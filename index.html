@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0F1428">
+<title>String Theory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&amp;family=Jacquard+24&amp;display=swap">
+<!-- build:css -->
+<link rel="stylesheet" href="style.css">
+<!-- /build:css -->
+</head>
+<body>
+<div id="stage">
+  <aside id="hudL" class="hud" aria-label="The chart"></aside>
+  <main id="field">
+    <canvas id="cloth" aria-label="The Coverlet: playfield"></canvas>
+    <div id="mtop" aria-label="Status"></div>
+    <div id="bossbar"></div>
+    <div id="banner" role="status" aria-live="polite"></div>
+  </main>
+  <aside class="hud" aria-label="The tray"><div id="hudR"></div><div id="tray"></div></aside>
+</div>
+<div id="floaters" aria-hidden="true"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+<div id="overlay" class="overlay"></div>
+<!-- build:js -->
+<script src="src/content.js"></script>
+<script src="src/save.js"></script>
+<script src="src/sim.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+<!-- /build:js -->
+<script type="module">
+  // Three.js r170: a local copy first (offline / packaged builds), then the CDNs.
+  const urls = ['./vendor/three.module.min.js', 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js', 'https://unpkg.com/three@0.170.0/build/three.module.min.js'];
+  let THREE = window.__THREE_STUB__ || null;
+  for (const u of urls) { if (THREE) break; try { THREE = await import(u); } catch (e) { THREE = null; } }
+  window.ST.boot(THREE);
+</script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+/* String Theory — DOM interface: HUD, the Hem and its stations, tallies, pause.
+   Talks to the game through a small controller object (see main.js). */
+(function (ST) {
+  'use strict';
+  const C = ST.content, PAL = C.PAL, S = ST.shop;
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+
+  /* A counted chart as inline SVG cross-stitches, the way the art bible draws every icon. */
+  function icon(name, px, tint) {
+    const s = C.SPRITES[name]; if (!s) return '';
+    let cells = '', a = '', b = '';
+    const by = {};
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) { const ch = s.rows[y][x]; if (ch !== '.') (by[ch] = by[ch] || []).push([x, y]); }
+    for (const ch in by) {
+      const col = tint && ch === 'G' ? tint : s.pal[ch]; let d1 = '', d2 = '', d3 = '';
+      for (const [x, y] of by[ch]) { d1 += `M${x} ${y}h1v1h-1z`; d2 += `M${x + .16} ${y + .16}l.68.68`; d3 += `M${x + .84} ${y + .16}l-.68.68`; }
+      cells += `<path d="${d1}" fill="${col}" opacity=".45"/>`; a += `<path d="${d2}" stroke="${col}"/>`; b += `<path d="${d3}" stroke="${col}" opacity=".8"/>`;
+    }
+    const w = px, h = Math.round(px * s.h / s.w);
+    return `<svg class="ic" width="${w}" height="${h}" viewBox="0 0 ${s.w} ${s.h}" aria-hidden="true">${cells}<g fill="none" stroke-width=".4" stroke-linecap="round">${a}${b}</g></svg>`;
+  }
+  const dustTag = n => `<span class="tag">${icon('dust', 20)}<b>${num(n)}</b></span>`;
+  const silkTag = n => `<span class="tag silk">${icon('silk', 26)}<b>${num(n)}</b></span>`;
+  const pips = (n, max) => { let h = '<span class="pips">'; for (let i = 0; i < max; i++) h += `<i class="${i < n ? 'on' : ''}"></i>`; return h + '</span>'; };
+
+  class UI {
+    constructor(ctl) {
+      this.ctl = ctl; this.el = {};
+      for (const id of ['overlay', 'hudL', 'hudR', 'mtop', 'tray', 'banner', 'toasts', 'floaters', 'bossbar']) this.el[id] = document.getElementById(id);
+      this.cache = {};
+      this.el.overlay.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) this.act(b.dataset.act, b.dataset.arg); });
+      this.el.tray.addEventListener('pointerdown', e => { const b = e.target.closest('[data-act]'); if (b) { e.preventDefault(); this.act(b.dataset.act, b.dataset.arg); } });
+      this.tab = 'spool'; this.sel = {};
+    }
+    get p() { return this.ctl.profile; }
+    set(key, html) { if (this.cache[key] !== html) { this.cache[key] = html; this.el[key].innerHTML = html; } }
+    show(html, cls) { const o = this.el.overlay; o.className = 'overlay on ' + (cls || ''); o.innerHTML = html; const f = o.querySelector('[data-focus]'); if (f) f.focus(); }
+    hide() { this.el.overlay.className = 'overlay'; this.el.overlay.innerHTML = ''; }
+    get open() { return this.el.overlay.classList.contains('on'); }
+    act(a, arg) {
+      const c = this.ctl;
+      switch (a) {
+        case 'begin': c.beginNight(); break;
+        case 'hem': c.openHem(false); break;
+        case 'title': c.toTitle(); break;
+        case 'depart': c.depart(); break;
+        case 'tab': this.tab = arg; this.hem(); break;
+        case 'pick': this.sel[this.tab] = arg; this.hem(); break;
+        case 'buy': this.buy(arg); break;
+        case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
+        case 'wind2': S.windSecond(this.p, arg); c.saved(); this.hem(); break;
+        case 'takeup': S.takeUp(this.p, arg); c.saved(); this.hem(); break;
+        case 'continue': c.continueNight(); break;
+        case 'pocket': c.takePocket(arg); break;
+        case 'resume': c.resume(); break;
+        case 'abandon': c.abandon(); break;
+        case 'toggle': this.p.settings[arg] = !this.p.settings[arg]; c.saved(); c.applySettings(); if (c.state === 'paused') this.pause(); else this.title(); break;
+        case 'reset': if (this.confirmReset) { c.resetSave(); this.confirmReset = false; } else { this.confirmReset = true; } this.title(); break;
+        case 'how': this.how(); break;
+        case 'notion': c.useNotion(+arg); break;
+        case 'swap': c.swap(); break;
+        case 'pause': c.pause(); break;
+      }
+    }
+
+    // ---------- title ----------
+    title() {
+      const p = this.p, st = p.settings;
+      this.show(`<div class="title">
+        <div class="eyebrow">A counted-thread arcade</div>
+        <h1 class="wordmark">String Theory</h1>
+        <p class="lede">Above the town of Hemmle the night is a cloth, and every star is a hole in it. Take up a needle and stitch the Moth Host down.</p>
+        <div class="stack">
+          <button class="btn primary" data-act="begin" data-focus>Begin a Night</button>
+          <button class="btn" data-act="hem">The Hem</button>
+          <button class="btn" data-act="how">How to sew</button>
+        </div>
+        <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}<span class="mono dim">Best Night ${num(p.stats.bestNight)} · Nights ${p.stats.nights} · mended ${p.stats.mended}</span></div>
+        <div class="row small">
+          <button class="chip" data-act="toggle" data-arg="sound">Sound: ${st.sound ? 'on' : 'off'}</button>
+          <button class="chip" data-act="toggle" data-arg="autofire">Auto-stitch: ${st.autofire ? 'on' : 'off'}</button>
+          <button class="chip" data-act="toggle" data-arg="shadows">Shadows: ${st.shadows ? 'on' : 'off'}</button>
+          <button class="chip danger" data-act="reset">${this.confirmReset ? 'Tap again to unpick everything' : 'Unpick the save'}</button>
+        </div></div>`, 'night');
+    }
+    how() {
+      this.show(`<div class="sheet"><div class="eyebrow">Controls</div><h2>How to sew</h2>
+        <div class="how">
+          <div><b>Move</b><span><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> · drag on the cloth</span></div>
+          <div><b>Stitch</b><span>Automatic, or hold <kbd>Space</kbd> with auto-stitch off</span></div>
+          <div><b>Notions</b><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · tap the tray</span></div>
+          <div><b>Swap thread</b><span><kbd>Q</kbd> (Chenille only)</span></div>
+          <div><b>Sidestep</b><span><kbd>Shift</kbd> or double-tap (Between only)</span></div>
+          <div><b>Hold the needle</b><span><kbd>Esc</kbd> or <kbd>P</kbd></span></div>
+        </div>
+        <p>A Night is three Panels. Each Panel is two Rows of the Moth Host and then its Keeper. Between Panels the cloth folds and you step into the Hem.</p>
+        <p>Stitch quickly to build a combo: it multiplies your Stitches and the Dust that moths shake loose. Dust buys threads, tempers and notions. Silk, reeled from Spinners and Keepers, buys needles and stitches in the Pattern. Pattern charts unseal new things at the Hem.</p>
+        <div class="row"><button class="btn primary" data-act="title" data-focus>Back</button></div></div>`, 'paper');
+    }
+
+    // ---------- the Hem ----------
+    hem() {
+      const p = this.p, c = this.ctl, mid = c.midNight;
+      const tabs = [['spool', 'Spool Wall', 'Bodkin · threads'], ['bench', 'The Bench', 'Gimp · temper your needle'], ['notions', 'Notions Drawer', 'Tuck · consumables']];
+      if (!mid) tabs.push(['case', 'Needle Case', 'Old Warp · new needles'], ['pattern', 'The Pattern', 'Selvage · for good']);
+      tabs.push(['book', 'Pattern Book', 'charts · the Host']);
+      if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
+      const sub = mid ? `Between ${C.PANELS[c.sim.panel - 1].name} and ${C.PANELS[c.sim.panel].name.replace('Panel ', '')}` : 'Between Nights';
+      const body = this['st_' + this.tab]();
+      this.show(`<div class="hem">
+        <header><div><div class="eyebrow">${esc(sub)}</div><h2>The Hem</h2></div>
+          <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}</div></header>
+        <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
+        <div class="station">${body}</div>
+        <footer><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End the Night here' : 'Title'}</button>
+          <button class="btn primary" data-act="depart">${mid ? 'Back through the cloth' : 'Begin a Night'}</button></footer></div>`, 'paper');
+    }
+    stateLine(st, cur) {
+      const unit = cur === 'silk' ? 'Silk' : 'Dust', have = this.p[cur];
+      if (st.why === 'sealed') return '<span class="state sealed">Sealed · chart not yet found</span>';
+      if (st.why === 'locked') return '<span class="state sealed">Stitch the one before it first</span>';
+      if (st.why === 'short') return `<span class="state short">${num(st.price - have)} ${unit} short</span>`;
+      if (st.why === 'full') return '<span class="state short">Your tray is full</span>';
+      if (st.why === 'visit') return '<span class="state short">One per visit</span>';
+      if (st.why === 'owned') return '<span class="state own">Owned</span>';
+      return '';
+    }
+    priceTag(st, cur) { return st.price !== undefined ? (cur === 'silk' ? silkTag(st.price) : dustTag(st.price)) : ''; }
+    list(items, selId) { return `<div class="list">${items.map(i => `<button class="card ${i.id === selId ? 'sel' : ''} ${i.dim ? 'dim' : ''}" data-act="pick" data-arg="${i.id}"><span class="cic">${i.icon || ''}</span><span class="cname">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('')}</div>`; }
+    detail(o) {
+      return `<div class="detail"><div class="eyebrow">${esc(o.kicker || '')}</div><h3>${esc(o.name)}</h3><p>${esc(o.desc)}</p>${o.extra || ''}
+        <div class="buyrow">${o.state || ''}${o.buttons || ''}</div>${o.quote ? `<p class="quote">“${esc(o.quote)}”</p>` : ''}</div>`;
+    }
+    st_spool() {
+      const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
+      const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
+        return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, dim: st.why === 'sealed',
+          meta: w ? (p.thread === id ? 'Threaded' : p.thread2 === id ? 'Second thread' : 'Owned') + ' · Weight ' + ROMAN[w] : st.why === 'sealed' ? 'Sealed' : dustTag(t.price) }; });
+      const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
+      const weights = `<ol class="weights">${t.weights.map((d, i) => `<li class="${i < w ? 'on' : ''}"><b>${ROMAN[i + 1]}</b> ${esc(d)}${i > 0 ? ` <span class="mono dim">+${C.WEIGHT_COST[i]}</span>` : ''}</li>`).join('')}</ol>`;
+      let btn = '';
+      if (st.ok) btn += `<button class="btn primary" data-act="buy" data-arg="thread:${sel}">${st.why === 'buy' ? 'Wind it on' : 'Weight ' + ROMAN[st.next]} · ${num(st.price)}</button>`;
+      if (w && p.thread !== sel) btn += `<button class="btn" data-act="wind" data-arg="${sel}">Thread it</button>`;
+      if (w && p.thread !== sel && p.needle === 'chenille' && p.thread2 !== sel) btn += `<button class="btn" data-act="wind2" data-arg="${sel}">Second thread</button>`;
+      return this.list(items, sel) + this.detail({ kicker: 'On the wall · six threads', name: t.name, desc: t.desc, extra: weights,
+        state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''), buttons: btn,
+        quote: 'Your needle carries one thread at a time. What you take down keeps its weight.' });
+    }
+    st_bench() {
+      const p = this.p, ids = Object.keys(C.TEMPERS), sel = this.sel.bench && C.TEMPERS[this.sel.bench] ? this.sel.bench : 'point';
+      const n = C.NEEDLES[p.needle], d = ST.derive(p);
+      const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
+        return { id, name: t.name, icon: pips(lv, t.max), meta: lv >= t.max ? 'Full temper' : st.why === 'sealed' ? 'Tier IV sealed' : 'Next ' + dustTag(st.price) }; });
+      const t = C.TEMPERS[sel], st = S.temperState(p, sel);
+      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => `<div><span>${k}</span>${pips(d.pips[k], 8)}</div>`).join('')}</div>`;
+      return this.list(items, sel) + this.detail({ kicker: 'Tempers · ' + n.name + ' in hand, every needle keeps them', name: t.name + ' ' + ROMAN[Math.min(t.max, p.tempers[sel] + 1)], desc: t.desc + '.', extra: stats,
+        state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''),
+        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="temper:${sel}">Temper · ${num(st.price)}</button>` : '',
+        quote: "A third ply on a Sharps? Now you're thinking like a mender, not a moth." });
+    }
+    st_notions() {
+      const p = this.p, ids = Object.keys(C.NOTIONS), sel = this.sel.notions && C.NOTIONS[this.sel.notions] ? this.sel.notions : 'thimble', visit = this.ctl.visit;
+      const items = ids.map(id => { const n = C.NOTIONS[id], st = S.notionState(p, id, visit), price = S.notionPrice(p, id), have = S.trayCount(p, id);
+        return { id, name: n.name, icon: icon(n.sprite, 30), dim: st.why === 'sealed',
+          meta: st.why === 'sealed' ? 'Sealed' : dustTag(price) + (price < n.price ? ` <s class="mono dim">${n.price}</s>` : '') + (have ? ` <span class="mono">×${have}</span>` : '') }; });
+      const n = C.NOTIONS[sel], st = S.notionState(p, sel, visit);
+      const tray = `<div class="trayrow"><span class="eyebrow">Your tray</span>${[0, 1, 2].map(i => { const s = p.tray[i]; return `<span class="slot">${s ? icon(C.NOTIONS[s.id].sprite, 30) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></span>`; }).join('')}</div>`;
+      return this.list(items, sel) + this.detail({ kicker: 'Single use · three slots in the tray', name: n.name, desc: n.desc, extra: tray,
+        state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''),
+        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="notion:${sel}">Pin it to the cushion · ${num(st.price)}</button>` : '',
+        quote: 'Buttons are dear. Spares are dearer.' });
+    }
+    st_case() {
+      const p = this.p, ids = Object.keys(C.NEEDLES), sel = this.sel.case && C.NEEDLES[this.sel.case] ? this.sel.case : p.needle;
+      const items = ids.map(id => { const n = C.NEEDLES[id], st = S.needleState(p, id);
+        return { id, name: n.name, icon: icon(id, 26), dim: st.why === 'sealed', meta: p.needle === id ? 'In hand' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Sealed' : silkTag(n.price) }; });
+      const n = C.NEEDLES[sel], st = S.needleState(p, sel), base = C.NEEDLES.sharps;
+      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${k}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow">Against a Sharps</div>`;
+      let btn = st.ok ? `<button class="btn primary" data-act="buy" data-arg="needle:${sel}">Buy for ${st.price} Silk</button>` : '';
+      if (p.needles[sel] && p.needle !== sel) btn += `<button class="btn primary" data-act="takeup" data-arg="${sel}">Take it up</button>`;
+      const sealed = st.why === 'sealed' ? `<p class="state sealed">${esc(n.name)} is sealed until you find its chart: ${esc(C.CHARTS[n.chart].from)} carries it.</p>` : '';
+      return this.list(items, sel) + this.detail({ kicker: 'Needle · for good', name: n.name, desc: n.trait + ': ' + n.traitDesc, extra: stats + sealed,
+        state: (st.why === 'sealed' ? '' : this.stateLine(st, 'silk')) + (st.why === 'short' ? this.priceTag(st, 'silk') : ''), buttons: btn,
+        quote: sel === 'chenille' ? 'Two threads through one eye. Fiddly. Worth it.' : '' });
+    }
+    st_pattern() {
+      const p = this.p, all = C.PATTERN.nodes, sel = this.sel.pattern && all[this.sel.pattern] ? this.sel.pattern : 'steady';
+      const done = Object.keys(all).filter(k => p.pattern[k]).length;
+      const grid = `<div class="sampler">${C.PATTERN.rows.map(r => `<div class="srow"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
+        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Stitched' : all[id].cost + ' Silk'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      const n = all[sel], st = S.patternState(p, sel);
+      return grid + this.detail({ kicker: `Every hole was once a star · ${done} of 12`, name: n.name, desc: n.desc,
+        extra: '<p class="dim">Stitched into the Pattern, it holds for every Night after this one, on every needle.</p>',
+        state: (st.why === 'owned' ? '<span class="state own">Stitched</span>' : this.stateLine(st, 'silk')) + (st.why === 'short' ? this.priceTag(st, 'silk') : ''),
+        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="pattern:${sel}">Stitch it in · ${st.price} Silk</button>` : '',
+        quote: 'The Pattern remembers what you forget.' });
+    }
+    st_book() {
+      const p = this.p;
+      const charts = Object.keys(C.CHARTS).map(id => { const c = C.CHARTS[id], got = p.charts[id];
+        return `<div class="entry ${got ? '' : 'unseen'}">${icon('chart', 30)}<div><b>${got ? esc(c.name) : 'Not yet found'}</b><span>${got ? 'Unseals ' + esc(c.unseals) : 'Carried by ' + esc(c.from)}</span></div></div>`; }).join('');
+      const moths = Object.keys(C.MOTHS).map(id => { const m = C.MOTHS[id], n = p.codex.moths[id] || 0;
+        return `<div class="entry ${n ? '' : 'unseen'}">${icon(m.sprite, 40)}<div><b>${n ? esc(m.name) : 'Not yet seen'}</b><span>${n ? esc(m.note) + ' · stitched ' + num(n) : ''}</span></div></div>`; }).join('');
+      const keepers = Object.keys(C.KEEPERS).map(id => { const k = C.KEEPERS[id], n = p.codex.keepers[id] || 0;
+        return `<div class="entry ${n ? '' : 'unseen'}">${icon(k.sprite, 64)}<div><b>${n ? esc(k.name) : 'Not yet stitched down'}</b><span>${n ? 'Soft spot: ' + esc(k.softName) + ' · stitched down ' + n : ''}</span></div></div>`; }).join('');
+      const found = Object.keys(C.CHARTS).filter(k => p.charts[k]).length;
+      return `<div class="book"><section><div class="eyebrow">Pattern charts · ${found} of ${Object.keys(C.CHARTS).length}</div>${charts}</section>
+        <section><div class="eyebrow">The Moth Host</div>${moths}<div class="eyebrow">Keepers</div>${keepers}</section></div>`;
+    }
+    buy(arg) {
+      const [kind, id] = arg.split(':'), p = this.p;
+      const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id) : S.buyPattern(p, id);
+      if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy'); this.toast(kind === 'thread' ? 'Wound on' : kind === 'pattern' ? 'Stitched in' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
+      this.hem();
+    }
+
+    // ---------- tallies ----------
+    tally(res, pocket) {
+      const info = res.info, keeper = res.keeper;
+      const title = keeper ? (res.last ? 'The Night is mended' : info.panelName + ' darned') : 'Row count';
+      const rows = [['Stitches', num(res.stitches)], ['Dust shaken loose', dustTag(res.dust)], ['Silk reeled', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]]
+        .concat(res.bonuses.map(b => [b.name, b.dust ? '+' + dustTag(b.dust) : '+' + silkTag(b.silk)]))
+        .concat(res.charts.map(c => ['Chart found', esc(C.CHARTS[c].name)]));
+      const next = keeper ? (res.last ? 'To the Hem' : 'Fold to the Hem') : info.row === 0 ? 'Next Row' : 'Face the Keeper';
+      let pk = '';
+      if (pocket && pocket.length) pk = `<div class="pocket"><div class="eyebrow">Tuck's pocket · take one, or keep your Dust</div><div class="pk">${pocket.map(id => { const n = C.NOTIONS[id], st = S.notionState(this.p, id, null);
+        return `<button class="card" data-act="pocket" data-arg="${id}" ${st.ok ? '' : 'disabled'}><span class="cic">${icon(n.sprite, 30)}</span><span class="cname">${esc(n.name)}</span><span class="cmeta">${esc(n.desc)}</span><span>${dustTag(S.notionPrice(this.p, id))} ${st.ok ? '' : this.stateLine(st, 'dust')}</span></button>`; }).join('')}</div></div>`;
+      const s = this.ctl.sim, sum = res.last ? `<p class="lede">Three Panels darned, three Keepers stitched down. ${num(s.stitches)} Stitches${s.newBest ? ', your best Night' : ''}.</p>` : '';
+      this.show(`<div class="sheet"><div class="eyebrow">${esc(info.panelName)} · ${esc(info.label)}</div><h2>${esc(title)}</h2>${sum}
+        <dl class="tally">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>${pk}
+        <div class="row"><button class="btn primary" data-act="continue" data-focus>${next}</button></div></div>`, 'paper');
+    }
+    snapped(res) {
+      const rows = [['Stitches', num(res.stitches)], ['Dust kept', dustTag(res.dust)], ['Silk kept', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]];
+      if (res.sweep) rows.push(['Sweepings', '+' + silkTag(res.sweep)]);
+      res.charts.forEach(c => rows.push(['Chart found', esc(C.CHARTS[c].name)]));
+      this.show(`<div class="sheet"><div class="eyebrow">${esc(res.info.panelName)} · ${esc(res.info.label)}</div><h2 class="madder">Thread snapped</h2>
+        <p class="lede">The Hem catches you. Your Dust and your Silk come with you.</p>
+        <dl class="tally">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>
+        <div class="row"><button class="btn primary" data-act="continue" data-focus>To the Hem</button></div></div>`, 'paper');
+    }
+    pause() {
+      const st = this.p.settings;
+      this.show(`<div class="sheet narrow"><div class="eyebrow">Paused</div><h2>Hold the needle</h2>
+        <div class="stack"><button class="btn primary" data-act="resume" data-focus>Pick it back up</button>
+          <button class="chip" data-act="toggle" data-arg="sound">Sound: ${st.sound ? 'on' : 'off'}</button>
+          <button class="chip" data-act="toggle" data-arg="autofire">Auto-stitch: ${st.autofire ? 'on' : 'off'}</button>
+          <button class="chip" data-act="toggle" data-arg="shadows">Shadows: ${st.shadows ? 'on' : 'off'}</button>
+          <button class="btn" data-act="abandon">End the Night here</button></div></div>`, 'paper');
+    }
+    fail(msg) { this.show(`<div class="sheet narrow"><h2>Could not thread the needle</h2><p>${esc(msg)}</p></div>`, 'paper'); }
+
+    // ---------- HUD ----------
+    hud(sim) {
+      const p = this.p, pl = sim.player, d = sim.d, th = C.THREADS[sim.curThread()], w = p.threads[sim.curThread()] || 1;
+      const chart = `<table class="nchart"><tr><th></th>${C.PANELS.map((_, i) => `<th>${ROMAN[i + 1]}</th>`).join('')}</tr>${['1', '2', 'K'].map((lab, r) => `<tr><th>${lab}</th>${C.PANELS.map((_, pi) => {
+        const done = pi < sim.panel || (pi === sim.panel && r < sim.row) || (sim.phase === 'done' && sim.result && sim.result.kind === 'clear' && pi === sim.panel && r === sim.row);
+        const cur = !done && pi === sim.panel && r === sim.row; return `<td class="${done ? 'done' : cur ? 'cur' : ''}"></td>`; }).join('')}</tr>`).join('')}</table>`;
+      const mult = sim.comboMult();
+      const combo = `<div class="combo ${sim.combo ? 'on' : ''}"><span class="lab">Combo</span><b>×${mult.toFixed(1)}</b><span class="mono">${sim.combo} stitched</span><i style="width:${sim.combo ? Math.max(0, sim.comboT / (C.TUNING.comboWindow * (p.pattern.second ? 2 : 1))) * 100 : 0}%"></i></div>`;
+      this.set('hudL', `<div class="wm">String Theory</div><div class="lab">Stitches</div><div class="score">${num(sim.stitches)}</div>
+        <div class="lab">Best Night</div><div class="mono big">${num(Math.max(p.stats.bestNight, sim.stitches))}</div>
+        <div class="lab">The Night's chart</div>${chart}<div class="dim small">${esc(sim.stageInfo().panelName)} · ${esc(sim.stageInfo().label)}</div>
+        <hr><div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Thread weight ${ROMAN[w]}</span></div></div>${combo}`);
+      let ply = '<div class="bobbin">'; for (let i = 0; i < d.ply; i++) ply += `<i class="${i < pl.ply ? (pl.ply === 1 && d.ply > 1 ? 'fray' : 'on') : ''}"></i>`; ply += '</div>';
+      let pins = '<div class="cushion">'; for (let i = 0; i < sim.spares; i++) pins += '<i></i>'; pins += '</div>';
+      const fx = Object.keys(sim.fx).filter(k => sim.fx[k] > 0).map(k => `<span class="fx" style="--c:${(C.CHARMS[k] || { color: PAL.saffron }).color}">${esc((C.CHARMS[k] || C.NOTIONS[k]).name)} <b class="mono">${Math.ceil(sim.fx[k])}</b></span>`).join('')
+        + (sim.armed.thimble ? '<span class="fx">Thimble on</span>' : '') + (sim.armed.pin ? '<span class="fx">Safety Pin on</span>' : '') + (sim.armed.chalk ? `<span class="fx">Chalk ${sim.armed.chalk}</span>` : '') + (pl.dual ? '<span class="fx" style="--c:#A82A33">Double stitch</span>' : '');
+      this.set('hudR', `<div class="lab">Spares</div>${pins}<div class="mono">${sim.spares}</div>
+        <div class="lab">Ply · ${pl.ply} of ${d.ply}${pl.ply === 1 && d.ply > 1 ? ' · fraying' : ''}</div>${ply}
+        <div class="lab">Dust</div><div class="cur">${icon('dust', 30)}<b class="mono big">${num(p.dust)}</b></div>
+        <div class="lab">Silk</div><div class="cur">${icon('silk', 36)}<b class="mono big">${num(p.silk)}</b></div>
+        <div class="lab">Needle</div><div class="thread">${icon(p.needle, 22)}<div><b>${esc(C.NEEDLES[p.needle].name)}</b><span>${esc(C.NEEDLES[p.needle].trait)}</span></div></div>
+        <div class="fxs">${fx}</div>`);
+      this.set('mtop', `<span class="score">${num(sim.stitches)}</span>${ply}<span class="mono">❖${sim.spares}</span>${dustTag(p.dust)}${silkTag(p.silk)}${sim.combo >= C.TUNING.comboStep ? `<span class="mcombo">×${mult.toFixed(1)}</span>` : ''}<span class="fxs">${fx}</span>`);
+      const slots = [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('');
+      this.set('tray', `<div class="lab">Notions</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap thread">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt" data-act="pause" aria-label="Pause">Hold<kbd>Esc</kbd></button></div>`);
+      const b = sim.boss;
+      this.set('bossbar', b ? `<div class="bb"><b>${esc(b.def.name)}</b><span>Phase ${b.phase} · ${esc(b.def.phaseTag[b.phase - 1])}${b.def.chews ? (b.open ? ' · chewing' : ' · mouth shut') : ''}</span><div class="seam"><i style="width:${Math.max(0, b.hp / b.maxHp * 100)}%"></i></div></div>` : '');
+    }
+    hudVisible(on) { document.body.classList.toggle('flying', on); }
+    banner(big, small, ms) {
+      const b = this.el.banner; b.innerHTML = `<div class="rib"><span>${esc(small || '')}</span><b>${esc(big)}</b></div>`; b.className = 'on';
+      clearTimeout(this.bt); this.bt = setTimeout(() => { b.className = ''; }, ms || 1700);
+    }
+    toast(head, body) {
+      const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<b>${esc(head)}</b><span>${esc(body || '')}</span>`;
+      this.el.toasts.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100);
+      while (this.el.toasts.children.length > 4) this.el.toasts.firstChild.remove();
+    }
+    floater(pt, text, cls) {
+      const f = document.createElement('span'); f.className = 'fl ' + (cls || ''); f.textContent = text; f.style.left = pt.x + 'px'; f.style.top = pt.y + 'px';
+      this.el.floaters.appendChild(f); setTimeout(() => f.remove(), 800);
+      while (this.el.floaters.children.length > 24) this.el.floaters.firstChild.remove();
+    }
+  }
+  ST.UI = UI; ST.icon = icon;
+})(window.ST);

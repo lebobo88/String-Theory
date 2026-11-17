@@ -1,0 +1,12 @@
+{
+  "name": "string-theory",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A counted-thread arcade shooter in Three.js",
+  "scripts": {
+    "test": "node test/sim.test.js",
+    "smoke": "python3 test/smoke.py",
+    "build": "node tools/build.js",
+    "design": "node tools/design-doc.js"
+  }
+}
