@@ -25,7 +25,8 @@
     // ---------- Night / stage flow ----------
     newNight() {
       const p = this.p;
-      this.panel = 0; this.row = 0;               // row 0,1 = Rows; row 2 = Keeper
+      this.panel = 0; this.row = 0;               // row indexes C.STAGES: Row, Row, Sampler, Keeper
+      this.route = []; this.perfectSamplers = 0; this.dualRun = 0;
       this.stitches = 0; this.nightDust = 0; this.nightSilk = 0; this.nightCharts = [];
       this.d = ST.derive(p);
       this.spares = T.spares + (p.pattern.sparepin ? 1 : 0);
@@ -39,7 +40,7 @@
     }
     clearField() {
       this.enemies = []; this.shots = []; this.eshots = []; this.drops = []; this.hazards = []; this.nets = [];
-      this.boss = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
+      this.boss = null; this.sampler = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
     }
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
       const old = this.d.ply; this.d = ST.derive(this.p);
@@ -49,8 +50,20 @@
     }
     stageInfo() {
       const pd = C.PANELS[this.panel];
-      return { panel: this.panel, row: this.row, keeper: this.row === 2, panelName: pd.name,
-        label: this.row === 2 ? C.KEEPERS[pd.keeper].name : 'Row ' + (this.row + 1) };
+      const kind = C.STAGES[this.row], patch = C.PATCHES[this.patchId()];
+      const label = kind === 'keeper' ? C.KEEPERS[pd.keeper].name : kind === 'sampler' ? 'Bonus wave' : 'Wave ' + (this.row + 1);
+      return { panel: this.panel, row: this.row, kind, keeper: kind === 'keeper', sampler: kind === 'sampler', panelName: pd.name, patch: patch.name,
+        label, reached: pd.name + ' \u00b7 ' + (kind === 'keeper' ? 'Boss' : label) };
+    }
+    patchId() { return this.route[this.panel] || C.PANELS[this.panel].patches[0]; }
+    setPatch(id) { if (C.PANELS[this.panel].patches.indexOf(id) >= 0) this.route[this.panel] = id; }
+    mods() { return C.PATCHES[this.patchId()].mods || {}; }
+    rowSpec() {
+      const base = C.PANELS[this.panel].rows[this.row], m = this.mods(), sp = Object.assign({}, base);
+      if (m.crowd) { sp.spinners = 4; sp.mids = Math.min(10, sp.mids + 2); sp.nibs = 10; sp.diveEvery *= 0.85; }
+      if (m.wicks) sp.wickEvery = Math.min(sp.wickEvery || 99, m.wicks);
+      if (m.hawks) sp.hawks = (sp.hawks || 0) + m.hawks;
+      return sp;
     }
     startStage() {
       this.events.length = 0;
@@ -61,12 +74,13 @@
       this.palmUsed = false;
       if (this.p.pattern.mended && this.player.ply < this.d.ply) this.player.ply++;
       this.player.x = 0; this.player.invuln = 1.5; this.player.charge = 0;
-      if (this.row < 2) this.buildRow(pd.rows[this.row]); else this.buildKeeper(pd.keeper);
+      const kind = C.STAGES[this.row];
+      if (kind === 'row') this.buildRow(this.rowSpec()); else if (kind === 'sampler') this.buildSampler(); else this.buildKeeper(pd.keeper);
       this.phase = 'intro'; this.phaseT = 1.8;
       this.emit('stage', this.stageInfo());
     }
     advance() {      // after a tally: what comes next
-      if (this.row < 2) { this.row++; return this.row === 2 ? 'keeper' : 'row'; }
+      if (this.row < C.STAGES.length - 1) { this.row++; return C.STAGES[this.row]; }
       this.row = 0; this.panel++;
       if (this.panel >= C.PANELS.length) { this.panel = C.PANELS.length - 1; return 'won'; }
       return 'hem';
@@ -101,6 +115,23 @@
       // shuffle extras deterministically
       for (let i = this.extras.length - 1; i > 0; i--) { const j = Math.floor(this.rand() * (i + 1)); [this.extras[i], this.extras[j]] = [this.extras[j], this.extras[i]]; }
       this.spec = spec;
+    }
+    buildSampler() {
+      const S = C.SAMPLER, pattern = this.mods().sampler || C.PANELS[this.panel].sampler;
+      this.sampler = { total: S.count, hit: 0, out: 0, pattern };
+      for (let i = 0; i < S.count; i++) this.spawn(S.order[i % S.order.length], { state: 'trace', t: -i * S.gap, pattern, x: HW + 2, y: H + 2 });
+      this.spec = { diveEvery: 99, fireEvery: 99 };
+    }
+    /* Sampler patterns, u in 0..1 around one closed figure. The rosette is the bible's quatrefoil. */
+    pathPoint(name, u) {
+      const cy = 10.33, P = Math.PI;
+      if (name === 'rosette') {
+        const s = (u * 4 + 0.5) % 4, k = Math.floor(s), f = s - k, hz = k % 2 === 0;
+        const along = (hz ? 4.72 : 3.78) * Math.sin(P * f), across = (hz ? 1.03 : 1.29) * Math.sin(2 * P * f);
+        return k === 0 ? { x: along, y: cy + across } : k === 1 ? { x: -across, y: cy + along } : k === 2 ? { x: -along, y: cy - across } : { x: across, y: cy - along };
+      }
+      if (name === 'eight') return { x: 5 * Math.sin(2 * P * u), y: cy + 3 * Math.sin(4 * P * u) };
+      return { x: 5.5 * Math.cos(2 * P * u), y: cy + 2.4 * Math.sin(6 * P * u) };
     }
     buildKeeper(id) {
       const def = C.KEEPERS[id];
@@ -276,23 +307,25 @@
       e.dead = true;
       const i = this.enemies.indexOf(e); if (i >= 0) this.enemies.splice(i, 1);
       if (silent) return;
-      const def = e.def, diving = e.state !== 'form' && e.state !== 'enter';
+      const def = e.def, tracing = e.state === 'trace', diving = e.state !== 'form' && e.state !== 'enter';
+      const m = this.mods();
       this.combo++; this.comboT = T.comboWindow * (this.p.pattern.second ? 2 : 1);
       this.bestCombo = Math.max(this.bestCombo, this.combo); this.stage.best = Math.max(this.stage.best, this.combo);
       const mult = this.comboMult();
-      let pts = diving ? def.ptsDive : def.pts;
+      let pts = tracing ? C.SAMPLER.pts : diving ? def.ptsDive : def.pts;
+      if (tracing && this.sampler) this.sampler.hit++;
       if (e.type === 'spinner' && diving && e.escorts && e.escorts.some(x => !x.dead)) pts = def.ptsEscort;
       this.stitches += Math.round(pts * mult);
       this.p.codex.moths[e.type] = (this.p.codex.moths[e.type] || 0) + 1;
       this.emit('kill', { x: e.x, y: e.y, type: e.type, pts: Math.round(pts * mult), mult });
       // drops
-      const dust = Math.round(def.dust * (1 + (mult - 1) * 0.5) * (this.fx.gold > 0 ? 2 : 1));
+      const dust = Math.round(def.dust * (1 + (mult - 1) * 0.5) * (this.fx.gold > 0 ? 2 : 1) * (m.dust || 1));
       this.dropDust(e.x, e.y, dust);
       if (def.silk) this.drop('silk', e.x, e.y, { v: def.silk });
       if (def.packet && this.rand() < def.packet) this.drop('packet', e.x, e.y, {});
-      else if (this.rand() < T.charmChance) this.drop('charm', e.x, e.y, { charm: this.pick(Object.keys(C.CHARMS)) });
-      if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1)) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
-      if (def.splits) for (const s of [-1, 1]) this.spawn('nibbler', { x: e.x + s * 0.5, y: e.y, state: 'dive', vx: s * 2.5, passes: 1 });
+      else if (this.rand() < T.charmChance * (m.charms || 1)) this.drop('charm', e.x, e.y, { charm: this.pick(Object.keys(C.CHARMS)) });
+      if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1) * (m.charts || 1)) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
+      if (def.splits && !tracing) for (const s of [-1, 1]) this.spawn('nibbler', { x: e.x + s * 0.5, y: e.y, state: 'dive', vx: s * 2.5, passes: 1 });
       if (e.captive) { this.player.dual = true; this.emit('double', { x: e.x, y: e.y }); }
     }
     dropDust(x, y, total) {
@@ -310,7 +343,7 @@
       const pl = this.player, playing = this.phase === 'play';
       const slotted = this.enemies.filter(e => e.slot);
       // dive scheduler
-      if (playing && !this.boss) {
+      if (playing && !this.boss && !this.sampler) {
         this.diveT -= dt;
         if (this.diveT <= 0) {
           const formed = slotted.filter(e => e.state === 'form');
@@ -344,6 +377,15 @@
             break;
           }
           case 'form': { const s = this.slotPos(e); e.x = s.x; e.y = s.y; break; }
+          case 'trace': {      // Sampler: fly in, trace the figure once, fly off. They never fire.
+            e.t += dt;
+            if (e.t < 0) break;
+            const a = this.pathPoint(e.pattern, 0), lap = 1 / C.SAMPLER.speed;
+            if (e.t < 1) { const k = e.t, q = k * k * (3 - 2 * k); e.x = (HW + 2) + (a.x - HW - 2) * q; e.y = (H + 1) + (a.y - H - 1) * q; }
+            else if (e.t < 1 + lap) { const pt = this.pathPoint(e.pattern, (e.t - 1) / lap); e.vx = (pt.x - e.x) / Math.max(dt, 1e-4); e.x = pt.x; e.y = pt.y; }
+            else { e.y += 9 * dt; e.x += 3 * dt; if (e.y > H + 1.5) { this.sampler.out++; this.kill(e, true); } }
+            break;
+          }
           case 'windup': {
             const s = this.slotPos(e); e.x = s.x + Math.sin(this.t * 40) * 0.05; e.y = s.y; e.t -= dt;
             if (e.t <= 0) { e.state = e.next; e.mark = null; e.vx = 0; }
@@ -432,7 +474,7 @@
     capture(e) {
       const pl = this.player;
       if (this.armed.pin) { this.armed.pin = false; this.emit('slip', { why: 'Safety Pin' }); return; }
-      if (this.d.palm && !this.palmUsed) { this.palmUsed = true; this.emit('slip', { why: 'Palm Guard' }); return; }
+      if (this.d.palm && !this.palmUsed) { this.palmUsed = true; this.emit('slip', { why: 'Heavy ship' }); return; }
       if (this.fx.starch > 0) return;
       this.stage.hurt = true; this.combo = 0;
       if (pl.dual) { pl.dual = false; pl.invuln = this.d.invuln; this.emit('captured', { dual: true }); return; }
@@ -449,6 +491,7 @@
         if (s.kind === 'knot') { if (s.y > s.hang) s.y += s.vy * dt; else { s.life -= dt; } }
         else { s.x += s.vx * dt; s.y += s.vy * dt; if (s.kind === 'silk') s.x += Math.cos(s.t * 5) * 2.4 * dt; }
         let dead = s.y < -0.6 || Math.abs(s.x) > HW + 0.6 || (s.kind === 'knot' && s.life <= 0);
+        if (!dead && s.kind === 'coal' && s.y < PY - 0.2) { dead = true; this.hazards.push({ id: this.nextId++, kind: 'burn', x: s.x, w: 1.6, warn: 0, life: 4 }); this.emit('burn', { x: s.x }); }
         if (!dead && playing && this.touches(s.x, s.y, s.r)) { dead = true; this.hurt(); }
         if (dead) this.eshots.splice(i, 1);
       }
@@ -513,7 +556,7 @@
         const ids = Object.keys(C.NOTIONS).filter(id => !C.NOTIONS[id].chart || p.charts[C.NOTIONS[id].chart]);
         const id = this.pick(ids);
         if (ST.shop.stow(p, id)) this.emit('packet', { id, name: C.NOTIONS[id].name });
-        else { p.dust += 20; this.nightDust += 20; this.emit('packet', { id: null, name: 'Tray full: 20 Dust' }); }
+        else { p.dust += 20; this.nightDust += 20; this.emit('packet', { id: null, name: 'Item slots full: 20 coins instead' }); }
       }
       else if (d.kind === 'chart') {
         if (!p.charts[d.chart]) { p.charts[d.chart] = true; this.nightCharts.push(d.chart); this.stage.charts.push(d.chart); this.emit('chart', { id: d.chart, name: C.CHARTS[d.chart].name, unseals: C.CHARTS[d.chart].unseals }); }
@@ -567,9 +610,9 @@
       const b = this.boss, def = b.def, p = this.p;
       this.stitches += def.pts;
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
-      this.emit('keeperdown', { name: def.name, x: b.x, y: b.y });
+      this.emit('keeperdown', { name: def.name, sprite: def.sprite, x: b.x, y: b.y });
       for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust / 3));
-      this.drop('silk', b.x, b.y, { v: def.silk });
+      this.drop('silk', b.x, b.y, { v: def.silk + (this.mods().keeperSilk || 0) });
       const open = def.charts.filter(id => !p.charts[id]);
       if (open.length) this.drop('chart', b.x, b.y - 1, { chart: open[0], keeper: true });
       for (const e of this.enemies.slice()) this.kill(e, true);
@@ -603,6 +646,14 @@
           this.hazards.push({ id: this.nextId++, kind: 'strike', x: clamp(-pl.x + this.rr(-1, 1), -6, 6), w: 1.3, warn: 1.15, life: 0.3 });
           this.emit('strike');
         }
+      } else if (b.id === 'greatlappet') {
+        b.x = Math.sin(b.t * 0.7) * 4; b.y = 14.6 + Math.sin(b.t * 1.3) * 0.3;
+        if (b.a <= 0) { b.a = ph === 1 ? 1.7 : 2.2; for (let i = 0; i < 4; i++) { const a = (i / 3 - 0.5) * 0.9; this.eshot('frass', b.x, b.y - 1.4, Math.sin(a) * 5, -Math.cos(a) * 5); } }
+        if (ph === 2 && b.b <= 0) { b.b = 4.5; if (nibs < 6) for (const s of [-1, 1]) this.spawn('lappet', { x: b.x + s * 1.8, y: b.y - 0.4, state: 'dive', vx: s * 2, passes: 0 }); this.emit('shed'); }
+      } else if (b.id === 'greatwick') {
+        b.x = Math.sin(b.t * 0.55) * 3.4; b.y = 14.6 + Math.sin(b.t) * 0.25;
+        if (b.a <= 0) { b.a = ph === 1 ? 1.9 : 2.4; this.eshot('coal', clamp(pl.x + this.rr(-0.6, 0.6), -6, 6), b.y - 2, 0, -5.2); this.eshot('frass', b.x, b.y - 2, 0, -5.5); }
+        if (ph === 2 && b.b <= 0) { b.b = 3.2; if (nibs < 4) this.spawn('wick', { x: clamp(pl.x + this.rr(-3, 3), -6, 6), y: H + 1, state: 'coal' }); }
       } else {
         b.x = Math.sin(b.t * 0.4) * 2.2; b.y = 14.4;
         const open = (b.t % 5.5) > 3; if (open !== b.open) { b.open = open; this.emit('chew', { open }); }
@@ -620,16 +671,25 @@
     // ---------- stage end ----------
     finishStage() {
       const p = this.p, st = this.stage, bonuses = [];
-      const keeper = this.row === 2;
-      if (!st.hurt) { const v = T.cleanRowDust * (this.panel + 1) * (keeper ? 2 : 1); bonuses.push({ name: keeper ? 'Clean Keeper: no ply lost' : 'Clean Row: no ply lost', dust: v }); }
-      if (st.best >= 12) bonuses.push({ name: 'Long thread: best combo ' + st.best, dust: st.best });
-      if (keeper) bonuses.push({ name: C.PANELS[this.panel].name + ' darned', silk: T.panelSilk });
+      const info = this.stageInfo(), keeper = info.keeper, m = this.mods();
+      if (info.sampler) {
+        const sm = this.sampler, perfect = sm.hit >= sm.total;
+        if (perfect) {
+          this.perfectSamplers++; p.stats.perfectSamplers = (p.stats.perfectSamplers || 0) + 1; this.stitches += C.SAMPLER.perfectPts;
+          bonuses.push({ name: 'Perfect bonus wave' + (m.samplerSilk ? ' (' + info.patch + ': double)' : ''), silk: C.SAMPLER.perfectSilk * (m.samplerSilk || 1), stitches: C.SAMPLER.perfectPts });
+        }
+      } else if (!st.hurt) { const v = T.cleanRowDust * (this.panel + 1) * (keeper ? 2 : 1); bonuses.push({ name: keeper ? 'No-damage boss' : 'No-damage wave', dust: v }); }
+      if (st.best >= 12) bonuses.push({ name: 'Combo bonus: best combo ' + st.best, dust: st.best });
+      if (keeper) bonuses.push({ name: 'Stage cleared', silk: T.panelSilk });
       for (const b of bonuses) { if (b.dust) { p.dust += b.dust; this.nightDust += b.dust; } if (b.silk) { p.silk += b.silk; this.nightSilk += b.silk; } }
+      if (info.kind === 'row' && m.mend && this.player.ply < this.d.ply) this.player.ply++;
+      this.dualRun = this.player.dual ? this.dualRun + 1 : 0; p.stats.longestDouble = Math.max(p.stats.longestDouble || 0, this.dualRun);
       this.phase = 'done';
       const last = keeper && this.panel === C.PANELS.length - 1;
       if (last) this.closeNight(true);
-      this.result = { kind: 'clear', keeper, last, info: this.stageInfo(), stitches: this.stitches - st.stitches0, dust: this.nightDust - st.dust0,
-        silk: this.nightSilk - st.silk0, bestCombo: st.best, bonuses, charts: st.charts.slice() };
+      this.result = { kind: 'clear', keeper, last, info, stitches: this.stitches - st.stitches0, dust: this.nightDust - st.dust0,
+        silk: this.nightSilk - st.silk0, nightSilk: this.nightSilk, bestCombo: st.best, bonuses, charts: st.charts.slice(),
+        sampler: info.sampler ? { hit: this.sampler.hit, total: this.sampler.total } : null };
       this.emit('stageclear', this.result);
     }
     finishSnap() {
@@ -644,6 +704,7 @@
       const s = this.p.stats;
       s.nights++; if (won) s.mended++;
       this.newBest = this.stitches > s.bestNight; if (this.newBest) s.bestNight = this.stitches;
+      this.record = { needle: this.d.needle, stitches: this.stitches, reached: won ? 'Run completed' : this.stageInfo().reached, won };
     }
     nightSummary() { return { stitches: this.stitches, dust: this.nightDust, silk: this.nightSilk, bestCombo: this.bestCombo, charts: this.nightCharts.slice(), newBest: this.newBest }; }
   }

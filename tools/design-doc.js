@@ -5,44 +5,47 @@ require(path.join(__dirname, '..', 'src', 'content.js'));
 const C = globalThis.ST.content, R = ['', 'I', 'II', 'III', 'IV'];
 const t = (head, rows) => '| ' + head.join(' | ') + ' |\n|' + head.map(() => '---').join('|') + '|\n' + rows.map(r => '| ' + r.join(' | ') + ' |').join('\n') + '\n';
 const chart = id => id ? C.CHARTS[id].name : 'none';
+const patchNames = p => p.patches.map(id => C.PATCHES[id].name).join(' or ');
 let md = `# String Theory: design tables
 
 Generated from \`src/content.js\` by \`tools/design-doc.js\`. Edit the content file, not this one.
-Vocabulary, sprites, palette and most names come from the art bible; see README for what was added.
 
-## The Night
-A Night is ${C.PANELS.length} Panels. Each Panel is two Rows of the Moth Host, then its Keeper. Between Panels you visit the Hem.
+## A run
+A run is ${C.PANELS.length} stages. Every stage is Wave 1, Wave 2, a bonus wave, then a boss. After each stage you visit the hideout, then pick a route to the next stage.
 
-${t(['Panel', 'Row 1', 'Row 2', 'Keeper'], C.PANELS.map(p => [p.name].concat(p.rows.map(r => `${r.spinners} Spinners, ${r.mids * 2} mid-row, ${r.nibs * 2} Nibblers` + (r.lappetEvery ? ', Lappets' : '') + (r.wickEvery ? ', Wicks' : '') + (r.hawks ? `, ${r.hawks} Hawks` : '') + (r.loopers ? `, ${r.loopers} Loopers` : '')), [C.KEEPERS[p.keeper].name])))}
-## Currencies
-- **Dust**: shaken loose from stitched moths, multiplied by your combo. Buys threads, thread weights, tempers and notions. Kept between Nights.
-- **Silk**: reeled from Spinners (1), Keepers (${Object.values(C.KEEPERS).map(k => k.silk).join(', ')}) and every Panel darned (${C.TUNING.panelSilk}). Buys needles and stitches in the Pattern.
-- **Combo**: every ${C.TUNING.comboStep} moths stitched without a ${C.TUNING.comboWindow}s gap adds x0.5, up to x${C.TUNING.comboMax}. Stitches take the full multiplier, Dust half of the bonus. A hit drops it.
-- **Bonuses**: Clean Row (no ply lost) ${C.TUNING.cleanRowDust} Dust x Panel number, doubled on a Keeper; Long thread (best combo 12+) pays the combo count in Dust.
+${t(['Stage', 'Route choices', 'Wave 1', 'Wave 2', 'Boss'], C.PANELS.map(p => [p.name, patchNames(p)].concat(p.rows.map(r => `${r.spinners} Spinners, ${r.mids * 2} mid-row, ${r.nibs * 2} Nibblers` + (r.lappetEvery ? ', Lappets' : '') + (r.wickEvery ? ', Wicks' : '') + (r.hawks ? `, ${r.hawks} Hawks` : '') + (r.loopers ? `, ${r.loopers} Loopers` : '')), [C.KEEPERS[p.keeper].name])))}
+## Routes
+${t(['Route', 'Bonus'], Object.values(C.PATCHES).map(p => [p.name, p.mark || 'none']))}
+## Bonus wave
+${C.SAMPLER.count} moths fly a set pattern and never shoot. Each is worth ${C.SAMPLER.pts} points. Destroying all ${C.SAMPLER.count} pays +${C.SAMPLER.perfectPts} points and ${C.SAMPLER.perfectSilk} gems (double on Old Darn).
 
-## The Moth Host
-${t(['Moth', 'Hits', 'Stitches (formation / diving)', 'Dust', 'Behaviour'], Object.values(C.MOTHS).map(m => [m.name, m.cased ? '2: case, then moth' : m.splits ? '1, then splits' : m.hp >= 2 ? '2' : '1', m.pts + ' / ' + m.ptsDive + (m.ptsEscort ? ' / ' + m.ptsEscort + ' escorted' : ''), m.dust + (m.silk ? ' + ' + m.silk + ' Silk' : ''), m.note]))}
-## Keepers
-${t(['Keeper', 'Ply', 'Stitches', 'Silk', 'Phases', 'Soft spot', 'Charts carried'], Object.values(C.KEEPERS).map(k => [k.name, k.hp, k.pts, '+' + k.silk, k.phases.map((p, i) => (i + 1) + '. ' + p).join('<br>'), k.softName, k.charts.map(chart).join(', ')]))}
-Stitches on the soft spot bite double; anywhere else 0.6. The Unraveller only takes full damage while it chews.
+## Money
+- **Coins**: dropped by destroyed enemies, multiplied by your combo. Buy weapons, weapon levels, upgrades and items. Kept after game over.
+- **Gems**: from Spinners (1), bosses (${Object.values(C.KEEPERS).map(k => k.silk).join(', ')}), every stage cleared (${C.TUNING.panelSilk}) and perfect bonus waves. Buy ships and perks.
+- **Combo**: every ${C.TUNING.comboStep} kills without a ${C.TUNING.comboWindow}s gap adds x0.5, up to x${C.TUNING.comboMax}. Score takes the full multiplier, coins half of the bonus. Taking a hit resets it.
+- **Bonuses**: no-damage wave ${C.TUNING.cleanRowDust} coins x stage number, doubled on a boss; best combo of 12 or more pays the combo count in coins.
 
-## Spool Wall: threads (Dust, kept for good)
-${t(['Thread', 'Price', 'Weight I', 'Weight II (+' + C.WEIGHT_COST[1] + ')', 'Weight III (+' + C.WEIGHT_COST[2] + ')', 'Sealed by'], Object.values(C.THREADS).map(x => [x.name, x.price || 'Starter'].concat(x.weights, [chart(x.chart)])))}
-## Needle Case: needles (Silk, kept for good)
-${t(['Needle', 'Price', 'Ply', 'Pace', 'Eye', 'Point', 'Trait', 'Sealed by'], Object.values(C.NEEDLES).map(n => [n.name, n.price || 'Starter', n.ply, n.pace, n.eye, n.point, `**${n.trait}**: ${n.traitDesc}`, chart(n.chart)]))}
-Ply is hits before a needle snaps, Pace is side-to-side speed, Eye is rate of stitch, Point is damage per stitch.
+## Enemies
+${t(['Enemy', 'Hits', 'Score (in formation / diving)', 'Coins', 'Behaviour'], Object.values(C.MOTHS).map(m => [m.name, m.cased ? '2: armour, then body' : m.splits ? '1, then splits' : m.hp >= 2 ? '2' : '1', m.pts + ' / ' + m.ptsDive + (m.ptsEscort ? ' / ' + m.ptsEscort + ' escorted' : ''), m.dust + (m.silk ? ' + ' + m.silk + ' gem' : ''), m.note]))}
+## Bosses
+${t(['Boss', 'Health', 'Score', 'Gems', 'Phases', 'Weak spot', 'Blueprints dropped'], Object.values(C.KEEPERS).map(k => [k.name + (k.standIn ? ' (stand-in, not in the art bible)' : ''), k.hp, k.pts, '+' + k.silk, k.phases.map((p, i) => (i + 1) + '. ' + p).join('<br>'), k.softName, k.charts.map(chart).join(', ')]))}
+Hits on the weak spot do double damage; anywhere else 0.6. The Unraveller only takes full damage while its mouth is open.
 
-## Gimp's Bench: tempers (Dust, kept for good, on every needle)
-${t(['Temper', 'Tiers', 'Effect', 'Tier prices'], Object.values(C.TEMPERS).map(x => [x.name, 'I to ' + R[x.max], x.desc + (x.chartAt ? ' (tier IV sealed by the Gilt Temper chart)' : ''), C.TEMPER_COST.slice(0, x.max).join(', ')]))}
-## Notions Drawer: consumables (Dust, single use, ${C.TUNING.traySlots} tray slots)
-${t(['Notion', 'Price', 'Effect', 'Sealed by'], Object.values(C.NOTIONS).map(n => [n.name, n.price, n.desc, chart(n.chart)]))}
-Tuck's pocket opens after each Row with three notions: take one, or keep your Dust. Stitched Lappets sometimes drop a sealed notion packet.
+## Weapons (coins, kept forever)
+${t(['Weapon', 'Price', 'Level I', 'Level II (+' + C.WEIGHT_COST[1] + ')', 'Level III (+' + C.WEIGHT_COST[2] + ')', 'Needs blueprint'], Object.values(C.THREADS).map(x => [x.name, x.price || 'Starter'].concat(x.weights, [chart(x.chart)])))}
+## Ships (gems, kept forever)
+${t(['Ship', 'Price', 'Shield', 'Speed', 'Fire rate', 'Damage', 'Trait', 'Needs blueprint'], Object.values(C.NEEDLES).map(n => [n.name, n.price || 'Starter', n.ply, n.pace, n.eye, n.point, `**${n.trait}**: ${n.traitDesc}`, chart(n.chart)]))}
+## Upgrades (coins, permanent, apply to every ship)
+${t(['Upgrade', 'Levels', 'Effect', 'Level prices'], Object.values(C.TEMPERS).map(x => [x.name, 'I to ' + R[x.max], x.desc + (x.chartAt ? ' (level IV needs the Level IV blueprint)' : ''), C.TEMPER_COST.slice(0, x.max).join(', ')]))}
+## Items (coins, single use, ${C.TUNING.traySlots} slots)
+${t(['Item', 'Price', 'Effect', 'Needs blueprint'], Object.values(C.NOTIONS).map(n => [n.name, n.price, n.desc, chart(n.chart)]))}
+A quick shop opens after Wave 1 and Wave 2 with three items: buy one, or keep your coins. Destroyed Lappets sometimes drop a random item.
 
-## Charms: temporary power-ups (dropped by stitched moths, ${Math.round(C.TUNING.charmChance * 100)}% chance)
-${t(['Charm', 'Lasts', 'Effect'], Object.values(C.CHARMS).map(c => [c.name, c.dur ? c.dur + ' s' : 'instant', c.desc]))}
-## The Pattern: permanent stitches (Silk; each row unlocks left to right)
-${t(['Row', 'Stitch', 'Silk', 'Effect'], C.PATTERN.rows.flatMap(r => r.nodes.map(id => [r.name, C.PATTERN.nodes[id].name, C.PATTERN.nodes[id].cost, C.PATTERN.nodes[id].desc])))}
-## Pattern charts: blueprints
-${t(['Chart', 'Unseals', 'Carried by'], Object.values(C.CHARTS).map(c => [c.name, c.unseals, c.from + (c.loose ? ' (rare drop from any moth)' : ' (guaranteed, one per defeat)')]))}`;
+## Power-ups (temporary, dropped by destroyed enemies, ${Math.round(C.TUNING.charmChance * 100)}% chance)
+${t(['Power-up', 'Lasts', 'Effect'], Object.values(C.CHARMS).map(c => [c.name, c.dur ? c.dur + ' s' : 'instant', c.desc]))}
+## Perks (gems, permanent; each row unlocks left to right)
+${t(['Row', 'Perk', 'Gems', 'Effect'], C.PATTERN.rows.flatMap(r => r.nodes.map(id => [r.name, C.PATTERN.nodes[id].name, C.PATTERN.nodes[id].cost, C.PATTERN.nodes[id].desc])))}
+## Blueprints
+${t(['Blueprint', 'Unlocks', 'Dropped by'], Object.values(C.CHARTS).map(c => [c.name, c.unseals, c.from]))}`;
 fs.writeFileSync(path.join(__dirname, '..', 'DESIGN.md'), md);
 console.log('DESIGN.md written');

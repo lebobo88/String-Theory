@@ -265,7 +265,7 @@
           case 'lance': this.wire(e.x, PY + 0.8, e.x, H, PAL.steelHi, e.w * 0.28, 0.32); for (let y = PY + 1; y < H; y += 1.4) this.strand(e.x, y, PAL.steelHi, { speed: 1.5, max: 0.4 }); this.shake = Math.max(this.shake, 0.15); break;
           case 'bosshit': this.sparks(e.x, e.y, e.soft ? PAL.saffron : PAL.linen, e.soft ? 4 : 1); if (e.soft) this.strand(e.x, e.y, PAL.linen, { speed: 3 }); break;
           case 'keeperdown': {
-            const cols = this.paletteOf(C.KEEPERS[sim.stageInfo && C.PANELS[sim.panel].keeper].sprite);
+            const cols = this.paletteOf(e.sprite);
             for (let i = 0; i < 5; i++) this.unravel(e.x + (Math.random() - 0.5) * 5, e.y + (Math.random() - 0.5) * 3, cols, 30, 1.6);
             this.loop(e.x, e.y, 7, PAL.glare); this.loop(e.x, e.y, 4, PAL.saffron); this.sparks(e.x, e.y, PAL.glare, 40); this.shake = 0.7;
             break;
@@ -376,9 +376,9 @@
       if (!this.bossGroup || this.bossGroup.userData.id !== b.id) {
         if (this.bossGroup) this.scene.remove(this.bossGroup);
         const g = new T.Group(), mat = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, emissive: new T.Color(PAL.glare), emissiveIntensity: 0 });
-        const body = this.chart(b.def.sprite, b.def.cell, b.id === 'unraveller', mat); g.add(body);
+        const body = this.chart(b.def.sprite, b.def.cell, !!b.def.noWings, mat); g.add(body);
         g.userData = { id: b.id, body, mat, rings: [] };
-        for (const s of b.def.soft) { const ring = new T.Mesh(new T.TorusGeometry(s.r, 0.045, 5, 30), this.flat(PAL.saffron, { emissive: new T.Color(PAL.saffron), emissiveIntensity: 0.6 })); ring.position.set(s.x, b.id === 'tinea' ? -1.3 : b.id === 'atlas' ? 0.4 : -1.7, 0.9); g.add(ring); g.userData.rings.push(ring); }
+        for (const s of b.def.soft) { const ring = new T.Mesh(new T.TorusGeometry(s.r, 0.045, 5, 30), this.flat(PAL.saffron, { emissive: new T.Color(PAL.saffron), emissiveIntensity: 0.6 })); ring.position.set(s.x, b.def.softY, 0.9); g.add(ring); g.userData.rings.push(ring); }
         this.scene.add(g); this.bossGroup = g;
       }
       const g = this.bossGroup, u = g.userData;
@@ -425,10 +425,20 @@
       });
       this.syncSet(this.views.nets, sim.nets, n => this.makeNet(n), (g, n) => { g.position.y = n.y; });
       this.syncBoss(sim, dt);
+      this.syncSamplerPath(sim);
       this.updateFx(dt);
       this.shake = Math.max(0, this.shake - dt * 2.2);
       const k = this.shake * this.shake * 0.5; this.placeCamera((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
       this.gl.render(this.scene, this.camera);
+    }
+    syncSamplerPath(sim) {   // the dotted figure the Sampler's moths trace
+      const T = this.T, want = sim.sampler ? sim.sampler.pattern : null;
+      if (this.pathGroup && this.pathGroup.userData.pattern !== want) { this.scene.remove(this.pathGroup); this.pathGroup = null; }
+      if (want && !this.pathGroup) {
+        const g = new T.Group(), geo = this.shared('pathdot', () => new T.CircleGeometry(0.055, 8)), mat = new T.MeshBasicMaterial({ color: new T.Color(PAL.linen), transparent: true, opacity: 0.38 });
+        for (let i = 0; i < 150; i++) { const p = sim.pathPoint(want, i / 150), d = new T.Mesh(geo, mat); d.position.set(p.x, p.y, 0.04); g.add(d); }
+        g.userData.pattern = want; this.scene.add(g); this.pathGroup = g;
+      }
     }
     idle(dt) {   // behind menus: just the cloth and any settling thread
       this.time += dt; this.playerGroup.visible = false; for (const t of this.tail) t.visible = false;
@@ -438,6 +448,7 @@
       for (const k in this.views) { for (const v of this.views[k].values()) this.scene.remove(v.obj); this.views[k].clear(); }
       this.scene.children.filter(c => c.userData && c.userData.keep !== undefined).forEach(c => this.scene.remove(c));
       if (this.bossGroup) { this.scene.remove(this.bossGroup); this.bossGroup = null; }
+      if (this.pathGroup) { this.scene.remove(this.pathGroup); this.pathGroup = null; }
     }
     setShadows(on) { this.gl.shadowMap.enabled = on; this.scene.traverse(o => { if (o.material) o.material.needsUpdate = true; }); }
   }

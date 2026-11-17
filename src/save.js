@@ -10,7 +10,7 @@
 
   function freshProfile() {
     return {
-      v: 1,
+      v: 1, mender: 'Mender',
       dust: 0, silk: 0,
       needle: 'sharps', needles: { sharps: true },
       thread: 'running', thread2: null, threads: { running: 1 },   // id -> weight (1..3)
@@ -19,7 +19,7 @@
       tray: [],                    // [{id, n}] up to TUNING.traySlots
       charts: {},                  // blueprint id -> true
       codex: { moths: {}, keepers: {} },
-      stats: { bestNight: 0, nights: 0, mended: 0 },
+      stats: { bestNight: 0, nights: 0, mended: 0, perfectSamplers: 0, longestDouble: 0 },
       settings: { sound: true, autofire: true, shadows: true }
     };
   }
@@ -32,22 +32,35 @@
     } catch (e) { return memoryBackend(); }
   }
 
+  /* Three pockets (save slots) plus the Ledger, which keeps every mender who ever flew, even unpicked pockets. */
+  const SLOTS = 3, LEDGER_MAX = 60;
+  const slotKey = i => 'string-theory.pocket.' + i + '.v1', LEDGER = 'string-theory.ledger.v1', LAST = 'string-theory.last';
   class SaveStore {
-    constructor(backend) { this.b = backend || (typeof window !== 'undefined' ? localBackend() : memoryBackend()); }
-    load() {
-      let p = null;
-      try { const t = this.b.get(KEY); if (t) p = JSON.parse(t); } catch (e) { p = null; }
+    constructor(backend) {
+      this.b = backend || (typeof window !== 'undefined' ? localBackend() : memoryBackend());
+      try { const old = this.b.get(KEY); if (old && !this.b.get(slotKey(0))) { this.b.set(slotKey(0), old); this.b.remove(KEY); } } catch (e) { /* nothing to migrate */ }
+    }
+    read(key) { try { const t = this.b.get(key); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+    load(i) {
+      const p = this.read(slotKey(i)); if (!p || p.v !== 1) return null;
       const f = freshProfile();
-      if (!p || p.v !== 1) return f;
-      // merge so new fields get defaults after an update
-      for (const k of Object.keys(f)) {
+      for (const k of Object.keys(f)) {   // merge so new fields get defaults after an update
         if (p[k] === undefined) p[k] = f[k];
         else if (f[k] && typeof f[k] === 'object' && !Array.isArray(f[k])) p[k] = Object.assign({}, f[k], p[k]);
       }
       return p;
     }
-    save(p) { try { this.b.set(KEY, JSON.stringify(p)); return true; } catch (e) { return false; } }
-    reset() { this.b.remove(KEY); return freshProfile(); }
+    slots() { const out = []; for (let i = 0; i < SLOTS; i++) out.push(this.load(i)); return out; }
+    create(i, name) { const p = freshProfile(); p.mender = String(name || 'Mender').trim().slice(0, 14) || 'Mender'; this.save(i, p); return p; }
+    save(i, p) { try { this.b.set(slotKey(i), JSON.stringify(p)); this.b.set(LAST, String(i)); return true; } catch (e) { return false; } }
+    unpick(i) { this.b.remove(slotKey(i)); }
+    copy(from, to) { const p = this.load(from); if (!p || this.load(to)) return false; p.mender = (p.mender + ' II').slice(0, 14); return this.save(to, p); }
+    last() { const n = parseInt(this.b.get(LAST), 10); return n >= 0 && n < SLOTS ? n : 0; }
+    ledger() { return this.read(LEDGER) || []; }
+    record(rec) {
+      const all = this.ledger(); all.push(rec); all.sort((a, b) => b.stitches - a.stitches);
+      try { this.b.set(LEDGER, JSON.stringify(all.slice(0, LEDGER_MAX))); } catch (e) { /* storage full: the Night still counts */ }
+    }
   }
 
   // ---------- shop rules (pure functions over the profile) ----------
@@ -171,7 +184,7 @@
     };
   }
 
-  ST.save = { SaveStore, freshProfile, memoryBackend, KEY };
+  ST.save = { SaveStore, freshProfile, memoryBackend, KEY, SLOTS };
   ST.shop = shop;
   ST.derive = derive;
 })(typeof window !== 'undefined' ? window.ST : globalThis.ST);

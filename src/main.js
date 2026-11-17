@@ -22,10 +22,55 @@
     lance: () => pluck(1400, 0.3, 'sawtooth', 0.05, 0.3), burst: () => pluck(120, 0.3, 'square', 0.06, 0.5), phase: () => pluck(98, 0.8, 'sawtooth', 0.09, 1.5)
   };
 
+  /* Recorded audio. Each entry names a file under audio/ and the prompt it should be generated from
+     (ElevenLabs sound effects / music). Files that are missing fall back to the synth plucks above,
+     so the game always has sound; drop the files in and they take over with no code change. */
+  const AUDIO = {
+    sfx: {
+      fire:   ['sfx/fire.mp3',   'Soft quick pluck of a taut cotton thread, short, dry, close-miked, 0.2 seconds'],
+      kill:   ['sfx/kill.mp3',   'Small fabric rip followed by a soft woolly puff, light and satisfying, 0.4 seconds'],
+      hit:    ['sfx/hit.mp3',    'Needle tapping through thick felt, muted thud, 0.15 seconds'],
+      dust:   ['sfx/coin.mp3',   'Tiny bright metallic button clink, single coin pickup, 0.2 seconds'],
+      silk:   ['sfx/gem.mp3',    'Gentle glassy chime with a silky shimmer tail, reward pickup, 0.8 seconds'],
+      hurt:   ['sfx/hurt.mp3',   'Thick yarn snapping under tension with a low thump, 0.5 seconds'],
+      snap:   ['sfx/gameover.mp3','A taut string breaking and whipping loose, then a low descending cello note, 2 seconds'],
+      charm:  ['sfx/powerup.mp3','Rising harp glissando, three bright notes, cheerful, 0.6 seconds'],
+      chart:  ['sfx/blueprint.mp3','Paper unfolding followed by a warm four-note music-box flourish, 1.2 seconds'],
+      buy:    ['sfx/buy.mp3',    'Wooden drawer sliding shut with a brass latch click and a soft coin jingle, 0.6 seconds'],
+      keeper: ['sfx/bossdown.mp3','Large tapestry tearing apart, heavy cloth collapsing, then a triumphant plucked chord, 2.5 seconds'],
+      lance:  ['sfx/laser.mp3',  'Metal wire drawn taut and released, bright zinging whip, 0.5 seconds'],
+      burst:  ['sfx/bomb.mp3',   'Muffled pop of a stuffed cushion bursting, soft debris, 0.6 seconds'],
+      phase:  ['sfx/bossphase.mp3','Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds']
+    },
+    music: {
+      menu:    ['music/menu.mp3',    'Calm night-time lullaby for plucked harp, music box and soft strings, slow 3/4, cosy and a little mysterious, seamless loop'],
+      hideout: ['music/hideout.mp3', 'Warm workshop tune: pizzicato strings, upright piano and soft hand percussion, relaxed mid-tempo, seamless loop'],
+      flight:  ['music/flight.mp3',  'Driving arcade shooter theme played on pizzicato strings, dulcimer and brushed drums with a retro synth bass, 140 bpm, upbeat and determined, seamless loop'],
+      bonus:   ['music/bonus.mp3',   'Playful fast waltz for music box, glockenspiel and pizzicato strings, bright and bouncy, seamless loop'],
+      boss:    ['music/boss.mp3',    'Tense boss battle theme: aggressive bowed cello ostinato, pounding toms, plucked strings and dark synth, 160 bpm, seamless loop']
+    }
+  };
+  const audio = { buf: {}, tried: false, track: null, src: null, gain: null, want: null };
+  function loadAudio() {
+    if (audio.tried || !ac || !window.fetch) return; audio.tried = true;
+    const all = Object.assign({}, AUDIO.sfx); for (const k in AUDIO.music) all['music:' + k] = AUDIO.music[k];
+    for (const k in all) fetch('audio/' + all[k][0]).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => ac.decodeAudioData(b)).then(d => { audio.buf[k] = d; if (audio.want === k.slice(6)) playMusic(audio.want, true); }).catch(() => { /* not generated yet: synth fallback */ });
+  }
+  function playSample(k, vol) { const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = audio.buf[k]; g.gain.value = vol; s.connect(g); g.connect(ac.destination); s.start(); }
+  function playMusic(name, force) {
+    audio.want = name; if (!ac) return;
+    if (audio.track === name && !force) return;
+    if (audio.src) { try { audio.src.stop(); } catch (e) { /* already stopped */ } audio.src = null; }
+    audio.track = name; const b = name && audio.buf['music:' + name]; if (!b) return;
+    const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = b; s.loop = true; g.gain.value = 0.35; s.connect(g); g.connect(ac.destination); s.start(); audio.src = s;
+  }
+  ST.AUDIO = AUDIO;
+
+
   class Game {
     constructor(THREE) {
       this.store = new ST.save.SaveStore();
-      this.profile = this.store.load();
+      this.slot = -1; this.profile = ST.save.freshProfile();
       this.ui = new ST.UI(this);
       this.canvas = document.getElementById('cloth');
       this.renderer = new ST.Renderer(this.canvas, THREE, { shadows: this.profile.settings.shadows });
@@ -36,20 +81,37 @@
       this.ui.title();
       requestAnimationFrame(t => this.loop(t));
     }
-    sfx(name) { if (this.profile.settings.sound && ac && SOUNDS[name]) SOUNDS[name](); }
-    saved() { this.store.save(this.profile); }
+    sfx(name) {
+      if (!this.profile.settings.sound || !ac) return;
+      if (audio.buf[name]) playSample(name, name === 'fire' ? 0.25 : 0.6); else if (SOUNDS[name]) SOUNDS[name]();
+    }
+    music() {   // pick the track for where the player is
+      const s = this.sim, st = this.state;
+      const t = !this.profile.settings.sound ? null : (st === 'flight' || st === 'paused' || st === 'tally') && s ? (s.boss ? 'boss' : s.sampler ? 'bonus' : 'flight') : (st === 'hem' || st === 'route') ? 'hideout' : 'menu';
+      playMusic(t);
+    }
+    saved() { if (this.slot >= 0) this.store.save(this.slot, this.profile); }
     applySettings() { this.renderer.setShadows(this.profile.settings.shadows); }
-    resetSave() { this.profile = this.store.reset(); this.saved(); }
+    openPocket(i, name) {
+      let p = this.store.load(i); if (!p) p = this.store.create(i, name);
+      this.slot = i; this.profile = p; this.saved(); this.applySettings(); this.toTitle();
+    }
+    closeBook() {   // a Night has ended: write it in the Ledger
+      const r = this.sim && this.sim.record; if (!r || this.sim.booked) return; this.sim.booked = true;
+      this.store.record({ mender: this.profile.mender, needle: r.needle, stitches: r.stitches, reached: r.reached, won: r.won, date: new Date().toISOString().slice(0, 10) });
+    }
 
     // ---------- flow ----------
-    toTitle() { this.state = 'title'; this.sim = null; this.midNight = false; this.ui.hudVisible(false); this.renderer.clear(); this.ui.title(); }
+    toTitle() { this.state = 'title'; this.sim = null; this.midNight = false; this.ui.hudVisible(false); this.renderer.clear(); if (this.slot < 0) this.ui.title(); else this.ui.menu(); }
+    toPockets() { this.state = 'title'; this.sim = null; this.ui.hudVisible(false); this.ui.pockets(); }
     openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; this.ui.hudVisible(false); this.ui.hem(); }
     beginNight() {
       this.sim = new ST.Sim(this.profile, (Date.now() & 0x7fffffff) || 1);
-      this.midNight = false; this.renderer.clear(); this.fly();
+      this.midNight = false; this.renderer.clear(); this.state = 'route'; this.ui.hudVisible(false); this.ui.route();
     }
+    flyPatch(id) { if (!this.sim) return; this.sim.setPatch(id); this.midNight = false; this.fly(); }
     fly() { this.sim.startStage(); this.state = 'flight'; this.ui.hide(); this.ui.hudVisible(true); this.acc = 0; this.pointer = null; this.pump(); this.ui.hud(this.sim); requestAnimationFrame(() => this.renderer.resize()); }
-    depart() { if (this.midNight && this.sim) { this.midNight = false; this.fly(); } else this.beginNight(); }
+    depart() { if (this.midNight && this.sim) { this.state = 'route'; this.ui.route(); } else this.beginNight(); }
     continueNight() {
       const res = this.sim && this.sim.result;
       if (!res || res.kind === 'snap' || res.last) { this.sim = null; this.renderer.clear(); this.openHem(false); return; }
@@ -59,13 +121,13 @@
     takePocket(id) { if (ST.shop.buyNotion(this.profile, id, null).ok) { this.sfx('buy'); this.saved(); this.ui.tally(this.sim.result, null); } }
     pause() { if (this.state === 'flight') { this.state = 'paused'; this.ui.pause(); } }
     resume() { if (this.state === 'paused') { this.state = 'flight'; this.ui.hide(); this.last = 0; } }
-    abandon() { if (this.sim) { if (this.sim.phase !== 'done') this.sim.closeNight(false); this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
+    abandon() { if (this.sim) { if (!this.sim.record) this.sim.closeNight(false); this.closeBook(); this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
     useNotion(i) { this.one.notion = i; }
     swap() { this.one.swap = true; }
 
     // ---------- input ----------
     bind() {
-      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); };
+      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); loadAudio(); };
       window.addEventListener('keydown', e => {
         wake();
         if (this.state !== 'flight' && this.state !== 'paused') return;
@@ -108,6 +170,7 @@
     loop(ts) {
       requestAnimationFrame(t => this.loop(t));
       const dt = this.last ? Math.min(0.1, (ts - this.last) / 1000) : STEP; this.last = ts; this.frame++;
+      if (this.frame % 20 === 0) this.music();
       if (this.state === 'flight' || (this.state === 'tally' && this.sim)) {
         const events = [];
         if (this.state === 'flight') {
@@ -129,30 +192,30 @@
       const ui = this.ui, sim = this.sim, r = this.renderer; let fired = false;
       for (const e of events || sim.events) {
         switch (e.t) {
-          case 'stage': ui.banner(e.keeper ? e.label : e.panelName + ' · ' + e.label, e.keeper ? e.panelName + ' · Keeper' : 'Stitch them down', 1800); if (e.keeper) this.sfx('phase'); break;
+          case 'stage': ui.banner(e.keeper ? e.label : e.panelName + ' · ' + e.label, e.keeper ? e.panelName + ' · Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); break;
           case 'fire': if (!fired) { fired = true; this.sfx('fire'); } break;
           case 'hit': case 'bosshit': case 'uncase': this.sfx('hit'); break;
           case 'kill': this.sfx('kill'); if (e.mult > 1 || e.pts >= 200) ui.floater(r.project(e.x, e.y), '+' + e.pts, e.mult > 1 ? 'hot' : ''); break;
           case 'dust': this.sfx('dust'); break;
-          case 'silk': this.sfx('silk'); ui.floater(r.project(sim.player.x, 2.6), '+' + e.v + ' Silk', 'silk'); break;
+          case 'silk': this.sfx('silk'); ui.floater(r.project(sim.player.x, 2.6), '+' + e.v + (e.v === 1 ? ' gem' : ' gems'), 'silk'); break;
           case 'charm': this.sfx('charm'); ui.toast(e.name, e.desc); break;
-          case 'chart': this.sfx('chart'); ui.toast('Chart found: ' + e.name, 'Unseals ' + e.unseals); break;
-          case 'packet': this.sfx('charm'); ui.toast('Notion packet', e.name); break;
+          case 'chart': this.sfx('chart'); ui.toast('Blueprint found', 'Unlocks ' + e.unseals + ' in the hideout'); break;
+          case 'packet': this.sfx('charm'); ui.toast('Item found', e.name); break;
           case 'notion': this.sfx('buy'); ui.toast(e.name, C.NOTIONS[e.id].desc); break;
-          case 'slip': this.sfx('charm'); ui.toast(e.why, 'The cocoon draw slips off.'); break;
-          case 'captured': this.sfx('hurt'); ui.toast('Cocoon draw', e.dual ? 'Your second needle is hauled away.' : 'A Spinner hauls your needle up. Stitch it down to win it back.'); break;
-          case 'double': this.sfx('chart'); ui.toast('Double stitch', 'Your needle drifts back. Both of you sewing.'); break;
-          case 'thimble': this.sfx('hit'); ui.toast('Thimble', 'It took the hit for you.'); break;
+          case 'slip': this.sfx('charm'); ui.toast(e.why, 'Capture beam blocked.'); break;
+          case 'captured': this.sfx('hurt'); ui.toast('Captured!', e.dual ? 'Your twin ship was taken.' : 'You lost a life. Destroy that Spinner to get the ship back as a twin.'); break;
+          case 'double': this.sfx('chart'); ui.toast('Twin ship', 'Ship rescued. Two ships, double fire, until one is hit.'); break;
+          case 'thimble': this.sfx('hit'); ui.toast('Thimble', 'Hit blocked.'); break;
           case 'hurt': case 'undouble': this.sfx('hurt'); break;
-          case 'spare': this.sfx('hurt'); ui.banner('Needle snapped', e.spares + (e.spares === 1 ? ' spare left' : ' spares left'), 1400); break;
-          case 'lastknot': this.sfx('chart'); ui.banner('Last Knot', 'The snap is caught', 1500); break;
+          case 'spare': this.sfx('hurt'); ui.banner('Life lost', e.spares + (e.spares === 1 ? ' life left' : ' lives left'), 1400); break;
+          case 'lastknot': this.sfx('chart'); ui.banner('Second Chance', 'You survive with 1 shield', 1500); break;
           case 'snap': this.sfx('snap'); break;
           case 'phase': this.sfx('phase'); ui.banner(e.tag, e.name + ' · Phase ' + e.phase, 1500); break;
-          case 'keeperdown': this.sfx('keeper'); ui.banner(e.name, 'Stitched down', 2000); break;
+          case 'keeperdown': this.sfx('keeper'); ui.banner(e.name, 'Boss defeated', 2000); break;
           case 'lance': this.sfx('lance'); break;
           case 'burst': this.sfx('burst'); break;
-          case 'stageclear': this.saved(); this.state = 'tally'; this.pocket = e.keeper ? null : this.rollPocket(); setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
-          case 'snapped': this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;
+          case 'stageclear': if (e.last) this.closeBook(); this.saved(); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
+          case 'snapped': this.closeBook(); this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;
         }
       }
     }

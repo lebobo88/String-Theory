@@ -12,6 +12,7 @@ for (const [k, s] of Object.entries(C.SPRITES)) {
   for (const r of s.rows) for (const ch of r) ok(ch === '.' || s.pal[ch], 'sprite palette: ' + k + ' ' + ch);
 }
 for (const m of Object.values(C.MOTHS)) ok(C.SPRITES[m.sprite], 'moth sprite ' + m.name);
+for (const pn of C.PANELS) { ok(C.KEEPERS[pn.keeper], 'panel keeper'); pn.patches.forEach(x => ok(C.PATCHES[x], 'patch ' + x)); ok(pn.rows.length === 2, 'two rows'); }
 for (const k of Object.values(C.KEEPERS)) { ok(C.SPRITES[k.sprite], 'keeper sprite'); k.charts.forEach(c => ok(C.CHARTS[c], 'keeper chart ' + c)); }
 for (const n of Object.keys(C.NEEDLES)) ok(C.SPRITES[n], 'needle sprite ' + n);
 for (const t of [C.THREADS, C.NEEDLES, C.NOTIONS]) for (const v of Object.values(t)) ok(!v.chart || C.CHARTS[v.chart], 'chart ref ' + v.name);
@@ -41,8 +42,13 @@ for (const c of Object.keys(C.CHARTS)) ok(unsealed.has(c), 'chart unseals someth
   S.buyNotion(p, 'thimble', visit); S.buyNotion(p, 'beeswax', visit);
   ok(S.notionState(p, 'chalk', visit).why === 'full' && S.notionState(p, 'thimble', visit).why === 'full', 'tray full');
   p.pattern.deep = true; ok(S.buyNotion(p, 'thimble', visit).ok && p.tray.find(s => s.id === 'thimble').n === 2, 'deep pockets');
-  const store = new ST.save.SaveStore(ST.save.memoryBackend()); store.save(p);
-  ok(JSON.stringify(store.load()) === JSON.stringify(p), 'save round trip');
+  const store = new ST.save.SaveStore(ST.save.memoryBackend()); store.save(1, p);
+  ok(JSON.stringify(store.load(1)) === JSON.stringify(p), 'save round trip');
+  ok(store.slots().filter(Boolean).length === 1 && store.last() === 1, 'one pocket filled');
+  ok(store.copy(1, 2) && store.load(2).dust === p.dust && !store.copy(1, 2), 'copy to empty only');
+  store.unpick(1); ok(store.load(1) === null && store.load(2), 'unpick');
+  store.record({ mender: 'A', stitches: 5 }); store.record({ mender: 'B', stitches: 9 }); ok(store.ledger()[0].mender === 'B', 'ledger sorted');
+  const b2 = ST.save.memoryBackend(); b2.set(ST.save.KEY, JSON.stringify(ST.save.freshProfile())); ok(new ST.save.SaveStore(b2).load(0), 'old single save migrates to pocket 1');
 }
 
 // --- a bot flies Nights ---
@@ -50,7 +56,7 @@ function fly(profile, seed, skill, log) {
   const sim = new ST.Sim(profile, seed);
   const seen = {}; let frames = 0, stages = 0, outcome = null;
   sim.startStage();
-  while (!outcome && frames < 60 * 60 * 40) {
+  while (!outcome && frames < 60 * 60 * 90) {
     frames++;
     // bot: dodge the nearest threat, otherwise line up under the lowest moth / soft spot
     const pl = sim.player; let tx = 0, danger = null, dd = 1e9;
@@ -67,7 +73,7 @@ function fly(profile, seed, skill, log) {
     sim.update(1 / 60, input);
     for (const ev of sim.events) {
       seen[ev.t] = (seen[ev.t] || 0) + 1;
-      if (ev.t === 'stageclear') { stages++; if (ev.last) outcome = 'won'; else { const nx = sim.advance(); ok(nx !== 'won', 'advance consistent'); sim.startStage(); } }
+      if (ev.t === 'stageclear') { stages++; if (ev.last) outcome = 'won'; else { const nx = sim.advance(); ok(nx !== 'won', 'advance consistent'); if (nx === 'hem') { const ps = C.PANELS[sim.panel].patches; sim.setPatch(ps[(seed + sim.panel) % ps.length]); } sim.startStage(); } }
       if (ev.t === 'snapped') outcome = 'snapped';
     }
     for (const e of sim.enemies) ok(Number.isFinite(e.x) && Number.isFinite(e.y), 'enemy position finite');
@@ -84,7 +90,7 @@ function fly(profile, seed, skill, log) {
 { // fresh profile, dodging bot
   const p = ST.save.freshProfile(); fly(p, 11, true, 'fresh / dodging:');
 }
-{ // every thread, every needle, tough needle: must be able to finish all 9 stages without errors
+{ // every thread, every needle, tough needle: must run a whole Night without errors
   for (const needle of Object.keys(C.NEEDLES)) for (const thread of Object.keys(C.THREADS)) {
     const p = ST.save.freshProfile();
     p.needles[needle] = true; p.needle = needle; p.threads[thread] = 3; p.thread = thread; p.threads.backstitch = 2; p.thread2 = 'backstitch';
@@ -98,17 +104,23 @@ function fly(profile, seed, skill, log) {
 }
 { // god-mode pass through all three Keepers to exercise every phase
   const p = ST.save.freshProfile();
-  const sim = new ST.Sim(p, 5); const seen = {}; let out = null, frames = 0;
+  const sim = new ST.Sim(p, 5); const seen = {}, samplers = []; let out = null, frames = 0, stages = 0;
   sim.startStage();
-  while (!out && frames++ < 60 * 60 * 60) {
+  while (!out && frames++ < 60 * 60 * 120) {
     sim.player.invuln = 1; sim.player.ply = 5;
     sim.update(1 / 60, { targetX: sim.boss ? sim.boss.x + sim.boss.def.soft[0].x : (sim.enemies[0] ? sim.enemies[0].x : 0), fire: true, notion: -1 });
-    for (const ev of sim.events) { seen[ev.t] = (seen[ev.t] || 0) + 1; if (ev.t === 'stageclear') { if (ev.last) out = 'won'; else { sim.advance(); sim.startStage(); } } }
+    for (const ev of sim.events) { seen[ev.t] = (seen[ev.t] || 0) + 1; if (ev.t === 'stageclear') { stages++; if (ev.sampler) samplers.push(ev.sampler); if (ev.last) out = 'won'; else { if (sim.advance() === 'hem') sim.setPatch(C.PANELS[sim.panel].patches.slice(-1)[0]); sim.startStage(); } } }
   }
-  ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 3, 'three Keepers stitched down');
+  ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 5, 'five Keepers stitched down');
+  ok(stages === 20, 'twenty rows on the chart'); ok(samplers.length === 5 && samplers.every(x => x.total === 40), 'five Samplers of 40');
+  ok(p.codex.keepers.greatlappet && p.codex.keepers.greatwick && seen.burn, 'stand-in Keepers fought');
   ok(seen.net && seen.strike && seen.glare && seen.phase >= 4, 'every Keeper phase seen');
   ok(p.charts.bp_herringbone && p.charts.bp_chain && p.charts.bp_beading, 'Keeper charts found');
-  ok(p.stats.mended === 1 && p.silk >= 28, 'night mended, silk banked');
+  ok(p.stats.mended === 1 && p.silk >= 40, 'night mended, silk banked');
+  ok(sim.record && sim.record.reached === 'Run completed', 'ledger record');
+  for (const pat of ['rosette', 'eight', 'wave']) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
+  const r0 = sim.pathPoint('rosette', 0); ok(Math.abs(r0.x - 4.72) < 0.01 && Math.abs(r0.y - 10.33) < 0.01, 'rosette starts at the right lobe tip');
+  console.log('samplers:', samplers.map(x => x.hit + '/' + x.total).join(' '), 'perfect', sim.perfectSamplers);
   console.log('god-mode:', { minutes: +(frames / 3600).toFixed(1), stitches: sim.stitches, dust: sim.nightDust, silk: sim.nightSilk, charts: sim.nightCharts });
 }
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
