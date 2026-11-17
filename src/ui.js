@@ -30,7 +30,7 @@
   class UI {
     constructor(ctl) {
       this.ctl = ctl; this.el = {};
-      for (const id of ['overlay', 'hudL', 'hudR', 'mtop', 'tray', 'banner', 'toasts', 'floaters', 'bossbar']) this.el[id] = document.getElementById(id);
+      for (const id of ['overlay', 'hudL', 'hudR', 'mtop', 'mfx', 'tray', 'banner', 'toasts', 'floaters', 'bossbar']) this.el[id] = document.getElementById(id);
       this.cache = {};
       this.el.overlay.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) this.act(b.dataset.act, b.dataset.arg); });
       this.el.tray.addEventListener('pointerdown', e => { const b = e.target.closest('[data-act]'); if (b) { e.preventDefault(); this.act(b.dataset.act, b.dataset.arg); } });
@@ -349,14 +349,19 @@
       let ply = '<div class="bobbin">'; for (let i = 0; i < d.ply; i++) ply += `<i class="${i < pl.ply ? (pl.ply === 1 && d.ply > 1 ? 'fray' : 'on') : ''}"></i>`; ply += '</div>';
       let pins = '<div class="cushion">'; for (let i = 0; i < sim.spares; i++) pins += '<i></i>'; pins += '</div>';
       const fx = Object.keys(sim.fx).filter(k => sim.fx[k] > 0).map(k => `<span class="fx" style="--c:${(C.CHARMS[k] || { color: PAL.saffron }).color}">${esc((C.CHARMS[k] || C.NOTIONS[k]).name)} <b class="mono">${Math.ceil(sim.fx[k])}</b></span>`).join('')
-        + (sim.armed.thimble ? '<span class="fx">Thimble: next hit blocked</span>' : '') + (sim.armed.pin ? '<span class="fx">Safety Pin: capture blocked</span>' : '') + (sim.armed.chalk ? `<span class="fx">Dive warnings: ${sim.armed.chalk}</span>` : '') + (pl.dual ? '<span class="fx" style="--c:#A82A33">Twin ship</span>' : '');
+        + (sim.armed.thimble ? '<span class="fx">Thimble<u>: next hit blocked</u></span>' : '') + (sim.armed.pin ? '<span class="fx">Safety Pin<u>: capture blocked</u></span>' : '') + (sim.armed.chalk ? `<span class="fx">Dive warnings: ${sim.armed.chalk}</span>` : '') + (pl.dual ? '<span class="fx" style="--c:#A82A33">Twin ship</span>' : '');
       this.set('hudR', `<div class="lab">Lives</div>${pins}<div class="mono">${sim.spares}</div>
         <div class="lab">Shield · ${pl.ply} of ${d.ply}${pl.ply === 1 && d.ply > 1 ? ' · low' : ''}</div>${ply}
         <div class="lab">Coins</div><div class="cur">${icon('dust', 30)}<b class="mono big">${num(p.dust)}</b></div>
         <div class="lab">Gems</div><div class="cur">${icon('silk', 36)}<b class="mono big">${num(p.silk)}</b></div>
         <div class="lab">Ship</div><div class="thread">${icon(p.needle, 22)}<div><b>${esc(C.NEEDLES[p.needle].name)}</b><span>${esc(C.NEEDLES[p.needle].trait)}</span></div></div>
         <div class="fxs">${fx}</div>`);
-      this.set('mtop', `<span class="score">${num(sim.stitches)}</span>${ply}<span class="mono">❖${sim.spares}</span>${dustTag(p.dust)}${silkTag(p.silk)}${sim.combo >= C.TUNING.comboStep ? `<span class="mcombo${pop}" style="${cvars}">×${mult.toFixed(1)}</span>` : ''}<span class="fxs">${fx}</span>`);
+      // phone HUD: one stitched panel above the cloth (lives and shield, score, coins and gems), power-ups in a row above the item slots
+      const info = sim.stageInfo(), lives = sim.spares > 4 ? icon(p.needle, 13) + `<b class="mono">\u00d7${sim.spares}</b>` : icon(p.needle, 13).repeat(sim.spares) || '<b class="mono dim">0</b>';
+      this.set('mtop', `<div class="mpanel"><div class="mcol l"><span class="mlab">Lives</span><span class="mlives">${lives}</span><span class="mlab">Shield</span>${ply}</div>
+        <div class="mcol c"><span class="mlab">${esc(info.panelName)} \u00b7 ${esc(info.label)}</span><span class="score">${num(sim.stitches)}</span><span class="mcombo${sim.combo >= C.TUNING.comboStep ? ' on' : ''}${pop}" style="${cvars}">Combo \u00d7${mult.toFixed(1)}</span></div>
+        <div class="mcol r">${dustTag(p.dust)}${silkTag(p.silk)}</div></div>`);
+      this.set('mfx', fx);
       const slots = [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('');
       this.set('tray', `<div class="lab">Items</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap weapon">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
       const b = sim.boss;
