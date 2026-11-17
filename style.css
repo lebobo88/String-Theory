@@ -146,7 +146,9 @@ h2.madder{color:var(--madder)}
   #mtop{display:flex;position:absolute;left:0;right:0;top:0;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;gap:10px;align-items:center;flex-wrap:wrap;background:linear-gradient(rgba(15,20,40,.85),transparent);pointer-events:none;visibility:hidden}
   body.flying #mtop{visibility:visible}
   #mtop .score{font-size:30px}#mtop .tag{height:24px;font-size:13px}#mtop .fxs{margin:0;flex-basis:100%}.mcombo{font-family:var(--display);font-size:26px;color:var(--saffron)}
-  #bossbar{top:calc(58px + env(safe-area-inset-top))}.bb b{font-size:24px}
+  #bossbar{top:calc(58px + env(safe-area-inset-top))}
+  #toasts{bottom:auto;top:calc(120px + env(safe-area-inset-top))}
+  .toast{padding:5px 10px}.toast span{display:none}.bb b{font-size:24px}
   .station{grid-template-columns:1fr}.hem{padding:14px}.sheet{padding:20px}
   .srow{grid-template-columns:1fr 1fr 1fr}.srow .eyebrow{grid-column:1/-1}
 }

@@ -10,4 +10,6 @@ html = html.replace(/<!-- build:js -->([\s\S]*?)<!-- \/build:js -->/, (_, block)
 });
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'index.html'), html);
+const v = path.join(root, 'vendor', 'three.module.min.js');
+if (fs.existsSync(v)) { fs.mkdirSync(path.join(root, 'dist', 'vendor'), { recursive: true }); fs.copyFileSync(v, path.join(root, 'dist', 'vendor', 'three.module.min.js')); }
 console.log('dist/index.html', (html.length / 1024).toFixed(0) + ' KB');

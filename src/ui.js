@@ -354,7 +354,7 @@
     toast(head, body) {
       const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<b>${esc(head)}</b><span>${esc(body || '')}</span>`;
       this.el.toasts.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100);
-      while (this.el.toasts.children.length > 4) this.el.toasts.firstChild.remove();
+      while (this.el.toasts.children.length > 3) this.el.toasts.firstChild.remove();
     }
     floater(pt, text, cls) {
       const f = document.createElement('span'); f.className = 'fl ' + (cls || ''); f.textContent = text; f.style.left = pt.x + 'px'; f.style.top = pt.y + 'px';

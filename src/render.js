@@ -96,9 +96,9 @@
       for (let i = 0; i < w; i += 6) { x.strokeStyle = i % 12 ? 'rgba(140,154,198,.05)' : 'rgba(0,0,0,.10)'; x.beginPath(); x.moveTo(i, 0); x.lineTo(i, h); x.stroke(); }
       for (let j = 0; j < h; j += 6) { x.strokeStyle = j % 12 ? 'rgba(140,154,198,.05)' : 'rgba(0,0,0,.10)'; x.beginPath(); x.moveTo(0, j); x.lineTo(w, j); x.stroke(); }
       // stars: every star is a hole in the cloth, glare showing through
-      for (let i = 0; i < 90; i++) {
-        const sx = r() * w, sy = r() * h, rad = 1.5 + r() * 3.5;
-        const gr = x.createRadialGradient(sx, sy, 0, sx, sy, rad * 5); gr.addColorStop(0, 'rgba(255,244,214,.55)'); gr.addColorStop(1, 'rgba(255,244,214,0)');
+      for (let i = 0; i < 48; i++) {
+        const sx = r() * w, sy = r() * h, rad = 1.2 + r() * 2.6;
+        const gr = x.createRadialGradient(sx, sy, 0, sx, sy, rad * 5); gr.addColorStop(0, 'rgba(255,244,214,.32)'); gr.addColorStop(1, 'rgba(255,244,214,0)');
         x.fillStyle = gr; x.beginPath(); x.arc(sx, sy, rad * 5, 0, 7); x.fill();
         x.fillStyle = PAL.glare; x.beginPath(); x.arc(sx, sy, rad, 0, 7); x.fill();
         x.strokeStyle = 'rgba(15,20,40,.8)'; x.lineWidth = 1; for (let k = 0; k < 5; k++) { const a = r() * 7; x.beginPath(); x.moveTo(sx + Math.cos(a) * rad, sy + Math.sin(a) * rad); x.lineTo(sx + Math.cos(a) * rad * 2.2, sy + Math.sin(a) * rad * 2.2); x.stroke(); }
@@ -167,7 +167,7 @@
     setNeedle(name) {
       if (name === this.needleName) return;
       if (this.needleA) { this.playerGroup.remove(this.needleA); this.playerGroup.remove(this.needleB); }
-      this.needleA = this.chart(name, 0.085, true); this.needleB = this.chart(name, 0.085, true);
+      this.needleA = this.chart(name, 0.1, true); this.needleB = this.chart(name, 0.1, true);
       this.playerGroup.add(this.needleA); this.playerGroup.add(this.needleB); this.needleName = name;
     }
     segment(mesh, a, b) {
@@ -299,7 +299,7 @@
     }
     makeMoth(e) {
       const T = this.T, g = new T.Group();
-      const body = this.chart(this.mothSprite(e), 0.075, e.type === 'looper'); g.add(body); g.userData.body = body;
+      const body = this.chart(this.mothSprite(e), 0.088, e.type === 'looper'); g.add(body); g.userData.body = body;
       if (e.type === 'spinner') {   // the cocoon draw: a fan of silk
         const geo = this.shared('cone', () => { const b = new T.BufferGeometry(); b.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, -1, -1, 0, 1, -1, 0], 3)); b.computeVertexNormals(); return b; });
         const cone = new T.Mesh(geo, new T.MeshBasicMaterial({ color: new T.Color(PAL.linen), transparent: true, opacity: 0.2, side: T.DoubleSide, depthWrite: false }));
@@ -311,7 +311,7 @@
     mothSprite(e) { return e.type === 'casebearer' && !e.cased ? 'casebearer_bare' : e.def.sprite; }
     updateMoth(g, e, dt, sim) {
       const u = g.userData, want = this.mothSprite(e);
-      if (u.body.userData.sprite !== want) { g.remove(u.body); u.body = this.chart(want, 0.075, false); g.add(u.body); }
+      if (u.body.userData.sprite !== want) { g.remove(u.body); u.body = this.chart(want, 0.088, false); g.add(u.body); }
       g.position.set(e.x, e.y, 0.35 + (e.state === 'form' ? 0 : 0.5));
       const diving = e.state === 'dive' || e.state === 'strafe' || e.state === 'coal';
       g.rotation.z = diving ? Math.PI + (e.vx || 0) * 0.12 : (e.type === 'looper' ? (e.dir > 0 ? 0 : Math.PI) : 0);
@@ -348,9 +348,9 @@
     }
     makeDrop(d) {
       const T = this.T;
-      if (d.kind === 'charm') { const mat = new T.MeshStandardMaterial({ vertexColors: true, color: new T.Color(C.CHARMS[d.charm].color), roughness: 0.8, emissive: new T.Color(C.CHARMS[d.charm].color), emissiveIntensity: 0.25 }); return this.chart('charm', 0.085, true, mat); }
+      if (d.kind === 'charm') { const mat = new T.MeshStandardMaterial({ vertexColors: true, color: new T.Color(C.CHARMS[d.charm].color), roughness: 0.8, emissive: new T.Color(C.CHARMS[d.charm].color), emissiveIntensity: 0.25 }); return this.chart('charm', 0.1, true, mat); }
       const name = d.kind === 'dust' ? 'dust' : d.kind === 'silk' ? 'silk' : d.kind === 'packet' ? 'packet' : 'chart';
-      return this.chart(name, d.kind === 'dust' ? 0.07 : d.kind === 'chart' ? 0.11 : 0.075, true);
+      return this.chart(name, d.kind === 'dust' ? 0.085 : d.kind === 'chart' ? 0.12 : 0.085, true);
     }
     makeHazard(h) {
       const T = this.T, g = new T.Group();
@@ -384,7 +384,7 @@
       const g = this.bossGroup, u = g.userData;
       g.position.set(b.x, b.y, 1.0);
       this.flapWings(u.body, Math.sin(this.time * 2.2) * 0.3 - 0.1);
-      u.mat.emissiveIntensity = b.flash > 0 ? 0.35 : 0;
+      u.mat.emissiveIntensity = b.flash > 0.05 ? 0.14 : 0;
       const open = !b.def.chews || b.open;
       for (const r of u.rings) { r.visible = open && !b.enter; r.rotation.z += dt * 1.5; r.scale.setScalar(1 + Math.sin(this.time * 6) * 0.08); }
       if (b.def.chews) g.scale.set(1, b.open ? 1.06 + Math.sin(this.time * 14) * 0.03 : 1, 1);

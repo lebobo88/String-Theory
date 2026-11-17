@@ -5,7 +5,7 @@ Look, vocabulary, palette, sprites, enemies and Keepers follow the MENDNIGHT UI/
 
 ## Play
 
-Open `dist/index.html` in a browser (it is one self-contained file; Three.js r170 loads from a CDN), or serve the repo root and open `index.html`.
+Serve the repo root (or `dist/`) with any static server and open `index.html`. Three.js r170 is vendored in `vendor/`, so it runs offline; opened straight from disk it falls back to a CDN.
 
 - Move: arrow keys or A/D, or drag on the cloth. Firing is automatic (toggle on the main menu).
 - Items: 1 2 3, or tap a slot. Swap weapon: Q (Chenille ship). Dash: Shift or double-tap (Between ship). Pause: Esc.
@@ -44,6 +44,7 @@ The 19 files have been generated in ElevenLabs (flow "String Theory game audio")
 | `test/sim.test.js` | Headless checks: content integrity, shop rules, save slots, bot-flown runs with every ship and weapon. |
 | `test/smoke.py` | Headless Chrome run of the interface and a full 20-wave run (Three.js stubbed). |
 | `tools/audio-list.js` | Regenerates `audio/PROMPTS.md`. |
+| `test/render.py` | Runs the real game in headless Chrome with software WebGL and saves screenshots. |
 
 ```
 node test/sim.test.js      # logic
