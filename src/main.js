@@ -27,27 +27,27 @@
      so the game always has sound; drop the files in and they take over with no code change. */
   const AUDIO = {
     sfx: {
-      fire:   ['sfx/fire.mp3',   'Soft quick pluck of a taut cotton thread, short, dry, close-miked, 0.2 seconds'],
-      kill:   ['sfx/kill.mp3',   'Small fabric rip followed by a soft woolly puff, light and satisfying, 0.4 seconds'],
-      hit:    ['sfx/hit.mp3',    'Needle tapping through thick felt, muted thud, 0.15 seconds'],
-      dust:   ['sfx/coin.mp3',   'Tiny bright metallic button clink, single coin pickup, 0.2 seconds'],
-      silk:   ['sfx/gem.mp3',    'Gentle glassy chime with a silky shimmer tail, reward pickup, 0.8 seconds'],
-      hurt:   ['sfx/hurt.mp3',   'Thick yarn snapping under tension with a low thump, 0.5 seconds'],
-      snap:   ['sfx/gameover.mp3','A taut string breaking and whipping loose, then a low descending cello note, 2 seconds'],
-      charm:  ['sfx/powerup.mp3','Rising harp glissando, three bright notes, cheerful, 0.6 seconds'],
-      chart:  ['sfx/blueprint.mp3','Paper unfolding followed by a warm four-note music-box flourish, 1.2 seconds'],
-      buy:    ['sfx/buy.mp3',    'Wooden drawer sliding shut with a brass latch click and a soft coin jingle, 0.6 seconds'],
-      keeper: ['sfx/bossdown.mp3','Large tapestry tearing apart, heavy cloth collapsing, then a triumphant plucked chord, 2.5 seconds'],
-      lance:  ['sfx/laser.mp3',  'Metal wire drawn taut and released, bright zinging whip, 0.5 seconds'],
-      burst:  ['sfx/bomb.mp3',   'Muffled pop of a stuffed cushion bursting, soft debris, 0.6 seconds'],
-      phase:  ['sfx/bossphase.mp3','Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds']
+      fire:   ['fire.mp3',   'Soft quick pluck of a taut cotton thread, short, dry, close-miked, 0.2 seconds'],
+      kill:   ['kill.mp3',   'Small fabric rip followed by a soft woolly puff, light and satisfying, 0.4 seconds'],
+      hit:    ['hit.mp3',    'Needle tapping through thick felt, muted thud, 0.15 seconds'],
+      dust:   ['coin.mp3',   'Tiny bright metallic button clink, single coin pickup, 0.2 seconds'],
+      silk:   ['gem.mp3',    'Gentle glassy chime with a silky shimmer tail, reward pickup, 0.8 seconds'],
+      hurt:   ['hurt.mp3',   'Thick yarn snapping under tension with a low thump, 0.5 seconds'],
+      snap:   ['gameover.mp3','A taut string breaking and whipping loose, then a low descending cello note, 2 seconds'],
+      charm:  ['powerup.mp3','Rising harp glissando, three bright notes, cheerful, 0.6 seconds'],
+      chart:  ['blueprint.mp3','Paper unfolding followed by a warm four-note music-box flourish, 1.2 seconds'],
+      buy:    ['buy.mp3',    'Wooden drawer sliding shut with a brass latch click and a soft coin jingle, 0.6 seconds'],
+      keeper: ['bossdown.mp3','Large tapestry tearing apart, heavy cloth collapsing, then a triumphant plucked chord, 2.5 seconds'],
+      lance:  ['laser.mp3',  'Metal wire drawn taut and released, bright zinging whip, 0.5 seconds'],
+      burst:  ['bomb.mp3',   'Muffled pop of a stuffed cushion bursting, soft debris, 0.6 seconds'],
+      phase:  ['bossphase.mp3','Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds']
     },
     music: {
-      menu:    ['music/menu.mp3',    'Calm night-time lullaby for plucked harp, music box and soft strings, slow 3/4, cosy and a little mysterious, seamless loop'],
-      hideout: ['music/hideout.mp3', 'Warm workshop tune: pizzicato strings, upright piano and soft hand percussion, relaxed mid-tempo, seamless loop'],
-      flight:  ['music/flight.mp3',  'Driving arcade shooter theme played on pizzicato strings, dulcimer and brushed drums with a retro synth bass, 140 bpm, upbeat and determined, seamless loop'],
-      bonus:   ['music/bonus.mp3',   'Playful fast waltz for music box, glockenspiel and pizzicato strings, bright and bouncy, seamless loop'],
-      boss:    ['music/boss.mp3',    'Tense boss battle theme: aggressive bowed cello ostinato, pounding toms, plucked strings and dark synth, 160 bpm, seamless loop']
+      menu:    ['music_menu.mp3',    'Calm night-time lullaby for plucked harp, music box and soft strings, slow 3/4, cosy and a little mysterious, seamless loop'],
+      hideout: ['music_hideout.mp3', 'Warm workshop tune: pizzicato strings, upright piano and soft hand percussion, relaxed mid-tempo, seamless loop'],
+      flight:  ['music_flight.mp3',  'Driving arcade shooter theme played on pizzicato strings, dulcimer and brushed drums with a retro synth bass, 140 bpm, upbeat and determined, seamless loop'],
+      bonus:   ['music_bonus.mp3',   'Playful fast waltz for music box, glockenspiel and pizzicato strings, bright and bouncy, seamless loop'],
+      boss:    ['music_boss.mp3',    'Tense boss battle theme: aggressive bowed cello ostinato, pounding toms, plucked strings and dark synth, 160 bpm, seamless loop']
     }
   };
   const audio = { buf: {}, tried: false, track: null, src: null, gain: null, want: null };
