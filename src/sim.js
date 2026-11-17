@@ -45,7 +45,6 @@
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
       const old = this.d.ply; this.d = ST.derive(this.p);
       this.player.ply = clamp(this.player.ply + (this.d.ply - old), 1, this.d.ply);
-      if (this.d.needle !== this.lastNeedle) { this.player.ply = this.d.ply; }
       this.lastNeedle = this.d.needle;
     }
     stageInfo() {

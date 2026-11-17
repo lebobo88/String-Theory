@@ -7,6 +7,7 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+  const STAT = { ply: 'Shield', pace: 'Speed', eye: 'Fire rate', point: 'Damage' };
 
   /* A counted chart as inline SVG cross-stitches, the way the art bible draws every icon. */
   function icon(name, px, tint) {
@@ -177,11 +178,11 @@
     // ---------- the Hem ----------
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
-      const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'permanent ship stats'], ['notions', 'Items', 'single use']];
-      if (!mid) tabs.push(['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'permanent bonuses']);
+      const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Ship upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use']];
+      tabs.push(['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'permanent bonuses']);
       tabs.push(['book', 'Collection', 'blueprints and enemies']);
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
-      const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared \u00b7 next: ${C.PANELS[c.sim.panel].name}. Ships and perks open between runs.` : 'Between runs \u00b7 everything you buy is saved';
+      const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared \u00b7 next: ${C.PANELS[c.sim.panel].name}` : 'Between runs \u00b7 everything you buy is saved';
       const body = this['st_' + this.tab]();
       this.show(`<div class="hem">
         <header><div><div class="eyebrow">${esc(sub)}</div><h2>Hideout</h2></div>
@@ -228,7 +229,7 @@
       const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
         return { id, name: t.name, icon: pips(lv, t.max), meta: lv >= t.max ? 'Maxed' : st.why === 'sealed' ? 'Level IV locked' : 'Next ' + dustTag(st.price) }; });
       const t = C.TEMPERS[sel], st = S.temperState(p, sel);
-      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => `<div><span>${k}</span>${pips(d.pips[k], 8)}</div>`).join('')}</div>`;
+      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => `<div><span>${STAT[k]}</span>${pips(d.pips[k], 8)}</div>`).join('')}</div>`;
       return this.list(items, sel) + this.detail({ kicker: 'Upgrade · permanent, applies to every ship', name: t.name + ' ' + ROMAN[Math.min(t.max, p.tempers[sel] + 1)], desc: t.desc + '.', extra: stats,
         state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''),
         buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="temper:${sel}">Upgrade · ${num(st.price)}</button>` : '',
@@ -251,7 +252,7 @@
       const items = ids.map(id => { const n = C.NEEDLES[id], st = S.needleState(p, id);
         return { id, name: n.name, icon: icon(id, 26), dim: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price) }; });
       const n = C.NEEDLES[sel], st = S.needleState(p, sel), base = C.NEEDLES.sharps;
-      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${k}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow">Compared with the starter ship</div>`;
+      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${STAT[k]}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow">Compared with the starter ship</div>`;
       let btn = st.ok ? `<button class="btn primary" data-act="buy" data-arg="needle:${sel}">Buy for ${st.price} gems</button>` : '';
       if (p.needles[sel] && p.needle !== sel) btn += `<button class="btn primary" data-act="takeup" data-arg="${sel}">Fly this ship</button>`;
       const sealed = st.why === 'sealed' ? `<p class="state sealed">${esc(n.name)} is locked until you find its blueprint. Dropped by: ${esc(C.CHARTS[n.chart].from)}.</p>` : '';

@@ -24,7 +24,7 @@ try:
             # a rich save so the Hem can be exercised
             pg.evaluate("""() => { const g = ST.game, p = g.profile; p.dust = 5000; p.silk = 900; Object.keys(ST.content.CHARTS).forEach(k => p.charts[k] = true); g.saved(); }""")
             pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem'); pg.screenshot(path=f'/tmp/st-{name}-hem.png')
-            for tab in ['Upgrades', 'Items', 'Ships', 'Perks', 'Collection', 'Weapons']:
+            for tab in ['Ship upgrades', 'Items', 'Ships', 'Perks', 'Collection', 'Weapons']:
                 pg.click(f'.tabb:has-text("{tab}")')
                 for i in range(pg.locator('.list .card, .node').count()):
                     pg.locator('.list .card, .node').nth(i).click()
@@ -64,6 +64,9 @@ try:
                     pg.click('[data-act=continue]')
                 elif st == 'hem':
                     if stages >= 20: break
+                    labels = pg.locator('.tabb b').all_inner_texts()
+                    assert labels == ['Weapons', 'Ship upgrades', 'Items', 'Ships', 'Perks', 'Collection'], f'all six hideout tabs mid-run: {labels}'
+                    assert pg.evaluate("[...document.querySelectorAll('.tabb')].every(t => { const r = t.getBoundingClientRect(), h = document.querySelector('.hem').getBoundingClientRect(); return r.left >= h.left && r.right <= h.right + 1; })"), 'every tab is inside the panel'
                     pg.click('text=Continue run')
                 elif st == 'route':
                     tiles = pg.locator('.ptile.open')
