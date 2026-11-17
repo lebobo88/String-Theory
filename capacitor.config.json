@@ -1,0 +1,7 @@
+{
+  "appId": "com.robleemedia.stringtheory",
+  "appName": "String Theory",
+  "webDir": "dist",
+  "backgroundColor": "#0F1428",
+  "android": { "backgroundColor": "#0F1428", "allowMixedContent": false }
+}

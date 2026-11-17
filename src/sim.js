@@ -28,12 +28,14 @@
       this.panel = 0; this.row = 0;               // row indexes C.STAGES: Row, Row, Sampler, Keeper
       this.route = []; this.perfectSamplers = 0; this.dualRun = 0;
       this.stitches = 0; this.nightDust = 0; this.nightSilk = 0; this.nightCharts = [];
+      const want = (p.settings && p.settings.mode) || 'normal';
+      this.modeId = ST.modeUnlocked(p, want) ? want : 'normal'; this.mode = C.MODES[this.modeId];
       this.d = ST.derive(p);
       this.spares = T.spares + (p.pattern.sparepin ? 1 : 0);
       this.lastKnot = !!p.pattern.lastknot;
       this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, fireT: 0, charge: 0, dashT: 0, dashCd: 0, dashDir: 0 };
-      this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0 };
-      this.armed = { thimble: false, pin: false, chalk: 0 };
+      this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0, homing: 0, drone: 0 };
+      this.armed = { thimble: !!p.pattern.headstart, pin: false, chalk: 0 };
       this.combo = 0; this.comboT = 0; this.bestCombo = 0;
       this.phase = 'idle';
       this.clearField();
@@ -57,9 +59,15 @@
     patchId() { return this.route[this.panel] || C.PANELS[this.panel].patches[0]; }
     setPatch(id) { if (C.PANELS[this.panel].patches.indexOf(id) >= 0) this.route[this.panel] = id; }
     mods() { return C.PATCHES[this.patchId()].mods || {}; }
+    hpMul() { return (1 + T.stageHp * this.panel) * this.mode.hp * (this.mods().hp || 1); }
+    speedMul() { return (1 + T.stageSpeed * this.panel) * this.mode.speed; }
+    shotMul() { return (1 + T.stageShot * this.panel) * this.mode.fire * (this.mods().shotSpeed || 1); }
+    get droneOn() { return this.d.drone || this.fx.drone > 0; }
     rowSpec() {
       const base = C.PANELS[this.panel].rows[this.row], m = this.mods(), sp = Object.assign({}, base);
       if (m.crowd) { sp.spinners = 4; sp.mids = Math.min(10, sp.mids + 2); sp.nibs = 10; sp.diveEvery *= 0.85; }
+      if (m.thin) { sp.mids = Math.max(4, sp.mids - 2); sp.nibs = Math.max(6, sp.nibs - 2); }
+      sp.diveEvery /= this.mode.fire; sp.fireEvery /= this.mode.fire;
       if (m.wicks) sp.wickEvery = Math.min(sp.wickEvery || 99, m.wicks);
       if (m.hawks) sp.hawks = (sp.hawks || 0) + m.hawks;
       return sp;
@@ -71,7 +79,8 @@
       const pd = C.PANELS[this.panel];
       this.stage = { stitches0: this.stitches, dust0: this.nightDust, silk0: this.nightSilk, hurt: false, best: 0, charts: [] };
       this.palmUsed = false;
-      if (this.p.pattern.mended && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
+      if (this.p.pattern.mended && this.row === 0 && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
+      if (this.d.padded) this.armed.thimble = true;
       this.skipMend = false;
       this.player.x = 0; this.player.invuln = 1.5; this.player.charge = 0;
       const kind = C.STAGES[this.row];
@@ -83,12 +92,13 @@
        at: 'stage' = about to play this stage, 'after' = this stage is cleared, 'hem' = in the hideout before this stage. */
     snapshot(at) {
       const pl = this.player;
-      return { at, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
+      return { at, mode: this.modeId, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
         nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, lastKnot: this.lastKnot,
         perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed) };
     }
     static restore(profile, snap) {
       const s = new Sim(profile, snap.seed || 1);
+      if (snap.mode && C.MODES[snap.mode]) { s.modeId = snap.mode; s.mode = C.MODES[snap.mode]; }
       for (const k of ['panel', 'row', 'stitches', 'nightDust', 'nightSilk', 'spares', 'lastKnot', 'perfectSamplers', 'bestCombo', 'dualRun']) if (snap[k] !== undefined) s[k] = snap[k];
       s.panel = Math.max(0, Math.min(C.PANELS.length - 1, s.panel | 0)); s.row = Math.max(0, Math.min(C.STAGES.length - 1, s.row | 0));
       s.route = (snap.route || []).slice(); s.nightCharts = (snap.nightCharts || []).slice();
@@ -107,7 +117,7 @@
     slotPos(e) { return { x: e.sx + Math.sin(this.t * 0.7) * 0.8, y: e.sy + Math.sin(this.t * 1.3 + e.sx) * 0.08 }; }
     spawn(type, o) {
       const def = C.MOTHS[type];
-      const e = Object.assign({ id: this.nextId++, type, def, hp: def.hp, r: def.r, x: 0, y: H + 2, state: 'form', t: 0, vx: 0,
+      const e = Object.assign({ id: this.nextId++, type, def, hp: def.hp * (o && o.state === 'trace' ? 1 : this.hpMul()), r: def.r, x: 0, y: H + 2, state: 'form', t: 0, vx: 0,
         slot: false, cased: !!def.cased, shotT: this.rr(0.4, 1.2), flap: this.rand() * 6, passes: 0 }, o);
       this.enemies.push(e); return e;
     }
@@ -117,8 +127,8 @@
       lay.forEach(([n, type], ri) => {
         for (let i = 0; i < n; i++) {
           let ty = type;
-          if (type === 'casebearer' && spec.lappetEvery && (++m % spec.lappetEvery) === 0) ty = 'lappet';
-          if (type === 'nibbler' && spec.wickEvery && (++nb % spec.wickEvery) === 0) ty = 'wick';
+          if (type === 'casebearer') { m++; if (spec.weevilEvery && m % spec.weevilEvery === 0) ty = 'weevil'; else if (spec.wormEvery && m % spec.wormEvery === 1) ty = 'silkworm'; else if (spec.lappetEvery && m % spec.lappetEvery === 0) ty = 'lappet'; }
+          if (type === 'nibbler') { nb++; if (spec.wickEvery && nb % spec.wickEvery === 0) ty = 'wick'; else if (spec.flyEvery && nb % spec.flyEvery === 2) ty = 'firefly'; }
           const sx = (i - (n - 1) / 2) * 1.2, sy = ROWS_Y[ri];
           const side = (i < n / 2) ? -1 : 1;
           this.spawn(ty, { slot: true, sx, sy, row: ri, state: 'enter', t: -(k * 0.07 + ri * 0.25),
@@ -147,12 +157,16 @@
         const along = (hz ? 4.72 : 3.78) * Math.sin(P * f), across = (hz ? 1.03 : 1.29) * Math.sin(2 * P * f);
         return k === 0 ? { x: along, y: cy + across } : k === 1 ? { x: -across, y: cy + along } : k === 2 ? { x: -along, y: cy - across } : { x: across, y: cy - along };
       }
+      if (name === 'spiral') { const k = u < 0.5 ? u * 2 : 2 - u * 2, r = 0.8 + 4.4 * k, a = k * P * 5 * (u < 0.5 ? 1 : -1); return { x: r * Math.cos(a), y: cy + r * 0.7 * Math.sin(a) }; }
+      if (name === 'heart') { const t = u * 2 * P; return { x: 0.3 * 16 * Math.pow(Math.sin(t), 3), y: cy + 0.8 + 0.3 * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) }; }
+      if (name === 'star') { const t = u * 2 * P, r = 3.2 + 1.9 * Math.cos(5 * t); return { x: r * Math.sin(t * 2), y: cy + r * 0.72 * Math.cos(t * 2) }; }
       if (name === 'eight') return { x: 5 * Math.sin(2 * P * u), y: cy + 3 * Math.sin(4 * P * u) };
       return { x: 5.5 * Math.cos(2 * P * u), y: cy + 2.4 * Math.sin(6 * P * u) };
     }
     buildKeeper(id) {
       const def = C.KEEPERS[id];
-      this.boss = { id, def, x: 0, y: H + 4, hp: def.hp, maxHp: def.hp, t: 0, phase: 1, enter: 2.2, a: 0, b: 0, c: 0, open: false, flash: 0 };
+      const hp = def.hp * this.mode.hp * (this.mods().hp || 1);
+      this.boss = { id, def, x: 0, y: H + 4, hp, maxHp: hp, t: 0, phase: 1, enter: 2.2, timers: [], open: false, flash: 0 };
       this.spec = { diveEvery: 99, fireEvery: 99 };
     }
 
@@ -169,7 +183,7 @@
       if (this.phase === 'intro') { this.phaseT -= dt; if (this.phaseT <= 0) this.phase = 'play'; }
       this.updatePlayer(dt, input);
       this.updateShots(dt);
-      this.updateEnemies(dt * slow, dt);
+      this.updateEnemies(dt * slow * this.speedMul(), dt);
       if (this.boss) this.updateBoss(dt * slow);
       this.updateEshots(dt * slow);
       this.updateHazards(dt);
@@ -202,7 +216,6 @@
       else if (input.targetX !== null && input.targetX !== undefined) {
         const dx = input.targetX - pl.x; pl.x += clamp(dx, -speed * dt, speed * dt);
       } else pl.x += (input.move || 0) * speed * dt;
-      if (this.boss && this.boss.id === 'unraveller' && this.boss.phase === 3 && !this.boss.enter) pl.x += Math.sign(this.boss.x - pl.x) * 1.5 * dt;
       const lim = HW - 0.5 - (pl.dual ? 0.45 : 0);
       pl.x = clamp(pl.x, -lim, lim);
 
@@ -229,27 +242,37 @@
     fire(thread, w) {
       const pl = this.player, d = this.d;
       const origins = pl.dual ? [-0.45, 0.45] : [0];
-      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0);
+      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0), home = d.homing || this.fx.homing > 0;
       const extras = (d.wide ? 1 : 0) + (this.fx.fan > 0 ? 1 : 0);
-      const add = (ox, o) => this.shots.push(Object.assign({ id: this.nextId++, x: pl.x + ox, y: PY + 0.7, vx: 0, vy: 17, dmg: d.dmg, pierce: basePierce, kind: thread, hit: null, t: 0 }, o));
+      const add = (ox, o) => this.shots.push(Object.assign({ id: this.nextId++, x: pl.x + ox, y: PY + 0.7, vx: 0, vy: 17, dmg: d.dmg, pierce: basePierce, kind: thread, hit: null, t: 0, home }, o));
       const ang = (deg, sp) => ({ vx: Math.sin(deg * Math.PI / 180) * sp, vy: Math.cos(deg * Math.PI / 180) * sp });
       let spread = 8;
       for (const ox of origins) {
         if (thread === 'running') add(ox, { pierce: basePierce + (w >= 3 ? 1 : 0) });
-        else if (thread === 'backstitch') { const n = w >= 3 ? 3 : 2; for (let i = 0; i < n; i++) add(ox + (i - (n - 1) / 2) * 0.34, {}); }
+        else if (thread === 'backstitch') { const n = w >= 3 ? 3 : 2; for (let i = 0; i < n; i++) add(ox + (i - (n - 1) / 2) * 0.34, { dmg: d.dmg * 0.8 }); }
         else if (thread === 'herringbone') {
           const n = w >= 3 ? 5 : 3, sp = w >= 3 ? 30 : 20; spread = sp;
-          for (let i = 0; i < n; i++) add(ox, Object.assign({ zig: 1, dmg: d.dmg * 0.8 }, ang((i / (n - 1) - 0.5) * sp, 15)));
+          for (let i = 0; i < n; i++) add(ox, Object.assign({ zig: 1, dmg: d.dmg * 0.7 }, ang((i / (n - 1) - 0.5) * sp, 15)));
         }
         else if (thread === 'chain') add(ox, { chain: w >= 2 ? 2 : 1, chainDmg: w >= 3 ? 1 : 0.6, vy: 15 });
-        else if (thread === 'knot') add(ox, { vy: 8, burst: w >= 2 ? 2.5 : 1.5, dmg: d.dmg * 1.6, r: 0.3 });
+        else if (thread === 'knot') add(ox, { vy: 8, burst: w >= 2 ? 2.5 : 1.5, dmg: d.dmg * 1.6, r: 0.3, home: false });
         else if (thread === 'couching') this.lance(pl.x + ox, w >= 3 ? 1.0 : 0.5, d.dmg * 3.2);
+        else if (thread === 'cross') {
+          spread = 50;
+          for (const a of [-25, 25]) add(ox, Object.assign({ bounce: w >= 2 ? 2 : 1, dmg: d.dmg * (w >= 2 ? 1.1 : 0.9), home: false }, ang(a, 15)));
+          if (w >= 3) add(ox, {});
+        }
+        else if (thread === 'satin') {
+          const n = w >= 2 ? 2 : 1;
+          for (let i = 0; i < n; i++) add(ox + (i - (n - 1) / 2) * 0.5, { zig: 1, t: this.t * 0.9 + i * 1.5, dmg: d.dmg * 0.42, vy: 19 });
+        }
         for (let k = 1; k <= extras; k++) {
           const a = spread / 2 + 9 * k;
           add(ox, Object.assign({ dmg: d.dmg * 0.6, kind: 'fan' }, ang(-a, 16)));
           add(ox, Object.assign({ dmg: d.dmg * 0.6, kind: 'fan' }, ang(a, 16)));
         }
       }
+      if (this.droneOn && thread !== 'couching') add((pl.x > 0 ? -1 : 1) * 0.95, { dmg: d.dmg * 0.7, kind: 'running', y: PY + 0.3 });
       this.emit('fire', { thread });
     }
     lance(x, halfW, dmg) {
@@ -265,7 +288,12 @@
         const s = ss[i]; s.t += dt;
         s.x += s.vx * dt; s.y += s.vy * dt;
         if (s.zig) s.x += Math.cos(s.t * 22) * 2.2 * dt;
-        let dead = s.y > H + 0.5 || Math.abs(s.x) > HW + 0.5;
+        if (s.bounce > 0 && Math.abs(s.x) > HW - 0.2) { s.vx = -s.vx; s.x = Math.sign(s.x) * (HW - 0.2); s.bounce--; }
+        if (s.home && this.enemies.length) {   // guided: lean toward the nearest enemy ahead
+          let best = null, bd = 30; for (const e of this.enemies) { if (e.y < s.y) continue; const dd = Math.abs(e.x - s.x) + (e.y - s.y) * 0.4; if (dd < bd) { bd = dd; best = e; } }
+          if (best) s.vx = clamp(s.vx + clamp((best.x - s.x) * 30, -40, 40) * dt, -9, 9);
+        }
+        let dead = s.y > H + 0.5 || Math.abs(s.x) > HW + 0.5 || (s.life && s.t > s.life);
         if (!dead) {
           const sr = s.r || 0.14;
           for (const e of this.enemies) {
@@ -332,16 +360,18 @@
       let pts = tracing ? C.SAMPLER.pts : diving ? def.ptsDive : def.pts;
       if (tracing && this.sampler) this.sampler.hit++;
       if (e.type === 'spinner' && diving && e.escorts && e.escorts.some(x => !x.dead)) pts = def.ptsEscort;
-      this.stitches += Math.round(pts * mult);
+      pts *= this.mode.pay; this.stitches += Math.round(pts * mult);
       this.p.codex.moths[e.type] = (this.p.codex.moths[e.type] || 0) + 1;
       this.emit('kill', { x: e.x, y: e.y, type: e.type, pts: Math.round(pts * mult), mult });
       // drops
-      const dust = Math.round(def.dust * (1 + (mult - 1) * 0.5) * (this.fx.gold > 0 ? 2 : 1) * (m.dust || 1));
+      const dust = Math.max(1, Math.round(def.dust * (1 + (mult - 1) * T.comboCoin) * (this.fx.gold > 0 ? 2 : 1) * (m.dust || 1) * this.mode.pay));
+      const luck = 1 + 0.2 * (this.p.tempers.luck || 0);
       this.dropDust(e.x, e.y, dust);
-      if (def.silk) this.drop('silk', e.x, e.y, { v: def.silk });
+      if (def.silk && (m.spinnerSilk || tracing || this.rand() < (def.silkChance || 1))) this.drop('silk', e.x, e.y, { v: def.silk });
+      if (def.bursts && !tracing) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.3; this.eshot('frass', e.x, e.y, Math.cos(a) * 4, Math.sin(a) * 4); }
       if (def.packet && this.rand() < def.packet) this.drop('packet', e.x, e.y, {});
-      else if (this.rand() < T.charmChance * (m.charms || 1)) this.drop('charm', e.x, e.y, { charm: this.pick(Object.keys(C.CHARMS)) });
-      if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1) * (m.charts || 1)) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
+      else if (this.rand() < T.charmChance * (m.charms || 1) * luck) this.drop('charm', e.x, e.y, { charm: this.pick(Object.keys(C.CHARMS)) });
+      if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1) * (m.charts || 1) * luck) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
       if (def.splits && !tracing) for (const s of [-1, 1]) this.spawn('nibbler', { x: e.x + s * 0.5, y: e.y, state: 'dive', vx: s * 2.5, passes: 1 });
       if (e.captive) { this.player.dual = true; this.emit('double', { x: e.x, y: e.y }); }
     }
@@ -393,7 +423,11 @@
             if (e.t >= 1) e.state = 'form';
             break;
           }
-          case 'form': { const s = this.slotPos(e); e.x = s.x; e.y = s.y; break; }
+          case 'form': {
+            const s = this.slotPos(e); e.x = s.x; e.y = s.y;
+            if (def.turret && playing) { e.shotT -= dt; if (e.shotT <= 0) { e.shotT = def.shotEvery * this.rr(1.6, 2.6); this.aim(e.x, e.y - 0.3, 5); } }
+            break;
+          }
           case 'trace': {      // Sampler: fly in, trace the figure once, fly off. They never fire.
             e.t += dt;
             if (e.t < 0) break;
@@ -410,12 +444,13 @@
           }
           case 'dive': {
             e.t += dt;
-            e.vx = clamp(e.vx + clamp((pl.x - e.x) * 2.2, -7, 7) * dt, -3.6, 3.6);
+            if (!def.charge) e.vx = clamp(e.vx + clamp((pl.x - e.x) * 2.2, -7, 7) * dt, -3.6, 3.6);
+            else e.vx = e.t < 0.5 ? clamp((pl.x - e.x) * 5, -9, 9) : 0;
             e.x += (e.vx + Math.sin(e.t * def.wob) * def.wobAmp) * dt;
             e.y -= def.diveSpeed * dt;
             e.x = clamp(e.x, -HW + 0.4, HW - 0.4);
             e.shotT -= dt;
-            if (e.shotT <= 0 && e.y > 5 && playing) { e.shotT = def.shotEvery; this.eshot(e.type === 'spinner' ? 'silk' : 'frass', e.x, e.y - 0.3, 0, -6.2); }
+            if (e.shotT <= 0 && e.y > 5 && playing) { e.shotT = def.shotEvery; if (this.panel >= 2 && e.type !== 'spinner') this.aim(e.x, e.y - 0.3, 6); else this.eshot(e.type === 'spinner' ? 'silk' : 'frass', e.x, e.y - 0.3, 0, -6.2); }
             if (e.y < -1) {
               if (e.slot) { e.y = H + 1; e.state = 'return'; }
               else if (e.passes-- > 0) { e.y = H + 1; e.x = this.rr(-5, 5); }
@@ -500,7 +535,8 @@
       this.loseSpare();
     }
 
-    eshot(kind, x, y, vx, vy, o) { this.eshots.push(Object.assign({ id: this.nextId++, kind, x, y, vx, vy, t: 0, r: kind === 'snake' ? 0.5 : kind === 'knot' ? 0.3 : 0.17 }, o)); }
+    aim(x, y, speed) { const dx = this.player.x - x, dy = PY - y, dd = Math.hypot(dx, dy) || 1; this.eshot('bead', x, y, dx / dd * speed, dy / dd * speed); }
+    eshot(kind, x, y, vx, vy, o) { if (kind !== 'knot') { const k = this.shotMul(); vx *= k; vy *= k; } this.eshots.push(Object.assign({ id: this.nextId++, kind, x, y, vx, vy, t: 0, r: kind === 'snake' ? 0.5 : kind === 'knot' ? 0.3 : 0.17 }, o)); }
     updateEshots(dt) {
       const playing = this.phase === 'play';
       for (let i = this.eshots.length - 1; i >= 0; i--) {
@@ -584,7 +620,12 @@
       const c = C.CHARMS[id], pl = this.player;
       if (id === 'egg') { if (pl.ply < this.d.ply) pl.ply++; else { this.p.dust += 10; this.nightDust += 10; } }
       else if (id === 'twin') pl.dual = true;
-      else this.fx[id] = c.dur;
+      else if (id === 'bomb') {
+        this.emit('burst', { x: 0, y: H / 2, r: 9 }); this.eshots.length = 0; this.nets.length = 0;
+        for (const e of this.enemies.slice()) this.damageEnemy(e, 3, true);
+        if (this.boss && !this.boss.enter) this.damageBoss(25, this.boss.x, true);
+      }
+      else this.fx[id] = c.dur * (this.p.pattern.overtime ? 1.3 : 1);
       this.emit('charm', { id, name: c.name, desc: c.desc });
     }
 
@@ -599,6 +640,8 @@
       else if (id === 'beeswax') this.fx.beeswax = 10;
       else if (id === 'dish') this.fx.dish = 12;
       else if (id === 'button') this.spares++;
+      else if (id === 'patch') { if (pl.ply >= this.d.ply) return false; pl.ply = this.d.ply; }
+      else if (id === 'drone') this.fx.drone = 25;
       else if (id === 'shears') { this.eshots.length = 0; this.nets.length = 0; this.hazards = this.hazards.filter(h => h.kind === 'burn'); }
       else if (id === 'ripper') {
         if (this.boss && !this.boss.enter) this.damageBoss(14, this.boss.x + this.boss.def.soft[0].x, true);
@@ -616,7 +659,7 @@
       const b = this.boss; if (!b || b.hp <= 0) return;
       const def = b.def;
       let soft = def.soft.some(s => Math.abs(x - (b.x + s.x)) < s.r);
-      let mul = soft ? 2 : 0.6;
+      let mul = soft ? 2 : (def.armour || 0.6);
       if (def.chews && !b.open) { mul = 0.3; soft = false; }
       if (force) { mul = 1; }
       b.hp -= dmg * mul; b.flash = 0.1;
@@ -625,11 +668,11 @@
     }
     killBoss() {
       const b = this.boss, def = b.def, p = this.p;
-      this.stitches += def.pts;
+      this.stitches += Math.round(def.pts * this.mode.pay);
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
       this.emit('keeperdown', { name: def.name, sprite: def.sprite, x: b.x, y: b.y });
-      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust / 3));
-      this.drop('silk', b.x, b.y, { v: def.silk + (this.mods().keeperSilk || 0) });
+      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay / 3));
+      this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay) });
       const open = def.charts.filter(id => !p.charts[id]);
       if (open.length) this.drop('chart', b.x, b.y - 1, { chart: open[0], keeper: true });
       for (const e of this.enemies.slice()) this.kill(e, true);
@@ -638,49 +681,42 @@
     updateBoss(dt) {
       const b = this.boss, def = b.def, pl = this.player;
       b.flash = Math.max(0, b.flash - dt);
-      if (b.enter > 0) { b.enter = Math.max(0, b.enter - dt); b.y = 14.2 + (b.enter / 2.2) * 6; return; }
+      if (b.enter > 0) { b.enter = Math.max(0, b.enter - dt); b.y = def.move[2] + (b.enter / 2.2) * 6; return; }
       if (this.phase !== 'play') return;
       b.t += dt;
-      const frac = b.hp / b.maxHp;
-      const ph = def.phases.length === 3 ? (frac > 0.66 ? 1 : frac > 0.33 ? 2 : 3) : (frac > 0.5 ? 1 : 2);
-      if (ph !== b.phase) { b.phase = ph; b.a = 1.2; b.b = 1.5; b.c = 2; this.emit('phase', { name: def.name, phase: ph, tag: def.phaseTag[ph - 1] }); }
-      b.a -= dt; b.b -= dt; b.c -= dt;
-      const nibs = this.enemies.length;
-      if (b.id === 'tinea') {
-        b.x = Math.sin(b.t * 0.6) * 3.6; b.y = 14.2 + Math.sin(b.t * 1.1) * 0.3;
-        if (b.a <= 0) { b.a = ph === 1 ? 2.6 : 4.2; if (nibs < 6) for (const s of [-1, 1]) this.spawn('nibbler', { x: b.x + s * 2.3, y: b.y - 0.5, state: 'dive', vx: s * 2, passes: 0 }); this.emit('shed'); }
-        if (b.b <= 0) { b.b = ph === 1 ? 1.5 : 2.1; this.eshot('silk', b.x, b.y - 2, 0, -4.6); }
-        if (ph === 2 && b.c <= 0) { b.c = 5; this.nets.push({ id: this.nextId++, y: b.y - 2.2, vy: -2.7, gapX: this.rr(-5.2, 5.2), gapW: 2.5 }); this.emit('net'); }
-      } else if (b.id === 'atlas') {
-        b.x = Math.sin(b.t * 0.5) * 2.6; b.y = 14.4 + Math.sin(b.t * 0.9) * 0.3;
-        if (b.a <= 0) {
-          b.a = ph === 1 ? 1.15 : 1.7;
-          for (const s of [-2.0, 2.0]) { const sx = b.x + s, sy = b.y - 0.4, dx = pl.x - sx, dy = PY - sy, dd = Math.hypot(dx, dy); this.eshot('bead', sx, sy, dx / dd * 6.6, dy / dd * 6.6); }
-        }
-        if (ph === 2 && b.b <= 0) {
-          b.b = 2.7;
+      const n = def.phases.length, ph = Math.min(n, 1 + Math.floor((1 - b.hp / b.maxHp) * n));
+      if (ph !== b.phase || !b.timers.length) {
+        if (ph !== b.phase) this.emit('phase', { name: def.name, phase: ph, tag: def.phaseTag[ph - 1] });
+        b.phase = ph; b.timers = def.attacks[ph - 1].map((a, i) => 1 + i * 0.6);
+      }
+      b.x = Math.sin(b.t * def.move[1]) * def.move[0]; b.y = def.move[2] + Math.sin(b.t * 1.1) * 0.3;
+      if (def.chews) { const open = (b.t % 5.5) > 3; if (open !== b.open) { b.open = open; this.emit('chew', { open }); } }
+      const fire = this.mode.fire, list = def.attacks[ph - 1], gun = b.y - def.halfH * 0.8;
+      for (let i = 0; i < list.length; i++) {
+        const [kind, every, opt] = list[i];
+        if (kind === 'pull') { pl.x += Math.sign(b.x - pl.x) * 1.5 * dt; continue; }
+        b.timers[i] -= dt; if (b.timers[i] > 0) continue;
+        b.timers[i] = every / fire;
+        if (kind === 'fan') for (let k = 0; k < opt; k++) { const a = (k / (opt - 1) - 0.5) * (0.25 * opt) + this.rr(-0.05, 0.05); this.eshot('frass', b.x, gun, Math.sin(a) * 5.2, -Math.cos(a) * 5.2); }
+        else if (kind === 'aimed') for (let k = 0; k < opt; k++) this.aim(b.x + (opt === 1 ? 0 : (k / (opt - 1) - 0.5) * def.halfW * 1.3), b.y - 0.4, 6.4);
+        else if (kind === 'ring') for (let k = 0; k < opt; k++) { const a = k / opt * Math.PI * 2 + b.t; this.eshot('silk', b.x, b.y, Math.cos(a) * 3.6, Math.sin(a) * 3.6 - 1.2); }
+        else if (kind === 'silk') this.eshot('silk', b.x + this.rr(-1.5, 1.5), gun, 0, -4.6);
+        else if (kind === 'net') { this.nets.push({ id: this.nextId++, y: gun, vy: -2.7 * Math.min(1.4, this.shotMul()), gapX: this.rr(-5.2, 5.2), gapW: 2.5 }); this.emit('net'); }
+        else if (kind === 'strike') {
           this.hazards.push({ id: this.nextId++, kind: 'strike', x: clamp(pl.x, -6, 6), w: 1.3, warn: 0.85, life: 0.3 });
-          this.hazards.push({ id: this.nextId++, kind: 'strike', x: clamp(-pl.x + this.rr(-1, 1), -6, 6), w: 1.3, warn: 1.15, life: 0.3 });
-          this.emit('strike');
+          this.hazards.push({ id: this.nextId++, kind: 'strike', x: clamp(-pl.x + this.rr(-1, 1), -6, 6), w: 1.3, warn: 1.15, life: 0.3 }); this.emit('strike');
         }
-      } else if (b.id === 'greatlappet') {
-        b.x = Math.sin(b.t * 0.7) * 4; b.y = 14.6 + Math.sin(b.t * 1.3) * 0.3;
-        if (b.a <= 0) { b.a = ph === 1 ? 1.7 : 2.2; for (let i = 0; i < 4; i++) { const a = (i / 3 - 0.5) * 0.9; this.eshot('frass', b.x, b.y - 1.4, Math.sin(a) * 5, -Math.cos(a) * 5); } }
-        if (ph === 2 && b.b <= 0) { b.b = 4.5; if (nibs < 6) for (const s of [-1, 1]) this.spawn('lappet', { x: b.x + s * 1.8, y: b.y - 0.4, state: 'dive', vx: s * 2, passes: 0 }); this.emit('shed'); }
-      } else if (b.id === 'greatwick') {
-        b.x = Math.sin(b.t * 0.55) * 3.4; b.y = 14.6 + Math.sin(b.t) * 0.25;
-        if (b.a <= 0) { b.a = ph === 1 ? 1.9 : 2.4; this.eshot('coal', clamp(pl.x + this.rr(-0.6, 0.6), -6, 6), b.y - 2, 0, -5.2); this.eshot('frass', b.x, b.y - 2, 0, -5.5); }
-        if (ph === 2 && b.b <= 0) { b.b = 3.2; if (nibs < 4) this.spawn('wick', { x: clamp(pl.x + this.rr(-3, 3), -6, 6), y: H + 1, state: 'coal' }); }
-      } else {
-        b.x = Math.sin(b.t * 0.4) * 2.2; b.y = 14.4;
-        const open = (b.t % 5.5) > 3; if (open !== b.open) { b.open = open; this.emit('chew', { open }); }
-        if (b.a <= 0) { b.a = ph === 3 ? 1.25 : 1.9; const n = ph === 1 ? 5 : 6; for (let i = 0; i < n; i++) { const a = (i / (n - 1) - 0.5) * 1.1 + this.rr(-0.06, 0.06); this.eshot('frass', b.x, b.y - 2, Math.sin(a) * 5.4, -Math.cos(a) * 5.4); } }
-        if (b.b <= 0) { b.b = 2.6; this.eshot('knot', this.rr(-6, 6), b.y - 2, 0, -1.8, { hang: this.rr(3, 6.5), life: 8 }); }
-        if (ph >= 2 && b.c <= 0) {
-          b.c = ph === 3 ? 4.2 : 3.3;
+        else if (kind === 'glare') {
           this.hazards.push({ id: this.nextId++, kind: 'glare', x: clamp(pl.x, -6, 6), w: 1.8, warn: 1.0, life: 1.2 });
-          this.hazards.push({ id: this.nextId++, kind: 'glare', x: this.rr(-6, 6), w: 1.8, warn: 1.0, life: 1.2 });
-          this.emit('glare');
+          this.hazards.push({ id: this.nextId++, kind: 'glare', x: this.rr(-6, 6), w: 1.8, warn: 1.0, life: 1.2 }); this.emit('glare');
+        }
+        else if (kind === 'coal') this.eshot('coal', clamp(pl.x + this.rr(-0.6, 0.6), -6, 6), gun, 0, -5.2);
+        else if (kind === 'knot') this.eshot('knot', this.rr(-6, 6), gun, 0, -1.8, { hang: this.rr(3, 6.5), life: 8 });
+        else if (kind === 'spawn' && this.enemies.length < 6) {
+          if (opt === 'wick') this.spawn('wick', { x: clamp(pl.x + this.rr(-3, 3), -6, 6), y: H + 1, state: 'coal' });
+          else if (opt === 'spinner' || opt === 'silkworm') this.spawn(opt, { x: this.rr(-5, 5), y: b.y - 1, state: 'dive', vx: 0, passes: 2 });
+          else for (const sd of [-1, 1]) this.spawn(opt, { x: b.x + sd * def.halfW * 0.8, y: b.y - 0.5, state: 'dive', vx: sd * 2, passes: 0, t: 0 });
+          this.emit('shed');
         }
       }
     }
@@ -719,9 +755,9 @@
     }
     closeNight(won) {
       const s = this.p.stats;
-      s.nights++; if (won) s.mended++;
+      s.nights++; if (won) { s.mended++; s['won_' + this.modeId] = (s['won_' + this.modeId] || 0) + 1; }
       this.newBest = this.stitches > s.bestNight; if (this.newBest) s.bestNight = this.stitches;
-      this.record = { needle: this.d.needle, stitches: this.stitches, reached: won ? 'Run completed' : this.stageInfo().reached, won };
+      this.record = { mode: this.modeId, needle: this.d.needle, stitches: this.stitches, reached: won ? 'Run completed' : this.stageInfo().reached, won };
     }
     nightSummary() { return { stitches: this.stitches, dust: this.nightDust, silk: this.nightSilk, bestCombo: this.bestCombo, charts: this.nightCharts.slice(), newBest: this.newBest }; }
   }

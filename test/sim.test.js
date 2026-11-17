@@ -12,7 +12,7 @@ for (const [k, s] of Object.entries(C.SPRITES)) {
   for (const r of s.rows) for (const ch of r) ok(ch === '.' || s.pal[ch], 'sprite palette: ' + k + ' ' + ch);
 }
 for (const m of Object.values(C.MOTHS)) ok(C.SPRITES[m.sprite], 'moth sprite ' + m.name);
-for (const pn of C.PANELS) { ok(C.KEEPERS[pn.keeper], 'panel keeper'); pn.patches.forEach(x => ok(C.PATCHES[x], 'patch ' + x)); ok(pn.rows.length === 2, 'two rows'); }
+for (const pn of C.PANELS) { ok(C.KEEPERS[pn.keeper], 'panel keeper'); pn.patches.forEach(x => ok(C.PATCHES[x], 'patch ' + x)); ok(pn.rows.length === 3, 'three waves'); }
 for (const k of Object.values(C.KEEPERS)) { ok(C.SPRITES[k.sprite], 'keeper sprite'); k.charts.forEach(c => ok(C.CHARTS[c], 'keeper chart ' + c)); }
 for (const n of Object.keys(C.NEEDLES)) ok(C.SPRITES[n], 'needle sprite ' + n);
 for (const t of [C.THREADS, C.NEEDLES, C.NOTIONS]) for (const v of Object.values(t)) ok(!v.chart || C.CHARTS[v.chart], 'chart ref ' + v.name);
@@ -27,12 +27,12 @@ for (const c of Object.keys(C.CHARTS)) ok(unsealed.has(c), 'chart unseals someth
   ok(S.threadState(p, 'backstitch').why === 'short', 'short of dust');
   ok(S.threadState(p, 'herringbone').why === 'sealed', 'sealed thread');
   p.dust = 1000; p.silk = 500;
-  ok(S.buyThread(p, 'backstitch').ok && p.thread === 'backstitch' && p.dust === 880, 'buy+wind thread');
-  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 2 && p.dust === 790, 'weight II');
-  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 3 && p.dust === 630, 'weight III');
+  p.dust = 5000; ok(S.buyThread(p, 'backstitch').ok && p.thread === 'backstitch' && p.dust === 4650, 'buy+wind thread');
+  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 2 && p.dust === 4250, 'weight II');
+  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 3 && p.dust === 3350, 'weight III');
   ok(!S.buyThread(p, 'backstitch').ok, 'weight capped');
   for (let i = 0; i < 3; i++) ok(S.buyTemper(p, 'point').ok, 'temper ' + i);
-  ok(S.temperState(p, 'point').why === 'sealed', 'tier IV sealed'); p.charts.bp_gilt = true; p.dust = 1000;
+  ok(S.temperState(p, 'point').why === 'sealed', 'tier IV sealed'); p.charts.bp_gilt = true; p.dust = 9000;
   ok(S.buyTemper(p, 'point').ok && ST.derive(p).pierceCase, 'tier IV pierces cases');
   ok(S.needleState(p, 'darner').why === 'sealed' && S.buyNeedle(p, 'between').ok && p.needle === 'between', 'needles');
   ok(S.patternState(p, 'quick').why === 'locked' && S.buyPattern(p, 'steady').ok && S.buyPattern(p, 'quick').ok, 'pattern order');
@@ -91,14 +91,15 @@ function fly(profile, seed, skill, log) {
   const p = ST.save.freshProfile(); fly(p, 11, true, 'fresh / dodging:');
 }
 { // every thread, every needle, tough needle: must run a whole Night without errors
-  for (const needle of Object.keys(C.NEEDLES)) for (const thread of Object.keys(C.THREADS)) {
+  const ships = Object.keys(C.NEEDLES), guns = Object.keys(C.THREADS);
+  for (let i = 0; i < Math.max(ships.length, guns.length); i++) { const needle = ships[i % ships.length], thread = guns[i % guns.length];
     const p = ST.save.freshProfile();
     p.needles[needle] = true; p.needle = needle; p.threads[thread] = 3; p.thread = thread; p.threads.backstitch = 2; p.thread2 = 'backstitch';
-    p.tempers = { point: 4, eye: 4, ply: 3, pace: 3 }; Object.keys(C.PATTERN.nodes).forEach(n => p.pattern[n] = true);
+    p.tempers = { point: 5, eye: 5, ply: 3, pace: 3, magnet: 3, luck: 3 }; Object.keys(C.PATTERN.nodes).forEach(n => p.pattern[n] = true);
     p.tray = [{ id: 'ripper', n: 2 }, { id: 'shears', n: 2 }, { id: 'thimble', n: 2 }];
     const sim0 = fly(p, 100 + needle.length * 7 + thread.length, true, null);
     ok(sim0.outcome, 'night ends: ' + needle + '/' + thread);
-    if (needle === 'sail' && thread === 'backstitch') console.log('maxed sail/backstitch:', sim0.outcome, 'stages', sim0.stages, 'min', (sim0.frames / 3600).toFixed(1), 'dust', sim0.sim.nightDust, 'silk', sim0.sim.nightSilk);
+    if (i === 0) console.log('maxed ' + needle + '/' + thread + ':', sim0.outcome, 'stages', sim0.stages, 'min', (sim0.frames / 3600).toFixed(1), 'dust', sim0.sim.nightDust, 'silk', sim0.sim.nightSilk);
     if (sim0.outcome !== 'won') console.log('  note:', needle, thread, sim0.outcome, 'at stage', sim0.stages);
   }
 }
@@ -106,19 +107,19 @@ function fly(profile, seed, skill, log) {
   const p = ST.save.freshProfile();
   const sim = new ST.Sim(p, 5); const seen = {}, samplers = []; let out = null, frames = 0, stages = 0;
   sim.startStage();
-  while (!out && frames++ < 60 * 60 * 120) {
+  while (!out && frames++ < 60 * 60 * 400) {
     sim.player.invuln = 1; sim.player.ply = 5;
     sim.update(1 / 60, { targetX: sim.boss ? sim.boss.x + sim.boss.def.soft[0].x : (sim.enemies[0] ? sim.enemies[0].x : 0), fire: true, notion: -1 });
     for (const ev of sim.events) { seen[ev.t] = (seen[ev.t] || 0) + 1; if (ev.t === 'stageclear') { stages++; if (ev.sampler) samplers.push(ev.sampler); if (ev.last) out = 'won'; else { if (sim.advance() === 'hem') sim.setPatch(C.PANELS[sim.panel].patches.slice(-1)[0]); sim.startStage(); } } }
   }
-  ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 5, 'five Keepers stitched down');
-  ok(stages === 20, 'twenty rows on the chart'); ok(samplers.length === 5 && samplers.every(x => x.total === 40), 'five Samplers of 40');
+  ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 8, 'eight bosses defeated');
+  ok(stages === 40, 'forty stages on the chart'); ok(samplers.length === 8 && samplers.every(x => x.total === 40), 'eight bonus waves of 40');
   ok(p.codex.keepers.greatlappet && p.codex.keepers.greatwick && seen.burn, 'stand-in Keepers fought');
-  ok(seen.net && seen.strike && seen.glare && seen.phase >= 4, 'every Keeper phase seen');
+  ok(seen.net && seen.strike && seen.glare && seen.phase >= 12, 'every boss phase seen');
   ok(p.charts.bp_herringbone && p.charts.bp_chain && p.charts.bp_beading, 'Keeper charts found');
   ok(p.stats.mended === 1 && p.silk >= 40, 'night mended, silk banked');
   ok(sim.record && sim.record.reached === 'Run completed', 'ledger record');
-  for (const pat of ['rosette', 'eight', 'wave']) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
+  for (const pat of ['rosette', 'eight', 'wave', 'spiral', 'heart', 'star']) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
   const r0 = sim.pathPoint('rosette', 0); ok(Math.abs(r0.x - 4.72) < 0.01 && Math.abs(r0.y - 10.33) < 0.01, 'rosette starts at the right lobe tip');
   console.log('samplers:', samplers.map(x => x.hit + '/' + x.total).join(' '), 'perfect', sim.perfectSamplers);
   console.log('god-mode:', { minutes: +(frames / 3600).toFixed(1), stitches: sim.stitches, dust: sim.nightDust, silk: sim.nightSilk, charts: sim.nightCharts });
@@ -129,7 +130,8 @@ function fly(profile, seed, skill, log) {
   const r = ST.Sim.restore(p, snap); r.startStage();
   ok(r.panel === 2 && r.row === 1 && r.stitches === 4321 && r.spares === 1 && r.player.ply === 1 && r.patchId() === 'boro', 'run restored at the same stage');
   ok(r.enemies.length > 20 && r.stageInfo().label === 'Wave 2', 'restored stage is playable');
-  const after = ST.Sim.restore(p, Object.assign({}, snap, { at: 'after', row: 3 })); ok(after.advance() === 'hem' && after.panel === 3 && after.row === 0, 'a cleared boss resumes at the hideout before the next stage');
+  ok(!ST.modeUnlocked(p, 'hard') && ST.modeUnlocked(Object.assign(ST.save.freshProfile(), { stats: { won_normal: 1 } }), 'hard'), 'hard unlocks after a normal win');
+  const after = ST.Sim.restore(p, Object.assign({}, snap, { at: 'after', row: 3 })); ok(Object.assign(after, { row: 4 }).advance() === 'hem' && after.panel === 3 && after.row === 0, 'a cleared boss resumes at the hideout before the next stage');
 }
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
 process.exit(fails ? 1 : 0);

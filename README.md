@@ -14,7 +14,8 @@ A run in progress is saved at the start of every wave and in the hideout: close 
 
 ## The loop
 
-A run is five stages. Every stage is Wave 1, Wave 2, a bonus wave (40 moths fly a pattern and never shoot back), then a boss.
+A run is eight stages. Every stage is three waves, a bonus wave (40 moths fly a pattern and never shoot back), then a boss.
+Three difficulty modes; Hard and Nightmare unlock by finishing a run.
 After each stage you visit the hideout to shop, then pick a route to the next stage on the route map; routes carry bonuses and risks.
 Enemies drop coins, gems, power-ups, items and blueprints. Coins buy weapons, weapon levels, upgrades and single-use items;
 gems buy ships and permanent perks; blueprints unlock new things in the shop. There are three save slots and a records screen.
@@ -25,6 +26,11 @@ The code keeps the art bible's internal names (`dust`, `silk`, `needle`, `thread
 Night = run, Panel = stage, Row = wave, Sampler = bonus wave, Keeper = boss, Needle = ship, Spares = lives, Ply = shield,
 Dust = coins, Silk = gems, Thread = weapon, Temper = upgrade, Notion = item, Charm = power-up, Pattern = perks, Chart = blueprint,
 Hem = hideout, Pocket = save slot, Ledger = records, Patch = route.
+
+## Android
+
+The `android/` folder is a Capacitor project that wraps the web build. The GitHub Actions workflow `Android APK` builds a debug-signed APK on every push to `main`
+and publishes it on the `apk` branch as `string-theory.apk`. To build locally: `npm ci && node tools/build.js && npx cap sync android && cd android && ./gradlew assembleDebug`.
 
 ## Audio
 
@@ -74,6 +80,7 @@ for a few hundred bytes of state, so the web build does not; the Rust and Androi
 
 - Name: String Theory instead of Mendnight.
 - Wording: the owner asked for plain language, so the bible's lexicon is not shown to players (see the glossary above). Sprites, palette, type and layout are unchanged.
+- Stages 6 to 8, their routes and bosses (The Carpet Beetle, The Silk Empress, The Moth King), three enemies (Weevil, Firefly, Silkworm), three ships, two weapons, and the difficulty modes are new, not from the bible.
 - Bosses: the bible draws three (Mother Tinea on stage 2, The Atlas on 4, The Unraveller on 5) but its progress chart has a boss on every stage.
   Stages 1 and 3 use stand-ins built from existing enemy charts: The Great Lappet and The Great Wick. They need real designs.
 - Routes: only Old Darn has a description and bonus in the bible. The other seven routes' text and bonuses are new.

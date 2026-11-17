@@ -68,6 +68,7 @@
         case 'resume': c.resume(); break;
         case 'abandon': c.abandon(); break;
         case 'toggle': this.p.settings[arg] = !this.p.settings[arg]; c.saved(); c.applySettings(); if (c.state === 'paused') this.pause(); else this.menu(); break;
+        case 'mode': { const ids = Object.keys(C.MODES).filter(k => ST.modeUnlocked(this.p, k)), cur = ids.indexOf(this.p.settings.mode); this.p.settings.mode = ids[(cur + 1) % ids.length]; c.saved(); this.menu(); break; }
         case 'pockets': this.unpickArm = -1; c.toPockets(); break;
         case 'pk': this.pk = +arg; this.unpickArm = -1; this.pockets(); break;
         case 'open': { const inp = $('#mender', this.el.overlay); c.openPocket(this.pk, inp ? inp.value : ''); break; }
@@ -128,6 +129,7 @@
           <button class="chip" data-act="toggle" data-arg="sound">Sound: ${st.sound ? 'on' : 'off'}</button>
           <button class="chip" data-act="toggle" data-arg="autofire">Auto-fire: ${st.autofire ? 'on' : 'off'}</button>
           <button class="chip" data-act="toggle" data-arg="shadows">Shadows: ${st.shadows ? 'on' : 'off'}</button>
+          <button class="chip" data-act="mode">Difficulty: ${C.MODES[ST.modeUnlocked(p, st.mode) ? st.mode : 'normal'].name}${Object.keys(C.MODES).some(k => !ST.modeUnlocked(p, k)) ? ' (finish a run to unlock harder)' : ''}</button>
         </div></div>`, 'night');
     }
 
@@ -142,7 +144,7 @@
       this.show(`<div class="hem"><header><div><div class="eyebrow">${C.PANELS[cur].name} of ${C.PANELS.length}</div><h2>Route map</h2></div></header>
         <div class="routewrap"><div><div class="routemap">${cols}</div><div class="hemline">You visit the hideout after every stage</div></div>
         <div class="detail"><div class="eyebrow">${C.PANELS[cur].name} · ${opts.length > 1 ? 'choose your route' : 'only one route'}</div><h3>${esc(pt.name)}</h3><p>${esc(pt.desc)}</p>
-          <dl class="tally"><div><dt>Waves</dt><dd>Wave 1 · Wave 2 · Bonus wave · Boss</dd></div><div><dt>Boss</dt><dd>${esc(k.name)}</dd></div>${pt.mark ? `<div><dt class="mark">Bonus</dt><dd class="mark">${esc(pt.mark)}</dd></div>` : ''}</dl>
+          <dl class="tally"><div><dt>Waves</dt><dd>3 waves · Bonus wave · Boss</dd></div><div><dt>Boss</dt><dd>${esc(k.name)}</dd></div>${pt.mark ? `<div><dt class="mark">Bonus</dt><dd class="mark">${esc(pt.mark)}</dd></div>` : ''}</dl>
           <div class="buyrow"><button class="btn primary" data-act="fly" data-arg="${this.patchSel}" data-focus>Go</button></div></div></div></div>`, 'paper');
     }
 
@@ -151,7 +153,7 @@
       const c = this.ctl, f = this.ledgerFilter || 'all', p = this.p;
       const rows = c.store.ledger().filter(r => f === 'all' || r.needle === f).slice(0, 12);
       const tabs = [['all', 'All ships']].concat(Object.keys(C.NEEDLES).map(n => [n, C.NEEDLES[n].name]));
-      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}</td><td>${esc(r.date)}</td></tr>`).join('')
+      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
         : '<tr><td colspan="6" class="dim">No runs on record yet.</td></tr>';
       const marks = [['Perfect bonus waves', p.stats.perfectSamplers || 0]].concat(Object.keys(C.KEEPERS).map(id => [C.KEEPERS[id].name + ' defeated', p.codex.keepers[id] || 0]), [['Longest twin-ship streak', (p.stats.longestDouble || 0) + ' waves']]);
       this.show(`<div class="hem"><header><div><div class="eyebrow">High scores</div><h2>Records</h2></div></header>
@@ -170,7 +172,7 @@
           <div><b>Dash</b><span><kbd>Shift</kbd> or double-tap (Between ship only)</span></div>
           <div><b>Pause</b><span><kbd>Esc</kbd> or <kbd>P</kbd></span></div>
         </div>
-        <p>A run is five stages. Each stage is two waves of enemies, a bonus wave where the moths fly a pattern and never shoot back, and then a boss. After every stage you visit the hideout to shop, then pick your route to the next stage.</p>
+        <p>A run is eight stages. Each stage is three waves of enemies, a bonus wave where the moths fly a pattern and never shoot back, and then a boss. After every stage you visit the hideout to shop, then pick your route to the next stage.</p>
         <p>Shoot enemies quickly to build a combo: it multiplies your score and the coins they drop. Coins buy weapons, upgrades and single-use items. Gems, from Spinners and bosses, buy new ships and permanent perks. Blueprints dropped by enemies and bosses unlock new things in the shop. Everything you buy is saved.</p>
         <div class="row"><button class="btn primary" data-act="title" data-focus>Back</button></div></div>`, 'paper');
     }
@@ -299,11 +301,11 @@
         .concat(res.bonuses.map(b => [b.name, (b.stitches ? '+' + num(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust) : '+' + silkTag(b.silk))]))
         .concat(keeper ? [['Gems this run', silkTag(res.nightSilk)]] : [])
         .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name)]));
-      const next = keeper ? (res.last ? 'To the hideout' : 'To the hideout') : info.row === 0 ? 'Next wave' : info.row === 1 ? 'Bonus wave' : 'Fight the boss';
+      const next = keeper ? 'To the hideout' : ({ row: 'Next wave', sampler: 'Bonus wave', keeper: 'Fight the boss' })[C.STAGES[info.row + 1]];
       let pk = '';
       if (pocket && pocket.length) pk = `<div class="pocket"><div class="eyebrow">Quick shop · buy one item, or keep your coins</div><div class="pk">${pocket.map(id => { const n = C.NOTIONS[id], st = S.notionState(this.p, id, null);
         return `<button class="card" data-act="pocket" data-arg="${id}" ${st.ok ? '' : 'disabled'}><span class="cic">${icon(n.sprite, 30)}</span><span class="cname">${esc(n.name)}</span><span class="cmeta">${esc(n.desc)}</span><span>${dustTag(S.notionPrice(this.p, id))} ${st.ok ? '' : this.stateLine(st, 'dust')}</span></button>`; }).join('')}</div></div>`;
-      const s = this.ctl.sim, sum = res.last ? `<p class="lede">All five stages cleared and every boss defeated. Final score ${num(s.stitches)}${s.newBest ? ', a new best' : ''}.</p>` : '';
+      const s = this.ctl.sim, sum = res.last ? `<p class="lede">All eight stages cleared and every boss defeated. Final score ${num(s.stitches)}${s.newBest ? ', a new best' : ''}.</p>` : '';
       this.show(`<div class="sheet"><div class="eyebrow">${esc(info.panelName)} · ${esc(info.label)}</div><h2>${esc(title)}</h2>${sum}
         <dl class="tally">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>${pk}
         <div class="row"><button class="btn primary" data-act="continue" data-focus>${next}</button></div></div>`, 'paper');
@@ -338,7 +340,7 @@
       const combo = `<div class="combo ${sim.combo ? 'on' : ''}"><span class="lab">Combo</span><b>×${mult.toFixed(1)}</b><span class="mono">${sim.combo} in a row</span><i style="width:${sim.combo ? Math.max(0, sim.comboT / (C.TUNING.comboWindow * (p.pattern.second ? 2 : 1))) * 100 : 0}%"></i></div>`;
       this.set('hudL', `<div class="wm">String Theory</div><div class="lab">Score</div><div class="score">${num(sim.stitches)}</div>
         <div class="lab">Best</div><div class="mono big">${num(Math.max(p.stats.bestNight, sim.stitches))}</div>
-        <div class="lab">Progress</div>${chart}<div class="dim small">${esc(sim.stageInfo().panelName)} · ${esc(sim.stageInfo().label)}</div>
+        <div class="lab">Progress</div>${chart}<div class="dim small">${esc(sim.stageInfo().panelName)} · ${esc(sim.stageInfo().label)}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</div>
         <hr><div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Weapon level ${ROMAN[w]}</span></div></div>${combo}`);
       let ply = '<div class="bobbin">'; for (let i = 0; i < d.ply; i++) ply += `<i class="${i < pl.ply ? (pl.ply === 1 && d.ply > 1 ? 'fray' : 'on') : ''}"></i>`; ply += '</div>';
       let pins = '<div class="cushion">'; for (let i = 0; i < sim.spares; i++) pins += '<i></i>'; pins += '</div>';

@@ -14,14 +14,14 @@
       dust: 0, silk: 0,
       needle: 'sharps', needles: { sharps: true },
       thread: 'running', thread2: null, threads: { running: 1 },   // id -> weight (1..3)
-      tempers: { point: 0, eye: 0, ply: 0, pace: 0 },
+      tempers: { point: 0, eye: 0, ply: 0, pace: 0, magnet: 0, luck: 0 },
       pattern: {},                 // node id -> true
       tray: [],                    // [{id, n}] up to TUNING.traySlots
       charts: {},                  // blueprint id -> true
       codex: { moths: {}, keepers: {} },
       stats: { bestNight: 0, nights: 0, mended: 0, perfectSamplers: 0, longestDouble: 0 },
       run: null,                   // a run in progress (see Sim.snapshot), so closing the game does not lose it
-      settings: { sound: true, autofire: true, shadows: true }
+      settings: { sound: true, autofire: true, shadows: true, mode: 'normal' }
     };
   }
 
@@ -107,7 +107,7 @@
         return p.dust >= t.price ? R(true, 'buy', { price: t.price }) : R(false, 'short', { price: t.price });
       }
       if (w >= 3) return R(false, 'owned');
-      const price = C.WEIGHT_COST[w];
+      const price = Math.round(C.WEIGHT_COST[w] * (p.pattern.bargain ? 0.85 : 1));
       return p.dust >= price ? R(true, 'weight', { price, next: w + 1 }) : R(false, 'short', { price, next: w + 1 });
     },
     buyThread(p, id) {
@@ -127,7 +127,7 @@
       const t = C.TEMPERS[id], lv = p.tempers[id];
       if (lv >= t.max) return R(false, 'owned');
       if (t.chartAt && lv + 1 >= t.chartAt && !p.charts.bp_gilt) return R(false, 'sealed');
-      const price = C.TEMPER_COST[lv];
+      const price = Math.round(C.TEMPER_COST[lv] * (p.pattern.bargain ? 0.85 : 1));
       return p.dust >= price ? R(true, 'buy', { price }) : R(false, 'short', { price });
     },
     buyTemper(p, id) {
@@ -173,12 +173,13 @@
       needle: p.needle,
       ply: n.ply + t.ply,
       speed: (4.6 + 1.5 * pace) * (pat.quick ? 1.1 : 1),
-      fireMul: 1 + 0.13 * (eye - 2),
-      dmg: 0.5 + 0.25 * point,
+      fireMul: 1 + 0.07 * (eye - 2),
+      dmg: 0.7 + 0.15 * point,
       pierceCase: t.point >= 4,
       radius: p.needle === 'sharps' ? 0.24 : 0.32,
-      invuln: (p.needle === 'sharps' ? 2.4 : 1.8) * (pat.steady ? 1.5 : 1),
-      magnet: C.TUNING.magnet * (pat.keen ? 1.5 : 1),
+      invuln: (p.needle === 'sharps' ? 1.7 : 1.3) * (pat.steady ? 1.5 : 1),
+      magnet: C.TUNING.magnet * (pat.keen ? 1.5 : 1) * (1 + 0.35 * (t.magnet || 0)),
+      homing: p.needle === 'embroidery', drone: p.needle === 'tapestry', padded: p.needle === 'quilter',
       dash: p.needle === 'between', wide: p.needle === 'darner', bigEye: p.needle === 'chenille',
       palm: p.needle === 'sail', pierce: p.needle === 'beading' ? 1 : 0,
       pips: { ply: n.ply + t.ply, pace, eye, point }
@@ -186,6 +187,8 @@
   }
 
   ST.save = { SaveStore, freshProfile, memoryBackend, KEY, SLOTS };
+  /* Hard opens after a Normal run is completed, Nightmare after a Hard one. */
+  ST.modeUnlocked = (p, id) => { const m = C.MODES[id]; return !!m && (!m.need || (p.stats['won_' + m.need] || 0) > 0); };
   ST.shop = shop;
   ST.derive = derive;
 })(typeof window !== 'undefined' ? window.ST : globalThis.ST);

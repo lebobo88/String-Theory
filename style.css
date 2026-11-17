@@ -139,6 +139,8 @@ h2.madder{color:var(--madder)}
 .entry div{display:flex;flex-direction:column}.entry span{font-size:13px;color:var(--mist)}.entry.unseen .ic{filter:brightness(0) opacity(.5)}.entry.unseen b{color:var(--mist);font-weight:400}
 .hem footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:12px;border-top:2px dashed var(--ink)}
 .purse{justify-content:flex-start}
+.title .purse,.title .row{justify-content:center}
+.title .purse .mono{flex-basis:100%;text-align:center}
 
 /* ---- phones and narrow windows: the cloth fills the screen, HUD folds onto it ---- */
 @media (max-width: 860px), (max-aspect-ratio: 1/1){
@@ -186,5 +188,5 @@ h2.madder{color:var(--madder)}
 .tablewrap{overflow-x:auto}.ledger{width:100%;border-collapse:collapse;background:var(--paper)}
 .ledger th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);text-align:left;padding:8px;border-bottom:2px dashed var(--ink)}
 .ledger td{padding:8px;border-bottom:1.5px dotted var(--rule);font-size:14px}.ledger tr.me td{background:rgba(227,169,60,.18)}.ledger td.won{color:var(--saffron-ink);font-weight:700}
-.nchart td{width:22px;height:18px}
+.nchart{border-spacing:3px}.nchart td{width:17px;height:15px}
 @media (max-width: 860px), (max-aspect-ratio: 1/1){ .pockets{grid-template-columns:1fr}.pcard{min-height:0;border-radius:0 0 24px 24px} }

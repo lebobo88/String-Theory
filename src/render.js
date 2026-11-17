@@ -405,6 +405,8 @@
       this.needleA.position.x = pl.dual ? -0.45 : 0; this.needleB.visible = pl.dual; this.needleB.position.x = 0.45;
       this.shield.visible = sim.armed.thimble; this.shield.rotation.z += dt * 2;
       this.starch.visible = sim.fx.starch > 0; this.starch.rotation.z -= dt * 3;
+      if (!this.droneMesh) { this.droneMesh = this.chart('bobbin', 0.08, true); this.scene.add(this.droneMesh); }
+      this.droneMesh.visible = alive && sim.droneOn; this.droneMesh.position.set(pl.x + (pl.x > 0 ? -1 : 1) * 0.95, PY + 0.1 + Math.sin(this.time * 4) * 0.08, 0.7); this.droneMesh.rotation.z += dt * 3;
       this.chargeRing.visible = pl.charge > 0; if (pl.charge > 0) this.chargeRing.scale.setScalar(0.4 + pl.charge * 1.6);
       // the thread trailing from the eye
       const pts = this.tailPts; pts[0].set(pl.x, PY - 0.25, 0.4);
@@ -441,7 +443,7 @@
       }
     }
     idle(dt) {   // behind menus: just the cloth and any settling thread
-      this.time += dt; this.playerGroup.visible = false; for (const t of this.tail) t.visible = false;
+      this.time += dt; this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false; for (const t of this.tail) t.visible = false;
       this.updateFx(dt); this.placeCamera(0, 0); this.gl.render(this.scene, this.camera);
     }
     clear() {
