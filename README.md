@@ -30,7 +30,7 @@ Hem = hideout, Pocket = save slot, Ledger = records, Patch = route.
 ## Android
 
 The `android/` folder is a Capacitor project that wraps the web build. The `Android APK` workflow builds a debug-signed APK only when asked: run it from the Actions tab,
-or push a tag named `build-*`. It publishes `string-theory.apk` on the `apk` branch. To build locally with the Android SDK:
+or push the commit you want built to the `build` branch (`git push -f origin main:build`). It publishes `string-theory.apk` on the `apk` branch. To build locally with the Android SDK:
 `npm ci && node tools/build.js && npx cap sync android && cd android && ./gradlew assembleDebug`.
 
 ## Audio

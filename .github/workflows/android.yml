@@ -1,9 +1,10 @@
 name: Android APK
-# Runs only when asked: from the Actions tab (Run workflow) or by pushing a tag named build-*.
+# Runs only when asked: from the Actions tab (Run workflow), or by pushing the commit to build to the `build` branch
+# (git push origin main:build). Ordinary pushes to main do not start it.
 on:
   workflow_dispatch:
   push:
-    tags: ['build-*']
+    branches: [build]
 permissions:
   contents: write
 jobs:
