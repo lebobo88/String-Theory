@@ -45,7 +45,7 @@ All 19 files are in `audio/`, generated with ElevenLabs.
 | `src/content.js` | Every table: sprites, moths, Keepers, panels, threads, needles, tempers, notions, charms, Pattern, charts, tuning. Pure data. |
 | `src/save.js` | Profile schema, storage backend, shop rules, derived needle stats. No DOM. |
 | `src/sim.js` | The whole flight simulation. Pure logic, seeded RNG, fixed 60 Hz step, emits events. No DOM, no Three.js. |
-| `src/render.js` | Three.js renderer. Reads sim state; sprites are cross-stitch charts built from yarn cylinders; all effects are thread. |
+| `src/render.js`, `src/fx.js`, `src/shaders.js` | Three.js renderer, effect systems and GLSL. Reads sim state only. Hand-written post-processing (bloom, shockwaves, grain) and GPU-driven particles; quality tiers high, medium, low with automatic step-down (`?quality=low` forces one). |
 | `src/ui.js`, `src/main.js`, `style.css` | HUD, Hem screens, input, frame loop, flow. |
 | `tools/build.js` | Writes `dist/`: one inlined `index.html` plus `audio/` and `vendor/`. |
 | `tools/vendor-three.js` | Rebuilds the plain-script copy of Three.js used when the page is opened from disk. |

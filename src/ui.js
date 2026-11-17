@@ -333,11 +333,15 @@
     // ---------- HUD ----------
     hud(sim) {
       const p = this.p, pl = sim.player, d = sim.d, th = C.THREADS[sim.curThread()], w = p.threads[sim.curThread()] || 1;
-      const chart = `<table class="nchart"><tr><th></th>${C.PANELS.map((_, i) => `<th>${ROMAN[i + 1]}</th>`).join('')}</tr>${C.STAGE_LABEL.map((lab, r) => `<tr><th>${lab}</th>${C.PANELS.map((_, pi) => {
+      const chart = `<table class="nchart"><tr><th></th>${C.PANELS.map((_, i) => `<th>${i + 1}</th>`).join('')}</tr>${C.STAGE_LABEL.map((lab, r) => `<tr><th>${lab}</th>${C.PANELS.map((_, pi) => {
         const done = pi < sim.panel || (pi === sim.panel && r < sim.row) || (sim.phase === 'done' && sim.result && sim.result.kind === 'clear' && pi === sim.panel && r === sim.row);
         const cur = !done && pi === sim.panel && r === sim.row; return `<td class="${done ? 'done' : cur ? 'cur' : ''}"></td>`; }).join('')}</tr>`).join('')}</table>`;
       const mult = sim.comboMult();
-      const combo = `<div class="combo ${sim.combo ? 'on' : ''}"><span class="lab">Combo</span><b>×${mult.toFixed(1)}</b><span class="mono">${sim.combo} in a row</span><i style="width:${sim.combo ? Math.max(0, sim.comboT / (C.TUNING.comboWindow * (p.pattern.second ? 2 : 1))) * 100 : 0}%"></i></div>`;
+      // combo punch: the animation's elapsed time rides along as a negative delay, so HUD re-renders don't restart it
+      if (sim.combo > (this.lastCombo || 0)) this.comboAt = performance.now(); this.lastCombo = sim.combo;
+      const since = performance.now() - (this.comboAt || -1e9), pop = since < 340 ? ' pop' : '';
+      const cvars = `--h:${((mult - 1) / 4).toFixed(2)};--d:-${Math.round(Math.min(since, 340))}ms`;
+      const combo = `<div class="combo ${sim.combo ? 'on' : ''}${pop}" style="${cvars}"><span class="lab">Combo</span><b>×${mult.toFixed(1)}</b><span class="mono">${sim.combo} in a row</span><i style="width:${sim.combo ? Math.max(0, sim.comboT / (C.TUNING.comboWindow * (p.pattern.second ? 2 : 1))) * 100 : 0}%"></i></div>`;
       this.set('hudL', `<div class="wm">String Theory</div><div class="lab">Score</div><div class="score">${num(sim.stitches)}</div>
         <div class="lab">Best</div><div class="mono big">${num(Math.max(p.stats.bestNight, sim.stitches))}</div>
         <div class="lab">Progress</div>${chart}<div class="dim small">${esc(sim.stageInfo().panelName)} · ${esc(sim.stageInfo().label)}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</div>
@@ -352,7 +356,7 @@
         <div class="lab">Gems</div><div class="cur">${icon('silk', 36)}<b class="mono big">${num(p.silk)}</b></div>
         <div class="lab">Ship</div><div class="thread">${icon(p.needle, 22)}<div><b>${esc(C.NEEDLES[p.needle].name)}</b><span>${esc(C.NEEDLES[p.needle].trait)}</span></div></div>
         <div class="fxs">${fx}</div>`);
-      this.set('mtop', `<span class="score">${num(sim.stitches)}</span>${ply}<span class="mono">❖${sim.spares}</span>${dustTag(p.dust)}${silkTag(p.silk)}${sim.combo >= C.TUNING.comboStep ? `<span class="mcombo">×${mult.toFixed(1)}</span>` : ''}<span class="fxs">${fx}</span>`);
+      this.set('mtop', `<span class="score">${num(sim.stitches)}</span>${ply}<span class="mono">❖${sim.spares}</span>${dustTag(p.dust)}${silkTag(p.silk)}${sim.combo >= C.TUNING.comboStep ? `<span class="mcombo${pop}" style="${cvars}">×${mult.toFixed(1)}</span>` : ''}<span class="fxs">${fx}</span>`);
       const slots = [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('');
       this.set('tray', `<div class="lab">Items</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap weapon">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
       const b = sim.boss;

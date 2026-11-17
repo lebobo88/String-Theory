@@ -35,6 +35,11 @@ body.flying .hud{visibility:visible}
 .combo{position:relative;margin-top:14px;padding:8px 10px;border:1.5px dashed var(--dot);min-width:150px;opacity:.45;display:flex;flex-direction:column;align-items:flex-end}
 .combo.on{opacity:1;border-color:var(--saffron)}.combo .lab{margin:0}.combo b{font-family:var(--display);font-size:36px;line-height:1;color:var(--saffron)}
 .combo i{position:absolute;left:0;bottom:0;height:3px;background:var(--saffron)}
+.combo.on{box-shadow:0 0 calc(var(--h,0) * 26px) rgba(227,169,60,calc(var(--h,0) * .55)),inset 0 0 calc(var(--h,0) * 18px) rgba(227,169,60,calc(var(--h,0) * .3))}
+.combo b{display:inline-block;transform-origin:100% 60%}
+.combo.pop b,.mcombo.pop{animation:cpop .34s cubic-bezier(.2,1.6,.4,1) var(--d,0s) both}
+@keyframes cpop{0%{transform:scale(1.25) rotate(-3deg);color:var(--paper);text-shadow:0 0 14px var(--saffron),0 0 2px var(--paper)}100%{transform:none}}
+.mcombo{display:inline-block;transform-origin:50% 60%}
 .cushion{display:flex;gap:6px;min-height:30px;align-items:flex-end;padding:0 8px;border-bottom:10px solid var(--madder);border-radius:0 0 14px 14px;width:max-content;min-width:60px}
 .cushion i{width:3px;height:26px;background:var(--linen);position:relative;transform:rotate(8deg)}.cushion i::before{content:'';position:absolute;top:-6px;left:-3px;width:9px;height:9px;border-radius:50%;background:var(--saffron)}
 .cushion i:nth-child(2n)::before{background:var(--madder-pale)}.cushion i:nth-child(2n){transform:rotate(-10deg)}
@@ -60,12 +65,19 @@ button.slot:active{border-color:var(--saffron)}
 .seam i{display:block;height:100%;background:repeating-linear-gradient(90deg,var(--madder) 0 9px,transparent 9px 13px) center/100% 8px no-repeat;transition:width .15s}
 #banner{position:absolute;left:0;right:0;top:36%;display:flex;justify-content:center;pointer-events:none;opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s}
 #banner.on{opacity:1;transform:none}
-.rib{background:var(--paper);color:var(--ink);padding:10px 34px;text-align:center;display:flex;flex-direction:column;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 50%,100% 100%,0 100%,14px 50%);box-shadow:0 0 0 2px var(--ink) inset}
+#banner.on .rib{animation:ribin .5s cubic-bezier(.2,1.5,.35,1) both}
+#banner.on .rib::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,244,214,.9) 50%,transparent 65%);animation:ribshine .9s .15s ease-out both;pointer-events:none}
+#banner.on .rib::before{content:'';position:absolute;left:18px;right:18px;top:5px;border-top:2px dashed var(--madder);animation:ribsew .5s .1s steps(14) both}
+@keyframes ribin{0%{transform:scaleX(.15) scaleY(.6);opacity:0}60%{opacity:1}100%{transform:none}}
+@keyframes ribshine{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+@keyframes ribsew{from{right:100%}to{right:18px}}
+.rib{position:relative;overflow:hidden;background:var(--paper);color:var(--ink);padding:10px 34px;text-align:center;display:flex;flex-direction:column;clip-path:polygon(0 0,100% 0,calc(100% - 14px) 50%,100% 100%,0 100%,14px 50%);box-shadow:0 0 0 2px var(--ink) inset}
 .rib span{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}.rib b{font-family:var(--display);font-weight:400;font-size:38px;line-height:1}
 #floaters{position:fixed;inset:0;pointer-events:none;overflow:hidden}
 .fl{position:absolute;font:600 14px var(--mono);color:var(--linen);transform:translate(-50%,-50%);animation:fl .8s ease-out forwards;text-shadow:0 1px 0 var(--night)}
 .fl.hot{color:var(--saffron);font-size:17px}.fl.silk{color:var(--paper)}
-@keyframes fl{to{transform:translate(-50%,-190%);opacity:0}}
+@keyframes fl{0%{transform:translate(-50%,-50%) scale(.5);opacity:0}14%{transform:translate(-50%,-85%) scale(1.3);opacity:1}30%{transform:translate(-50%,-100%) scale(1)}100%{transform:translate(-50%,-200%) scale(.95);opacity:0}}
+.fl.hot{text-shadow:0 1px 0 var(--night),0 0 10px rgba(227,169,60,.85)}.fl.silk{text-shadow:0 1px 0 var(--night),0 0 10px rgba(243,238,227,.8)}
 #toasts{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;z-index:30;width:min(92vw,420px)}
 .toast{background:var(--paper);color:var(--ink);padding:8px 14px;border:1.5px dashed var(--ink);display:flex;flex-direction:column;align-items:center;text-align:center;animation:tin .2s ease-out;transition:opacity .4s}
 .toast b{font-size:15px}.toast span{font-size:13px;color:var(--ink2)}.toast.out{opacity:0}
@@ -158,7 +170,7 @@ h2.madder{color:var(--madder)}
   .tabb{flex:1 1 30%;min-height:44px;padding:4px 8px}.tabb span{display:none}
   .srow{grid-template-columns:1fr 1fr 1fr}.srow .eyebrow{grid-column:1/-1}
 }
-@media (prefers-reduced-motion: reduce){.fl,.toast,.bobbin i.fray{animation:none}#banner{transition:none}}
+@media (prefers-reduced-motion: reduce){.fl,.toast,.bobbin i.fray,.combo.pop b,.mcombo.pop,#banner.on .rib,#banner.on .rib::after,#banner.on .rib::before{animation:none}#banner{transition:none}}
 
 /* ---- pockets, route, ledger ---- */
 .sheet.wide{width:min(100%,900px)}
