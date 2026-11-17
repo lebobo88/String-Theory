@@ -1,6 +1,6 @@
 # Audio to generate
 
-Put each file at the path shown, under `audio/`. Until a file exists the game uses its built-in synth sound.
+Each file lives at the path shown. If one is missing the game falls back to its built-in synth sound for that cue.
 
 | Used for | File | Prompt |
 |---|---|---|
@@ -26,6 +26,6 @@ Put each file at the path shown, under `audio/`. Until a file exists the game us
 
 ## Status
 
-All 19 files have been generated, trimmed, levelled and exported with these exact names in the ElevenLabs flow
-"String Theory game audio" (flow id `hBzYOSiXZ7ujABbLIh90`). They are not in this repo yet: the build session had no
-outbound network, so it could not download them. Copy the 19 MP3s into this folder and the game uses them with no code change.
+All 19 files are in this folder. They were generated in the ElevenLabs flow "String Theory game audio"
+(flow id `hBzYOSiXZ7ujABbLIh90`), trimmed and levelled there, and exported under these names.
+To replace one, regenerate it from its prompt and save it here under the same name.

@@ -28,7 +28,7 @@ Hem = hideout, Pocket = save slot, Ledger = records, Patch = route.
 
 `src/main.js` holds a table of every sound effect and music track: the file it loads from `audio/` and the prompt to generate it from.
 `audio/PROMPTS.md` lists them (`node tools/audio-list.js`). Files that are missing fall back to a built-in synth, so the game always has sound.
-The 19 files have been generated in ElevenLabs (flow "String Theory game audio") but are not in the repo yet; see `audio/PROMPTS.md`.
+All 19 files are in `audio/`, generated with ElevenLabs.
 
 ## Layout
 

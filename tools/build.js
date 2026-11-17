@@ -12,4 +12,6 @@ fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'index.html'), html);
 const v = path.join(root, 'vendor', 'three.module.min.js');
 if (fs.existsSync(v)) { fs.mkdirSync(path.join(root, 'dist', 'vendor'), { recursive: true }); fs.copyFileSync(v, path.join(root, 'dist', 'vendor', 'three.module.min.js')); }
+const au = path.join(root, 'audio'); fs.mkdirSync(path.join(root, 'dist', 'audio'), { recursive: true });
+for (const f of fs.readdirSync(au)) if (f.endsWith('.mp3')) fs.copyFileSync(path.join(au, f), path.join(root, 'dist', 'audio', f));
 console.log('dist/index.html', (html.length / 1024).toFixed(0) + ' KB');
