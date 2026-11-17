@@ -37,7 +37,12 @@
   // Three.js r170: a local copy first (offline / packaged builds), then the CDNs.
   const urls = ['./vendor/three.module.min.js', 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js', 'https://unpkg.com/three@0.170.0/build/three.module.min.js'];
   let THREE = window.__THREE_STUB__ || null;
-  for (const u of urls) { if (THREE) break; try { THREE = await import(u); } catch (e) { THREE = null; } }
+  try { if (!THREE) THREE = await import(urls[0]); } catch (e) { THREE = null; }
+  if (!THREE) {   // opened straight from disk: module imports of local files are blocked, a plain script is not
+    await new Promise(done => { const s = document.createElement('script'); s.src = './vendor/three.global.js'; s.onload = s.onerror = done; document.head.appendChild(s); });
+    THREE = window.THREE || null;
+  }
+  for (const u of urls.slice(1)) { if (THREE) break; try { THREE = await import(u); } catch (e) { THREE = null; } }
   window.ST.boot(THREE);
 </script>
 </body>

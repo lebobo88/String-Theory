@@ -72,12 +72,30 @@
       const pd = C.PANELS[this.panel];
       this.stage = { stitches0: this.stitches, dust0: this.nightDust, silk0: this.nightSilk, hurt: false, best: 0, charts: [] };
       this.palmUsed = false;
-      if (this.p.pattern.mended && this.player.ply < this.d.ply) this.player.ply++;
+      if (this.p.pattern.mended && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
+      this.skipMend = false;
       this.player.x = 0; this.player.invuln = 1.5; this.player.charge = 0;
       const kind = C.STAGES[this.row];
       if (kind === 'row') this.buildRow(this.rowSpec()); else if (kind === 'sampler') this.buildSampler(); else this.buildKeeper(pd.keeper);
       this.phase = 'intro'; this.phaseT = 1.8;
       this.emit('stage', this.stageInfo());
+    }
+    /* Run progress, saved with the profile so a run survives closing the game.
+       at: 'stage' = about to play this stage, 'after' = this stage is cleared, 'hem' = in the hideout before this stage. */
+    snapshot(at) {
+      const pl = this.player;
+      return { at, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
+        nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, lastKnot: this.lastKnot,
+        perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed) };
+    }
+    static restore(profile, snap) {
+      const s = new Sim(profile, snap.seed || 1);
+      for (const k of ['panel', 'row', 'stitches', 'nightDust', 'nightSilk', 'spares', 'lastKnot', 'perfectSamplers', 'bestCombo', 'dualRun']) if (snap[k] !== undefined) s[k] = snap[k];
+      s.panel = Math.max(0, Math.min(C.PANELS.length - 1, s.panel | 0)); s.row = Math.max(0, Math.min(C.STAGES.length - 1, s.row | 0));
+      s.route = (snap.route || []).slice(); s.nightCharts = (snap.nightCharts || []).slice();
+      s.player.ply = Math.max(1, Math.min(s.d.ply, snap.ply || s.d.ply)); s.player.dual = !!snap.dual;
+      s.lastNeedle = s.d.needle; Object.assign(s.armed, snap.armed || {}); s.skipMend = true;
+      return s;
     }
     advance() {      // after a tally: what comes next
       if (this.row < C.STAGES.length - 1) { this.row++; return C.STAGES[this.row]; }

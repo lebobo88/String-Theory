@@ -46,6 +46,13 @@ try:
             pg.keyboard.press('Digit1'); pg.keyboard.press('KeyQ'); pg.keyboard.down('ArrowLeft'); pg.wait_for_timeout(300); pg.keyboard.up('ArrowLeft')
             pg.wait_for_timeout(1500); pg.screenshot(path=f'/tmp/st-{name}-flight.png')
             pg.keyboard.press('Escape'); pg.wait_for_selector('text=Paused'); pg.click('text=Resume')
+            # closing and reopening mid-run: the run is offered again at the same stage
+            pg.evaluate("() => { clearInterval(window.__bot); const s = ST.game.sim; s.stitches = 777; }"); pg.evaluate("() => ST.game.keep('stage')")
+            pg.reload(); pg.wait_for_selector('.wordmark'); pg.click('text=Play'); pg.click('.pcard:not(.empty)'); pg.click('.btn:has-text("Load")')
+            pg.wait_for_selector('text=Continue run'); pg.screenshot(path=f'/tmp/st-{name}-continue.png'); pg.click('text=Continue run'); pg.wait_for_function('ST.game.state === "flight"')
+            assert pg.evaluate('ST.game.sim.stitches') == 777 and pg.evaluate('ST.game.sim.panel') == 0 and pg.evaluate('ST.game.sim.row') == 0, 'run resumed'
+            pg.evaluate("""() => { window.__bot = setInterval(() => { const g = ST.game, s = g.sim; if (!s || g.state !== 'flight') return; s.player.invuln = 1; s.d.dmg = 6;
+                const t = s.boss ? s.boss.x + s.boss.def.soft[0].x : (s.enemies[0] ? s.enemies[0].x : 0); g.pointer = { id: 99, x: t }; }, 30); }""")
             stages = 0; t0 = time.time()
             while time.time() - t0 < 900:
                 st = pg.evaluate('ST.game.state')
@@ -84,6 +91,7 @@ try:
             pg.click('.btn:has-text("Delete")'); pg.click('text=Tap again'); assert pg.locator('.pcard:not(.empty)').count() == 1, 'unpick'
             pg.click('.pcard:not(.empty)'); pg.click('.btn:has-text("Load")'); pg.wait_for_selector('text=Start run')
             assert pg.evaluate('ST.game.profile.stats.mended') == 1 and pg.evaluate('ST.game.store.ledger().length') == 1, 'save and Ledger persist'
+            assert pg.evaluate('ST.game.profile.run') is None, 'no run left over after completing one'
             pg.evaluate('localStorage.clear()'); pg.close()
             print(name, 'ok: 20 rows, pockets, route, Ledger, save persisted')
         b.close()

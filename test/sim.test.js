@@ -123,5 +123,13 @@ function fly(profile, seed, skill, log) {
   console.log('samplers:', samplers.map(x => x.hit + '/' + x.total).join(' '), 'perfect', sim.perfectSamplers);
   console.log('god-mode:', { minutes: +(frames / 3600).toFixed(1), stitches: sim.stitches, dust: sim.nightDust, silk: sim.nightSilk, charts: sim.nightCharts });
 }
+{ // run progress survives a save and reload
+  const p = ST.save.freshProfile(); const sim = new ST.Sim(p, 3); sim.panel = 2; sim.row = 1; sim.route = ['selvage', 'olddarn', 'boro']; sim.stitches = 4321; sim.spares = 1; sim.startStage();
+  sim.player.ply = 1; const snap = JSON.parse(JSON.stringify(sim.snapshot('stage')));
+  const r = ST.Sim.restore(p, snap); r.startStage();
+  ok(r.panel === 2 && r.row === 1 && r.stitches === 4321 && r.spares === 1 && r.player.ply === 1 && r.patchId() === 'boro', 'run restored at the same stage');
+  ok(r.enemies.length > 20 && r.stageInfo().label === 'Wave 2', 'restored stage is playable');
+  const after = ST.Sim.restore(p, Object.assign({}, snap, { at: 'after', row: 3 })); ok(after.advance() === 'hem' && after.panel === 3 && after.row === 0, 'a cleared boss resumes at the hideout before the next stage');
+}
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
 process.exit(fails ? 1 : 0);

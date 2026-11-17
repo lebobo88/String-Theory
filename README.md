@@ -5,7 +5,9 @@ Look, vocabulary, palette, sprites, enemies and Keepers follow the MENDNIGHT UI/
 
 ## Play
 
-Serve the repo root (or `dist/`) with any static server and open `index.html`. Three.js r170 is vendored in `vendor/`, so it runs offline; opened straight from disk it falls back to a CDN.
+Double-click `index.html`, or serve the repo root with any static server. Three.js r170 and all audio are in the repo, so it runs offline either way. `node tools/build.js` writes a deployable copy to `dist/` (not committed).
+
+A run in progress is saved at the start of every wave and in the hideout: close the game and the main menu offers Continue run.
 
 - Move: arrow keys or A/D, or drag on the cloth. Firing is automatic (toggle on the main menu).
 - Items: 1 2 3, or tap a slot. Swap weapon: Q (Chenille ship). Dash: Shift or double-tap (Between ship). Pause: Esc.
@@ -39,7 +41,9 @@ All 19 files are in `audio/`, generated with ElevenLabs.
 | `src/sim.js` | The whole flight simulation. Pure logic, seeded RNG, fixed 60 Hz step, emits events. No DOM, no Three.js. |
 | `src/render.js` | Three.js renderer. Reads sim state; sprites are cross-stitch charts built from yarn cylinders; all effects are thread. |
 | `src/ui.js`, `src/main.js`, `style.css` | HUD, Hem screens, input, frame loop, flow. |
-| `tools/build.js` | Inlines everything into `dist/index.html`. |
+| `tools/build.js` | Writes `dist/`: one inlined `index.html` plus `audio/` and `vendor/`. |
+| `tools/vendor-three.js` | Rebuilds the plain-script copy of Three.js used when the page is opened from disk. |
+| `test/fromdisk.py` | Opens `index.html` from disk with the network blocked: boot, audio playback, fixed menu size. |
 | `tools/design-doc.js` | Regenerates `DESIGN.md` from `src/content.js`. |
 | `test/sim.test.js` | Headless checks: content integrity, shop rules, save slots, bot-flown runs with every ship and weapon. |
 | `test/smoke.py` | Headless Chrome run of the interface and a full 20-wave run (Three.js stubbed). |

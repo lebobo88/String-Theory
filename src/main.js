@@ -50,20 +50,34 @@
       boss:    ['music_boss.mp3',    'Tense boss battle theme: aggressive bowed cello ostinato, pounding toms, plucked strings and dark synth, 160 bpm, seamless loop']
     }
   };
-  const audio = { buf: {}, tried: false, track: null, src: null, gain: null, want: null };
+  /* Playback uses plain <audio> elements, not fetch + decode: fetch is blocked when index.html is opened
+     straight from disk (file://), and elements work there and on a server alike. */
+  const audio = { el: {}, ok: {}, pool: {}, turn: {}, tried: false, track: null, cur: null };
   function loadAudio() {
-    if (audio.tried || !ac || !window.fetch) return; audio.tried = true;
+    if (audio.tried || typeof Audio === 'undefined') return; audio.tried = true;
     const all = Object.assign({}, AUDIO.sfx); for (const k in AUDIO.music) all['music:' + k] = AUDIO.music[k];
-    for (const k in all) fetch('audio/' + all[k][0]).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => ac.decodeAudioData(b)).then(d => { audio.buf[k] = d; if (audio.want === k.slice(6)) playMusic(audio.want, true); }).catch(() => { /* not generated yet: synth fallback */ });
+    for (const k in all) {
+      const a = new Audio(); a.preload = 'auto'; a.loop = k.indexOf('music:') === 0;
+      a.addEventListener('canplaythrough', () => { audio.ok[k] = true; }, { once: true });
+      a.addEventListener('error', () => { audio.ok[k] = false; });
+      a.src = 'audio/' + all[k][0]; audio.el[k] = a; audio.pool[k] = [a]; audio.turn[k] = 0;
+    }
   }
-  function playSample(k, vol) { const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = audio.buf[k]; g.gain.value = vol; s.connect(g); g.connect(ac.destination); s.start(); }
-  function playMusic(name, force) {
-    audio.want = name; if (!ac) return;
-    if (audio.track === name && !force) return;
-    if (audio.src) { try { audio.src.stop(); } catch (e) { /* already stopped */ } audio.src = null; }
-    audio.track = name; const b = name && audio.buf['music:' + name]; if (!b) return;
-    const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = b; s.loop = true; g.gain.value = 0.35; s.connect(g); g.connect(ac.destination); s.start(); audio.src = s;
+  function playSample(k, vol) {
+    const pool = audio.pool[k]; let a = pool.find(x => x.paused || x.ended);
+    if (!a) { if (pool.length < 5) { a = audio.el[k].cloneNode(); pool.push(a); } else a = pool[audio.turn[k]++ % pool.length]; }
+    a.volume = vol; try { a.currentTime = 0; } catch (e) { /* not seekable yet */ }
+    const p = a.play(); if (p && p.catch) p.catch(() => { /* no user gesture yet */ });
   }
+  function playMusic(name) {
+    if (audio.track === name && (!name || (audio.cur && !audio.cur.paused))) return;
+    if (audio.cur) { audio.cur.pause(); audio.cur = null; }
+    audio.track = name; const key = 'music:' + name, a = name && audio.ok[key] ? audio.el[key] : null;
+    if (!a) { if (name) audio.track = null; return; }
+    a.volume = 0.4; try { a.currentTime = 0; } catch (e) { /* not seekable yet */ }
+    audio.cur = a; const p = a.play(); if (p && p.catch) p.catch(() => { audio.track = null; audio.cur = null; });   // retried on the next poll, after a click
+  }
+  ST.audioState = audio;
   ST.AUDIO = AUDIO;
 
 
@@ -77,13 +91,14 @@
       this.sim = null; this.state = 'title'; this.midNight = false; this.visit = {};
       this.keys = {}; this.pointer = null; this.one = { notion: -1, swap: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
       this.acc = 0; this.last = 0; this.frame = 0;
+      loadAudio();
       this.bind();
       this.ui.title();
       requestAnimationFrame(t => this.loop(t));
     }
     sfx(name) {
-      if (!this.profile.settings.sound || !ac) return;
-      if (audio.buf[name]) playSample(name, name === 'fire' ? 0.25 : 0.6); else if (SOUNDS[name]) SOUNDS[name]();
+      if (!this.profile.settings.sound) return;
+      if (audio.ok[name]) playSample(name, name === 'fire' ? 0.22 : name === 'dust' ? 0.35 : 0.6); else if (SOUNDS[name]) SOUNDS[name]();
     }
     music() {   // pick the track for where the player is
       const s = this.sim, st = this.state;
@@ -104,13 +119,24 @@
     // ---------- flow ----------
     toTitle() { this.state = 'title'; this.sim = null; this.midNight = false; this.ui.hudVisible(false); this.renderer.clear(); if (this.slot < 0) this.ui.title(); else this.ui.menu(); }
     toPockets() { this.state = 'title'; this.sim = null; this.ui.hudVisible(false); this.ui.pockets(); }
-    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; this.ui.hudVisible(false); this.ui.hem(); }
+    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; this.ui.hudVisible(false); if (mid) this.keep('hem'); this.ui.hem(); }
+    keep(at) { this.profile.run = at && this.sim ? this.sim.snapshot(at) : null; this.saved(); }
+    continueRun() {
+      const snap = this.profile.run; if (!snap) return this.beginNight();
+      this.sim = ST.Sim.restore(this.profile, snap); this.renderer.clear();
+      if (snap.at === 'after') {
+        const nx = this.sim.advance();
+        if (nx === 'won') { this.profile.run = null; this.saved(); this.sim = null; return this.openHem(false); }
+        if (nx === 'hem') return this.openHem(true);
+      } else if (snap.at === 'hem') return this.openHem(true);
+      this.fly();
+    }
     beginNight() {
-      this.sim = new ST.Sim(this.profile, (Date.now() & 0x7fffffff) || 1);
+      this.sim = new ST.Sim(this.profile, (Date.now() & 0x7fffffff) || 1); this.profile.run = null;
       this.midNight = false; this.renderer.clear(); this.state = 'route'; this.ui.hudVisible(false); this.ui.route();
     }
     flyPatch(id) { if (!this.sim) return; this.sim.setPatch(id); this.midNight = false; this.fly(); }
-    fly() { this.sim.startStage(); this.state = 'flight'; this.ui.hide(); this.ui.hudVisible(true); this.acc = 0; this.pointer = null; this.pump(); this.ui.hud(this.sim); requestAnimationFrame(() => this.renderer.resize()); }
+    fly() { this.sim.startStage(); this.keep('stage'); this.state = 'flight'; this.ui.hide(); this.ui.hudVisible(true); this.acc = 0; this.pointer = null; this.pump(); this.ui.hud(this.sim); requestAnimationFrame(() => this.renderer.resize()); }
     depart() { if (this.midNight && this.sim) { this.state = 'route'; this.ui.route(); } else this.beginNight(); }
     continueNight() {
       const res = this.sim && this.sim.result;
@@ -121,13 +147,13 @@
     takePocket(id) { if (ST.shop.buyNotion(this.profile, id, null).ok) { this.sfx('buy'); this.saved(); this.ui.tally(this.sim.result, null); } }
     pause() { if (this.state === 'flight') { this.state = 'paused'; this.ui.pause(); } }
     resume() { if (this.state === 'paused') { this.state = 'flight'; this.ui.hide(); this.last = 0; } }
-    abandon() { if (this.sim) { if (!this.sim.record) this.sim.closeNight(false); this.closeBook(); this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
+    abandon() { if (this.sim) { if (!this.sim.record) this.sim.closeNight(false); this.closeBook(); this.profile.run = null; this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
     useNotion(i) { this.one.notion = i; }
     swap() { this.one.swap = true; }
 
     // ---------- input ----------
     bind() {
-      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); loadAudio(); };
+      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); };
       window.addEventListener('keydown', e => {
         wake();
         if (this.state !== 'flight' && this.state !== 'paused') return;
@@ -214,8 +240,8 @@
           case 'keeperdown': this.sfx('keeper'); ui.banner(e.name, 'Boss defeated', 2000); break;
           case 'lance': this.sfx('lance'); break;
           case 'burst': this.sfx('burst'); break;
-          case 'stageclear': if (e.last) this.closeBook(); this.saved(); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
-          case 'snapped': this.closeBook(); this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;
+          case 'stageclear': if (e.last) { this.closeBook(); this.profile.run = null; this.saved(); } else this.keep('after'); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
+          case 'snapped': this.closeBook(); this.profile.run = null; this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;
         }
       }
     }

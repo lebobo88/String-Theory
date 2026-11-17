@@ -10,8 +10,8 @@ html = html.replace(/<!-- build:js -->([\s\S]*?)<!-- \/build:js -->/, (_, block)
 });
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'index.html'), html);
-const v = path.join(root, 'vendor', 'three.module.min.js');
-if (fs.existsSync(v)) { fs.mkdirSync(path.join(root, 'dist', 'vendor'), { recursive: true }); fs.copyFileSync(v, path.join(root, 'dist', 'vendor', 'three.module.min.js')); }
+fs.mkdirSync(path.join(root, 'dist', 'vendor'), { recursive: true });
+for (const f of ['three.module.min.js', 'three.global.js']) { const v = path.join(root, 'vendor', f); if (fs.existsSync(v)) fs.copyFileSync(v, path.join(root, 'dist', 'vendor', f)); }
 const au = path.join(root, 'audio'); fs.mkdirSync(path.join(root, 'dist', 'audio'), { recursive: true });
 for (const f of fs.readdirSync(au)) if (f.endsWith('.mp3')) fs.copyFileSync(path.join(au, f), path.join(root, 'dist', 'audio', f));
 console.log('dist/index.html', (html.length / 1024).toFixed(0) + ' KB');

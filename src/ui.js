@@ -37,13 +37,22 @@
     }
     get p() { return this.ctl.profile; }
     set(key, html) { if (this.cache[key] !== html) { this.cache[key] = html; this.el[key].innerHTML = html; } }
-    show(html, cls) { const o = this.el.overlay; o.className = 'overlay on ' + (cls || ''); o.innerHTML = html; const f = o.querySelector('[data-focus]'); if (f) f.focus(); }
+    show(html, cls, key) {
+      const o = this.el.overlay, sel = '.station, .station > *, .routewrap, .routewrap > *, .tabs, .sheet';
+      // re-rendering the same screen (picking an item, buying) must not jump the scroll position
+      const keep = key && key === this.shown ? [...o.querySelectorAll(sel)].map(e => [e.scrollTop, e.scrollLeft]) : null; this.shown = key || null;
+      o.className = 'overlay on ' + (cls || ''); o.innerHTML = html;
+      if (keep) [...o.querySelectorAll(sel)].forEach((e, i) => { if (keep[i]) { e.scrollTop = keep[i][0]; e.scrollLeft = keep[i][1]; } });
+      else { const t = o.querySelector('.tabb.on'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
+      const f = o.querySelector('[data-focus]'); if (f) f.focus({ preventScroll: true });
+    }
     hide() { this.el.overlay.className = 'overlay'; this.el.overlay.innerHTML = ''; }
     get open() { return this.el.overlay.classList.contains('on'); }
     act(a, arg) {
       const c = this.ctl;
       switch (a) {
-        case 'begin': c.beginNight(); break;
+        case 'begin': if (this.p.run && !this.newArm && c.state === 'title') { this.newArm = true; this.menu(); } else { this.newArm = false; c.beginNight(); } break;
+        case 'resumerun': this.newArm = false; c.continueRun(); break;
         case 'hem': c.openHem(false); break;
         case 'title': c.toTitle(); break;
         case 'depart': c.depart(); break;
@@ -106,7 +115,8 @@
         <div class="eyebrow">Playing as ${esc(p.mender)}</div>
         <h1 class="wordmark">String Theory</h1>
         <div class="stack">
-          <button class="btn primary" data-act="begin" data-focus>Start run</button>
+          ${p.run ? `<button class="btn primary" data-act="resumerun" data-focus>Continue run \u00b7 ${esc(C.PANELS[Math.min(C.PANELS.length - 1, p.run.panel)].name)}</button>
+          <button class="btn" data-act="begin">${this.newArm ? 'Tap again: the run in progress is dropped' : 'Start a new run'}</button>` : '<button class="btn primary" data-act="begin" data-focus>Start run</button>'}
           <button class="btn" data-act="hem">Hideout (shop)</button>
           <button class="btn" data-act="ledger">Records</button>
           <button class="btn" data-act="how">How to play</button>
@@ -179,7 +189,7 @@
         <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
         <div class="station">${body}</div>
         <footer><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End run' : 'Main menu'}</button>
-          <button class="btn primary" data-act="depart">${mid ? 'Continue run' : 'Start run'}</button></footer></div>`, 'paper');
+          <button class="btn primary" data-act="depart">${mid ? 'Continue run' : this.p.run ? 'Start a new run' : 'Start run'}</button></footer></div>`, 'paper', 'hem:' + this.tab);
     }
     stateLine(st, cur) {
       const unit = cur === 'silk' ? 'gems' : 'coins', have = this.p[cur];
