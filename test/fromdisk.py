@@ -26,7 +26,7 @@ with sync_playwright() as pw:
         if len(sizes) != 1: fails.append(f'{name}: hideout panel changes size across tabs: {sizes}')
         if not scroll: fails.append(f'{name}: the page itself scrolls')
         if pg.evaluate("document.documentElement.scrollHeight > window.innerHeight + 1"): fails.append(f'{name}: document taller than the window')
-        pg.click('.hem >> text=Start run'); pg.click('[data-act=fly]'); pg.wait_for_function('ST.game.state === "flight"')
+        pg.click('.hem >> text=Start run'); pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
         pg.wait_for_function("ST.audioState.track === 'flight' && !ST.audioState.cur.paused", timeout=8000)
         pg.wait_for_timeout(2500)
         fired = pg.evaluate("ST.audioState.pool.fire.some(a => a.currentTime > 0 || !a.paused)")

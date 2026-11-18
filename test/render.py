@@ -16,7 +16,7 @@ try:
             pg.goto('http://127.0.0.1:8770/index.html'); pg.wait_for_selector('.wordmark', timeout=60000)
             pg.click('text=Play'); pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run')
             pg.evaluate("() => { const p = ST.game.profile; p.threads.herringbone = 3; p.thread = 'herringbone'; p.tray = [{id:'thimble',n:1}]; }")
-            pg.click('text=Start run'); pg.click('[data-act=fly]'); pg.wait_for_function('ST.game.state === "flight"')
+            pg.click('text=Start run'); pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
             pg.evaluate("""() => { setInterval(() => { const g = ST.game, s = g.sim; if (!s || g.state !== 'flight') return; s.player.invuln = 1;
                 const t = s.boss ? s.boss.x + s.boss.def.soft[0].x : (s.enemies.length ? s.enemies[Math.floor(s.enemies.length / 2)].x : 0); g.pointer = { id: 99, x: t }; }, 30); }""")
             pg.wait_for_timeout(9000); pg.screenshot(path=f'/tmp/r-{name}-wave.png')

@@ -38,8 +38,8 @@ try:
             assert len(prof['pattern']) == 15 and prof['tempers'] == {'point': 5, 'eye': 5, 'ply': 3, 'pace': 3, 'magnet': 3, 'luck': 3}, 'perks + upgrades'
             assert all(v == 3 for v in prof['threads'].values()) and len(prof['threads']) == 8, 'weapons'
             assert len(prof['tray']) == 3, 'tray'
-            pg.click('.hem >> text=Start run'); pg.wait_for_selector('[data-act=fly]'); pg.screenshot(path=f'/tmp/st-{name}-route1.png')
-            pg.click('[data-act=fly]'); pg.wait_for_function('ST.game.state === "flight"')
+            pg.click('.hem >> text=Start run'); pg.wait_for_selector('[data-act=fly]:visible'); pg.screenshot(path=f'/tmp/st-{name}-route1.png')
+            pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
             # a bot: fly under the moths, never get hurt, use real keys now and then
             pg.evaluate("""() => { window.__bot = setInterval(() => { const g = ST.game, s = g.sim; if (!s || g.state !== 'flight') return; s.player.invuln = 1; s.d.dmg = 40;
                 const t = s.boss ? s.boss.x + s.boss.def.soft[0].x : (s.enemies[0] ? s.enemies[0].x : 0); g.pointer = { id: 99, x: t }; }, 30); }""")
@@ -69,11 +69,11 @@ try:
                     assert pg.evaluate("[...document.querySelectorAll('.tabb')].every(t => { const r = t.getBoundingClientRect(), h = document.querySelector('.hem').getBoundingClientRect(); return r.left >= h.left && r.right <= h.right + 1; })"), 'every tab is inside the panel'
                     pg.click('text=Continue run')
                 elif st == 'route':
-                    tiles = pg.locator('.ptile.open')
+                    tiles = pg.locator('.ptile.open:visible, .rcard:visible')
                     if tiles.count() > 1:
                         tiles.nth(1).click()
                         if not pg.evaluate('!!window.__r'): pg.evaluate('window.__r = 1'); pg.screenshot(path=f'/tmp/st-{name}-route2.png')
-                    pg.click('[data-act=fly]')
+                    pg.click('[data-act=fly]:visible')
                 elif st == 'flight' and pg.evaluate('!!ST.game.sim.sampler') and not pg.evaluate('!!window.__s'):
                     if pg.evaluate('ST.game.sim.sampler.hit > 8'): pg.evaluate('window.__s = 1'); pg.screenshot(path=f'/tmp/st-{name}-sampler.png')
                 elif st == 'flight' and stages == 4 and not pg.evaluate('!!window.__shot'):

@@ -137,15 +137,28 @@
     route() {
       const sim = this.ctl.sim, cur = sim.panel, opts = C.PANELS[cur].patches;
       if (opts.indexOf(this.patchSel) < 0) this.patchSel = opts[0];
-      const cols = C.PANELS.map((pn, i) => `<div class="rcol ${i > cur ? 'future' : ''}"><span class="eyebrow">${pn.name.replace('Panel ', '')}</span>${pn.patches.map(id => { const pt = C.PATCHES[id];
-        const flown = i < cur && (sim.route[i] === id || pn.patches.length === 1), here = i === cur;
+      const flownAt = i => sim.route[i] || C.PANELS[i].patches[0];
+      // wide screens: the map across, details beside it
+      const cols = C.PANELS.map((pn, i) => `<div class="rcol ${i > cur ? 'future' : ''}"><span class="eyebrow">${i + 1}</span>${pn.patches.map(id => { const pt = C.PATCHES[id];
+        const flown = i < cur && flownAt(i) === id, here = i === cur;
         return `<button class="ptile art-${pt.art} ${flown ? 'flown' : ''} ${here ? 'open' : ''} ${here && id === this.patchSel ? 'sel' : ''}" ${here ? `data-act="patch" data-arg="${id}" aria-pressed="${id === this.patchSel}"` : 'disabled'}><i></i><b>${esc(pt.name)}</b></button>`; }).join('')}</div>`).join('');
+      // phones and upright tablets: the run as a list from top to bottom, the choice for this stage as full-width cards
+      const list = C.PANELS.map((pn, i) => {
+        const boss = esc(C.KEEPERS[pn.keeper].name), head = `<div class="rlh"><b>${esc(pn.name)}</b><span>Boss: ${boss}</span></div>`;
+        if (i < cur) return `<li class="rl done">${head}<div class="rlc">Cleared · ${esc(C.PATCHES[flownAt(i)].name)}</div></li>`;
+        if (i > cur) return `<li class="rl future">${head}<div class="rlc">${pn.patches.map(id => esc(C.PATCHES[id].name)).join(' or ')}</div></li>`;
+        return `<li class="rl cur">${head}<div class="eyebrow">${opts.length > 1 ? 'You are here · choose your route' : 'You are here · only one route'}</div>${pn.patches.map(id => { const pt = C.PATCHES[id];
+          return `<button class="rcard art-${pt.art} ${id === this.patchSel ? 'sel' : ''}" data-act="patch" data-arg="${id}" aria-pressed="${id === this.patchSel}"><i></i><span class="rct"><b>${esc(pt.name)}</b><span>${esc(pt.desc)}</span>${pt.mark ? `<em>Bonus: ${esc(pt.mark)}</em>` : '<em class="none">No bonus</em>'}</span></button>`; }).join('')}</li>`;
+      }).join('');
       const pt = C.PATCHES[this.patchSel], k = C.KEEPERS[C.PANELS[cur].keeper];
-      this.show(`<div class="hem"><header><div><div class="eyebrow">${C.PANELS[cur].name} of ${C.PANELS.length}</div><h2>Route map</h2></div></header>
-        <div class="routewrap"><div><div class="routemap">${cols}</div><div class="hemline">You visit the hideout after every stage</div></div>
+      this.show(`<div class="hem route"><header><div><div class="eyebrow">${C.PANELS[cur].name} of ${C.PANELS.length}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</div><h2>Route map</h2></div></header>
+        <div class="routewrap"><div class="mapside"><div class="routemap">${cols}</div><div class="hemline">You visit the hideout after every stage</div></div>
+        <ol class="routelist">${list}</ol>
         <div class="detail"><div class="eyebrow">${C.PANELS[cur].name} · ${opts.length > 1 ? 'choose your route' : 'only one route'}</div><h3>${esc(pt.name)}</h3><p>${esc(pt.desc)}</p>
           <dl class="tally"><div><dt>Waves</dt><dd>3 waves · Bonus wave · Boss</dd></div><div><dt>Boss</dt><dd>${esc(k.name)}</dd></div>${pt.mark ? `<div><dt class="mark">Bonus</dt><dd class="mark">${esc(pt.mark)}</dd></div>` : ''}</dl>
-          <div class="buyrow"><button class="btn primary" data-act="fly" data-arg="${this.patchSel}" data-focus>Go</button></div></div></div></div>`, 'paper');
+          <div class="buyrow"><button class="btn primary" data-act="fly" data-arg="${this.patchSel}" data-focus>Go</button></div></div></div>
+        <footer class="routego"><span class="dim small">3 waves · bonus wave · boss</span><button class="btn primary" data-act="fly" data-arg="${this.patchSel}">Go · ${esc(pt.name)}</button></footer></div>`, 'paper', 'route:' + cur);
+      if (this.routeAt !== cur) { this.routeAt = cur; const el = this.el.overlay.querySelector('.rl.cur'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }
     }
 
     // ---------- the Ledger ----------
