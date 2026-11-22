@@ -122,7 +122,7 @@ void main(){
 attribute vec4 aUv; attribute vec4 aCol; varying vec4 vUv; varying vec4 vCol;
 void main(){ vUv = aUv; vCol = aCol; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
   /* styles: 0 glow thread, 1 plied yarn, 2 running stitch (dashed), 3 wire, 4 satin ribbon, 5 chain loops,
-     6 chalk dashes, 7 silk, 8 frayed yarn, 9 zigzag dashes */
+     6 chalk dashes, 7 silk, 8 frayed yarn, 9 zigzag dashes, 10 basting (long tacking stitches) */
   S.stripFS = `
 uniform float uTime;
 varying vec4 vUv; varying vec4 vCol;
@@ -140,7 +140,9 @@ void main(){
   else if (st < 7.5) { a *= edge * (.55 + .45 * sin(s * 11. - uTime * 13.)); c *= 1. + .6 * pow(edge, 4.); }
   else if (st < 8.5) { float br = step(.35, fract(s * 3.1 + sin(s * 17.) * .3)); float split = smoothstep(.2, .0, abs(abs(v) - .55 - .2 * sin(s * 23. + uTime * 30.)));
     a *= max(br * smoothstep(0., .4, edge), split); c *= .8 + .2 * sin(s * 80.); }
-  else { float d = fract(s / .3); a *= smoothstep(0., .06, d) * smoothstep(.7, .62, d) * smoothstep(0., .4, edge); c *= 1. + .5 * edge; }
+  else if (st < 9.5) { float d = fract(s / .3); a *= smoothstep(0., .06, d) * smoothstep(.7, .62, d) * smoothstep(0., .4, edge); c *= 1. + .5 * edge; }
+  else { float d = fract(s / 1.15); float ply = .8 + .2 * sin((s * 24. + v * 2.2) * 3.14159);
+    a *= smoothstep(0., .02, d) * smoothstep(.84, .8, d) * smoothstep(0., .4, edge); c *= ply * (.7 + .3 * edge) * (1. + .5 * smoothstep(.06, 0., d) + .5 * smoothstep(.74, .8, d)); }
   if (a < .004) discard;
 #ifdef ADD
   gl_FragColor = vec4(c * a, 1.);
@@ -270,15 +272,20 @@ void main(){
   gl_FragColor = vec4(c, min(a, 1.));
   #include <colorspace_fragment>
 }`;
+  /* Cones of light (the Spinner's capture beam, the Atlas's gaze) lie on the cloth and stop at its edge: uClip is the cloth's
+     rectangle in world units (x0, y0, x1, y1); the light fades over the last stitch before the frame. */
+  S.coneVS = `varying vec2 vUv; varying vec2 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vW = w.xy; gl_Position = projectionMatrix * viewMatrix * w; }`;
   S.coneFS = `
-uniform float uTime, uAlpha, uPull; uniform vec3 uColor;
-varying vec2 vUv;
+uniform float uTime, uAlpha, uPull; uniform vec3 uColor; uniform vec4 uClip;
+varying vec2 vUv; varying vec2 vW;
 void main(){
+  float clip = smoothstep(0., .22, min(min(vW.x - uClip.x, uClip.z - vW.x), min(vW.y - uClip.y, uClip.w - vW.y)));
+  if (clip <= 0.) discard;
   float y = 1. - vUv.y, param = (vUv.x - .5) / max(y, .02);
   float strands = pow(abs(sin(param * 3.14159 * 13. + sin(y * 6. - uTime * 3.) * .6)), 18.);
   float band = smoothstep(.4, .0, abs(fract(y * 2.5 - uTime * 1.8) - .5));
   float side = smoothstep(.5, .35, abs(param));
-  float m = (strands * (.6 + uPull) + band * .25 + .12) * side * smoothstep(0., .1, y);
+  float m = (strands * (.6 + uPull) + band * .25 + .12) * side * smoothstep(0., .1, y) * clip;
   gl_FragColor = vec4(uColor * m * uAlpha * (1. + uPull * 2.), 1.);
   #include <colorspace_fragment>
 }`;
@@ -364,7 +371,7 @@ void main(){
   S.copyFS = `uniform sampler2D tIn; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(tIn, vUv).rgb, 1.); }`;
   S.compositeFS = `
 uniform sampler2D tScene, tB1, tB2; uniform float uB1, uB2, uAspect, uAberr, uTime, uGrain, uVig;
-uniform vec4 uWaves[4]; uniform vec3 uFlash, uVigCol;
+uniform vec4 uWaves[4]; uniform vec3 uFlash, uVigCol; uniform float uCool;
 varying vec2 vUv;
 float h12(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec3 shoulder(vec3 c){ vec3 o = c - .78; return mix(c, .78 + .22 * (1. - exp(-o / .22)), step(.78, c)); }
@@ -393,6 +400,9 @@ void main(){
   col += texture2D(tB2, uv).rgb * uB2;
 #endif
   col += uFlash;
+  // slow time: the colour drains toward a cold moonlit blue and the highlights settle
+  float lum = dot(col, vec3(.2126, .7152, .0722));
+  col = mix(col, vec3(lum * .78, lum * .9, lum * 1.12 + .012) * (1. - .12 * smoothstep(.6, 1.6, lum)), uCool * .55);
   float vg = smoothstep(.95, .3, length(cd * vec2(1.05, 1.)));
   col = mix(col * (1. - uVig) + uVigCol * (1. - vg) * .5, col, vg);
   col = toSRGB(shoulder(col));

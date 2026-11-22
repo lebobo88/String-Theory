@@ -14,7 +14,11 @@ with sync_playwright() as pw:
         pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
         pg.goto('file://' + root + '/' + target); pg.wait_for_selector('.wordmark', timeout=60000)
         pg.click('text=Play'); pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run')
-        pg.wait_for_function("Object.values(ST.audioState.ok).filter(Boolean).length === 19", timeout=30000)
+        # every sound whose file is in audio/ must load (the list grows with the game, so it is read from the page)
+        refs = pg.evaluate("Object.entries(ST.AUDIO.sfx).map(([k, v]) => [k, v[0]]).concat(Object.entries(ST.AUDIO.music).map(([k, v]) => ['music:' + k, v[0]]))")
+        want = [k for k, f in refs if os.path.exists(os.path.join(root, 'audio', f))]
+        try: pg.wait_for_function("ks => ks.every(k => ST.audioState.ok[k])", arg=want, timeout=30000)
+        except Exception: fails.append(f"{name}: sounds that did not load: {pg.evaluate('ks => ks.filter(k => !ST.audioState.ok[k])', want)}")
         pg.wait_for_function("ST.audioState.track === 'menu' && ST.audioState.cur && !ST.audioState.cur.paused && ST.audioState.cur.currentTime > 0", timeout=15000)
         pg.evaluate("() => { const p = ST.game.profile; p.dust = 9000; p.silk = 900; Object.keys(ST.content.CHARTS).forEach(k => p.charts[k] = true); }")
         pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem')

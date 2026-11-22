@@ -70,7 +70,8 @@
       const base = C.PANELS[this.panel].rows[this.row], m = this.mods(), sp = Object.assign({}, base);
       if (m.crowd) { sp.spinners = 4; sp.mids = Math.min(10, sp.mids + 2); sp.nibs = 10; sp.diveEvery *= 0.85; }
       if (m.thin) { sp.mids = Math.max(4, sp.mids - 2); sp.nibs = Math.max(6, sp.nibs - 2); }
-      sp.diveEvery /= this.mode.fire; sp.fireEvery /= this.mode.fire;
+      sp.diveEvery /= this.mode.fire * T.pressure; sp.fireEvery /= this.mode.fire * T.pressure;   // pressure: the ship can dash, slow time and fire specials now
+      if (m.guards) sp.guardEvery = Math.min(sp.guardEvery || 99, m.guards);
       if (m.wicks) sp.wickEvery = Math.min(sp.wickEvery || 99, m.wicks);
       if (m.hawks) sp.hawks = (sp.hawks || 0) + m.hawks;
       return sp;
@@ -121,7 +122,7 @@
     spawn(type, o) {
       const def = C.MOTHS[type];
       const e = Object.assign({ id: this.nextId++, type, def, hp: def.hp * (o && o.state === 'trace' ? 1 : this.hpMul()), r: def.r, x: 0, y: H + 2, state: 'form', t: 0, vx: 0,
-        slot: false, cased: !!def.cased, shotT: this.rr(0.4, 1.2), flap: this.rand() * 6, passes: 0 }, o);
+        slot: false, cased: !!def.cased, guard: !!def.guard, guardT: 9, shotT: this.rr(0.4, 1.2), flap: this.rand() * 6, passes: 0 }, o);
       this.enemies.push(e); return e;
     }
     buildRow(spec) {
@@ -131,7 +132,7 @@
         for (let i = 0; i < n; i++) {
           let ty = type;
           if (type === 'casebearer') { m++; if (spec.weevilEvery && m % spec.weevilEvery === 0) ty = 'weevil'; else if (spec.wormEvery && m % spec.wormEvery === 1) ty = 'silkworm'; else if (spec.lappetEvery && m % spec.lappetEvery === 0) ty = 'lappet'; }
-          if (type === 'nibbler') { nb++; if (spec.wickEvery && nb % spec.wickEvery === 0) ty = 'wick'; else if (spec.flyEvery && nb % spec.flyEvery === 2) ty = 'firefly'; }
+          if (type === 'nibbler') { nb++; if (spec.guardEvery && nb % spec.guardEvery === 1) ty = 'shieldbug'; else if (spec.wickEvery && nb % spec.wickEvery === 0) ty = 'wick'; else if (spec.flyEvery && nb % spec.flyEvery === 2) ty = 'firefly'; }
           const sx = (i - (n - 1) / 2) * 1.2, sy = ROWS_Y[ri];
           const side = (i < n / 2) ? -1 : 1;
           this.spawn(ty, { slot: true, sx, sy, row: ri, state: 'enter', t: -(k * 0.07 + ri * 0.25),
@@ -283,7 +284,7 @@
       if (cut && this.phase === 'play') for (const b of this.bobbins()) for (const e of this.enemies.slice()) {
         if (e.state === 'enter' && e.t < 0) continue;
         const vx = b.x - pl.x, vy = b.y - pl.y, ll = vx * vx + vy * vy || 1, u = clamp(((e.x - pl.x) * vx + (e.y - pl.y) * vy) / ll, 0, 1);
-        if (Math.hypot(e.x - pl.x - vx * u, e.y - pl.y - vy * u) < e.r + 0.18) { if (e.cased) continue; this.damageEnemy(e, cut * dt * d.dmg, false, 'T'); }
+        if (Math.hypot(e.x - pl.x - vx * u, e.y - pl.y - vy * u) < e.r + 0.18) { if (e.cased) continue; this.damageEnemy(e, cut * dt * d.dmg, false, 'T'); if (this.t - (this.tcT || 0) > 0.22) { this.tcT = this.t; this.emit('tcut', { x: e.x, y: e.y }); } }
       }
     }
     gun(slot, thread, fireOk, dt, rateMul, origins, mul) {
@@ -354,6 +355,8 @@
             const dx = e.x - s.x, dy = e.y - s.y, rr = e.r + sr;
             if (dx * dx + dy * dy < rr * rr) {
               if (s.burst) { this.burst(s.x, s.y, s.burst, s.dmg, s.src, true); dead = true; break; }
+              // a Shield Bug in formation turns straight shots aside; angled shots, bounced shots, blasts and beams get through
+              if (e.guard && e.state === 'form' && !s.bounced && Math.abs(s.vx) < 3) { e.guardT = 0; this.emit('guard', { x: e.x, y: e.y - e.r }); dead = true; break; }
               this.damageEnemy(e, this.shotDmg(s, e), false, s.src);
               if (s.chain) this.chainFrom(e, s.chain, s.dmg * s.chainDmg, s.src);
               if (s.pierce > 0) { s.pierce--; (s.hit = s.hit || []).push(e.id); } else { dead = true; break; }
@@ -492,6 +495,7 @@
       for (const e of this.enemies.slice()) {
         if (e.dead) continue;
         const edt = dt * this.patchSlow(e.x, e.y);   // the Darner's patch
+        if (e.guard) e.guardT += rawDt;
         e.flap += rawDt * (e.state === 'form' ? 6 : 14);
         if (e.hurt) e.hurt = Math.max(0, e.hurt - rawDt);
         const def = e.def;

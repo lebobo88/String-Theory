@@ -45,7 +45,7 @@
       this.obj = new T.Points(g, this.mat); this.obj.frustumCulled = false; this.obj.renderOrder = order || 0;
       this.now = 0;
     }
-    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; }
+    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; this.geo.setDrawRange(0, this.limit); }   // lower tiers draw only their share of the ring
     /* rgb is a linear [r,g,b]; kind as in shaders.shape */
     emit(x, y, z, vx, vy, vz, life, size, rgb, a, kind, drag, grow, rot, spin, gz, ay) {
       const i = this.i; this.i = (i + 1) % this.limit;
@@ -123,46 +123,44 @@
   }
 
   // ---------- strip batch: every trail of one blend mode in one draw ----------
+  /* Two vertices per point (either side of the thread) and an index list of two triangles per segment, so a point shared by
+     two segments is written and shaded once. Everything is written straight into the typed arrays: no call per vertex, so no
+     numbers are boxed and nothing is allocated per frame. cap counts vertices. */
   class Strips {
     constructor(T, cap, add, order) {
-      this.cap = cap; this.n = 0;
+      this.cap = cap; this.n = 0; this.ni = 0; this.icap = cap * 3;
       this.p = new Float32Array(cap * 3); this.uv = new Float32Array(cap * 4); this.c = new Float32Array(cap * 4);
+      this.idx = new (cap > 65535 ? Uint32Array : Uint16Array)(this.icap);
       const g = this.geo = new T.BufferGeometry();
       this.attrs = [dyn(T, this.p, 3), dyn(T, this.uv, 4), dyn(T, this.c, 4)];
       g.setAttribute('position', this.attrs[0]); g.setAttribute('aUv', this.attrs[1]); g.setAttribute('aCol', this.attrs[2]);
+      this.index = dyn(T, this.idx, 1); g.setIndex(this.index);
       this.mat = shaderMat(T, { vs: SH.stripVS, fs: SH.stripFS, transparent: true, add, side: T.DoubleSide, uniforms: { uTime: { value: 0 } } });
       this.obj = new T.Mesh(g, this.mat); this.obj.frustumCulled = false; this.obj.renderOrder = order || 0;
-      this.nx = new Float32Array(512); this.ny = new Float32Array(512);
     }
-    begin(time) { this.n = 0; this.mat.uniforms.uTime.value = time; }
-    vert(x, y, z, u, v, s, st, rgb, a) {
-      const i = this.n++;
-      this.p[i * 3] = x; this.p[i * 3 + 1] = y; this.p[i * 3 + 2] = z;
-      this.uv[i * 4] = u; this.uv[i * 4 + 1] = v; this.uv[i * 4 + 2] = s; this.uv[i * 4 + 3] = st;
-      this.c[i * 4] = rgb[0]; this.c[i * 4 + 1] = rgb[1]; this.c[i * 4 + 2] = rgb[2]; this.c[i * 4 + 3] = a;
-    }
-    /* A strip through m points (px,py,pz arrays; ps = distance along, for dashes). Width and alpha run from w0/a0 at the
-       first point to w1/a1 at the last; wf(i) may override width per point. */
+    begin(time) { this.n = 0; this.ni = 0; this.mat.uniforms.uTime.value = time; }
+    /* A strip through m points (px,py,pz arrays; ps = distance along, for dashes), starting at index off. Width and alpha run
+       from w0/a0 at the first point to w1/a1 at the last. */
     strip(px, py, pz, ps, m, w0, w1, rgb, a0, a1, style, wf, off) {
-      if (m < 2 || this.n + (m - 1) * 6 > this.cap) return;
-      const nx = this.nx, ny = this.ny, o = off || 0;
+      if (m < 2 || this.n + m * 2 > this.cap || this.ni + (m - 1) * 6 > this.icap) return;
+      const o = off || 0, P = this.p, UV = this.uv, Cc = this.c, X = this.idx, r = rgb[0], g = rgb[1], b = rgb[2], inv = 1 / (m - 1), last = o + m - 1;
+      let v = this.n, k = this.ni;
       for (let i = 0; i < m; i++) {
-        const a = o + (i > 0 ? i - 1 : i), b = o + (i < m - 1 ? i + 1 : i);
-        let tx = px[b] - px[a], ty = py[b] - py[a]; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
-        const u = i / (m - 1), w = (wf ? wf(i, u) : w0 + (w1 - w0) * u) * 0.5;
-        nx[i] = -ty * w; ny[i] = tx * w;
+        const I = o + i, A = I > o ? I - 1 : I, Bn = I < last ? I + 1 : I;
+        let tx = px[Bn] - px[A], ty = py[Bn] - py[A]; const l = Math.sqrt(tx * tx + ty * ty) || 1;
+        const u = i * inv, w = (w0 + (w1 - w0) * u) * 0.5 / l, nx = -ty * w, ny = tx * w, x = px[I], y = py[I], z = pz[I], s = ps[I], al = a0 + (a1 - a0) * u;
+        let j = v * 3; P[j] = x + nx; P[j + 1] = y + ny; P[j + 2] = z; P[j + 3] = x - nx; P[j + 4] = y - ny; P[j + 5] = z;
+        j = v * 4; UV[j] = u; UV[j + 1] = 1; UV[j + 2] = s; UV[j + 3] = style; UV[j + 4] = u; UV[j + 5] = -1; UV[j + 6] = s; UV[j + 7] = style;
+        Cc[j] = r; Cc[j + 1] = g; Cc[j + 2] = b; Cc[j + 3] = al; Cc[j + 4] = r; Cc[j + 5] = g; Cc[j + 6] = b; Cc[j + 7] = al;
+        if (i) { const a = v - 2; X[k] = a; X[k + 1] = a + 1; X[k + 2] = v; X[k + 3] = a + 1; X[k + 4] = v + 1; X[k + 5] = v; k += 6; }
+        v += 2;
       }
-      for (let i = 0; i < m - 1; i++) {
-        const u0 = i / (m - 1), u1 = (i + 1) / (m - 1), al0 = a0 + (a1 - a0) * u0, al1 = a0 + (a1 - a0) * u1, j = i + 1, I = i + o, J = j + o;
-        this.vert(px[I] + nx[i], py[I] + ny[i], pz[I], u0, 1, ps[I], style, rgb, al0);
-        this.vert(px[I] - nx[i], py[I] - ny[i], pz[I], u0, -1, ps[I], style, rgb, al0);
-        this.vert(px[J] + nx[j], py[J] + ny[j], pz[J], u1, 1, ps[J], style, rgb, al1);
-        this.vert(px[I] - nx[i], py[I] - ny[i], pz[I], u0, -1, ps[I], style, rgb, al0);
-        this.vert(px[J] - nx[j], py[J] - ny[j], pz[J], u1, -1, ps[J], style, rgb, al1);
-        this.vert(px[J] + nx[j], py[J] + ny[j], pz[J], u1, 1, ps[J], style, rgb, al1);
-      }
+      this.n = v; this.ni = k;
     }
-    end() { this.geo.setDrawRange(0, this.n); this.obj.visible = this.n > 0; if (this.n) for (const a of this.attrs) upload(a, 0, this.n); }
+    end() {
+      this.geo.setDrawRange(0, this.ni); this.obj.visible = this.ni > 0;
+      if (this.ni) { for (let i = 0; i < 3; i++) upload(this.attrs[i], 0, this.n); upload(this.index, 0, this.ni); }
+    }
   }
 
   // ---------- instance pool: one InstancedMesh per yarn shape, refilled every frame ----------
@@ -228,7 +226,7 @@
       this.comp = fsq(SH.compositeFS, {
         tScene: { value: null }, tB1: { value: null }, tB2: { value: null }, uB1: { value: 0.9 }, uB2: { value: 0.6 },
         uAspect: { value: 1 }, uAberr: { value: 0 }, uTime: { value: 0 }, uGrain: { value: 0.03 }, uVig: { value: 0.35 },
-        uWaves: { value: this.waves }, uFlash: { value: new T.Vector3() }, uVigCol: { value: new T.Vector3() }
+        uWaves: { value: this.waves }, uFlash: { value: new T.Vector3() }, uVigCol: { value: new T.Vector3() }, uCool: { value: 0 }
       });
       this.w = 0; this.h = 0; this.q = null; this.rt = null;
     }

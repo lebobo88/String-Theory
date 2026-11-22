@@ -30,3 +30,15 @@ Each entry: what changed, why, and how it came about.
 - **Boss sizes changed** where the fight needed it: the Carpet Beetle and the Silk Empress are smaller so they can move through the ship's half of the cloth.
 - **Each boss has an entrance film** (`src/cine.js`): the first camera movement in the game. Four seconds, six for the Moth King, 1.5 once seen, a tap skips.
 - **Phones start on a new "lite" graphics tier** (glow, no shadow pass, no lens passes), the HUD updates ten times a second instead of every frame, drawing is capped to one frame per game step, and the Android app asks the screen for 60Hz. Why: the HUD was being rebuilt on 54 of 55 frames after two always-on weapons made events constant, and 90Hz phones were drawing every frame twice in three.
+
+## Finishing pass (November 2026)
+
+- **Boss strength follows where the player is in the run** (`POWER` in `src/bosses.js`). The eight boss scripts were tuned against a fully built ship, which made the first boss a slog for a new player. Each boss's health and the health of what it puts on the cloth are now scaled to the ship a player has by that panel. Tuned with the bot in `tools/bossbot.js`, which flies a typical loadout for each panel; it has not been tuned by hand play.
+- **A new enemy, the shield bug**, appears from panel 5. It stops straight shots while in formation; curved, bouncing and bobbin shots get past, and its guard drops for a moment after each block. Why: the retuned weapons each have one job, and nothing in the enemy set rewarded picking by job.
+- **Each route card names what waits on it**, so the weapon choice can be made before flying.
+- **Enemy rows fire 10% more often** now that the ship can dodge up and down, dash and slow time.
+- **Sound.** 67 new effects and two more boss music tracks (panels 4 to 6, and the Moth King). Every weapon, every ship special, every boss mechanic and every entrance film has its own sound. Music crossfades and dips under big moments. Music and effects have their own volume sliders.
+- **Vibration** on hits, specials and boss moments, with a switch in Settings.
+- **The first flight teaches by doing**: one prompt at a time (steer, lift to slow, flick to dash, special), each cleared by doing the thing. It replaces the text notices.
+- **Interface.** Purchases show what changed, screens change with a stitched wipe, power-ups are small stitched badges, the combo is thread wound round the score. Phones held sideways and left-handed play each have their own layout. On the shortest phones the route map lays cleared and upcoming stages two to a row so it never scrolls, and the camera sits closer so the cloth fills the height.
+- **Drawing.** Each ship's special has its own effect in place of one shared ring. Boss light cones stop at the edge of the cloth. A last point of shield frays the screen edges red.

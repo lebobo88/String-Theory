@@ -10,9 +10,17 @@
   const W = C.TUNING.fieldW, H = C.TUNING.fieldH, B = C.TUNING.fieldBot || 0, HW = W / 2, FH = H - B, CY = (H + B) / 2;
   const TAU = Math.PI * 2, PI = Math.PI;
   const rnd = (a, b) => a + (b - a) * Math.random();
+  const hyp = (x, y) => Math.sqrt(x * x + y * y);   // (Math.hypot is slow and boxes its arguments)
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const EMPTY = [], NODATA = Object.freeze({});
+  /* How far a ray from (x, y) at angle a runs before it leaves the cloth (capped at L): cones and their stitched edges stop at the frame. */
+  const clipRay = (x, y, a, L) => {
+    const dx = Math.cos(a), dy = Math.sin(a); let t = L;
+    if (dx > 1e-6) t = Math.min(t, (HW - x) / dx); else if (dx < -1e-6) t = Math.min(t, (-HW - x) / dx);
+    if (dy > 1e-6) t = Math.min(t, (H - y) / dy); else if (dy < -1e-6) t = Math.min(t, (B - y) / dy);
+    return t > 0 ? t : 0;
+  };
   const P = ST.Renderer.prototype;
 
   /* Words in b.pose that select a body pose. Scripts document their exact values under POSES; these cover them by meaning. */
@@ -83,7 +91,7 @@
   P.bfEnsure = function () { if (!this.bf) this.bfInit(); return this.bf; };
   P.bfP = function (key) {   // a lazily built instance pool of one yarn shape; the renderer begins and ends it every frame
     const bf = this.bf; let p = bf.pools[key];
-    if (!p) { p = bf.pools[key] = new FX.Pool(this.T, MAKE[key](this.T), this.yarnM, 40, true); this.pools['bf:' + key] = p; this.scene.add(p.mesh); }
+    if (!p) { p = bf.pools[key] = new FX.Pool(this.T, MAKE[key](this.T), this.yarnM, 40, true); this.pools['bf:' + key] = p; this.scene.add(p.mesh); this.poolList = null; }
     return p;
   };
   P.bfChartPools = function (name, split) {   // instanced chart pools at cell 0.1, scaled per instance
@@ -93,7 +101,7 @@
       c = map[name] = { body: null, left: null, right: null };
       for (const part of split ? ['body', 'left', 'right'] : ['body']) {
         const pool = new FX.Pool(this.T, this.chartGeo(name, 0.1, part, !split), this.yarnM, 40, true);
-        this.pools['bf:' + (split ? 'c:' : 's:') + name + ':' + part] = pool; this.scene.add(pool.mesh); c[part] = pool;
+        this.pools['bf:' + (split ? 'c:' : 's:') + name + ':' + part] = pool; this.scene.add(pool.mesh); c[part] = pool; this.poolList = null;
       }
     }
     return c;
@@ -115,7 +123,7 @@
   // ---------- drawing helpers (no allocation) ----------
   /* A thread from (x1,y1) to (x2,y2): sag bows it sideways, wob makes it wave, ph is the wave's phase. */
   P.bfLine = function (batch, x1, y1, x2, y2, z, w, rgb, a, style, sag, wob, ph, a1, z2) {
-    const bf = this.bf, px = bf.px, py = bf.py, pz = bf.pz, ps = bf.ps, dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy);
+    const bf = this.bf, px = bf.px, py = bf.py, pz = bf.pz, ps = bf.ps, dx = x2 - x1, dy = y2 - y1, len = Math.sqrt(dx * dx + dy * dy);
     if (len < 0.02) return;
     const n = sag || wob ? Math.max(3, Math.min(60, Math.ceil(len / 0.3) + 1)) : 2, nx = -dy / len, ny = dx / len, zz = z2 === undefined ? z : z2;
     for (let i = 0; i < n; i++) {
@@ -130,7 +138,7 @@
     for (let i = 0; i <= n; i++) {
       const an = i / n * TAU + (ph || 0), ex = Math.cos(an) * rx, ey = Math.sin(an) * ry;
       px[i] = x + ex * c - ey * s; py[i] = y + ex * s + ey * c; pz[i] = z;
-      if (i) len += Math.hypot(px[i] - px[i - 1], py[i] - py[i - 1]); ps[i] = len;
+      if (i) { const ex = px[i] - px[i - 1], ey = py[i] - py[i - 1]; len += Math.sqrt(ex * ex + ey * ey); } ps[i] = len;
     }
     batch.strip(px, py, pz, ps, n + 1, w, w, rgb, a, a, style);
   };
@@ -169,9 +177,9 @@
       this.bfLine(this.trA, x1, p.y, x2, p.y, 0.05, h, K.bastDim, (0.06 + 0.22 * bl.wk) * bl.on, 0);
       for (let x = x1 + 0.55; x < x2; x += 1.1) this.spr.add(x, p.y, 0.25, Math.min(0.55, h * 0.8), K.tack, 0.55 * bl.on, 5, 0);
     } else if (p.shape === 'cone') {
-      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10;
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L, p.y + Math.sin(a0) * L, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L, p.y + Math.sin(a1) * L, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
+      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L);
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L0, p.y + Math.sin(a0) * L0, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L1, p.y + Math.sin(a1) * L1, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
     } else {
       const r = p.r || 0.5;
       this.spr.add(p.x, p.y, 0.3, r * 2.5, K.bast, 0.85 * bl.on, 7, t * 0.8 + v.seed * 6);
@@ -197,6 +205,7 @@
     for (const m of bf.lamps) { this.scene.remove(m); m.material.dispose(); } bf.lamps.length = 0;
     if (bf.lost) { for (const m of bf.lost.meshes) { this.scene.remove(m); } bf.lost.mat.dispose(); bf.lost = null; }
     for (const k in this.pools) if (k.indexOf('bf:') === 0) { const p = this.pools[k]; this.scene.remove(p.mesh); p.mesh.geometry.dispose(); delete this.pools[k]; }
+    this.poolList = null;
     bf.pools = {}; bf.charts = {}; bf.solids = {};
     bf.floorV = bf.insetV = bf.floorFx = bf.insetFx = 0; bf.dark = 0; bf.simDark = 0;
     const ps = bf.pose; ps.id = null; ps.eyes = null; ps.pal = null;
@@ -544,7 +553,7 @@
   /* A prop that names a chart is drawn as that chart; returns false when it has none. */
   P.bfSprite = function (p, z, spin, size, x, y, f2) {
     if (!p.sprite || !C.SPRITES[p.sprite]) return false;
-    const sp = C.SPRITES[p.sprite], r = p.r || 0.5, k = (size || (p.shape === 'seg' ? Math.hypot(p.x2 - p.x, p.y2 - p.y) : r * 2.2)) / Math.max(sp.w, sp.h);
+    const sp = C.SPRITES[p.sprite], r = p.r || 0.5, k = (size || (p.shape === 'seg' ? hyp(p.x2 - p.x, p.y2 - p.y) : r * 2.2)) / Math.max(sp.w, sp.h);
     if (x === undefined) { x = p.shape === 'seg' ? (p.x + p.x2) / 2 : p.x; y = p.shape === 'seg' ? (p.y + p.y2) / 2 : p.y; }
     this.bfChart(p.sprite, x, y, z, spin || 0, k, 0, this.bf.K.white, this.bfFlash(p), 0.12, f2 || 0, false);
     return true;
@@ -601,13 +610,13 @@
     // the scorched length the flame has already eaten: from where it was lit if the script says, else the path the flame took
     if (p.data && p.data.x0 !== undefined) { this.bfLine(this.trN, p.data.x0, p.data.y0, p.x, p.y, 0.04, 0.12, K.char, 0.85, 8, 0, 0.03, v.seed * 9, 0.4);
       v.acc += 1 / 60; if (v.acc > 0.25) { v.acc = 0; this.darn(p.x, p.y, K.char, 0.3, 3.5); } }
-    else if (v.n === 0 || Math.hypot(p.x - v.hx[0], p.y - v.hy[0]) > 0.22) {
+    else if (v.n === 0 || hyp(p.x - v.hx[0], p.y - v.hy[0]) > 0.22) {
       const n = Math.min(v.n, 31); v.hx.copyWithin(1, 0, n); v.hy.copyWithin(1, 0, n); v.hx[0] = p.x; v.hy[0] = p.y; v.n = n + 1;
       if (v.n > 1) this.darn(p.x, p.y, K.char, 0.32, 3.5);
     }
     if (v.n > 1) {
       const bf = this.bf, px = bf.px, py = bf.py, pz = bf.pz, ps = bf.ps; let s = 0;
-      for (let i = 0; i < v.n; i++) { px[i] = v.hx[i]; py[i] = v.hy[i]; pz[i] = 0.04; if (i) s += Math.hypot(px[i] - px[i - 1], py[i] - py[i - 1]); ps[i] = s; }
+      for (let i = 0; i < v.n; i++) { px[i] = v.hx[i]; py[i] = v.hy[i]; pz[i] = 0.04; if (i) s += hyp(px[i] - px[i - 1], py[i] - py[i - 1]); ps[i] = s; }
       this.trN.strip(px, py, pz, ps, v.n, 0.12, 0.05, K.char, 0.85, 0.1, 8);
     }
     // the unburnt fuse: plied tan yarn, a stitched line toward the powder
@@ -624,7 +633,7 @@
   P.bfPowder = function (p, v, sim, warn) {
     const K = this.bf.K, r = p.r || 0.6, t = this.time; let near = 0;
     const props = sim.props;   // how close the nearest fuse's flame is to this knot
-    for (let i = 0; i < props.length; i++) { const f = props[i]; if (f.kind !== 'fuse' || f.warn > 0) continue; if (Math.hypot(f.x2 - p.x, f.y2 - p.y) < r + 0.8) { const d = Math.hypot(f.x2 - f.x, f.y2 - f.y); near = Math.max(near, clamp(1 - d / 6, 0, 1)); } }
+    for (let i = 0; i < props.length; i++) { const f = props[i]; if (f.kind !== 'fuse' || f.warn > 0) continue; if (hyp(f.x2 - p.x, f.y2 - p.y) < r + 0.8) { const d = hyp(f.x2 - f.x, f.y2 - f.y); near = Math.max(near, clamp(1 - d / 6, 0, 1)); } }
     const red = near > 0 ? (Math.sin(t * (6 + near * 26)) > 0 ? near : near * 0.2) : 0, knot = p.data && p.data.knot ? p.data.knot : r, blast = p.data && p.data.knot ? r : 0;
     if (!this.bfSprite(p, 0.5, Math.sin(t * 2 + v.seed) * 0.2, knot * 2.6, undefined, undefined, red)) { this.bfM(p.x, p.y, 0.5, t * 0.6 + v.seed * 6, 0.4, 0.3, knot * 1.2, knot * 1.2, knot * 1.2); this.bfP('knot').push(this.bf.M, K.dbrown, this.bfFlash(p), 0.05, red); }
     for (let k = 0; k < 3; k++) { const an = v.seed * 9 + k * 2.1 + t * 0.5; if (Math.sin(t * 5 + k * 2 + v.seed * 7) > 0.6) this.spr.add(p.x + Math.cos(an) * knot * 0.5, p.y + Math.sin(an) * knot * 0.5, 0.9, 0.4, K.saffHi, 0.9, 1, an); }
@@ -674,7 +683,7 @@
     const bf = this.bf, T = this.T; let m = bf.cones[bf.coneN];
     if (!m) {
       const geo = this.shared('cone', () => { const b = new T.BufferGeometry(); b.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, -1, -1, 0, 1, -1, 0], 3)); b.setAttribute('uv', new T.Float32BufferAttribute([0.5, 1, 0, 0, 1, 0], 2)); return b; });
-      m = new T.Mesh(geo, FX.shaderMat(T, { vs: SH.quadVS, fs: SH.coneFS, add: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uAlpha: { value: 1 }, uPull: { value: 0 }, uColor: { value: new T.Vector3() } } }));
+      m = new T.Mesh(geo, this.coneMaterial());   // the light stops at the edge of the cloth
       m.renderOrder = 5; m.frustumCulled = false; this.scene.add(m); bf.cones.push(m);
     }
     bf.coneN++; m.visible = true; return m;
@@ -687,12 +696,13 @@
     const op = p.data && p.data.open !== undefined ? clamp(p.data.open, 0, 1) : 1;
     u.uAlpha.value = (warn ? 0.18 + 0.12 * this.bfBlink(p).on : (hot ? 0.9 + 0.1 * Math.sin(t * 30) : 0.55)) * op;
     if (warn) this.bfWarn(p, v);
-    // the edges are stitched; the eye at its apex glows
-    if (!warn) { const a0 = p.a - half, a1 = p.a + half, c = hot ? K.bastHot : K.linen;
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L, p.y + Math.sin(a0) * L, 0.06, 0.06, c, 0.6, 2);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L, p.y + Math.sin(a1) * L, 0.06, 0.06, c, 0.6, 2); }
+    // the edges are stitched and tacked down where they meet the frame; the eye at its apex glows
+    if (!warn) { const a0 = p.a - half, a1 = p.a + half, c = hot ? K.bastHot : K.linen, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L);
+      const x0 = p.x + Math.cos(a0) * L0, y0 = p.y + Math.sin(a0) * L0, x1 = p.x + Math.cos(a1) * L1, y1 = p.y + Math.sin(a1) * L1;
+      this.bfLine(this.trN, p.x, p.y, x0, y0, 0.06, 0.06, c, 0.6, 2); this.bfLine(this.trN, p.x, p.y, x1, y1, 0.06, 0.06, c, 0.6, 2);
+      if (L0 < L - 0.05) this.spr.add(x0, y0, 0.3, 0.42, c, 0.8, 5, 0); if (L1 < L - 0.05) this.spr.add(x1, y1, 0.3, 0.42, c, 0.8, 5, 0); }
     this.spr.add(p.x, p.y, 1.4, hot ? 2.2 : 1.6, hot ? K.emberDim : K.glareDim, 2.2, 0); this.spr.add(p.x, p.y, 1.5, 0.9, K.glare, 1, 8, t);
-    if (hot && Math.random() < 0.5 * this.q.particles) { const a = p.a + rnd(-half, half) * 0.8, d = rnd(1, L); this.glow.emit(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 0.4, Math.cos(a) * 3, Math.sin(a) * 3, 0, 0.3, 0.3, K.bastHot, 0.9, 4, 0, 0.3, a, 0, 0); }
+    if (hot && Math.random() < 0.5 * this.q.particles) { const a = p.a + rnd(-half, half) * 0.8, d = rnd(1, Math.max(1.05, clipRay(p.x, p.y, a, L) - 0.3)); this.glow.emit(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, 0.4, Math.cos(a) * 3, Math.sin(a) * 3, 0, 0.3, 0.3, K.bastHot, 0.9, 4, 0, 0.3, a, 0, 0); }
   };
   P.bfHook = function (p, v, sim, warn, fdt) {
     const K = this.bf.K, t = this.time, b = sim.boss, d = p.data || NODATA, snag = !!d.snag, aim = !!d.aim, lunge = !!d.lunge, r = p.r || 0.5;
@@ -718,11 +728,11 @@
     this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.7, 0.07, K.madderHi, 1, 3, 0, 0.06 + 0.04 * Math.sin(t * 50), t * 60);
     this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.68, 0.1, K.madder, 1, 1, 0, 0.04, t * 60);
     // tension: glints reeling toward the hook
-    const L = Math.hypot(p.x2 - p.x, p.y2 - p.y); for (let k = 0; k < 3; k++) { const u = (t * 1.6 + k / 3) % 1; this.spr.add(p.x2 + (p.x - p.x2) * u, p.y2 + (p.y - p.y2) * u, 0.8, 0.5, K.bastHot, 0.9, 1, t + k); }
+    const L = hyp(p.x2 - p.x, p.y2 - p.y); for (let k = 0; k < 3; k++) { const u = (t * 1.6 + k / 3) % 1; this.spr.add(p.x2 + (p.x - p.x2) * u, p.y2 + (p.y - p.y2) * u, 0.8, 0.5, K.bastHot, 0.9, 1, t + k); }
     if (L > 0) this.spr.add(p.x2, p.y2, 0.8, 1.3, K.bastHot, 0.5 + 0.3 * Math.sin(t * 20), 10, t * 4);
   };
   P.bfLane = function (p, v) {   // the charge, chalked on the cloth ahead of time
-    const K = this.bf.K, d = p.data || NODATA, w = (p.w || 2) / 2, dx = p.x2 - p.x, dy = p.y2 - p.y, L = Math.hypot(dx, dy);
+    const K = this.bf.K, d = p.data || NODATA, w = (p.w || 2) / 2, dx = p.x2 - p.x, dy = p.y2 - p.y, L = hyp(dx, dy);
     if (L < 0.1) return;
     const nx = -dy / L * w, ny = dx / L * w, lock = !!d.lock, on = lock ? (Math.sin(this.time * 26) > -0.2 ? 1 : 0.4) : 1, wk = lock ? 1 : 0.35;
     const a = (0.45 + 0.5 * wk) * (d.n ? Math.max(0.35, 1 - d.n * 0.3) : 1);
@@ -736,7 +746,7 @@
   };
   P.bfBristle = function (p, v, warn, fdt) {
     if (warn) { this.bfWarn(p, v); return; }
-    const K = this.bf.K, w = p.w || 0.4, dx = p.x2 - p.x, dy = p.y2 - p.y, L = Math.hypot(dx, dy) || 1, ang = Math.atan2(dy, dx), fa = p.life === Infinity ? 1 : clamp(p.life / 1.2, 0, 1);
+    const K = this.bf.K, w = p.w || 0.4, dx = p.x2 - p.x, dy = p.y2 - p.y, L = hyp(dx, dy) || 1, ang = Math.atan2(dy, dx), fa = p.life === Infinity ? 1 : clamp(p.life / 1.2, 0, 1);
     this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, w * 0.7, K.brown, 0.95 * fa, 8, 0, 0.03, v.seed * 9);
     for (let s = 0.15, i = 0; s < L; s += 0.22, i++) {
       const u = s / L, h = hash(v.seed * 50 + i), side = i % 2 ? 1 : -1;
@@ -745,7 +755,7 @@
     if (Math.random() < fdt * 3 * this.q.particles) this.fibres(p.x + dx * Math.random(), p.y + dy * Math.random(), 0.2, 1, K.tan, 0.6);
   };
   P.bfLump = function (p, v, fdt) {   // something moving under the cloth: a hump, the weave stretched over it, a ripple behind
-    const K = this.bf.K, r = p.r || 0.9, t = this.time, sp = Math.hypot(p.x - v.lx, p.y - v.ly) / Math.max(fdt, 1e-3);
+    const K = this.bf.K, r = p.r || 0.9, t = this.time, sp = hyp(p.x - v.lx, p.y - v.ly) / Math.max(fdt, 1e-3);
     this.bfM(p.x, p.y, 0, 0, 0, 0, r * (1 + 0.05 * Math.sin(t * 9)), r * (1 + 0.05 * Math.cos(t * 9)), r * 0.3);
     this.bfP('ball').push(this.bf.M, K.coverHi, 0, 0.08, 0);
     this.halo.add(p.x, p.y - r * 0.25, 0.1 + r * 0.3, r * 2.6, K.night, 0.35, 0);
@@ -792,7 +802,7 @@
       this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, 0.05, K.bastDim, 0.5, 2);
       this.spr.add(x2, y2, 0.6, 0.6, K.glare, 0.9, 1, t * 4); }
     // the ship brushing it makes it shiver
-    const dx = p.x2 - p.x, dy = p.y2 - p.y, ll = dx * dx + dy * dy || 1, u = clamp(((pl.x - p.x) * dx + (pl.y - p.y) * dy) / ll, 0, 1), d = Math.hypot(pl.x - p.x - dx * u, pl.y - p.y - dy * u);
+    const dx = p.x2 - p.x, dy = p.y2 - p.y, ll = dx * dx + dy * dy || 1, u = clamp(((pl.x - p.x) * dx + (pl.y - p.y) * dy) / ll, 0, 1), d = hyp(pl.x - p.x - dx * u, pl.y - p.y - dy * u);
     if (d < 0.8) v.k = Math.min(1, v.k + 0.25); v.k *= 0.94;
     const held = !!(p.data && p.data.held), sag = held ? 0 : Math.sin(t * 1.1 + v.seed * 6) * 0.08, wob = 0.02 + v.k * 0.16 + (held ? 0.03 : 0);
     if (held) { this.bfLine(this.trA, p.x, p.y, x2, y2, 0.46, 0.3, K.saffHi, 0.3 + 0.15 * Math.sin(t * 9), 0); for (let k = 0; k < 2; k++) { const u = (t * 0.7 + k * 0.5) % 1; this.spr.add(p.x + (x2 - p.x) * u, p.y + (y2 - p.y) * u, 0.6, 0.7, K.glare, 0.9, 1, t); } }
@@ -859,7 +869,7 @@
   };
   P.bfRoller = function (p, v, fdt) {   // a rolling shell (the King's test): the beetle's chart curled and spinning
     const K = this.bf.K, r = p.r || 1, sp = C.SPRITES.beetle, dx = p.x - v.lx, dy = p.y - v.ly;
-    v.acc -= Math.hypot(dx, dy) / Math.max(0.4, r * 0.8) * (dx < 0 ? -1 : 1);
+    v.acc -= hyp(dx, dy) / Math.max(0.4, r * 0.8) * (dx < 0 ? -1 : 1);
     if (sp) this.bfChart('beetle', p.x, p.y, 0.9, v.acc, r * 2.1 / sp.w, 0, K.white, 0, 0.1, 0, false);
     this.spr.add(p.x, p.y, 1.2, r * 2.3, K.tan, 0.5, 7, v.acc);
     this.spr.add(p.x, p.y, 1.2, r * 2.6, K.bastHot, 0.35, 10, -v.acc);
@@ -917,7 +927,7 @@
     if (b.id === 'tinea' && ps.cased > 0.01) ps.open += ((b.shield ? 0 : 1) - ps.open) * k;   // the case is split whenever she can be hurt
     ps.stun += ((b.stun > 0 ? 1 : 0) - ps.stun) * Math.min(1, dt * 5);
     const vx = (b.x - ps.lastX) / Math.max(dt, 1e-3), vy = (b.y - ps.lastY) / Math.max(dt, 1e-3); ps.lastX = b.x; ps.lastY = b.y;
-    const sp = Math.hypot(vx, vy);
+    const sp = hyp(vx, vy);
     // --- the body ---
     const body = u.body, L = body.userData.left, R = body.userData.right;
     let wing = L ? L.rotation.y : 0;
@@ -1086,7 +1096,7 @@
         const ex = x + sd * ATLAS_EYE[0], ey = y + ATLAS_EYE[1], er = 0.62;
         if (o < 0.98) { this.bfM(ex, ey + er * o * 0.8, 1.3, 0, 0, 0, er * 1.05, er * (1 - o) + 0.05, er * 0.16); this.bfP('ball').push(this.bf.M, K.brown, 0, 0.06, 0); }
         if (o > 0.02) {
-          const dx = pl.x - ex, dy = pl.y - ey, dd = Math.hypot(dx, dy) || 1, ox = dx / dd * er * 0.3 * o, oy = dy / dd * er * 0.3 * o, hot = pose.indexOf('gaze') === 0;
+          const dx = pl.x - ex, dy = pl.y - ey, dd = hyp(dx, dy) || 1, ox = dx / dd * er * 0.3 * o, oy = dy / dd * er * 0.3 * o, hot = pose.indexOf('gaze') === 0;
           this.spr.add(ex, ey, 1.5, er * 3, hot ? K.saffDim : K.glareDim, 2 * o, 0);
           this.halo.add(ex, ey, 1.55, er * 1.5, K.saff, o, 9); this.halo.add(ex + ox, ey + oy, 1.6, er * 0.75, K.char, o, 9);
           this.spr.add(ex + ox - er * 0.12, ey + oy + er * 0.14, 1.65, er * 0.4, K.glare, o, 1, t);

@@ -14,6 +14,7 @@
   const eo = k => 1 - (1 - k) * (1 - k) * (1 - k), ei = k => k * k * k, eio = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   const back = k => { const s = 1.9; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); };
   const rnd = (a, b) => a + (b - a) * Math.random();
+  const hyp = (x, y) => Math.sqrt(x * x + y * y);   // (Math.hypot is slow and boxes its arguments)
   const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const IV = 0.038;   // film seconds between sewn letters
 
@@ -242,7 +243,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
         else if (name.indexOf('pool') === 0) m = this.r.bfLampMesh();
         else if (name === 'hole' || name === 'seam') { m = new T.Mesh(new T.CircleGeometry(1, 48), new T.MeshBasicMaterial({ color: new T.Color('#030308') })); m.renderOrder = 1; }
         else { const geo = this.r.shared('cone', () => { const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, -1, -1, 0, 1, -1, 0], 3)); g.setAttribute('uv', new T.Float32BufferAttribute([0.5, 1, 0, 0, 1, 0], 2)); return g; });
-          m = new T.Mesh(geo, ST.fx.shaderMat(T, { vs: ST.shaders.quadVS, fs: ST.shaders.coneFS, add: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uAlpha: { value: 1 }, uPull: { value: 0.4 }, uColor: { value: new T.Vector3() } } })); m.renderOrder = 5; }
+          m = new T.Mesh(geo, this.r.coneMaterial(false)); m.material.uniforms.uPull.value = 0.4; m.renderOrder = 5; }   // light across the lens: not clipped to the cloth
         m.frustumCulled = false; this.meshes[name] = m;
       }
       if (!m.parent) this.r.scene.add(m);
@@ -276,7 +277,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
   const WEB = (function () {   // the Empress's web: anchors round the frame, in angle order about the centre
     const cx = 0, cy = 9.6, a = [[-6.8, -3.1], [6.8, 18.4], [6.8, -3.1], [-6.8, 18.4], [-6.8, 7.8], [6.8, 7.8], [0, 18.4], [0, -3.1]];
     const ang = a.map(p => Math.atan2(p[1] - cy, p[0] - cx)), order = a.map((p, i) => i).sort((i, j) => ang[i] - ang[j]);
-    return { cx, cy, a, ang, order, dist: a.map(p => Math.hypot(p[0] - cx, p[1] - cy)) };
+    return { cx, cy, a, ang, order, dist: a.map(p => hyp(p[0] - cx, p[1] - cy)) };
   })();
   const KING_MOTHS = Object.keys(C.MOTHS), POOLS = ['pool0', 'pool1', 'pool2'];
 
@@ -439,7 +440,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
           if (fadeE <= 0.02 || close < 0.6) continue;
           if (open < 0.98) c.ball(ex, ey + er * open * 0.85, z + 0.25 * S * cell, er * 1.05, er * (1 - open) + 0.05, er * 0.3, 0, K.brown, 0, 0.05);
           if (open > 0.02) {
-            const look = sm(2.05, 2.5, t), dx = pl.x - ex, dy = pl.y - ey, dd = Math.hypot(dx, dy) || 1, ox = dx / dd * er * 0.32 * look, oy = dy / dd * er * 0.32 * look;
+            const look = sm(2.05, 2.5, t), dx = pl.x - ex, dy = pl.y - ey, dd = hyp(dx, dy) || 1, ox = dx / dd * er * 0.32 * look, oy = dy / dd * er * 0.32 * look;
             r.spr.add(ex, ey, z + 0.6 + er, er * 2.4, K.saffDim, 2.2 * open * fadeE, 0);
             r.halo.add(ex, ey, z + 0.5, er * 1.55, K.saff, open * fadeE, 9);
             r.halo.add(ex + ox, ey + oy, z + 0.55, er * 0.8, K.char, open * fadeE, 9);
@@ -486,7 +487,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
           const m = 120, turns = 3.3, sf = 1 - gone;
           for (let s = 0; s < 2; s++) { let len = 0;
             for (let i = 0; i < m; i++) { const u = i / (m - 1), a = u * turns * TAU - time * 5 + s * PI, rr = R * u + 0.05;
-              px[i] = X0 + Math.cos(a) * rr; py[i] = Y0 + Math.sin(a) * rr * 0.95; pz[i] = 0.05 + (1 - u) * 1.2 * sm(0.9, 1.4, t) * sf; if (i) len += Math.hypot(px[i] - px[i - 1], py[i] - py[i - 1]); ps[i] = len; }
+              px[i] = X0 + Math.cos(a) * rr; py[i] = Y0 + Math.sin(a) * rr * 0.95; pz[i] = 0.05 + (1 - u) * 1.2 * sm(0.9, 1.4, t) * sf; if (i) len += hyp(px[i] - px[i - 1], py[i] - py[i - 1]); ps[i] = len; }
             r.trN.strip(px, py, pz, ps, m, 0.11, 0.08, s ? K.patch : K.coverHi, 0.95 * sf, 0.95 * sf, s ? 1 : 8); }
         }
         // the hole, with a frayed rim and the light from behind the cloth inside it
@@ -551,7 +552,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
         }
         if (on) {
           const un = eo(sm(3.0, 3.3, t)), s = lerp(0.56, 1, un);
-          c.ang -= Math.min(2, Math.hypot(bx - c.lx, by - c.ly)) / 0.8 * (1 - un);
+          c.ang -= Math.min(2, hyp(bx - c.lx, by - c.ly)) / 0.8 * (1 - un);
           c.boss(bx, by, bz, s, c.ang * (1 - un), 0, 1, 1, 1, 0.1 * (1 - un));
           if (un < 1) r.spr.add(bx, by, bz + 0.6, def.halfW * 2.2 * s, K.tan, 0.55 * (1 - un), 7, c.ang);
           if (t < 3 && Math.random() < 0.5) r.lintPuff(bx, by - 0.6, bz - 0.4, 1, K.tan, 0.6, 1.2);
@@ -597,7 +598,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
             const f = Math.min(s, sp), j = Math.floor(f), fr = f - j, i0 = WEB.order[j % 8], i1 = WEB.order[(j + 1) % 8];
             const ring = f / 8, a0 = WEB.ang[i0], a1 = WEB.ang[i1]; let da = a1 - a0; if (da < 0) da += TAU;
             const a = a0 + da * fr, rr = Math.min(1.0 + ring * 1.05, 0.9 * lerp(WEB.dist[i0], WEB.dist[i1], fr)) * (1 + shiv * 0.06 * Math.sin(a * 3));
-            px[m] = cx + Math.cos(a) * rr; py[m] = cy + Math.sin(a) * rr; pz[m] = 0.42; if (m) len += Math.hypot(px[m] - px[m - 1], py[m] - py[m - 1]); ps[m] = len; m++;
+            px[m] = cx + Math.cos(a) * rr; py[m] = cy + Math.sin(a) * rr; pz[m] = 0.42; if (m) len += hyp(px[m] - px[m - 1], py[m] - py[m - 1]); ps[m] = len; m++;
             if (s < n && fr === 0 && Math.sin(time * 2.6 + s * 1.7) > 0.35) r.spr.add(px[m - 1], py[m - 1], 0.55, 0.5, K.glare, 0.9 * fade, 1, time + s);
           }
           r.trA.strip(px, py, pz, ps, m, 0.07, 0.07, K.silk, 0.6 * fade, 0.6 * fade, 7); r.trN.strip(px, py, pz, ps, m, 0.028, 0.028, K.linen, 0.8 * fade, 0.8 * fade, 1);
@@ -645,7 +646,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
           if (Math.random() < 0.04 * c.q()) r.glow.emit(x, y, z, 0, 0, 0, 0.4, 0.25, K.saffHi, 0.8, 1, 0, 0.3);
         }
         // the light, and a disc of moths crossing it
-        const Lx = -3.4, Ly = 17.1, ek = clamp((t - 2.55) / 1.1, 0, 1), Dx = lerp(-11, 5.5, ek), Dy = lerp(17.6, 16.6, ek), occ = t > 2.55 && t < 3.65 ? clamp(1 - Math.hypot(Dx - Lx, Dy - Ly) / 2.6, 0, 1) : 0;
+        const Lx = -3.4, Ly = 17.1, ek = clamp((t - 2.55) / 1.1, 0, 1), Dx = lerp(-11, 5.5, ek), Dy = lerp(17.6, 16.6, ek), occ = t > 2.55 && t < 3.65 ? clamp(1 - hyp(Dx - Lx, Dy - Ly) / 2.6, 0, 1) : 0;
         const lightK = sm(0.2, 0.8, t) * (1 - sm(5.1, 5.5, t));
         if (lightK > 0.01) { r.spr.add(Lx, Ly, 2, 3.4, K.glare, 0.85 * (1 - 0.9 * occ) * lightK, 9); r.spr.add(Lx, Ly, 4.5, 11, K.glareDim, 1.6 * (1 - 0.8 * occ) * lightK, 0);
           if (occ > 0.05) { r.spr.add(Lx, Ly, 3, 7, K.glare, occ * 0.7, 8, time * 0.3); r.spr.add(Lx, Ly, 2.2, 4.4, K.saffHi, occ * 0.8, 3); } }

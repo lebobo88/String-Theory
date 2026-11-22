@@ -22,10 +22,16 @@
   const C = ST.content, F = ST.FIELD, HW = F.HW, H = F.H, PY = F.PY, BOT = F.BOT, T = C.TUNING;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   ST.bossScripts = ST.bossScripts || {};
+  /* Boss scripts are tuned against a fully built ship. POWER is how strong a player is expected to be when they reach each boss
+     (1 = level III weapons and three levels of damage and fire rate; the first boss meets a fresh ship). The framework scales each
+     boss's health, and the health of the things it puts on the cloth, by it. tools/bossbot.js fights each boss with the matching loadout. */
+  const POWER = { greatlappet: 0.163, tinea: 0.29, greatwick: 0.452, atlas: 0.511, unraveller: 0.717, beetle: 0.845, empress: 0.94, king: 1 };
+  ST.bossPower = POWER;
   ST.registerBoss = function (id, script) {
     if (!C.KEEPERS[id]) throw new Error('unknown boss ' + id);
     ST.bossScripts[id] = script;
     if (script.def) Object.assign(C.KEEPERS[id], script.def);
+    if (script.def && script.def.hp) C.KEEPERS[id].hp = Math.round(script.def.hp * (POWER[id] || 1));
     if (script.sprites) Object.assign(C.SPRITES, script.sprites);
   };
   const segDist = (px, py, x1, y1, x2, y2) => { const vx = x2 - x1, vy = y2 - y1, ll = vx * vx + vy * vy || 1, u = clamp(((px - x1) * vx + (py - y1) * vy) / ll, 0, 1); return Math.hypot(px - x1 - vx * u, py - y1 - vy * u); };
@@ -87,6 +93,7 @@
     // ---------- props ----------
     addProp(o) {
       const p = Object.assign({ id: this.nextId++, kind: 'prop', shape: 'circle', x: 0, y: 0, r: 0.5, t: 0, warn: 0, life: Infinity, hp: 0, shoot: false, block: true, cut: false, hurt: false, slow: 0, data: {} }, o);
+      if (p.hp > 0 && this.boss) p.hp *= POWER[this.boss.id] || 1;
       p.maxHp = p.hp; p.warn0 = p.warn; this.props.push(p); this.emit('prop', { id: p.id, kind: p.kind, x: p.x, y: p.y }); return p;
     },
     removeProp(p, why) {

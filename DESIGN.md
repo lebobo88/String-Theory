@@ -63,6 +63,7 @@ Enemy health rises 20% per stage, speed 4%, shot speed 5%.
 | Weevil | 2 | 180 / 360 | 3 | Tough. Charges straight down at where you are standing. |
 | Firefly | 1 | 150 / 300 | 2 | Explodes into a ring of shots when destroyed. Keep your distance. |
 | Silkworm | 2 | 140 / 280 | 3 | Sits in formation and fires aimed shots. Destroy it first. |
+| Shield Bug | 1 | 160 / 320 | 3 | Holds a shield in front while it keeps formation: straight shots bounce off. Hit it from an angle, with a blast or a beam, or when it dives. |
 | Wick | 1 | 200 / 400 | 3 | Carries a fireball. If it reaches the bottom it leaves a burning patch. |
 
 ## Bosses

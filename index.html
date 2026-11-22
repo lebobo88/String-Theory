@@ -13,18 +13,21 @@
 </head>
 <body>
 <div id="stage">
-  <aside id="hudL" class="hud" aria-label="The chart"></aside>
+  <aside id="hudL" class="hud" aria-label="Score and progress"></aside>
   <main id="field">
     <canvas id="cloth" aria-label="The Coverlet: playfield"></canvas>
     <div id="mtop" aria-label="Status"></div>
     <div id="bossbar"></div>
     <div id="banner" role="status" aria-live="polite"></div>
+    <div id="coach" role="status" aria-live="polite"></div>
   </main>
-  <aside class="hud" aria-label="The tray"><div id="hudR"></div><div id="mfx" class="fxs" aria-label="Active power-ups"></div><div id="tray"></div></aside>
+  <aside id="side" class="hud" aria-label="Items and meters"><div id="hudR"></div><div id="mfx" aria-label="Active power-ups"></div><div id="tray"></div></aside>
 </div>
 <div id="floaters" aria-hidden="true"></div>
 <div id="toasts" role="status" aria-live="polite"></div>
 <div id="overlay" class="overlay"></div>
+<div id="flyers" aria-hidden="true"></div>
+<div id="wipe" aria-hidden="true"></div>
 <!-- build:js -->
 <script src="src/content.js"></script>
 <script src="src/save.js"></script>

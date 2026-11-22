@@ -14,8 +14,12 @@ function load() {
 }
 function fight(id, strategy, opts) {
   const ST = load(), C = ST.content, o = Object.assign({ god: false, maxSec: 420, seed: 5, mode: 'normal' }, opts);
-  const p = ST.save.freshProfile('bot'); p.threads = { backstitch: 3, running: 3 }; p.thread = 'backstitch'; p.thread2 = 'running';
-  p.tempers.point = 3; p.tempers.eye = 3; p.tempers.ply = 2; p.tempers.pace = 2; p.settings.mode = o.mode; p.stats.won_normal = 1; p.stats.won_hard = 1;
+  // the ship a player is expected to have when they meet this boss (see POWER in src/bosses.js): a fresh ship for the first, fully built for the last
+  const LOAD = [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 1, 0], [2, 2, 1, 1], [3, 2, 2, 1], [3, 3, 2, 2], [3, 3, 3, 2], [3, 3, 3, 3]];   // Double level, Single level, damage, fire rate
+  const idx = Math.max(0, C.PANELS.findIndex(pn => pn.keeper === id)), L = LOAD[idx];
+  const p = ST.save.freshProfile('bot'); p.threads = { running: L[1] }; p.thread = 'running'; p.thread2 = null;
+  if (L[0]) { p.threads.backstitch = L[0]; p.thread = 'backstitch'; p.thread2 = 'running'; }
+  p.tempers.point = L[2]; p.tempers.eye = L[3]; p.tempers.ply = Math.min(2, idx >> 1); p.tempers.pace = Math.min(2, idx >> 1); p.settings.mode = o.mode; p.stats.won_normal = 1; p.stats.won_hard = 1;
   if (o.setup) o.setup(p);
   const sim = new ST.Sim(p, o.seed);
   sim.panel = C.PANELS.findIndex(pn => pn.keeper === id); if (sim.panel < 0) throw new Error('no stage has boss ' + id);

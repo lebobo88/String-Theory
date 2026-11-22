@@ -93,6 +93,7 @@
     beading: spr(NEEDLE, ['.....A.....', '.....B.....', '.....B.....', '.....B.....', '....CBC....', '....CBC....',
       '....CBC....', '...UCBCU...', '..U.CBC.U..', '.U..CBC..U.', 'U...CBC...U', '....C.C....', '....C.C....', '.....B.....']),
 
+    shieldbug: spr(MOTH, ['...D.....D...', '....D...D....', '....BBDBB....', '...BBTDTBB...', '..BBTBDBTBB..', '..BBBBDBBBB..', '.WWWWWWWWWWW.', '.WTWWWWWWWTW.', '..WWWWWWWWW..', '....WWWWW....']),
     weevil: spr(MOTH, ['...D...D...', '....D.D....', '...DDDDD...', '..DBBBBBD..', '.DBBDBDBBD.', '.DBBBDBBBD.', '.DBBDBDBBD.', '..DBBBBBD..', '...DD.DD...']),
     firefly: spr(MOTH, ['.D.....D.', '..D...D..', '...DRD...', 'TT.DDD.TT', 'TTTDDDTTT', '.TTDDDTT.', '...GYG...', '...YYY...', '....Y....']),
     silkworm: spr(MOTH, ['...........', '.WW.WW.WW..', 'WTTWTTWTTW.', 'WTTWTTWTTRD', 'WTTWTTWTTW.', '.WW.WW.WW..', '.D..D..D...']),
@@ -142,6 +143,7 @@
     weevil:     { name: 'Weevil',     sprite: 'weevil',     hp: 3,    pts: 180, ptsDive: 360, dust: 3, r: 0.45, diveSpeed: 9.5, wob: 0, wobAmp: 0, shotEvery: 9, charge: true, note: 'Tough. Charges straight down at where you are standing.' },
     firefly:    { name: 'Firefly',    sprite: 'firefly',    hp: 1,    pts: 150, ptsDive: 300, dust: 2, r: 0.4,  diveSpeed: 6.8, wob: 4, wobAmp: 1.2, shotEvery: 9, bursts: true, note: 'Explodes into a ring of shots when destroyed. Keep your distance.' },
     silkworm:   { name: 'Silkworm',   sprite: 'silkworm',   hp: 2,    pts: 140, ptsDive: 280, dust: 3, r: 0.48, diveSpeed: 4.5, wob: 2, wobAmp: 1.5, shotEvery: 1.4, turret: true, note: 'Sits in formation and fires aimed shots. Destroy it first.' },
+    shieldbug:  { name: 'Shield Bug', sprite: 'shieldbug',  hp: 1.5,  pts: 160, ptsDive: 320, dust: 3, r: 0.46, diveSpeed: 5.2, wob: 2, wobAmp: 1.4, shotEvery: 1.6, guard: true, note: 'Holds a shield in front while it keeps formation: straight shots bounce off. Hit it from an angle, with a blast or a beam, or when it dives.' },
     wick:       { name: 'Wick',       sprite: 'wick',       hp: 1,    pts: 200, ptsDive: 400, dust: 3, r: 0.4,  diveSpeed: 6.5, note: 'Carries a fireball. If it reaches the bottom it leaves a burning patch.' }
   };
 
@@ -199,29 +201,29 @@
     { name: 'Stage 4', keeper: 'atlas', patches: ['atlasreach', 'lantern'], sampler: 'eight', rows: [
       W({ lappetEvery: 3, wickEvery: 4, wormEvery: 5, hawks: 5, loopers: 3, diveEvery: 1.6, fireEvery: 1.6 }), W({ lappetEvery: 2, wickEvery: 4, weevilEvery: 6, hawks: 5, loopers: 4, diveEvery: 1.5, fireEvery: 1.6 }), W({ lappetEvery: 2, wickEvery: 4, weevilEvery: 5, wormEvery: 5, hawks: 6, loopers: 4, diveEvery: 1.5, fireEvery: 1.5 }) ] },
     { name: 'Stage 5', keeper: 'unraveller', patches: ['looseend'], sampler: 'rosette', rows: [
-      W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 5, hawks: 6, loopers: 4, diveEvery: 1.5, fireEvery: 1.5 }), W({ lappetEvery: 2, wickEvery: 3, flyEvery: 5, wormEvery: 5, hawks: 6, loopers: 5, diveEvery: 1.4, fireEvery: 1.5 }), W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 4, flyEvery: 5, hawks: 7, loopers: 5, diveEvery: 1.4, fireEvery: 1.4 }) ] },
+      W({ guardEvery: 6, lappetEvery: 2, wickEvery: 3, weevilEvery: 5, hawks: 6, loopers: 4, diveEvery: 1.5, fireEvery: 1.5 }), W({ guardEvery: 6, lappetEvery: 2, wickEvery: 3, flyEvery: 5, wormEvery: 5, hawks: 6, loopers: 5, diveEvery: 1.4, fireEvery: 1.5 }), W({ guardEvery: 6, lappetEvery: 2, wickEvery: 3, weevilEvery: 4, flyEvery: 5, hawks: 7, loopers: 5, diveEvery: 1.4, fireEvery: 1.4 }) ] },
     { name: 'Stage 6', keeper: 'beetle', patches: ['lining', 'mothballs'], sampler: 'heart', rows: [
-      W({ lappetEvery: 2, weevilEvery: 3, flyEvery: 5, wormEvery: 4, hawks: 7, loopers: 5, diveEvery: 1.4, fireEvery: 1.4 }), W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 3, flyEvery: 4, hawks: 7, loopers: 5, diveEvery: 1.3, fireEvery: 1.4 }), W({ lappetEvery: 2, weevilEvery: 3, flyEvery: 4, wormEvery: 4, hawks: 8, loopers: 6, diveEvery: 1.3, fireEvery: 1.3 }) ] },
+      W({ guardEvery: 5, lappetEvery: 2, weevilEvery: 3, flyEvery: 5, wormEvery: 4, hawks: 7, loopers: 5, diveEvery: 1.4, fireEvery: 1.4 }), W({ guardEvery: 5, lappetEvery: 2, wickEvery: 3, weevilEvery: 3, flyEvery: 4, hawks: 7, loopers: 5, diveEvery: 1.3, fireEvery: 1.4 }), W({ guardEvery: 5, lappetEvery: 2, weevilEvery: 3, flyEvery: 4, wormEvery: 4, hawks: 8, loopers: 6, diveEvery: 1.3, fireEvery: 1.3 }) ] },
     { name: 'Stage 7', keeper: 'empress', patches: ['silkroad', 'loom'], sampler: 'star', rows: [
-      W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 3, flyEvery: 4, wormEvery: 3, hawks: 8, loopers: 6, diveEvery: 1.3, fireEvery: 1.3 }), W({ lappetEvery: 2, weevilEvery: 3, flyEvery: 3, wormEvery: 3, hawks: 8, loopers: 6, diveEvery: 1.2, fireEvery: 1.3 }), W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 2, flyEvery: 3, wormEvery: 3, hawks: 9, loopers: 7, diveEvery: 1.2, fireEvery: 1.2 }) ] },
+      W({ guardEvery: 4, lappetEvery: 2, wickEvery: 3, weevilEvery: 3, flyEvery: 4, wormEvery: 3, hawks: 8, loopers: 6, diveEvery: 1.3, fireEvery: 1.3 }), W({ guardEvery: 4, lappetEvery: 2, weevilEvery: 3, flyEvery: 3, wormEvery: 3, hawks: 8, loopers: 6, diveEvery: 1.2, fireEvery: 1.3 }), W({ guardEvery: 4, lappetEvery: 2, wickEvery: 3, weevilEvery: 2, flyEvery: 3, wormEvery: 3, hawks: 9, loopers: 7, diveEvery: 1.2, fireEvery: 1.2 }) ] },
     { name: 'Stage 8', keeper: 'king', patches: ['heart'], sampler: 'rosette', rows: [
-      W({ lappetEvery: 2, wickEvery: 3, weevilEvery: 2, flyEvery: 3, wormEvery: 3, hawks: 9, loopers: 7, diveEvery: 1.2, fireEvery: 1.2 }), W({ lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 3, wormEvery: 2, hawks: 10, loopers: 7, diveEvery: 1.1, fireEvery: 1.2 }), W({ lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 2, wormEvery: 2, hawks: 10, loopers: 8, diveEvery: 1.1, fireEvery: 1.1 }) ] }
+      W({ guardEvery: 4, lappetEvery: 2, wickEvery: 3, weevilEvery: 2, flyEvery: 3, wormEvery: 3, hawks: 9, loopers: 7, diveEvery: 1.2, fireEvery: 1.2 }), W({ guardEvery: 4, lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 3, wormEvery: 2, hawks: 10, loopers: 7, diveEvery: 1.1, fireEvery: 1.2 }), W({ guardEvery: 4, lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 2, wormEvery: 2, hawks: 10, loopers: 8, diveEvery: 1.1, fireEvery: 1.1 }) ] }
   ];
 
   // ---- The Night's route: one patch per Panel; Panels II to IV offer two. Only Old Darn's text and Mark are the bible's. ----
   const PATCHES = {
     selvage:    { name: 'Selvage Edge',  art: 'selvage', desc: 'The edge of the cloth, where every run begins.', mark: '' },
-    moththick:  { name: 'Moth-thick',    art: 'holes',   desc: 'Crowded with moths. Harder, and it pays better.', mark: 'More enemies per wave; coins are worth 50% more', mods: { crowd: 1, dust: 1.5 } },
+    moththick:  { name: 'Moth-thick',    art: 'holes',   desc: 'Crowded with moths. Harder, and it pays better.', mark: 'More enemies per wave; coins are worth 50% more', foes: 'Big swarms. Chain and Spread do well here.', mods: { crowd: 1, dust: 1.5 } },
     olddarn:    { name: 'Old Darn',      art: 'darn',    desc: 'An old repair. The bonus wave here flies a different pattern.', mark: 'A perfect bonus wave pays double gems', mods: { samplerSilk: 2, sampler: 'rosette' } },
-    thincloth:  { name: 'Thin Cloth',    art: 'holes',   desc: 'Worn thin. Fire-carrying Wicks gather here.', mark: 'More Wicks; blueprints drop twice as often', mods: { wicks: 3, charts: 2 } },
+    thincloth:  { name: 'Thin Cloth',    art: 'holes',   desc: 'Worn thin. Fire-carrying Wicks gather here.', mark: 'More Wicks; blueprints drop twice as often', foes: 'Fire-carriers. Shoot them before they reach the bottom.', mods: { wicks: 3, charts: 2 } },
     boro:       { name: 'Boro Square',   art: 'boro',    desc: 'Patch on patch. A safer way through.', mark: 'Restores 1 shield after every wave', mods: { mend: 1 } },
-    atlasreach: { name: 'Atlas Reach',   art: 'eyes',    desc: 'Guarded by Hawks. Harder, and the boss pays better.', mark: 'More Hawks; the boss pays 4 extra gems', mods: { hawks: 4, keeperSilk: 4 } },
+    atlasreach: { name: 'Atlas Reach',   art: 'eyes',    desc: 'Guarded by Hawks. Harder, and the boss pays better.', mark: 'More Hawks; the boss pays 4 extra gems', foes: 'Fast straight divers. Keep moving.', mods: { hawks: 4, keeperSilk: 4 } },
     lantern:    { name: 'Lantern Field', art: 'lines',   desc: 'Lit by old lamplight.', mark: 'Power-ups drop twice as often', mods: { charms: 2 } },
     looseend:   { name: 'The Loose End', art: 'fringe',  desc: 'The far edge of the cloth, where the thread hangs free.', mark: '' },
     lining:     { name: 'The Lining',    art: 'lines',   desc: 'Behind the cloth. Quieter, with less to pick up.', mark: 'Fewer enemies per wave; coins are worth 25% less', mods: { thin: 1, dust: 0.75 } },
-    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; gems from the boss are doubled', mods: { hp: 1.25, keeperSilkMul: 2 } },
+    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; gems from the boss are doubled', foes: 'Shield Bugs in every wave. Bring a Cross Stitch, a Knot Bomb or the Wire Laser.', mods: { hp: 1.25, keeperSilkMul: 2, guards: 3 } },
     silkroad:   { name: 'Silk Road',     art: 'darn',    desc: 'Spinners travel this way in numbers.', mark: 'Spinners always drop a gem', mods: { spinnerSilk: 1 } },
-    loom:       { name: 'Loom Shadow',   art: 'boro',    desc: 'The great loom overhead drops what it finds.', mark: 'Power-ups drop twice as often; enemy shots are 20% faster', mods: { charms: 2, shotSpeed: 1.2 } },
+    loom:       { name: 'Loom Shadow',   art: 'boro',    desc: 'The great loom overhead drops what it finds.', mark: 'Power-ups drop twice as often; enemy shots are 20% faster', foes: 'Shield Bugs and fast shots.', mods: { charms: 2, shotSpeed: 1.2, guards: 4 } },
     heart:      { name: 'Heart of the Cloth', art: 'eyes', desc: 'The centre of the Coverlet, and the Moth King\'s court. The final stage.', mark: '' }
   };
 
@@ -378,7 +380,7 @@
   };
 
   const TUNING = {
-    fieldW: 14, fieldH: 18.67, fieldBot: -3.4, playerY: -1.9, roam: 5.6, focusLast: 2.5, focusFill: 7, bobbinLag: 2.4, tether: 2.6, bobbinDmg: 0.6, graze: 0.07, spares: 2, traySlots: 3,
+    fieldW: 14, fieldH: 18.67, fieldBot: -3.4, playerY: -1.9, roam: 5.6, focusLast: 2.5, focusFill: 7, bobbinLag: 2.4, tether: 2.6, bobbinDmg: 0.6, graze: 0.07, pressure: 1.1, spares: 2, traySlots: 3,
     comboWindow: 2.5, comboStep: 8, comboMax: 5, comboCoin: 0.25,
     charmChance: 0.045, chartChance: 0.01, magnet: 1.7, dropSpeed: 2.3,
     cleanRowDust: 12, panelSilk: 2,

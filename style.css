@@ -157,7 +157,7 @@ h2.madder{color:var(--madder)}
 .title .purse .mono{flex-basis:100%;text-align:center}
 
 /* ---- phones and narrow windows: the cloth fills the screen, HUD folds onto it ---- */
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   #stage{grid-template-columns:1fr;grid-template-rows:1fr}
   #hudL,#hudR{display:none}
   /* The cloth sits between a status panel on top and the item slots below, so nothing ever covers the play area. */
@@ -215,12 +215,12 @@ h2.madder{color:var(--madder)}
 .ledger th{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);text-align:left;padding:8px;border-bottom:2px dashed var(--ink)}
 .ledger td{padding:8px;border-bottom:1.5px dotted var(--rule);font-size:14px}.ledger tr.me td{background:rgba(227,169,60,.18)}.ledger td.won{color:var(--saffron-ink);font-weight:700}
 .nchart{border-spacing:3px}.nchart td{width:17px;height:15px}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){ .pockets{grid-template-columns:1fr}.pcard{min-height:0;border-radius:0 0 24px 24px} }
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){ .pockets{grid-template-columns:1fr}.pcard{min-height:0;border-radius:0 0 24px 24px} }
 
 /* ---- route map: list layout for phones and upright tablets ---- */
 .hem .routelist,.hem .routego{display:none}
 .routemap{grid-template-columns:repeat(8,minmax(0,1fr))}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .route .mapside,.route .detail{display:none}
   .route .routewrap{display:block;overflow-y:auto;overscroll-behavior:contain}
   .route .routelist{display:flex;flex-direction:column;gap:8px;list-style:none;margin:0;padding:2px;max-height:none;overflow:visible}
@@ -284,7 +284,7 @@ body.sheeted #toasts{display:none}
 .records .tabs.shipf{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}.records .shipf .tabb{min-height:44px;flex:none;align-items:center;justify-content:center;text-align:center;padding:4px}
 
 /* ---- phones and upright tablets ---- */
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .slot kbd,.slot.pz{display:none}
   /* flight: a slim status row on top; power-ups and items share the band below the cloth */
   #field{--top:calc(70px + env(safe-area-inset-top));--bot:calc(112px + env(safe-area-inset-bottom))}
@@ -335,13 +335,13 @@ body.sheeted #toasts{display:none}
   .ledger td:nth-child(2){font-weight:700;font-size:15px}.ledger td:nth-child(4){text-align:right;font-size:16px}.ledger td:nth-child(3){color:var(--ink2);font-size:13px}.ledger td:nth-child(5){text-align:right;font-size:13px}
   .ledger td[colspan]{grid-column:1/-1}
 }
-@media (max-height: 700px) and (max-width: 860px){ .hem h2{font-size:26px}.list .card{min-height:46px}.station>.detail{max-height:50%} }
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px){ .hem h2{font-size:26px}.list .card{min-height:46px}.station>.detail{max-height:50%} }
 @media (min-width: 600px) and (max-aspect-ratio: 1/1){ .list{grid-template-columns:repeat(3,minmax(0,1fr))}.shop .tabb b{font-size:16px}.detail h3{font-size:34px}.detail p{font-size:16px}.shipstrip b.mono{font-size:22px} }
 @media (pointer: coarse){ .slot kbd{display:none} }
 
 /* phase 1 fixes after the first capture */
 .list .cname{white-space:normal}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .shop .tabb{flex:1 1 auto;min-width:0;padding:0 2px}.shop .tabb b{font-size:12px}
   .shipstrip span{letter-spacing:0}
   .st-case .stats,.st-case .cmp{display:none}
@@ -356,13 +356,13 @@ body.sheeted #toasts{display:none}
 @media (min-width: 600px) and (max-aspect-ratio: 1/1){ .shop .tabb b{font-size:16px}.tiles{grid-template-columns:repeat(10,minmax(0,1fr))}.tile{height:60px} }
 
 .records .tally div{padding:5px 0}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .shop .tabb{min-width:44px}
   .tiles{grid-template-columns:repeat(6,minmax(0,1fr))}.tile{height:48px}
   .pcard.empty{flex-direction:row;gap:12px;padding:12px 14px;justify-content:flex-start;text-align:left}.pcard.empty .pname{font-size:26px}
 }
 /* short phones: every row of chrome gives way to the list and its details */
-@media (max-height: 700px) and (max-width: 860px){
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px){
   .overlay{padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom))}
   .hem{padding:8px;gap:6px}.hem.shop{gap:6px}
   .shop header h2{display:none}.shop header{justify-content:flex-end;padding-bottom:4px}
@@ -376,8 +376,8 @@ body.sheeted #toasts{display:none}
   .sheet{padding:14px;gap:10px}.sheet h2{font-size:36px}.pcard{padding:10px 12px}.pname{font-size:26px}
 }
 .list{grid-auto-rows:min-content}.list .card{height:auto}
-@media (max-height: 700px) and (max-width: 860px){ .list .cname{font-size:14px} }
-@media (max-width: 860px), (max-aspect-ratio: 1/1){ .ledger td[colspan]{display:block;grid-column:1/-1}.mlab{text-transform:none;letter-spacing:.02em} }
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px){ .list .cname{font-size:14px} }
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){ .ledger td[colspan]{display:block;grid-column:1/-1}.mlab{text-transform:none;letter-spacing:.02em} }
 
 /* ================= phase 2: meters for special, slow time and dash ================= */
 .meters{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin-bottom:10px}
@@ -390,25 +390,360 @@ body.sheeted #toasts{display:none}
 .meters .da i{width:14px;height:10px;border:1.5px dashed var(--mist)}.meters .da i.on{border:0;background:var(--saffron)}
 .wstat{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:14px;color:var(--ink2)}.wstat b{color:var(--ink)}
 .role{font-size:14px !important;color:var(--ink2)}.role b{color:var(--ink)}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .meters{grid-template-columns:minmax(0,1fr) 84px auto;margin:0;gap:4px}.meters .sp,.meters .fo,.meters .da{height:28px}
   #field{--bot:calc(152px + env(safe-area-inset-bottom))}.hud{height:calc(152px + env(safe-area-inset-bottom))}
   #toasts{bottom:calc(158px + env(safe-area-inset-bottom))}
   .wstat{font-size:13px}.role{font-size:13px !important}
 }
 
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .purse{flex-wrap:nowrap}.hem h2{font-size:28px}
   .st-spool .role{display:none}.st-spool .weights li:not(.next){display:none}
   .st-spool .weights li.next::before{content:'Next level: ';font-weight:700}
 }
-@media (max-width: 860px), (max-aspect-ratio: 1/1){
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
   .meters .sp,.meters .fo,.meters .da{height:34px}
   #field{--bot:calc(158px + env(safe-area-inset-bottom))}.hud{height:calc(158px + env(safe-area-inset-bottom))}
   #toasts{bottom:auto;top:calc(126px + env(safe-area-inset-top))}
 }
 
-/* frame-rate readout, and bars that glide between the HUD's ten updates a second */
-#fps{position:fixed;left:6px;bottom:calc(4px + env(safe-area-inset-bottom));z-index:40;font:600 12px var(--mono);color:#fff;background:rgba(0,0,0,.6);padding:2px 6px;pointer-events:none;display:none}
-.meters i,.pw i,.seam i{transition:width .1s linear}
-@media (max-width: 860px), (max-aspect-ratio: 1/1){ #fps{bottom:calc(162px + env(safe-area-inset-bottom));left:4px} }
+/* ================= release pass: one HUD built once, power-up badges, the wound combo, layouts for every hand and every way up ================= */
+/* bars move by transform, not width, so the ten-a-second HUD never lays out */
+.meters .sp .fill,.fo .bar i,.pw .pt i,.seam i,.ctag .cdr i{transform-origin:0 50%;transform:scaleX(0);transition:transform .1s linear;will-change:transform}
+.seam i{width:100%;transition-duration:.15s}
+#bossbar:not(.on){visibility:hidden}
+
+/* ---- the combo: thread wound round the score, and a paper label with the multiplier ---- */
+.wound{position:relative;display:inline-block;line-height:1;padding:0 2px}
+.wound .score{position:relative;z-index:1;display:block}
+.wound svg{position:absolute;left:-14%;top:-22%;width:128%;height:144%;overflow:visible;pointer-events:none}
+.wound .wb{z-index:0}.wound .wf{z-index:2}
+.wound path{fill:none;stroke-width:1.8;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.wound .wb path{stroke:#B5832F;stroke-width:1.5}.wound .wf path{stroke:var(--saffron);stroke-dasharray:5 1.2}
+.wound .t{opacity:0;transform-box:fill-box;transform-origin:50% 50%}.wound .t.on{opacity:1}
+.ctag{position:relative;display:inline-flex;align-items:center;height:22px;padding:0 8px 2px 14px;background:radial-gradient(circle at 8px 50%,var(--coverlet) 0 2px,transparent 2.6px),var(--paper);color:var(--ink);
+  clip-path:polygon(6px 0,100% 0,100% 100%,6px 100%,0 50%);opacity:.38;transform-origin:0 50%;flex:none}
+.ctag.on{opacity:1}
+.ctag b{font:700 13px var(--mono);font-variant-numeric:tabular-nums}
+.ctag .cdr{position:absolute;left:13px;right:5px;bottom:2px;height:2px;background:rgba(28,34,56,.14)}
+.ctag .cdr i{display:block;height:100%;background:var(--madder)}
+/* wide screens: the left panel */
+#hudL .dscore{margin:8px 16px 4px 0}
+#hudL .crow{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin:14px 0 2px}
+#hudL .ctag{height:44px;padding:0 14px 4px 22px;clip-path:polygon(10px 0,100% 0,100% 100%,10px 100%,0 50%);background:radial-gradient(circle at 12px 50%,var(--night) 0 3px,transparent 3.6px),var(--paper)}
+#hudL .ctag b{font:400 32px/1 var(--display);color:var(--saffron-ink)}
+#hudL .ctag .cdr{left:20px;right:8px;bottom:5px;height:3px}
+#hudL .cn{font-size:13px;color:var(--mist)}
+
+/* ---- power-ups: a stitched badge each; the thread under it shortens as it runs out ---- */
+#mfx{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:14px 0 12px;align-content:start}
+.pw{position:relative;display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:7px;height:36px;padding:0 8px 4px;background:var(--coverlet);border:1.5px dashed var(--c);color:var(--linen)}
+.pw .ic{justify-self:center}
+.pw .pn{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pw .ps{font-size:12px;color:var(--mist);white-space:nowrap}
+.pw em{position:absolute;top:1px;left:20px;font-size:12px;font-style:normal;line-height:1;color:var(--paper);text-shadow:0 1px 0 var(--night)}
+.pw em:empty{display:none}
+.pw .pt{position:absolute;left:4px;right:4px;bottom:3px;height:3px;background:rgba(230,223,208,.12)}
+.pw .pt i{display:block;height:100%;background:var(--c)}
+
+/* ---- meters: the special is a button; slow and dash are threads ---- */
+.meters{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.meters .sp{position:relative;height:44px;display:flex;align-items:center;padding:0 10px;background:var(--coverlet);border:1px solid rgba(230,223,208,.3);color:var(--linen);font-size:13px;font-weight:700;overflow:hidden;white-space:nowrap;pointer-events:auto;text-align:left}
+.meters .sp .fill{position:absolute;inset:0;width:auto;height:auto;background:repeating-linear-gradient(90deg,var(--madder) 0 6px,#7A1D27 6px 8px);opacity:.85}
+.meters .sp.ready .fill{background:repeating-linear-gradient(90deg,var(--saffron) 0 6px,#B5790A 6px 8px)}
+.meters .sp span{position:relative;z-index:1;overflow:hidden;text-overflow:ellipsis}
+.meters .mm{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px}
+.meters .mm .fo,.meters .mm .da{position:relative;display:flex;align-items:center;gap:8px;height:28px;padding:0 8px;background:var(--coverlet);border:1px solid rgba(230,223,208,.3);color:var(--linen);font-size:12px;font-weight:700;white-space:nowrap;overflow:visible}
+.meters .mm .fo.on{border-color:var(--mist)}
+.fo .bar{position:relative;flex:1;min-width:30px;height:6px;background:repeating-linear-gradient(90deg,rgba(140,154,198,.55) 0 4px,transparent 4px 7px) center/100% 2px no-repeat}
+.meters .fo .bar i{position:absolute;left:0;top:0;bottom:0;right:0;width:auto;height:auto;background:repeating-linear-gradient(60deg,var(--mist) 0 3px,#5E6B95 3px 5px)}
+.meters .fo.on .bar i{background:var(--paper)}
+.dp{display:inline-flex;gap:4px}.meters .dp i{width:14px;height:10px;border:1.5px dashed var(--mist)}.meters .dp i.on{border:0;background:var(--saffron)}
+.slot.pz{flex-direction:column;gap:2px}.slot.pz .pzi{display:none;gap:5px}.slot.pz .pzi i{width:5px;height:18px;background:var(--linen)}
+
+/* ---- purchase feedback, the wipe between screens, a press that cannot buy ---- */
+.shipstrip>div{position:relative}
+.shipstrip .stitch{position:absolute;left:8px;right:8px;bottom:3px;height:0;border-top:2px dashed #8FE0A0;transform-origin:0 50%;transform:scaleX(0);opacity:0;pointer-events:none}
+#flyers{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden}
+.coinfly{position:absolute;left:0;top:0;display:block;line-height:0;filter:drop-shadow(0 2px 0 rgba(15,20,40,.45))}
+#wipe{position:fixed;inset:0 -40px 0 0;z-index:50;pointer-events:none;transform:translateX(104%);
+  background:var(--linen) linear-gradient(rgba(28,34,56,.06) 1px,transparent 1px) 0 0/12px 12px,var(--linen) linear-gradient(90deg,rgba(28,34,56,.06) 1px,transparent 1px) 0 0/12px 12px;background-color:var(--linen);box-shadow:-18px 0 36px rgba(15,20,40,.45)}
+#wipe::before{content:'';position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--umber)}
+#wipe::after{content:'';position:absolute;left:18px;top:0;bottom:0;border-left:3px dashed var(--madder)}
+.btn.nope{border:2px dashed var(--madder);color:var(--madder);background:transparent;box-shadow:none;opacity:.9}
+.foes{font-size:14px;color:var(--ink)}
+.detail .tally dd.foes{font:400 14px var(--text);text-align:right;max-width:60%}
+
+/* ---- the coach (first-run lesson) and the frame-rate readout ---- */
+#coach{position:absolute;left:50%;top:40%;z-index:6;transform:translateX(-50%);width:max-content;max-width:min(86%,380px);display:none;flex-direction:column;align-items:center;text-align:center;gap:2px;
+  padding:9px 18px 11px;background:var(--paper);color:var(--ink);pointer-events:none;box-shadow:0 0 0 2px var(--ink),0 8px 20px rgba(15,20,40,.45);transition:opacity .15s}
+#coach::before{content:'';position:absolute;inset:4px;border:1.5px dashed var(--madder);pointer-events:none}
+#coach.on{display:flex}body:not(.flying) #coach{display:none}
+#coach b{font-size:16px;line-height:1.25}#coach span{font-size:13px;color:var(--ink2);line-height:1.3}
+#banner.on ~ #coach{opacity:0}
+#fps{position:absolute;left:6px;right:auto;top:auto;bottom:calc(var(--bot, 0px) + 6px);z-index:7;font:600 12px/1.35 var(--mono);white-space:pre;color:#fff;background:rgba(0,0,0,.62);padding:3px 7px;pointer-events:none;display:none}
+
+/* ---- settings: three short tabs, threads for volume ---- */
+.settings{gap:12px}
+.settings .shead{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.stabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.stabs .tabb{min-height:44px;flex:none;align-items:center;justify-content:center;padding:0 6px}
+.setrow.slide{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto 44px;align-items:center;gap:0 12px;padding:10px 2px 2px;cursor:default}
+.setrow.slide output{font-size:15px;color:var(--ink)}
+.setrow.slide input{grid-column:1/-1}
+.setrow input[type=range]{-webkit-appearance:none;appearance:none;display:block;width:100%;height:44px;margin:0;background:transparent;cursor:pointer}
+.setrow input[type=range]:focus-visible{outline:3px solid var(--saffron);outline-offset:2px}
+.setrow input[type=range]::-webkit-slider-runnable-track{height:8px;background:repeating-linear-gradient(60deg,var(--madder) 0 3px,#7A1D27 3px 5px) left center/var(--v,50%) 6px no-repeat,repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px) center/100% 2px no-repeat}
+.setrow input[type=range]::-moz-range-track{height:8px;background:repeating-linear-gradient(90deg,var(--ink2) 0 6px,transparent 6px 10px) center/100% 2px no-repeat}
+.setrow input[type=range]::-moz-range-progress{height:6px;background:repeating-linear-gradient(60deg,var(--madder) 0 3px,#7A1D27 3px 5px)}
+.setrow input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;margin-top:-11px;border-radius:50%;border:0;
+  background:radial-gradient(circle at 39% 39%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 61% 39%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 39% 61%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 61% 61%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle,var(--saffron) 0 10px,var(--ochre,#B5832F) 10.5px 12px,var(--saffron) 12.5px);
+  box-shadow:0 2px 0 rgba(28,34,56,.35)}
+.setrow input[type=range]::-moz-range-thumb{width:30px;height:30px;border-radius:50%;border:0;
+  background:radial-gradient(circle at 39% 39%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 61% 39%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 39% 61%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle at 61% 61%,var(--saffron-ink) 0 1.8px,transparent 2.3px),radial-gradient(circle,var(--saffron) 0 10px,#B5832F 10.5px 12px,var(--saffron) 12.5px);box-shadow:0 2px 0 rgba(28,34,56,.35)}
+
+/* ---- collection: bosses wear a frame, so enemies and bosses can share one run of tiles ---- */
+.tile.boss{box-shadow:inset 0 0 0 2px var(--brass)}
+.album .sep{letter-spacing:.14em}
+.srow .eyebrow{overflow-wrap:anywhere}
+
+/* ================= phones and upright tablets ================= */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
+  /* flight: a 52 px status row on top, one band of power-ups, special and items below; the cloth gets the rest */
+  #field{--top:calc(60px + env(safe-area-inset-top));--bot:calc(116px + env(safe-area-inset-bottom))}
+  #mtop{padding:calc(4px + env(safe-area-inset-top)) 6px 0}
+  .mpanel{grid-template-columns:auto minmax(0,1fr) auto 44px;grid-template-areas:"l c r p";height:52px;padding:3px 3px 3px 10px;gap:8px}
+  .mcol.l{grid-area:l;gap:6px}.mcol.c{grid-area:c;gap:1px}.mcol.r{grid-area:r;gap:3px}
+  .mpause{grid-area:p;width:44px;height:44px}
+  .mscore{display:flex;align-items:center;justify-content:center;gap:12px;max-width:100%}
+  #mtop .score{font-size:26px;line-height:.9}
+  #mtop .wound svg{left:-12%;width:124%;top:-30%;height:160%}
+  #mtop .tag{height:21px;font-size:13px}
+  body.lefty .mpanel{grid-template-columns:44px auto minmax(0,1fr) auto;grid-template-areas:"p l c r";padding:3px 10px 3px 3px}
+  #side.hud{height:calc(116px + env(safe-area-inset-bottom));padding:4px 8px calc(8px + env(safe-area-inset-bottom));gap:6px;justify-content:flex-end}
+  #mfx{display:flex;flex-wrap:nowrap;justify-content:center;gap:4px;height:34px;max-height:none;margin:0;overflow:hidden}
+  .pw{display:flex;flex:0 1 36px;min-width:30px;height:34px;padding:0 0 5px;justify-content:center;gap:0}
+  .pw .pn,.pw .ps{display:none}.pw em{left:auto;right:2px}
+  .pw .pt{left:3px;right:3px;bottom:2px}
+  #tray{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"m s";gap:8px;align-items:stretch}
+  body.lefty #tray{grid-template-columns:auto minmax(0,1fr);grid-template-areas:"s m"}
+  .meters{grid-area:m;display:flex;flex-direction:column;justify-content:space-between;gap:4px;margin:0;min-width:0}
+  .meters .sp{height:44px}
+  .meters .mm{display:flex;gap:10px;height:16px}
+  .meters .mm .fo,.meters .mm .da{height:16px;padding:0;background:none;border:0;gap:6px;line-height:16px}
+  .meters .mm .fo{flex:1}
+  .meters .dp i{width:12px;height:9px}
+  .slots{grid-area:s;display:flex;flex-wrap:nowrap;gap:6px;justify-content:flex-end}
+  .slot{width:56px;height:64px}
+  #bossbar{top:calc(64px + env(safe-area-inset-top))}
+  #toasts{top:calc(118px + env(safe-area-inset-top))}
+
+  /* hideout */
+  .detail .btn.nope{min-height:48px;padding:0 14px;font-size:15px}
+  .srow{grid-template-columns:62px repeat(3,minmax(0,1fr));gap:4px}
+  .srow .eyebrow{grid-column:auto;font-size:12px;letter-spacing:0;text-transform:none;margin:0;color:var(--ink)}
+  .tiles{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.tile{height:44px}
+  .rct .foes{font-size:13.5px;line-height:1.3;color:var(--ink)}
+  .route .rct span.foes{color:var(--ink)}
+}
+@media (min-width: 600px) and (max-aspect-ratio: 1/1){
+  .tiles{grid-template-columns:repeat(10,minmax(0,1fr))}.tile{height:56px}
+  .slot{width:64px;height:64px}
+}
+/* short phones: the cloth is height-bound, so every row of chrome gives a little back */
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1){
+  #field{--top:calc(58px + env(safe-area-inset-top));--bot:calc(110px + env(safe-area-inset-bottom))}
+  #mtop{padding-top:calc(3px + env(safe-area-inset-top))}
+  #side.hud{height:calc(110px + env(safe-area-inset-bottom));padding:3px 6px calc(6px + env(safe-area-inset-bottom));gap:5px}
+  .slot{width:52px;height:62px}
+  .hem.shop{gap:5px}.shop .tabb{min-height:44px}
+  .station{gap:6px}.station>.detail{padding:7px 10px}
+  .st-pattern .detail .pnote,.st-book .detail .eyebrow{display:none}
+  .st-notions .trayrow{display:none}
+  .album{gap:4px}
+}
+
+/* ================= sideways phones: the cloth at full height, a slim panel each side ================= */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1){
+  #stage{grid-template-columns:minmax(150px,1fr) minmax(0,calc(100vh * .78)) minmax(150px,1fr)}
+  #field{grid-column:2;grid-row:1}
+  #side{grid-column:3;grid-row:1}
+  body.lefty #side{grid-column:1}
+  #hudL,#hudR{display:none}
+  /* status on one side */
+  #mtop{display:block;position:fixed;top:0;bottom:0;left:0;width:max(150px,calc((100vw - 100vh * .78) / 2));padding:max(8px,env(safe-area-inset-top)) 8px 8px max(8px,env(safe-area-inset-left));pointer-events:none;visibility:hidden;z-index:4}
+  body.flying #mtop{visibility:visible}
+  body.lefty #mtop{left:auto;right:0;padding:max(8px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) 8px 8px}
+  .mpanel{display:flex;flex-direction:column;align-items:stretch;gap:12px;height:auto;padding:12px 14px;background:var(--coverlet);background-image:linear-gradient(rgba(140,154,198,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(140,154,198,.07) 1px,transparent 1px);background-size:6px 6px;border:1.5px dashed rgba(230,223,208,.5);box-shadow:0 0 0 4px var(--umber),0 0 0 5.5px var(--brass);border-radius:3px}
+  .mcol{display:flex;flex-direction:column;gap:6px}
+  .mcol.c{order:-1;align-items:flex-start;gap:8px}
+  .mlab{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--saffron)}
+  .mscore{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  #mtop .score{font-family:var(--display);font-size:40px;line-height:.9;color:var(--linen)}
+  .mlives{display:flex;gap:4px;align-items:center;min-height:17px}
+  #mtop .bobbin{height:16px;border-width:0 4px}#mtop .bobbin i{width:12px}
+  .mcol.r{flex-direction:row;flex-wrap:wrap;gap:6px}
+  #mtop .tag{height:26px;font-size:14px}
+  .mpause{display:none}
+  /* items, meters and pause on the other */
+  #side.hud{padding:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) 10px 10px;justify-content:flex-end;gap:8px;overflow:hidden}
+  body.lefty #side.hud{padding-left:max(10px,env(safe-area-inset-left));padding-right:10px}
+  #mfx{display:flex;flex-wrap:wrap;gap:4px;margin:0;align-content:flex-end}
+  .pw{display:flex;flex:0 0 38px;height:36px;padding:0 0 5px;justify-content:center;gap:0}
+  .pw .pn,.pw .ps{display:none}.pw em{left:auto;right:2px}
+  #tray{margin:0;pointer-events:auto}#tray .lab{display:none}
+  .meters{margin:0 0 8px}
+  .slots{display:flex;flex-wrap:nowrap;gap:6px}
+  .slot{width:52px;height:52px;flex:none;border:1.5px dashed rgba(230,223,208,.45);box-shadow:0 0 0 3px var(--umber)}
+  .slot kbd,.slot.pz .pzt{display:none}
+  .slot.pz{display:inline-flex;margin-left:auto}.slot.pz .pzi{display:flex}
+  body.lefty .slot.pz{margin-left:0;order:-1;margin-right:auto}
+  #toasts{left:50%;right:auto;bottom:auto;top:58px;transform:translateX(-50%);width:min(300px,calc(100vh * .74));align-items:center}
+  .toast{align-items:center;text-align:center;padding:5px 10px}.toast span{display:none}
+  .bb{grid-template-columns:1fr}.bb b{font:700 14px var(--text)}.bb span{font-size:12px;letter-spacing:.06em;white-space:normal}
+  #banner .rib b{font-size:30px}
+
+  /* menus: two columns wherever a column would scroll */
+  .overlay{padding:6px max(10px,env(safe-area-inset-right)) 6px max(10px,env(safe-area-inset-left))}
+  .title.menu{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,300px);grid-template-areas:"h s" "c s";align-items:center;gap:10px 28px;max-width:780px;width:100%;text-align:left}
+  .title.menu .mhead{grid-area:h;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+  .title.menu .stack{grid-area:s;width:100%;gap:6px}
+  .title.menu .mchips{grid-area:c;justify-content:flex-start}
+  .title.menu .purse{justify-content:flex-start}.title.menu .purse .mono{text-align:left}
+  .title .wordmark{font-size:72px}
+  .title{gap:12px}
+  .sheet{padding:14px 18px;gap:10px}
+  .sheet h2,.hem h2{font-size:34px}
+  .saves .pockets{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .saves .pcard{min-height:0;padding:8px 12px;border-radius:0 0 22px 22px;gap:2px}
+  .saves .pname{font-size:24px}.saves .pcard dl div{padding:1px 0}
+  .saves .pcard.empty{flex-direction:column;gap:4px}
+  .howto{width:min(100%,860px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"h h" "l p" "l b";gap:6px 22px;align-items:start}
+  .howto .hhead{grid-area:h;display:flex;align-items:baseline;gap:14px}.howto .how{grid-area:l}.howto .hprose{grid-area:p;display:flex;flex-direction:column;gap:8px}.howto>.row{grid-area:b;justify-content:flex-end}
+  .howto p{font-size:14px;line-height:1.35}.how div{grid-template-columns:96px 1fr;padding:4px 0}.how span{font-size:14px}
+  .sheet.result{width:min(100%,820px);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"h t" "k t" "b t";grid-template-rows:auto 1fr auto;gap:8px 22px}
+  .result .rhead{grid-area:h;display:flex;flex-direction:column;gap:6px}.result .tally{grid-area:t;align-self:start}.result .pocket{grid-area:k;align-self:start}.result>.row{grid-area:b;justify-content:flex-start}
+  .result .lede{font-size:15px}.result .tally div{padding:5px 0}
+  .result .pk{grid-template-columns:1fr}.result .pk .card{flex-direction:row;align-items:center;flex-wrap:wrap;min-height:48px;padding:4px 8px;gap:2px 8px}.result .pk .cmeta{display:none}
+  .settings{width:min(100%,640px)}
+  .settings .setrow{min-height:48px;padding:4px 2px}
+  .settings .setrow.slide{grid-template-columns:150px minmax(0,1fr) 48px;grid-template-rows:44px;padding:2px}
+  .settings .setrow.slide input{grid-column:2;grid-row:1}.settings .setrow.slide output{grid-column:3;grid-row:1;text-align:right}.settings .setrow.slide>span>span{display:none}
+  /* hideout: tabs down the side, the list and its details side by side */
+  .hem{width:100%;height:100%;padding:8px 10px;gap:6px}
+  .hem.shop{display:grid;grid-template-columns:128px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"tabs strip" "tabs station" "purse foot";gap:6px 10px}
+  .shop>header{grid-area:purse;border:0;padding:0;align-items:center;justify-content:flex-start;flex-wrap:nowrap}
+  .shop>header>div:first-child{display:none}
+  .shop header .purse{flex-direction:column;align-items:flex-start;gap:3px;flex-wrap:nowrap}
+  .shop header .tag{height:24px;font-size:14px}
+  .shop>.tabs{grid-area:tabs;display:flex;flex-direction:column;flex-wrap:nowrap;gap:4px}
+  .shop .tabb{flex:1 1 0;min-height:44px;padding:0 10px;justify-content:center}.shop .tabb span{display:none}.shop .tabb b{font-size:14px}
+  .shop>.shipstrip{grid-area:strip}.shipstrip>div{padding:3px 8px}.shipstrip b.mono{font-size:17px}.shipstrip .who b{font-size:14px}
+  .shop>.station{grid-area:station;gap:10px}
+  .shop>footer{grid-area:foot;padding-top:6px;align-items:center}
+  .list .card{min-height:44px;padding:3px 8px}.list{gap:4px}
+  .detail{padding:10px 12px;gap:6px}.detail .eyebrow{display:none}.detail h3{font-size:26px}.detail p{font-size:14px;line-height:1.35}
+  .st-spool .role,.st-spool .weights li:not(.next){display:none}.st-spool .weights li.next::before{content:'Next level: ';font-weight:700}
+  .wstat{font-size:13px}.role{font-size:13px !important}.st-case .stats,.st-case .cmp{display:none}
+  .trayrow .slot{width:44px;height:44px}
+  .station.st-book{grid-template-columns:minmax(0,500px) minmax(0,1fr)}
+  .tiles{grid-template-columns:repeat(auto-fill,44px);gap:4px}.tile{height:44px}
+  .node{min-height:44px;padding:3px 8px}.sampler{gap:4px}.srow{gap:4px}
+  /* route map, records */
+  .route>header,.records>header{padding-bottom:4px}
+  .route .routewrap{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:10px}
+  .route .routemap{min-height:0;padding:8px 6px;gap:4px}.route .rcol{gap:6px}.route .ptile b{font-size:12px;line-height:1.15;text-align:center}
+  .route .ptile i{max-width:46px}.route .hemline{padding:4px}
+  .route .detail .tally div{padding:4px 0}.route .detail .tally dt{font-size:14px}.route .detail .tally dd{font-size:14px}
+  .records .tabs.shipf{grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.records .shipf .tabb{padding:2px}.records .shipf .tabb b{font-size:12px}
+  .records .routewrap{gap:10px}.records .ledger td{padding:5px 8px}
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) and (prefers-reduced-motion: no-preference){ .pw{transition:none} }
+@media (prefers-reduced-motion: reduce){ #wipe{display:none} .meters .sp .fill,.fo .bar i,.pw .pt i,.seam i,.ctag .cdr i{transition:none} }
+
+/* ---- fixes after the first release capture ---- */
+.wound .score{white-space:nowrap}
+.pw .pn{white-space:normal;font-size:12px;line-height:1.1;max-height:2.2em;overflow:hidden;text-overflow:clip}
+/* quick shop after a wave: one compact row per item */
+.pk{grid-template-columns:1fr;gap:6px}
+.pk .card{display:grid;grid-template-columns:40px minmax(0,1fr) auto;grid-template-areas:"i n p" "i d p";align-items:center;gap:0 10px;height:auto;min-height:52px;padding:6px 10px}
+.pk .card .cic{grid-area:i;width:40px}.pk .card .cname{grid-area:n;font-size:15px}.pk .cmeta{grid-area:d;text-align:left;font-size:13px;line-height:1.3}
+.pk .card>span:last-child{grid-area:p;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
+  #mtop .wound svg{left:-10%;width:120%;top:-16%;height:132%}
+  .result .tally div{padding:6px 0}
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1){
+  /* the lesson prompt waits under the status panel, off the cloth altogether */
+  #coach{position:fixed;left:8px;right:auto;top:auto !important;bottom:10px;transform:none;width:calc(max(150px,calc((100vw - 100vh * .78) / 2)) - 16px);max-width:none}
+  body.lefty #coach{left:auto;right:8px}
+  .result .pk .card{grid-template-areas:"i n p" "i n p"}.result .pk .cmeta{display:none}
+}
+.detail{gap:8px}.weights li{padding:4px 8px}
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px){
+  .tiles{gap:3px}
+  #mtop .wound svg{left:-6%;width:112%;top:-12%;height:124%}
+  /* route list: the stages you have passed or not reached yet take one short card each */
+  .rl.done,.rl.future{padding:5px 10px;gap:1px}
+  .rl.done .rlh b,.rl.future .rlh b{font-size:20px}
+  .rl.done .rlc,.rl.future .rlc{font-size:13px}
+  .route .routelist{gap:6px}
+  .rl:not(:last-child)::after{bottom:-8px;height:8px}
+}
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1){
+  #field{--bot:calc(102px + env(safe-area-inset-bottom))}
+  #side.hud{height:calc(102px + env(safe-area-inset-bottom))}
+  #mfx{height:30px}.pw{height:30px;flex-basis:34px;padding-bottom:4px}.pw .ic{width:18px;height:18px}
+  .slot{height:58px}.meters .mm{height:14px}.meters .mm .fo,.meters .mm .da{height:14px;line-height:14px}
+  .rl.future .rlc{display:none}
+  .rl.cur{padding:10px}.rcard{min-height:0;padding:8px}.rcard i{width:48px;height:48px}
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1){
+  .shop>.station{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}
+  .list .cname{font-size:14px;line-height:1.1}.list .cmeta{font-size:12.5px}
+  .node b{font-size:12.5px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.node{min-height:44px;padding:3px 6px;justify-content:center}
+  .srow{grid-template-columns:62px repeat(3,minmax(0,1fr))}.srow .eyebrow{font-size:12px;letter-spacing:0;text-transform:none;color:var(--ink)}
+  /* records: the Back button joins the header; stats in two columns */
+  .hem.records{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr);grid-template-areas:"head foot" "tabs tabs" "wrap wrap";gap:6px 12px}
+  .records>header{grid-area:head;flex-wrap:nowrap;align-items:center}.records>.tabs{grid-area:tabs}.records>.routewrap{grid-area:wrap}
+  .records>footer{grid-area:foot;border:0;padding:0;align-self:center}.records>footer>span{display:none}
+  .records h2{font-size:30px}
+  .records .detail .tally{display:grid;grid-template-columns:1fr 1fr;column-gap:16px}
+  .records .detail .tally div{padding:4px 0}.records .detail .tally dt{font-size:13px}.records .detail .tally dd{font-size:15px}
+  /* settings: the Back button joins the header */
+  .sheet.settings{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"head back" "tabs tabs" "list list";align-items:end;gap:8px 12px}
+  .settings .shead{grid-area:head;display:block}.settings .stabs{grid-area:tabs}.settings .setlist{grid-area:list}
+  .settings .sfoot{display:flex;grid-area:back}
+}
+@media (max-width: 1240px){ .pw .ps{display:none} .pw{grid-template-columns:22px minmax(0,1fr)} }
+@media (max-height: 500px) and (min-aspect-ratio: 1/1){
+  .shop>.station.st-book{grid-template-columns:minmax(0,500px) minmax(0,1fr)}
+  .node b{white-space:normal;overflow:visible;font-size:12.5px;line-height:1.05}.node span{font-size:12px;line-height:1.05}.node{padding:2px 6px;gap:1px}
+  .srow{grid-template-columns:56px repeat(3,minmax(0,1fr))}
+  .records .detail{padding:8px 12px}.records .detail .tally div{padding:3px 0}
+}
+@media (max-aspect-ratio: 1/1) and (max-width: 599px), (max-width: 860px) and (min-height: 501px) and (max-width: 599px){
+  /* route on phones: a slimmer header, passed stages on one line, the choices a little tighter */
+  .route>header{padding-bottom:4px}.route>header h2{font-size:28px}
+  .rl.done{flex-direction:row;align-items:baseline;gap:10px}.rl.done .rlh{width:auto}.rl.done .rlh span{display:none}
+  .rl.future{padding:4px 10px}
+  .rl.cur{padding:10px;gap:6px}.rl.cur .rlh b{font-size:24px}
+  .rcard{gap:10px;padding:8px;min-height:0}.rcard i{width:46px;height:46px}
+  .rct{gap:2px}.rct b{font-size:16px}.rct span,.rct em,.rct .foes{font-size:13px;line-height:1.28}
+}
+@media (max-aspect-ratio: 1/1) and (max-width: 599px), (max-width: 860px) and (min-height: 501px) and (max-width: 599px){
+  .route .routelist{gap:5px}.rl:not(:last-child)::after{bottom:-6px;height:6px}.rl.cur{gap:4px}.rcard{padding:7px 8px}
+}
+@media (min-width: 1241px) and (min-height: 501px){ #mfx .pw em{display:none} }
+
+/* short phones: stages already cleared or still ahead sit two to a row, so the route never scrolls */
+@media (max-height: 700px) and (max-width: 599px) and (max-aspect-ratio: 1/1){
+  .route .routelist{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+  .rl.cur{grid-column:1/-1}
+  .rl::after{display:none}
+  .rl.done,.rl.future{flex-direction:row;align-items:baseline;gap:8px;padding:3px 8px;min-width:0}
+  .rl.done .rlh,.rl.future .rlh{width:auto;flex:none}.rl.future .rlh span{display:none}
+  .rl.done .rlh b,.rl.future .rlh b{font-size:14px}
+  .rl.done .rlc{font-size:12px;line-height:1.15;min-width:0}.rl.done .cl{display:none}
+}
