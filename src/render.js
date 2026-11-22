@@ -221,7 +221,8 @@
       this.gl.setSize(w, h, false);
       const cam = this.camera; cam.aspect = w / h;
       const t = Math.tan(cam.fov * Math.PI / 360);
-      const needH = H + 2.4, needW = W + 2.4;
+      // upright screens are width-bound: zoom until the cloth spans the screen and let the frame's side rails run off the edges
+      const needH = H + 2.4, needW = W + (cam.aspect < 0.85 ? 0.5 : 2.4);
       this.dist = Math.max(needH / 2 / t, needW / 2 / (t * cam.aspect)) * 1.02;
       cam.updateProjectionMatrix(); this.placeCamera(0, 0);
       const db = this.gl.getDrawingBufferSize(this.tmpV);

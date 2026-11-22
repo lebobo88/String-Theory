@@ -20,9 +20,9 @@ with sync_playwright() as pw:
         pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem')
         pg.wait_for_function("ST.audioState.track === 'hideout'", timeout=8000)
         sizes = set(); scroll = pg.evaluate("document.getElementById('overlay').scrollHeight <= document.getElementById('overlay').clientHeight")
-        for tab in ['Weapons', 'Ship upgrades', 'Items', 'Ships', 'Perks', 'Collection']:
+        for tab in ['Weapons', 'Upgrades', 'Items', 'Ships', 'Perks', 'Collection']:
             pg.click(f'.tabb:has-text("{tab}")'); r = pg.evaluate("(() => { const b = document.querySelector('.hem').getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)].join(','); })()"); sizes.add(r)
-            if tab in ('Ship upgrades', 'Items'): pg.screenshot(path=f'/tmp/disk-{name}-{tab.lower()}.png')
+            if tab in ('Upgrades', 'Items'): pg.screenshot(path=f'/tmp/disk-{name}-{tab.lower()}.png')
         if len(sizes) != 1: fails.append(f'{name}: hideout panel changes size across tabs: {sizes}')
         if not scroll: fails.append(f'{name}: the page itself scrolls')
         if pg.evaluate("document.documentElement.scrollHeight > window.innerHeight + 1"): fails.append(f'{name}: document taller than the window')

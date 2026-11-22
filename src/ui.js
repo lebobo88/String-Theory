@@ -33,7 +33,7 @@
       for (const id of ['overlay', 'hudL', 'hudR', 'mtop', 'mfx', 'tray', 'banner', 'toasts', 'floaters', 'bossbar']) this.el[id] = document.getElementById(id);
       this.cache = {};
       this.el.overlay.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) this.act(b.dataset.act, b.dataset.arg); });
-      this.el.tray.addEventListener('pointerdown', e => { const b = e.target.closest('[data-act]'); if (b) { e.preventDefault(); this.act(b.dataset.act, b.dataset.arg); } });
+      for (const k of ['tray', 'mtop']) this.el[k].addEventListener('pointerdown', e => { const b = e.target.closest('[data-act]'); if (b) { e.preventDefault(); this.act(b.dataset.act, b.dataset.arg); } });
       this.tab = 'spool'; this.sel = {};
     }
     get p() { return this.ctl.profile; }
@@ -42,12 +42,12 @@
       const o = this.el.overlay, sel = '.station, .station > *, .routewrap, .routewrap > *, .tabs, .sheet';
       // re-rendering the same screen (picking an item, buying) must not jump the scroll position
       const keep = key && key === this.shown ? [...o.querySelectorAll(sel)].map(e => [e.scrollTop, e.scrollLeft]) : null; this.shown = key || null;
-      o.className = 'overlay on ' + (cls || ''); o.innerHTML = html;
+      o.className = 'overlay on ' + (cls || ''); o.innerHTML = html; document.body.classList.add('sheeted');
       if (keep) [...o.querySelectorAll(sel)].forEach((e, i) => { if (keep[i]) { e.scrollTop = keep[i][0]; e.scrollLeft = keep[i][1]; } });
       else { const t = o.querySelector('.tabb.on'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
       const f = o.querySelector('[data-focus]'); if (f) f.focus({ preventScroll: true });
     }
-    hide() { this.el.overlay.className = 'overlay'; this.el.overlay.innerHTML = ''; }
+    hide() { this.el.overlay.className = 'overlay'; this.el.overlay.innerHTML = ''; document.body.classList.remove('sheeted'); }
     get open() { return this.el.overlay.classList.contains('on'); }
     act(a, arg) {
       const c = this.ctl;
@@ -67,7 +67,10 @@
         case 'pocket': c.takePocket(arg); break;
         case 'resume': c.resume(); break;
         case 'abandon': c.abandon(); break;
-        case 'toggle': this.p.settings[arg] = !this.p.settings[arg]; c.saved(); c.applySettings(); if (c.state === 'paused') this.pause(); else this.menu(); break;
+        case 'toggle': this.p.settings[arg] = !this.p.settings[arg]; c.saved(); c.applySettings(); this.settings(); break;
+        case 'settings': this.settings(); break;
+        case 'back': if (c.state === 'paused') this.pause(); else this.menu(); break;
+        case 'lview': this.ledgerView = arg; this.ledger(); break;
         case 'mode': { const ids = Object.keys(C.MODES).filter(k => ST.modeUnlocked(this.p, k)), cur = ids.indexOf(this.p.settings.mode); this.p.settings.mode = ids[(cur + 1) % ids.length]; c.saved(); this.menu(); break; }
         case 'pockets': this.unpickArm = -1; c.toPockets(); break;
         case 'pk': this.pk = +arg; this.unpickArm = -1; this.pockets(); break;
@@ -126,9 +129,7 @@
         </div>
         <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}<span class="mono dim">Best score ${num(p.stats.bestNight)} · Runs ${p.stats.nights} · completed ${p.stats.mended}</span></div>
         <div class="row small">
-          <button class="chip" data-act="toggle" data-arg="sound">Sound: ${st.sound ? 'on' : 'off'}</button>
-          <button class="chip" data-act="toggle" data-arg="autofire">Auto-fire: ${st.autofire ? 'on' : 'off'}</button>
-          <button class="chip" data-act="toggle" data-arg="shadows">Shadows: ${st.shadows ? 'on' : 'off'}</button>
+          <button class="chip" data-act="settings">Settings</button>
           <button class="chip" data-act="mode">Difficulty: ${C.MODES[ST.modeUnlocked(p, st.mode) ? st.mode : 'normal'].name}${Object.keys(C.MODES).some(k => !ST.modeUnlocked(p, k)) ? ' (finish a run to unlock harder)' : ''}</button>
         </div></div>`, 'night');
     }
@@ -169,44 +170,57 @@
       const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
         : '<tr><td colspan="6" class="dim">No runs on record yet.</td></tr>';
       const marks = [['Perfect bonus waves', p.stats.perfectSamplers || 0]].concat(Object.keys(C.KEEPERS).map(id => [C.KEEPERS[id].name + ' defeated', p.codex.keepers[id] || 0]), [['Longest twin-ship streak', (p.stats.longestDouble || 0) + ' waves']]);
-      this.show(`<div class="hem"><header><div><div class="eyebrow">High scores</div><h2>Records</h2></div></header>
-        <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === f ? 'on' : ''}" data-act="ledger" data-arg="${t[0]}"><b>${t[1]}</b></button>`).join('')}</nav>
+      const view = this.ledgerView === 'stats' ? 'stats' : 'runs';
+      this.show(`<div class="hem records lv-${view}"><header><div><div class="eyebrow">High scores</div><h2>Records</h2></div>
+          <div class="seg"><button class="tabb ${view === 'runs' ? 'on' : ''}" data-act="lview" data-arg="runs"><b>Runs</b></button><button class="tabb ${view === 'stats' ? 'on' : ''}" data-act="lview" data-arg="stats"><b>Your stats</b></button></div></header>
+        <nav class="tabs shipf">${tabs.map(t => `<button class="tabb ${t[0] === f ? 'on' : ''}" data-act="ledger" data-arg="${t[0]}"><b>${t[1]}</b></button>`).join('')}</nav>
         <div class="routewrap"><div class="tablewrap"><table class="ledger"><tr><th>#</th><th>Player</th><th>Ship</th><th>Score</th><th>Reached</th><th>Date</th></tr>${body}</table></div>
         <div class="detail"><div class="eyebrow">${esc(p.mender)}'s stats</div><dl class="tally">${marks.map(m => `<div><dt>${esc(m[0])}</dt><dd>${m[1]}</dd></div>`).join('')}</dl></div></div>
-        <footer><span></span><button class="btn primary" data-act="title" data-focus>Back</button></footer></div>`, 'paper');
+        <footer><span></span><button class="btn primary" data-act="title" data-focus>Back</button></footer></div>`, 'paper', 'ledger');
     }
     how() {
-      this.show(`<div class="sheet"><div class="eyebrow">Controls</div><h2>How to play</h2>
-        <div class="how">
-          <div><b>Move</b><span><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd> · drag on the cloth</span></div>
-          <div><b>Fire</b><span>Automatic, or hold <kbd>Space</kbd> with auto-fire off</span></div>
-          <div><b>Use an item</b><span><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · tap an item slot</span></div>
-          <div><b>Swap weapon</b><span><kbd>Q</kbd> (Chenille ship only)</span></div>
-          <div><b>Dash</b><span><kbd>Shift</kbd> or double-tap (Between ship only)</span></div>
-          <div><b>Pause</b><span><kbd>Esc</kbd> or <kbd>P</kbd></span></div>
-        </div>
-        <p>A run is eight stages. Each stage is three waves of enemies, a bonus wave where the moths fly a pattern and never shoot back, and then a boss. After every stage you visit the hideout to shop, then pick your route to the next stage.</p>
-        <p>Shoot enemies quickly to build a combo: it multiplies your score and the coins they drop. Coins buy weapons, upgrades and single-use items. Gems, from Spinners and bosses, buy new ships and permanent perks. Blueprints dropped by enemies and bosses unlock new things in the shop. Everything you buy is saved.</p>
+      const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      const rows = touch ? [['Move', 'Drag anywhere on the cloth'], ['Fire', 'Automatic'], ['Use an item', 'Tap an item slot'], ['Dash', 'Double-tap to one side (Between ship only)'], ['Swap weapon', 'Tap Swap (Chenille ship only)'], ['Pause', 'Tap the pause button, top right']]
+        : [['Move', '<kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd>, or drag on the cloth'], ['Fire', 'Automatic, or hold <kbd>Space</kbd> with auto-fire off'], ['Use an item', '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>'], ['Dash', '<kbd>Shift</kbd> (Between ship only)'], ['Swap weapon', '<kbd>Q</kbd> (Chenille ship only)'], ['Pause', '<kbd>Esc</kbd> or <kbd>P</kbd>']];
+      this.show(`<div class="sheet howto"><div class="eyebrow">Controls</div><h2>How to play</h2>
+        <div class="how">${rows.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>
+        <p>A run is eight stages: three waves, a bonus wave that never shoots back, then a boss. After each stage you shop in the hideout and pick your route.</p>
+        <p>Quick kills build a combo that multiplies score and coins. Coins buy weapons, upgrades and items. Gems buy ships and perks. Blueprints unlock new things in the shop. Everything you buy is saved.</p>
         <div class="row"><button class="btn primary" data-act="title" data-focus>Back</button></div></div>`, 'paper');
     }
 
     // ---------- the Hem ----------
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
-      const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Ship upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use']];
-      tabs.push(['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'permanent bonuses']);
-      tabs.push(['book', 'Collection', 'blueprints and enemies']);
+      const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use'],
+        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'permanent bonuses'], ['book', 'Collection', 'blueprints and enemies']];
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared \u00b7 next: ${C.PANELS[c.sim.panel].name}` : 'Between runs \u00b7 everything you buy is saved';
+      this.preview = null;
       const body = this['st_' + this.tab]();
-      this.show(`<div class="hem">
+      this.show(`<div class="hem shop">
         <header><div><div class="eyebrow">${esc(sub)}</div><h2>Hideout</h2></div>
           <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}</div></header>
         <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
-        <div class="station">${body}</div>
+        ${this.shipStrip()}
+        <div class="station st-${this.tab}">${body}</div>
         <footer><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End run' : 'Main menu'}</button>
           <button class="btn primary" data-act="depart">${mid ? 'Continue run' : this.p.run ? 'Start a new run' : 'Start run'}</button></footer></div>`, 'paper', 'hem:' + this.tab);
     }
+    /* The four numbers a purchase can move, for the ship and weapon in hand. */
+    flight(p) {
+      const d = ST.derive(p), id = p.threads[p.thread] ? p.thread : 'running', w = p.threads[id] || 1;
+      return { dmg: d.dmg, rate: d.fireMul / C.THREADS[id].rate[w - 1], ply: d.ply, speed: d.speed };
+    }
+    /* Always on screen in the hideout: what you fly now, and in green or red what the selected thing would change. */
+    shipStrip() {
+      const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null;
+      const cell = (lab, k, dp, unit) => { const ch = b && Math.abs(b[k] - a[k]) > 1e-6;
+        return `<div class="${ch ? 'chg' : ''}"><span>${lab}</span><b class="mono">${a[k].toFixed(dp)}${unit || ''}</b>${ch ? `<em class="mono ${b[k] > a[k] ? 'up' : 'down'}">\u2192 ${b[k].toFixed(dp)}</em>` : ''}</div>`; };
+      return `<div class="shipstrip" aria-label="Your ship's stats"><div class="who">${icon(p.needle, 24)}<span><i>Your ship</i><b>${esc(C.NEEDLES[p.needle].name)}</b></span></div>
+        ${cell('Damage', 'dmg', 2)}${cell('Fire rate', 'rate', 1, '/s')}${cell('Shield', 'ply', 0)}${cell('Speed', 'speed', 1)}</div>`;
+    }
+    clone() { return JSON.parse(JSON.stringify(this.p)); }
     stateLine(st, cur) {
       const unit = cur === 'silk' ? 'gems' : 'coins', have = this.p[cur];
       if (st.why === 'sealed') return '<span class="state sealed">Locked · find its blueprint</span>';
@@ -227,13 +241,14 @@
       const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
       const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
         return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, dim: st.why === 'sealed',
-          meta: w ? (p.thread === id ? 'Equipped' : p.thread2 === id ? 'Second weapon' : 'Owned') + ' · Level ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price) }; });
+          meta: w ? (p.thread === id ? 'Equipped' : p.thread2 === id ? 'Second' : 'Owned') + ' · Lv ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price) }; });
       const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
       const weights = `<ol class="weights">${t.weights.map((d, i) => `<li class="${i < w ? 'on' : ''}"><b>${ROMAN[i + 1]}</b> ${esc(d)}${i > 0 ? ` <span class="mono dim">+${C.WEIGHT_COST[i]}</span>` : ''}</li>`).join('')}</ol>`;
       let btn = '';
       if (st.ok) btn += `<button class="btn primary" data-act="buy" data-arg="thread:${sel}">${st.why === 'buy' ? 'Buy' : 'Upgrade to level ' + ROMAN[st.next]} · ${num(st.price)}</button>`;
       if (w && p.thread !== sel) btn += `<button class="btn" data-act="wind" data-arg="${sel}">Equip</button>`;
       if (w && p.thread !== sel && p.needle === 'chenille' && p.thread2 !== sel) btn += `<button class="btn" data-act="wind2" data-arg="${sel}">Equip as second weapon</button>`;
+      if (st.ok || (w && p.thread !== sel)) { const q = this.clone(); q.thread = sel; q.threads[sel] = p.thread === sel || !w ? (st.ok ? st.next || 1 : w) : w; this.preview = q; }
       return this.list(items, sel) + this.detail({ kicker: 'Weapon · bought with coins, kept forever', name: t.name, desc: t.desc, extra: weights,
         state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''), buttons: btn,
         quote: '' });
@@ -242,9 +257,10 @@
       const p = this.p, ids = Object.keys(C.TEMPERS), sel = this.sel.bench && C.TEMPERS[this.sel.bench] ? this.sel.bench : 'point';
       const n = C.NEEDLES[p.needle], d = ST.derive(p);
       const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
-        return { id, name: t.name, icon: pips(lv, t.max), meta: lv >= t.max ? 'Maxed' : st.why === 'sealed' ? 'Level IV locked' : 'Next ' + dustTag(st.price) }; });
+        return { id, name: t.name, icon: `<b class="lv mono">${lv}/${t.max}</b>`, meta: lv >= t.max ? 'Maxed' : st.why === 'sealed' ? 'Level IV locked' : dustTag(st.price) }; });
       const t = C.TEMPERS[sel], st = S.temperState(p, sel);
-      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => `<div><span>${STAT[k]}</span>${pips(d.pips[k], 8)}</div>`).join('')}</div>`;
+      const lvNow = p.tempers[sel], stats = `<div class="lvrow"><span class="eyebrow">Level ${lvNow} of ${t.max}</span>${pips(lvNow, t.max)}</div>`;
+      if (lvNow < t.max) { const q = this.clone(); q.tempers[sel] = lvNow + 1; this.preview = q; }
       return this.list(items, sel) + this.detail({ kicker: 'Upgrade · permanent, applies to every ship', name: t.name + ' ' + ROMAN[Math.min(t.max, p.tempers[sel] + 1)], desc: t.desc + '.', extra: stats,
         state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''),
         buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="temper:${sel}">Upgrade · ${num(st.price)}</button>` : '',
@@ -267,9 +283,10 @@
       const items = ids.map(id => { const n = C.NEEDLES[id], st = S.needleState(p, id);
         return { id, name: n.name, icon: icon(id, 26), dim: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price) }; });
       const n = C.NEEDLES[sel], st = S.needleState(p, sel), base = C.NEEDLES.sharps;
-      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${STAT[k]}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow">Compared with the starter ship</div>`;
+      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${STAT[k]}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow cmp">Compared with the starter ship</div>`;
       let btn = st.ok ? `<button class="btn primary" data-act="buy" data-arg="needle:${sel}">Buy for ${st.price} gems</button>` : '';
       if (p.needles[sel] && p.needle !== sel) btn += `<button class="btn primary" data-act="takeup" data-arg="${sel}">Fly this ship</button>`;
+      if (sel !== p.needle) { const q = this.clone(); q.needle = sel; this.preview = q; }
       const sealed = st.why === 'sealed' ? `<p class="state sealed">${esc(n.name)} is locked until you find its blueprint. Dropped by: ${esc(C.CHARTS[n.chart].from)}.</p>` : '';
       return this.list(items, sel) + this.detail({ kicker: 'Ship · bought with gems, kept forever', name: n.name, desc: n.trait + ': ' + n.traitDesc, extra: stats + sealed,
         state: (st.why === 'sealed' ? '' : this.stateLine(st, 'silk')) + (st.why === 'short' ? this.priceTag(st, 'silk') : ''), buttons: btn,
@@ -288,16 +305,18 @@
         quote: '' });
     }
     st_book() {
-      const p = this.p;
-      const charts = Object.keys(C.CHARTS).map(id => { const c = C.CHARTS[id], got = p.charts[id];
-        return `<div class="entry ${got ? '' : 'unseen'}">${icon('chart', 30)}<div><b>${got ? esc(c.name) : 'Not yet found'}</b><span>${got ? 'Unlocks ' + esc(c.unseals) : 'Dropped by ' + esc(c.from)}</span></div></div>`; }).join('');
-      const moths = Object.keys(C.MOTHS).map(id => { const m = C.MOTHS[id], n = p.codex.moths[id] || 0;
-        return `<div class="entry ${n ? '' : 'unseen'}">${icon(m.sprite, 40)}<div><b>${n ? esc(m.name) : 'Not yet seen'}</b><span>${n ? esc(m.note) + ' Destroyed: ' + num(n) : ''}</span></div></div>`; }).join('');
-      const keepers = Object.keys(C.KEEPERS).map(id => { const k = C.KEEPERS[id], n = p.codex.keepers[id] || 0;
-        return `<div class="entry ${n ? '' : 'unseen'}">${icon(k.sprite, 64)}<div><b>${n ? esc(k.name) : 'Not yet defeated'}</b><span>${n ? 'Weak spot: ' + esc(k.softName) + '. Defeated: ' + n : ''}</span></div></div>`; }).join('');
-      const found = Object.keys(C.CHARTS).filter(k => p.charts[k]).length;
-      return `<div class="book"><section><div class="eyebrow">Blueprints · ${found} of ${Object.keys(C.CHARTS).length}</div>${charts}</section>
-        <section><div class="eyebrow">Enemies</div>${moths}<div class="eyebrow">Bosses</div>${keepers}</section></div>`;
+      const p = this.p, all = [];
+      for (const id of Object.keys(C.CHARTS)) { const c = C.CHARTS[id], got = !!p.charts[id];
+        all.push({ id: 'c:' + id, grp: 0, got, ic: icon('chart', 30), name: got ? c.name : 'Not yet found', kicker: 'Blueprint', desc: got ? 'Unlocks ' + c.unseals + '.' : 'Dropped by ' + c.from + '.' }); }
+      for (const id of Object.keys(C.MOTHS)) { const m = C.MOTHS[id], n = p.codex.moths[id] || 0;
+        all.push({ id: 'm:' + id, grp: 1, got: n > 0, ic: icon(m.sprite, 34), name: n ? m.name : 'Not yet seen', kicker: 'Enemy', desc: n ? m.note + ' Destroyed: ' + num(n) + '.' : 'You have not met this one yet.' }); }
+      for (const id of Object.keys(C.KEEPERS)) { const k = C.KEEPERS[id], n = p.codex.keepers[id] || 0;
+        all.push({ id: 'k:' + id, grp: 2, got: n > 0, ic: icon(k.sprite, 40), name: n ? k.name : 'Not yet defeated', kicker: 'Boss', desc: n ? 'Weak spot: ' + k.softName + '. Defeated: ' + n + '.' : 'Beat this boss to add it to your collection.' }); }
+      const sel = all.find(x => x.id === this.sel.book) || all.find(x => x.got) || all[0];
+      const head = ['Blueprints', 'Enemies', 'Bosses'];
+      const grid = `<div class="album">${head.map((h, g) => { const xs = all.filter(x => x.grp === g);
+        return `<div class="eyebrow">${h} \u00b7 ${xs.filter(x => x.got).length} of ${xs.length}</div><div class="tiles">${xs.map(x => `<button class="tile ${x.got ? '' : 'unseen'} ${x === sel ? 'sel' : ''}" data-act="pick" data-arg="${x.id}" aria-label="${esc(x.name)}">${x.ic}</button>`).join('')}</div>`; }).join('')}</div>`;
+      return grid + this.detail({ kicker: sel.kicker, name: sel.name, desc: sel.desc });
     }
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p;
@@ -333,13 +352,16 @@
         <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button></div></div>`, 'paper');
     }
     pause() {
-      const st = this.p.settings;
       this.show(`<div class="sheet narrow"><div class="eyebrow">Paused</div><h2>Paused</h2>
         <div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
-          <button class="chip" data-act="toggle" data-arg="sound">Sound: ${st.sound ? 'on' : 'off'}</button>
-          <button class="chip" data-act="toggle" data-arg="autofire">Auto-fire: ${st.autofire ? 'on' : 'off'}</button>
-          <button class="chip" data-act="toggle" data-arg="shadows">Shadows: ${st.shadows ? 'on' : 'off'}</button>
+          <button class="btn" data-act="settings">Settings</button>
           <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper');
+    }
+    settings() {
+      const st = this.p.settings, row = (k, name, note) => `<button class="setrow" data-act="toggle" data-arg="${k}" role="switch" aria-checked="${!!st[k]}"><span><b>${name}</b><span>${note}</span></span><i class="sw ${st[k] ? 'on' : ''}">${st[k] ? 'On' : 'Off'}</i></button>`;
+      this.show(`<div class="sheet narrow"><div class="eyebrow">Saved with your game</div><h2>Settings</h2>
+        <div class="setlist">${row('sound', 'Sound', 'Music and effects')}${row('autofire', 'Auto-fire', 'Fire without holding a button')}${row('shadows', 'Shadows', 'Turn off if the game runs slowly')}</div>
+        <div class="row"><button class="btn primary" data-act="back" data-focus>Back</button></div></div>`, 'paper', 'settings');
     }
     fail(msg) { this.show(`<div class="sheet narrow"><h2>Could not start the game</h2><p>${esc(msg)}</p></div>`, 'paper'); }
 
@@ -369,14 +391,22 @@
         <div class="lab">Gems</div><div class="cur">${icon('silk', 36)}<b class="mono big">${num(p.silk)}</b></div>
         <div class="lab">Ship</div><div class="thread">${icon(p.needle, 22)}<div><b>${esc(C.NEEDLES[p.needle].name)}</b><span>${esc(C.NEEDLES[p.needle].trait)}</span></div></div>
         <div class="fxs">${fx}</div>`);
-      // phone HUD: one stitched panel above the cloth (lives and shield, score, coins and gems), power-ups in a row above the item slots
-      const info = sim.stageInfo(), lives = sim.spares > 4 ? icon(p.needle, 13) + `<b class="mono">\u00d7${sim.spares}</b>` : icon(p.needle, 13).repeat(sim.spares) || '<b class="mono dim">0</b>';
-      this.set('mtop', `<div class="mpanel"><div class="mcol l"><span class="mlab">Lives</span><span class="mlives">${lives}</span><span class="mlab">Shield</span>${ply}</div>
-        <div class="mcol c"><span class="mlab">${esc(info.panelName)} \u00b7 ${esc(info.label)}</span><span class="score">${num(sim.stitches)}</span><span class="mcombo${sim.combo >= C.TUNING.comboStep ? ' on' : ''}${pop}" style="${cvars}">Combo \u00d7${mult.toFixed(1)}</span></div>
-        <div class="mcol r">${dustTag(p.dust)}${silkTag(p.silk)}</div></div>`);
-      this.set('mfx', fx);
+      // phone HUD: one slim status row above the cloth (lives, shield, score, coins, gems, pause); power-ups as draining rings beside the item slots
+      const info = sim.stageInfo(), lives = sim.spares > 3 ? icon(p.needle, 14) + `<b class="mono">\u00d7${sim.spares}</b>` : icon(p.needle, 14).repeat(sim.spares) || '<b class="mono dim">0</b>';
+      this.set('mtop', `<div class="mpanel"><div class="mcol l"><span class="mlives" aria-label="Lives: ${sim.spares}">${lives}</span><span aria-label="Shield: ${pl.ply} of ${d.ply}">${ply}</span></div>
+        <div class="mcol c"><span class="mlab">${esc(info.panelName)} \u00b7 ${info.kind === 'keeper' ? 'Boss' : info.kind === 'sampler' ? 'Bonus' : esc(info.label)}</span><span class="score">${num(sim.stitches)}</span><span class="mcombo${sim.combo >= C.TUNING.comboStep ? ' on' : ''}${pop}" style="${cvars}">Combo \u00d7${mult.toFixed(1)}</span></div>
+        <div class="mcol r">${dustTag(p.dust)}${silkTag(p.silk)}</div>
+        <button class="mpause" data-act="pause" aria-label="Pause"><i></i><i></i></button></div>`);
+      this.fxMax = this.fxMax || {};
+      // each running power-up: its name on a strip of thread that shortens as it runs out
+      const ring = (k, name, color, secs) => { const max = this.fxMax[k] = Math.max(this.fxMax[k] || 0, secs || 0);
+        return `<span class="pw" style="--c:${color};--p:${secs ? Math.round(secs / max * 100) : 100}%" aria-label="${esc(name)}${secs ? ', ' + Math.ceil(secs) + ' seconds left' : ''}">${esc(name)}<i></i></span>`; };
+      for (const k of Object.keys(this.fxMax)) if (!(sim.fx[k] > 0)) delete this.fxMax[k];
+      this.set('mfx', Object.keys(sim.fx).filter(k => sim.fx[k] > 0).map(k => { const c = C.CHARMS[k] || C.NOTIONS[k]; return ring(k, c.name, c.color || PAL.saffron, sim.fx[k]); }).join('')
+        + (sim.armed.thimble ? ring('_t', 'Thimble', PAL.saffron, 0) : '') + (sim.armed.pin ? ring('_p', 'Safety Pin', PAL.saffron, 0) : '')
+        + (sim.armed.chalk ? ring('_c', 'Dive warnings', PAL.saffron, 0) : '') + (pl.dual ? ring('_d', 'Twin ship', '#E0726E', 0) : ''));
       const slots = [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('');
-      this.set('tray', `<div class="lab">Items</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap weapon">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
+      this.set('tray', `<div class="lab">Items</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap weapon">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt pz" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
       const b = sim.boss;
       const sm = sim.sampler;
       this.set('bossbar', sm ? `<div class="bb"><b>Bonus wave \u00b7 ${sm.hit} of ${sm.total}</b><span>They never shoot back. Get them all.</span><div class="seam"><i style="width:${sm.hit / sm.total * 100}%"></i></div></div>` : b ? `<div class="bb"><b>${esc(b.def.name)}</b><span>Phase ${b.phase} · ${esc(b.def.phaseTag[b.phase - 1])}${b.def.chews ? (b.open ? ' · mouth open: shoot it' : ' · mouth shut') : ''}</span><div class="seam"><i style="width:${Math.max(0, b.hp / b.maxHp * 100)}%"></i></div></div>` : '');
