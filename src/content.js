@@ -316,19 +316,36 @@
   };
 
   // ---- Charms: temporary power-ups shaken loose from stitched moths. ----
+  /* up: the power-up's one permanent upgrade, bought with gems in the hideout. Once bought, that power-up always drops in its
+     upgraded form. tier: 0, 1 or 2; a tier opens once CHARM_TIERS[tier].need upgrades from the tier before it are owned.
+     Prices are set against gem income: about 10 to 15 gems for a run that ends at the first or second boss, about 170 for a
+     full Normal run (see docs/DEPARTURES.md, "Power-up upgrades"). */
   const CHARMS = {
-    gold:   { name: 'Double Coins', color: PAL.saffron,    dur: 12, desc: 'Coins are worth double.' },
-    bobbin: { name: 'Rapid Fire',   color: PAL.madderPale, dur: 10, desc: 'Fire 60% faster.' },
-    staple: { name: 'Piercing Shots',color: PAL.steelHi,   dur: 8,  desc: 'Shots pass through every enemy.' },
-    fan:    { name: 'Wide Shot',    color: PAL.mist,       dur: 10, desc: 'Two extra side shots from your lead weapon.' },
-    starch: { name: 'Invincible',   color: PAL.paper,      dur: 6,  desc: 'Nothing can hurt you.' },
-    tangle: { name: 'Slow Motion',  color: PAL.green,      dur: 6,  desc: 'Enemies and their shots move at half speed.' },
-    egg:    { name: 'Shield +1',    color: PAL.tan,        dur: 0,  desc: 'Restores one shield.' },
-    homing: { name: 'Guided Shots', color: PAL.blue,       dur: 10, desc: 'Shots curve toward the nearest enemy.' },
-    drone:  { name: 'Bobbin Drone', color: PAL.brass,      dur: 15, desc: 'A drone flies beside you and fires with you.' },
-    bomb:   { name: 'Unravel',      color: PAL.madderHi,   dur: 0,  desc: 'Damages every enemy on screen and clears their shots.' },
-    twin:   { name: 'Twin Ship',    color: PAL.madder,     dur: 0,  desc: 'A second ship flies and fires beside you until it is hit.' }
+    gold:   { name: 'Double Coins', color: PAL.saffron,    dur: 12, desc: 'Coins are worth double.',
+      up: { name: 'Triple Coins', dur: 12, tier: 0, cost: 25, desc: 'Coins are worth triple and fly straight to your ship.' } },
+    bobbin: { name: 'Rapid Fire',   color: PAL.madderPale, dur: 10, desc: 'Fire 60% faster.',
+      up: { name: 'Overdrive', dur: 10, tier: 1, cost: 70, desc: 'Fire twice as fast. Every kill adds half a second.' } },
+    staple: { name: 'Piercing Shots',color: PAL.steelHi,   dur: 8,  desc: 'Shots pass through every enemy.',
+      up: { name: 'Breaker Shots', dur: 10, tier: 0, cost: 40, desc: 'Shots pass through every enemy, break armour in one hit and get past shields.' } },
+    fan:    { name: 'Wide Shot',    color: PAL.mist,       dur: 10, desc: 'Two extra side shots from your lead weapon.',
+      up: { name: 'Wider Shot', dur: 10, tier: 1, cost: 80, desc: 'Four extra side shots from your lead weapon, and two from your bobbin.' } },
+    starch: { name: 'Invincible',   color: PAL.paper,      dur: 6,  desc: 'Nothing can hurt you.',
+      up: { name: 'Unstoppable', dur: 8, tier: 2, cost: 150, desc: 'Nothing can hurt you. Every shot that hits you turns into a coin and charges your special.' } },
+    tangle: { name: 'Slow Motion',  color: PAL.green,      dur: 6,  desc: 'Enemies and their shots move at half speed.',
+      up: { name: 'Freeze', dur: 8, tier: 0, cost: 45, freeze: 2, desc: 'Enemies and their shots freeze for 2 seconds, then move at half speed for 6 more.' } },
+    egg:    { name: 'Shield +1',    color: PAL.tan,        dur: 0,  desc: 'Restores one shield.',
+      up: { name: 'Shield +2', dur: 0, tier: 0, cost: 30, desc: 'Restores two shields. Any left over puts up a pad that blocks one hit.' } },
+    homing: { name: 'Guided Shots', color: PAL.blue,       dur: 10, desc: 'Shots curve toward the nearest enemy.',
+      up: { name: 'Seeker Shots', dur: 10, tier: 1, cost: 90, desc: 'Every shot locks on to the nearest enemy and chases it down, even one behind you.' } },
+    drone:  { name: 'Bobbin Drone', color: PAL.brass,      dur: 15, desc: 'A drone flies beside you and fires with you.',
+      up: { name: 'Twin Drones', dur: 15, tier: 1, cost: 100, desc: 'Two drones, one on each side, fly with you. Their shots curve toward enemies.' } },
+    bomb:   { name: 'Unravel',      color: PAL.madderHi,   dur: 0,  desc: 'Damages every enemy on screen and clears their shots.',
+      up: { name: 'Grand Unravel', dur: 0, tier: 2, cost: 170, desc: 'Hits every enemy on screen twice as hard, and turns every enemy shot into a coin.' } },
+    twin:   { name: 'Twin Ship',    color: PAL.madder,     dur: 0,  desc: 'A second ship flies and fires beside you until it is hit.',
+      up: { name: 'Triple Ship', dur: 0, tier: 2, cost: 220, desc: 'Two extra ships fly and fire beside you. Each hit costs one of them.' } }
   };
+  /* The order power-up upgrades open in: the first row is open from the start; each row after it opens once you own `need` from the row before. */
+  const CHARM_TIERS = [{ name: 'Row 1', need: 0 }, { name: 'Row 2', need: 2 }, { name: 'Row 3', need: 2 }];
 
   // ---- The Pattern: permanent stitches. Silk. Each row unlocks left to right. ----
   const PATTERN = {
@@ -387,5 +404,5 @@
     stageHp: 0.2, stageSpeed: 0.04, stageShot: 0.05     // per stage: enemies get tougher, faster, and their shots quicker
   };
 
-  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, PATTERN, CHARTS, TUNING };
+  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
 })(typeof window !== 'undefined' ? (window.ST = window.ST || {}) : (globalThis.ST = globalThis.ST || {}));

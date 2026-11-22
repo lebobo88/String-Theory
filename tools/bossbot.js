@@ -1,7 +1,9 @@
 /* Boss test harness. Loads the game logic headless and fights one boss with a strategy you supply.
    CLI:    node tools/bossbot.js <bossId> [seconds]        (naive strategy: sit under the weak spot)
    Module: const { fight, load } = require('../tools/bossbot.js');
-           fight('tinea', (sim, frame) => ({ targetX, targetY, fire: true, dash: 0, special: false, focus: false, notion: -1 }), { god: true, maxSec: 300, seed: 5, mode: 'normal', setup: p => {} })
+           fight('tinea', (sim, frame) => ({ targetX, targetY, fire: true, dash: 0, special: false, focus: false, notion: -1 }), { god: true, maxSec: 300, seed: 5, mode: 'normal', setup: p => {}, hold: 'triple' })
+           hold: keep a power-up going for the whole fight, to measure it: a C.CHARMS id ('bobbin', 'homing', ...) for its plain form, the id
+           with '+' ('bobbin+') for its upgraded form; 'twin' / 'triple' start the fight with that many ships (lost to hits as usual).
    Returns { won, sec, hurts, stuns, phases, cues: {name: count}, events: {type: count}, maxProps, stalled (longest seconds without boss damage), hp (fraction left), error } */
 const path = require('path');
 function load() {
@@ -26,10 +28,13 @@ function fight(id, strategy, opts) {
   sim.row = C.STAGES.indexOf('keeper'); sim.startStage();
   const out = { won: false, sec: 0, hurts: 0, stuns: 0, phases: 1, cues: {}, events: {}, maxProps: 0, stalled: 0, hp: 1, error: null };
   let lastHp = sim.boss.hp, lastHit = 0, f = 0;
+  const hold = o.hold ? String(o.hold) : '', hid = hold.replace('+', '');
+  if (hold === 'twin' || hold === 'triple') { sim.player.wings = hold === 'triple' ? 2 : 1; sim.player.dual = true; }
   const naive = s => ({ targetX: s.boss ? s.boss.x + s.boss.def.soft[0].x : 0, targetY: C.TUNING.playerY, fire: true, dash: 0, special: s.player.sp >= 1, focus: false, notion: -1 });
   try {
     for (; f < o.maxSec * 60; f++) {
       const pl = sim.player; if (o.god) { pl.invuln = 1; }
+      if (hold && hold !== 'twin' && hold !== 'triple' && C.CHARMS[hid] && C.CHARMS[hid].dur) { sim.fx[hid] = Math.max(sim.fx[hid], 1); sim.fxUp[hid] = hold !== hid; }
       sim.update(1 / 60, Object.assign({ fire: true, dash: 0, special: false, focus: false, notion: -1 }, (strategy || naive)(sim, f)));
       for (const e of sim.events) {
         out.events[e.t] = (out.events[e.t] || 0) + 1;

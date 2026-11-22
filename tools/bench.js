@@ -34,3 +34,23 @@ console.table(row);
 const ships = {};
 for (const n of Object.keys(C.NEEDLES)) { const r = run(p => { p.needles[n] = true; p.needle = n; p.threads = { backstitch: 2, running: 2 }; p.thread = 'backstitch'; p.thread2 = 'running'; }, { stages: 10 }); ships[C.NEEDLES[n].name] = { 'minutes, 2 stages': r.min, 'specials fired': r.sp }; }
 console.table(ships);
+/* Power-ups held on: seconds to clear wave 3 of stages 1, 3, 5 and 7 (two seeds each) with each power-up in its plain and upgraded
+   form, Double Stitch II lead and Single Stitch II bobbin. Lower is stronger; Slow Motion and Freeze are defensive, so slower. */
+function wave(panel, seed, hold) {
+  const p = ST.save.freshProfile('bench'); p.threads = { backstitch: 2, running: 2 }; p.thread = 'backstitch'; p.thread2 = 'running'; p.tempers.point = p.tempers.eye = Math.min(3, panel >> 1);
+  const sim = new ST.Sim(p, seed); sim.panel = panel; sim.row = 2; sim.startStage(); let f = 0; const id = hold.replace('+', ''), up = hold !== id;
+  if (id === 'twin') { sim.player.wings = up ? 2 : 1; sim.player.dual = true; }
+  if (id === 'tangle' && up) sim.freezeT = C.CHARMS.tangle.up.freeze;
+  while (f < 60 * 240 && sim.phase !== 'clear' && sim.phase !== 'done') {
+    f++; sim.player.invuln = 1; if (id && id !== 'twin') { sim.fx[id] = Math.max(sim.fx[id], 1); sim.fxUp[id] = up; }
+    let low = null; for (const e of sim.enemies) if (!low || e.y < low.y) low = e;
+    sim.update(1 / 60, { targetX: low ? Math.max(-6.5, Math.min(6.5, low.x)) : 0, fire: true, notion: -1, dash: 0 });
+  }
+  return f / 60;
+}
+const ups = {};
+for (const id of [''].concat(Object.keys(C.CHARMS).filter(k => C.CHARMS[k].dur || k === 'twin'))) for (const hold of id ? [id, id + '+'] : ['']) {
+  let t = 0, n = 0; for (const panel of [0, 2, 4, 6]) for (const seed of [1, 2]) { t += wave(panel, seed, hold); n++; }
+  ups[hold ? (hold.endsWith('+') ? C.CHARMS[id].up.name : C.CHARMS[id].name) : 'no power-up'] = { 'seconds to clear wave 3': +(t / n).toFixed(1) };
+}
+console.table(ups);

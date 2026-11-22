@@ -16,12 +16,12 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | buy | `audio/buy.mp3` | Wooden drawer sliding shut with a brass latch click and a soft coin jingle, 0.6 seconds |
 | keeper | `audio/bossdown.mp3` | Large tapestry tearing apart, heavy cloth collapsing, then a triumphant plucked chord, 2.5 seconds |
 | lance | `audio/laser.mp3` | Metal wire drawn taut and released, bright zinging whip, 0.5 seconds |
-| burst | `audio/bomb.mp3` | Muffled pop of a stuffed cushion bursting, soft debris, 0.6 seconds |
+| burst | `audio/bomb.mp3` | Arcade game bomb explosion: a compact deep boom with a sharp crack at the start, followed by a quick spray of small debris and snapping threads, powerful and satisfying, tight tail, 0.9 seconds |
 | phase | `audio/bossphase.mp3` | Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds |
-| fire_backstitch | `audio/fire_double.mp3` | Two quick soft plucks of taut cotton thread one right after the other, dry, close, 0.25 seconds |
+| fire_backstitch | `audio/fire_double.mp3` | Arcade game shot: two tight crisp string snaps in very quick succession, like a taut bowstring double-twang, bright sharp attack, the second slightly higher in pitch, punchy and dry, no reverb, 0.3 seconds |
 | fire_chain | `audio/fire_chain.mp3` | Short bright metallic chain-link jingle with a light zip, like a tiny chain flicked, dry, 0.3 seconds |
 | fire_herringbone | `audio/fire_spread.mp3` | Soft fabric fan snapping open with a breathy spray of thread, wide and airy, dry, 0.3 seconds |
-| fire_knot | `audio/fire_knot.mp3` | Low rubbery thunk of a heavy yarn ball launched from a sling, dull and round, 0.35 seconds |
+| fire_knot | `audio/fire_knot.mp3` | Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds |
 | fire_cross | `audio/fire_cross.mp3` | Two crossing thread whips, a quick sharp X shaped swish, crisp, dry, 0.25 seconds |
 | fire_satin | `audio/fire_satin.mp3` | Very short silky tick, a smooth light thread flick for rapid fire, soft and high, 0.08 seconds |
 | charge | `audio/laser_charge.mp3` | A metal wire being wound tighter, rising pitch creak and hum building tension, 0.8 seconds |
@@ -77,6 +77,22 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | emp_cocoon | `audio/emp_cocoon.mp3` | Something being wrapped tight in silk, three quick winding swishes and a muffled squeeze, 0.7 seconds |
 | emp_fall | `audio/emp_fall.mp3` | A taut silk line snipped and a large body dropping onto cloth, sharp snip, a short fall and a soft heavy thud, 0.8 seconds |
 | in_king | `audio/in_king.mp3` | A thousand moths pouring in from every side, a rising storm of fluttering wings swirling into a vortex, the light dimming with a deep organ-like drone, four golden crown pieces locking into place each with a bright metallic strike, then a final thunderous chord, 6 seconds |
+| ins_lappet | `audio/ins_lappet.mp3` | The last 1.7 seconds of in_lappet.mp3 with a short fade in: the sting for the Great Lappet when its entrance has been seen before |
+| ins_tinea | `audio/ins_tinea.mp3` | The last 1.7 seconds of in_tinea.mp3 with a short fade in: the sting for the Mother Tinea when its entrance has been seen before |
+| ins_wick | `audio/ins_wick.mp3` | The last 1.7 seconds of in_wick.mp3 with a short fade in: the sting for the Great Wick when its entrance has been seen before |
+| ins_atlas | `audio/ins_atlas.mp3` | The last 1.7 seconds of in_atlas.mp3 with a short fade in: the sting for the Atlas when its entrance has been seen before |
+| ins_unraveller | `audio/ins_unraveller.mp3` | The last 1.7 seconds of in_unraveller.mp3 with a short fade in: the sting for the Unraveller when its entrance has been seen before |
+| ins_beetle | `audio/ins_beetle.mp3` | The last 1.7 seconds of in_beetle.mp3 with a short fade in: the sting for the Carpet Beetle when its entrance has been seen before |
+| ins_empress | `audio/ins_empress.mp3` | The last 1.7 seconds of in_empress.mp3 with a short fade in: the sting for the Silk Empress when its entrance has been seen before |
+| ins_king | `audio/ins_king.mp3` | The last 1.7 seconds of in_king.mp3 with a short fade in: the sting for the Moth King when its entrance has been seen before |
+| out_lappet | `audio/out_lappet.mp3` | A dry crack and papery crinkle as a large dead leaf stiffens, then a gust of wind peels dry leaves away with a rustle, a second stronger gust scatters the rest, the wind dies away to a breath, cinematic, 3.6 seconds |
+| out_tinea | `audio/out_tinea.mp3` | A soft fabric thump, then tiny fabric-tearing nibbling ticks that speed up faster and faster for two seconds, then a muffled cloth sagging flat with a sigh, and finally one small moth fluttering up and away, cinematic, 3.8 seconds |
+| out_wick | `audio/out_wick.mp3` | A large flame sputtering and guttering out with three small snuffing puffs and a final hiss of smoke in the first 1.3 seconds, one second of near silence, then three heavy electrical switch clunks one after another as big lights come back on, cinematic, 4 seconds |
+| out_atlas | `audio/out_atlas.mp3` | An unstable wavering searchlight hum that locks into a held tone, then two slow heavy deep soft thuds like giant eyelids closing with the hum cutting out on the second, then a long dusty shimmering exhale as something huge crumbles to dust and drifts away, cinematic, 3.8 seconds |
+| out_unraveller | `audio/out_unraveller.mp3` | A choked gulp, a scissor snip, then a long steady zipping of knitting being unravelled row by row with soft wooden loom shuttle clacks underneath for two and a half seconds, a final sharp thread pluck, then a small bright chime glint, cinematic, 4.4 seconds |
+| out_beetle | `audio/out_beetle.mp3` | A hard shell scraping as a heavy armoured beetle flips onto its back, then a bouncing series of hard shell cracks with short thuds that come quicker and quicker like a dropped ball settling, ending in one biggest crack with a heavy thud and settling dust, cinematic, 3.6 seconds |
+| out_empress | `audio/out_empress.mp3` | A spinning wheel whirring faster and faster with a rising silk whine for under two seconds, stopping dead with a taut string twang, a small silk snap, then a slow creaking rope hauling something heavy upward with a rising whoosh and a few delicate water drops at the end, cinematic, 4.2 seconds |
+| out_king | `audio/out_king.mp3` | A deep slow-motion impact with time stretching, a falling crystalline shimmer, a clear glass jewel clink on a hard floor with two tiny bounces, a beat of silence, then an explosive burst of hundreds of moth wings fluttering away into the distance while a long warm orchestral dawn chord swells and resolves with a soft sparkle, epic and cinematic, 6.2 seconds |
 | king_swarm | `audio/king_swarm.mp3` | A body bursting apart into a cloud of moths, an explosion of hundreds of fluttering wings scattering, 0.9 seconds |
 | king_eclipse | `audio/king_eclipse.mp3` | The lights going out: a deep descending drone as a shadow passes over, with a faint cold shimmer left behind, 1.5 seconds |
 | king_jewel | `audio/king_jewel.mp3` | A crown jewel shattering, bright crystalline crack with glittering fragments, 0.5 seconds |
@@ -95,14 +111,17 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 
 ## Status
 
-All 88 files are in this folder.
+All 104 files are in this folder.
 
 The first 19 (the original effects and five music tracks) came from the ElevenLabs flow
 "String Theory game audio" (flow id `hBzYOSiXZ7ujABbLIh90`).
 
-The other 69 (weapon, special, boss, entrance-film and menu sounds, plus `music_boss2.mp3` and
+The other 85 (weapon, special, boss, entrance-film and menu sounds, plus `music_boss2.mp3` and
 `music_final.mp3`) came from the flow "String Theory sound effects" (flow id `FYB0P8xeomTbQXDVCNyB`).
 Each was trimmed to its start, capped to the length the game needs, levelled, and saved as
 128 kbps mono (effects) or stereo (music). Both music tracks were checked for sung words: none.
 
 To replace one, regenerate it from its prompt and save it here under the same name.
+
+The eight `ins_*.mp3` stings are the last 1.7 seconds of the matching `in_*.mp3`, cut locally. The eight `out_*.mp3`
+death-film sounds had their loudness evened out so the quiet later beats can be heard.

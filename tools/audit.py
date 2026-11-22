@@ -1,4 +1,4 @@
-import subprocess, sys, time, json, os
+import subprocess, sys, time, json, os, socket
 from playwright.sync_api import sync_playwright
 root='/home/claude/string-theory'
 MEASURE = r"""(name) => {
@@ -38,8 +38,11 @@ MEASURE = r"""(name) => {
   return out; }"""
 VPS = {'phoneS': (360, 640), 'phone': (390, 844), 'tablet': (820, 1180), 'tabletL': (1180, 820), 'phoneL': (844, 390), 'desktop': (1280, 720), 'phoneL2': (915, 412)}
 which = sys.argv[1:] or list(VPS)
-os.makedirs('/tmp/audit-out', exist_ok=True)
-srv=subprocess.Popen([sys.executable,'-m','http.server','8777','--bind','127.0.0.1'],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1)
+OUT = os.environ.get('AUDIT_OUT', '/tmp/audit-out')   # set AUDIT_OUT to keep your screenshots apart from another run's
+os.makedirs(OUT, exist_ok=True)
+# a free port of our own: other test runs share this machine, and a clash would load their server's pages
+_s = socket.socket(); _s.bind(('127.0.0.1', 0)); PORT = _s.getsockname()[1]; _s.close()
+srv=subprocess.Popen([sys.executable,'-m','http.server',str(PORT),'--bind','127.0.0.1'],cwd=root,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); time.sleep(1)
 res = []
 try:
   with sync_playwright() as pw:
@@ -50,9 +53,9 @@ try:
       pg.on('pageerror', lambda e: print('PAGEERROR', e))
       pg.route('**/*', lambda r: r.continue_() if '127.0.0.1' in r.request.url else r.abort())
       def shot(name, full=False):
-        pg.wait_for_timeout(420); pg.screenshot(path=f'/tmp/audit-out/{vn}-{name}.png')
+        pg.wait_for_timeout(420); pg.screenshot(path=f'{OUT}/{vn}-{name}.png')
         m = pg.evaluate(MEASURE, f'{vn}-{name}'); res.append(m)
-      pg.goto('http://127.0.0.1:8777/index.html?quality=low'); pg.wait_for_selector('.wordmark', timeout=60000)
+      pg.goto(f'http://127.0.0.1:{PORT}/index.html?quality=low'); pg.wait_for_selector('.wordmark', timeout=60000)
       shot('01title')
       pg.click('text=Play'); pg.wait_for_timeout(300); shot('02slots')
       pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run'); shot('03menu')
@@ -65,10 +68,15 @@ try:
         const ids = Object.keys(ST.content ? ST.content.NOTIONS : {}); p.tray[0] = { id: 'thimble', n: 2 }; p.tray[1] = { id: Object.keys((ST.C||ST.content).NOTIONS)[1], n: 1 }; g.saved && g.saved(); g.openHem(false); }""")
       for t in ['spool','bench','notions','case','pattern','book']:
         pg.evaluate(f"ST.game.ui.tab='{t}'; ST.game.ui.hem()"); shot('05hem-'+t)
+      # the Perks tab's second view: power-up upgrades (one owned, one row still closed, the longest details)
+      pg.evaluate("() => { const u = ST.game.ui, p = ST.game.profile; p.charmUps = { gold: true }; u.tab = 'pattern'; u.patView = 'ups'; u.sel.ups = 'egg'; u.hem(); }"); shot('05hem-ups')
+      pg.evaluate("() => { const u = ST.game.ui; u.sel.ups = 'bomb'; u.hem(); }"); shot('05hem-ups-locked')
+      pg.evaluate("() => { const u = ST.game.ui; u.patView = 'perks'; u.tab = 'spool'; ST.game.profile.charmUps = {}; u.hem(); }")
       pg.click('.btn:has-text("Start run")'); pg.wait_for_selector('.route'); shot('06route')
       pg.locator('[data-act=fly]:visible').first.click(); pg.wait_for_function('ST.game.state === "flight"'); pg.wait_for_timeout(5000)
       # eight power-ups at once (six timed, two armed), a combo, the lesson prompt and the frame-rate readout
       pg.evaluate("""() => { const g = ST.game, s = g.sim; for (const k of ['gold', 'bobbin', 'staple', 'fan', 'homing', 'tangle']) s.fx[k] = 6 + Math.random() * 4;
+        s.fxUp.gold = s.fxUp.staple = true; s.player.wings = 2; s.player.dual = true;   // upgraded badges, and a Triple Ship's
         s.combo = 24; s.comboT = 2; s.armed.thimble = 1; s.armed.chalk = 3; s.player.invuln = 99; g.profile.settings.showFps = true;
         g.ui.coach('Drag anywhere to fly', 'The ship moves as far as your finger does'); }""")
       pg.wait_for_timeout(900); shot('07flight')
@@ -86,4 +94,6 @@ try:
       print(vn, 'done', flush=True); pg.close()
     b.close()
 finally:
-  srv.terminate(); json.dump(res, open('/tmp/audit-out/measure-%s.json' % '-'.join(which), 'w'), indent=1)
+  srv.terminate(); json.dump(res, open(OUT + '/measure-%s.json' % '-'.join(which), 'w'), indent=1)
+  bad = [m for m in res if any(m[k] for k in ('scroll', 'small', 'tiny', 'clip', 'overlap', 'trunc'))]
+  print('%d screens measured, %d with a problem%s' % (len(res), len(bad), ''.join('\n  ' + m['name'] + ' ' + json.dumps({k: m[k] for k in ('scroll', 'small', 'tiny', 'clip', 'overlap', 'trunc') if m[k]})[:400] for m in bad)))

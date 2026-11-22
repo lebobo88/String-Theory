@@ -34,7 +34,7 @@
   // ---------- analytic point particles ----------
   class Particles {
     constructor(T, cap, add, order) {
-      this.cap = cap; this.limit = cap; this.i = 0; this.lo = cap; this.hi = 0;
+      this.cap = cap; this.limit = cap; this.i = 0; this.lo = cap; this.hi = 0; this.top = 0; this.dead = -1;
       this.p0 = new Float32Array(cap * 3); this.v0 = new Float32Array(cap * 4); this.t = new Float32Array(cap * 4);
       this.c = new Float32Array(cap * 4); this.m = new Float32Array(cap * 4); this.g = new Float32Array(cap);
       for (let i = 0; i < cap; i++) { this.t[i * 4] = -1e6; this.t[i * 4 + 1] = 1; }
@@ -45,10 +45,12 @@
       this.obj = new T.Points(g, this.mat); this.obj.frustumCulled = false; this.obj.renderOrder = order || 0;
       this.now = 0;
     }
-    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; this.geo.setDrawRange(0, this.limit); }   // lower tiers draw only their share of the ring
+    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; if (this.top > this.limit) this.top = this.limit; }   // lower tiers draw only their share of the ring
     /* rgb is a linear [r,g,b]; kind as in shaders.shape */
     emit(x, y, z, vx, vy, vz, life, size, rgb, a, kind, drag, grow, rot, spin, gz, ay) {
+      if (this.now > this.dead) { this.i = 0; this.top = 0; }   // everything has burnt out: start again from the front, so only the part in use is drawn
       const i = this.i; this.i = (i + 1) % this.limit;
+      if (i + 1 > this.top) this.top = i + 1; if (this.now + life > this.dead) this.dead = this.now + life + 0.15;
       if (i < this.lo) this.lo = i; if (i + 1 > this.hi) this.hi = i + 1;
       const p = this.p0, v = this.v0, t = this.t, c = this.c, m = this.m;
       p[i * 3] = x; p[i * 3 + 1] = y; p[i * 3 + 2] = z;
@@ -62,8 +64,9 @@
       this.now = now; this.mat.uniforms.uTime.value = now;
       if (this.hi > this.lo) { for (const a of this.attrs) upload(a, this.lo, this.hi); }
       this.lo = this.cap; this.hi = 0;
+      const n = now > this.dead ? 0 : this.top; this.geo.setDrawRange(0, n); this.obj.visible = n > 0;
     }
-    reset() { for (let i = 0; i < this.cap; i++) this.t[i * 4] = -1e6; this.lo = 0; this.hi = this.cap; }
+    reset() { for (let i = 0; i < this.cap; i++) this.t[i * 4] = -1e6; this.lo = 0; this.hi = this.cap; this.i = 0; this.top = 0; this.dead = -1; }
   }
 
   // ---------- per-frame sprites (halos, heads, glints that follow sim objects) ----------
@@ -90,7 +93,7 @@
   // ---------- instanced 3D debris: X-stitches and yarn curls ----------
   class Debris {
     constructor(T, base, cap) {
-      this.cap = cap; this.limit = cap; this.i = 0; this.lo = cap; this.hi = 0; this.now = 0;
+      this.cap = cap; this.limit = cap; this.i = 0; this.lo = cap; this.hi = 0; this.now = 0; this.top = 0; this.dead = -1;
       const g = this.geo = new T.InstancedBufferGeometry();
       if (base.index) g.setIndex(base.index);
       g.setAttribute('position', base.attributes.position); g.setAttribute('normal', base.attributes.normal);
@@ -99,13 +102,15 @@
       for (let i = 0; i < cap; i++) { this.t[i * 4] = -1e6; this.t[i * 4 + 1] = 1; }
       this.attrs = [dynI(T, this.p0, 3), dynI(T, this.v0, 4), dynI(T, this.t, 4), dynI(T, this.c, 4), dynI(T, this.r, 4), dynI(T, this.gg, 2)];
       ['iP0', 'iV0', 'iT', 'iC', 'iR', 'iG'].forEach((n, k) => g.setAttribute(n, this.attrs[k]));
-      g.instanceCount = cap;
+      g.instanceCount = 0;
       this.mat = shaderMat(T, { vs: SH.debrisVS, fs: SH.debrisFS, side: T.DoubleSide, uniforms: { uTime: { value: 0 } } });
       this.obj = new T.Mesh(g, this.mat); this.obj.frustumCulled = false;
     }
-    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; this.geo.instanceCount = this.limit; }
+    setLimit(f) { this.limit = Math.max(64, Math.min(this.cap, Math.floor(this.cap * f))); if (this.i >= this.limit) this.i = 0; if (this.top > this.limit) this.top = this.limit; }
     emit(x, y, z, vx, vy, vz, life, size, rgb, heat, rot, spin, tumble, gz, drag, grow, thick, ay) {
+      if (this.now > this.dead) { this.i = 0; this.top = 0; }   // everything has burnt out: start again from the front, so only the part in use is drawn
       const i = this.i; this.i = (i + 1) % this.limit;
+      if (i + 1 > this.top) this.top = i + 1; if (this.now + life > this.dead) this.dead = this.now + life + 0.15;
       if (i < this.lo) this.lo = i; if (i + 1 > this.hi) this.hi = i + 1;
       this.p0[i * 3] = x; this.p0[i * 3 + 1] = y; this.p0[i * 3 + 2] = z;
       this.v0[i * 4] = vx; this.v0[i * 4 + 1] = vy; this.v0[i * 4 + 2] = vz; this.v0[i * 4 + 3] = ay || 0;
@@ -118,8 +123,9 @@
       this.now = now; this.mat.uniforms.uTime.value = now;
       if (this.hi > this.lo) for (const a of this.attrs) upload(a, this.lo, this.hi);
       this.lo = this.cap; this.hi = 0;
+      const n = now > this.dead ? 0 : this.top; this.geo.instanceCount = n; this.obj.visible = n > 0;
     }
-    reset() { for (let i = 0; i < this.cap; i++) this.t[i * 4] = -1e6; this.lo = 0; this.hi = this.cap; }
+    reset() { for (let i = 0; i < this.cap; i++) this.t[i * 4] = -1e6; this.lo = 0; this.hi = this.cap; this.i = 0; this.top = 0; this.dead = -1; }
   }
 
   // ---------- strip batch: every trail of one blend mode in one draw ----------

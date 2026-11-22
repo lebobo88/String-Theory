@@ -63,20 +63,26 @@
     pickQuality() {
       let q = this.opts.quality;
       try { const m = /[?&]quality=(low|lite|medium|high|auto)/.exec(location.search); if (m) q = m[1]; } catch (e) { /* no location */ }
+      let mobile = false; try { mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
+      this.mobile = mobile;
       if (!q || q === 'auto') {
         this.auto = true;
-        let mobile = false; try { mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
         this.step = mobile ? 3 : 0;
       } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); }
-      this.step0 = this.step; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; this.noUp = {};
+      this.step0 = this.step; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; this.noUp = {}; this.res = 1; this.resFail = {};
     }
     setQuality(q) {
-      if (q === 'auto') { this.opts.quality = 'auto'; this.pickQuality(); } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); }
+      if (q === 'auto') { this.opts.quality = 'auto'; this.pickQuality(); } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); this.res = 1; this.resFail = {}; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; }
       this.applyQuality(); this.resize();
     }
+    /* The sharpness actually drawn: the tier's, times `res`. When the player has picked a tier by hand the look is kept and only
+       this slides (see monitor), so a heavy stage costs a little sharpness instead of frames. Never below one screen pixel. */
+    pixelRatio() { const top = Math.min(window.devicePixelRatio || 1, FX.LADDER[this.step][1]); return Math.max(Math.min(1, top), top * (this.res || 1)); }
     applyQuality() {
-      const [name, pr] = FX.LADDER[this.step]; this.q = FX.QUALITY[name]; this.quality = name;
-      this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, pr));
+      const name = FX.LADDER[this.step][0]; this.quality = name;
+      // a phone's High keeps every effect but halves the two costs a small dense screen cannot show: 4x to 2x smoothing, and the shadow map
+      this.q = this.mobile && name === 'high' ? (this.qHiM || (this.qHiM = Object.assign({}, FX.QUALITY.high, { samples: 2, shadowMap: 1024 }))) : FX.QUALITY[name];
+      this.gl.setPixelRatio(this.pixelRatio());
       if (this.gpu) for (const p of this.gpu) p.setLimit(this.q.particles);
       if (this.clothMat && this.clothMat.defines.DETAIL !== this.q.cloth) { this.clothMat.defines.DETAIL = this.q.cloth; this.clothMat.needsUpdate = true; }
       if (this.sun && this.sun.shadow.mapSize.x !== this.q.shadowMap) { this.sun.shadow.mapSize.set(this.q.shadowMap, this.q.shadowMap); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; } }
@@ -85,11 +91,17 @@
     /* Auto quality. Judged one second at a time by how many frames ran long, not by the average, so stutter counts.
        Two bad seconds in a row: one step down. Twenty calm seconds: one step back up (once per step, so it cannot flap). */
     monitor(dt) {
-      if (!this.auto) return;
       if (this.warm > 0) { this.warm -= dt; return; }
       const w = this.win; w.t += dt; w.n++; if (dt > 0.026) w.slow++;
       if (w.t < 1) return;
       const frac = w.slow / w.n; w.t = 0; w.n = 0; w.slow = 0;
+      if (!this.auto) {   // a tier picked by hand: same judgement, but only sharpness moves (down in two bad seconds, back up after twenty calm ones, at most twice per level)
+        const R = [1, 0.87, 0.75, 0.65], i = Math.max(0, R.indexOf(this.res));
+        if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && i < R.length - 1 && this.pixelRatio() > 1) { this.resFail[i] = (this.resFail[i] || 0) + 1; this.res = R[i + 1]; this.resize(); w.bad = 0; this.warm = 2; } }
+        else { w.bad = 0; if (frac < 0.03) w.calm++; else w.calm = 0;
+          if (w.calm >= 20 && i > 0 && (this.resFail[i - 1] || 0) < 2) { this.res = R[i - 1]; this.resize(); w.calm = 0; this.warm = 2; } }
+        return;
+      }
       if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && this.step < FX.LADDER.length - 1) { this.noUp[this.step] = true; this.step++; this.applyQuality(); this.resize(); w.bad = 0; this.warm = 2; } }
       else { w.bad = 0; if (frac < 0.03) w.calm++; else w.calm = 0;
         if (w.calm >= 20 && this.step > this.step0 && !this.noUp[this.step - 1]) { this.step--; this.applyQuality(); this.resize(); w.calm = 0; this.warm = 2; } }
@@ -253,20 +265,29 @@
     }
     resize() {
       const cv = this.canvas, w = cv.clientWidth || 1, h = cv.clientHeight || 1;
-      this.gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, FX.LADDER[this.step][1]));
+      this.gl.setPixelRatio(this.pixelRatio());
       this.gl.setSize(w, h, false);
       const cam = this.camera; cam.aspect = w / h;
       const t = Math.tan(cam.fov * Math.PI / 360);
+      /* The canvas runs the full height of the screen, behind the status row and the item row, so effects are never cut off along
+         a straight line where the canvas used to stop. The cloth is fitted to the open space between them (the .clothbox probe,
+         placed by the same CSS variables as the HUD) and the view is shifted so the cloth sits in the middle of that space. */
+      if (!this.box && cv.parentElement) { this.box = document.createElement('div'); this.box.className = 'clothbox'; cv.parentElement.appendChild(this.box); }
+      let tp = 0, bp = 0;
+      if (this.box) { const cr = cv.getBoundingClientRect(), br = this.box.getBoundingClientRect(); if (br.height > 40) { tp = Math.max(0, br.top - cr.top); bp = Math.max(0, cr.bottom - br.bottom); } }
+      const free = Math.max(40, h - tp - bp), fa = w / free;
       // upright screens are width-bound: zoom until the cloth spans the screen and let the frame's side rails run off the edges
-      const needH = FH + (cam.aspect < 0.85 ? 1.0 : 2.4), needW = W + (cam.aspect < 0.85 ? 0.5 : 2.4);
-      this.dist = Math.max(needH / 2 / t, needW / 2 / (t * cam.aspect)) * 1.02;
+      const needH = FH + (fa < 0.85 ? 1.0 : 2.4), needW = W + (fa < 0.85 ? 0.5 : 2.4);
+      this.dist = Math.max(needH / 2 / t * (h / free), needW / 2 / (t * cam.aspect)) * 1.02;
+      if (tp || bp) cam.setViewOffset(w, h, 0, (bp - tp) / 2, w, h); else if (cam.view) cam.clearViewOffset();
+      this.ndT = 1 - 2 * tp / h; this.ndB = -1 + 2 * bp / h;
       cam.updateProjectionMatrix(); this.placeCamera(0, 0);
       const db = this.gl.getDrawingBufferSize(this.tmpV);
       this.post.configure(this.q, db.x, db.y);
       this.post.comp.uniforms.uAspect.value = db.x / Math.max(1, db.y);
       const scale = db.y / (2 * t);
       for (const s of [this.lint, this.glow, this.halo, this.spr]) if (s) s.mat.uniforms.uScale.value = scale;
-      this.viewTop = this.onPlane(0, 1, 0.5).y;
+      this.viewTop = this.onPlane(0, this.ndT, 0.5).y;
       this.edges();
     }
     onPlane(nx, ny, z) {   // where the ray through a screen point (NDC) meets the plane at height z, with the camera at rest
@@ -277,12 +298,13 @@
     /* Anchors round the border of the screen for the low-shield fray: x, y on the plane FZ, the inward direction, and a seed. */
     edges() {
       const A = this.edgeA; let n = 0;
+      const nT = this.ndT === undefined ? 1 : this.ndT, nB = this.ndB === undefined ? -1 : this.ndB, mid = (nT + nB) / 2, half = (nT - nB) / 2;
       const put = (nx, ny, ix, iy) => {
         const a = this.onPlane(nx, ny, FZ), ax = a.x, ay = a.y, b = this.onPlane(nx + ix * 0.1, ny + iy * 0.1, FZ), dx = b.x - ax, dy = b.y - ay, l = Math.sqrt(dx * dx + dy * dy) || 1;
         A[n * 5] = ax; A[n * 5 + 1] = ay; A[n * 5 + 2] = dx / l; A[n * 5 + 3] = dy / l; A[n * 5 + 4] = hash(n * 3.7 + 1); n++;
       };
-      for (let i = 0; i < 10; i++) { const t = -0.92 + i * 1.84 / 9 + (hash(i) - 0.5) * 0.08; put(-1, t, 1, 0); put(1, t, -1, 0); }
-      for (let i = 0; i < 7; i++) { const t = -0.86 + i * 1.72 / 6 + (hash(i + 20) - 0.5) * 0.1; put(t, 1, 0, -1); put(t, -1, 0, 1); }
+      for (let i = 0; i < 10; i++) { const t = -0.92 + i * 1.84 / 9 + (hash(i) - 0.5) * 0.08; const ty = mid + t * half; put(-1, ty, 1, 0); put(1, ty, -1, 0); }
+      for (let i = 0; i < 7; i++) { const t = -0.86 + i * 1.72 / 6 + (hash(i + 20) - 0.5) * 0.1; put(t, nT, 0, -1); put(t, nB, 0, 1); }
       this.edgeN = n;
     }
     placeCamera(ox, oy) {
@@ -422,14 +444,14 @@
       this.starch = hoop(3, 2.7, PAL.paper, PAL.paper, 0.32); this.playerGroup.add(this.starch);
       this.chargeRing = hoop(5, 1.4, PAL.steelHi, PAL.steelHi, 0.4); this.chargeRing.position.y = 0.9; this.playerGroup.add(this.chargeRing);
       this.ghosts = []; this.ghostMat = new T.MeshBasicMaterial({ color: new T.Color(PAL.saffron), transparent: true, opacity: 0.5, blending: T.AdditiveBlending, depthWrite: false });
-      this.trails = [0, 1, 2].map(() => ({ x: new Float32Array(80), y: new Float32Array(80), t: new Float32Array(80), s: new Float32Array(80), n: 0 }));
+      this.trails = [0, 1, 2, 3, 4].map(() => ({ x: new Float32Array(80), y: new Float32Array(80), t: new Float32Array(80), s: new Float32Array(80), n: 0 }));
       this.lastX = undefined; this.vx = 0;
     }
     setNeedle(name) {
       if (name === this.needleName) return;
-      if (this.needleA) { this.playerGroup.remove(this.needleA); this.playerGroup.remove(this.needleB); }
-      this.needleA = this.chart(name, 0.1, true, this.needleMat); this.needleB = this.chart(name, 0.1, true, this.needleMat);
-      this.playerGroup.add(this.needleA); this.playerGroup.add(this.needleB); this.needleName = name;
+      if (this.needleA) { this.playerGroup.remove(this.needleA); this.playerGroup.remove(this.needleB); this.playerGroup.remove(this.needleC); }
+      this.needleA = this.chart(name, 0.1, true, this.needleMat); this.needleB = this.chart(name, 0.1, true, this.needleMat); this.needleC = this.chart(name, 0.1, true, this.needleMat);   // C: the third ship of a Triple Ship
+      this.playerGroup.add(this.needleA); this.playerGroup.add(this.needleB); this.playerGroup.add(this.needleC); this.needleName = name;
       for (const g of this.ghosts) this.scene.remove(g.m);
       this.ghosts = [0, 1, 2, 3, 4].map(() => { const m = new this.T.Mesh(this.chartGeo(name, 0.1, 'body', true), this.ghostMat.clone()); m.visible = false; m.renderOrder = 6; this.scene.add(m); return { m, t: 1 }; });
       this.needleCells = this.cells(name, 0.1);
@@ -488,7 +510,7 @@
               this.muzzleT = this.time; const th = C.THREADS[e.thread], col = th ? th.color : PAL.linen, hx = e.x !== undefined ? e.x : pl.x, hy = (e.y !== undefined ? e.y : PY + 0.7) + 0.35;
               this.flare(hx, hy, 0.9, 0.65, this.lc(col, 1.7), 0.1, 0, 0.3);
               this.lintPuff(hx, hy, 0.8, 2, this.lc(PAL.linen), 0.3, 1);
-              if (pl.dual && e.src !== 'B') { this.flare(hx - 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); this.flare(hx + 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); }
+              if (pl.dual && e.src !== 'B') for (const o of (sim.shipOffsets ? sim.shipOffsets() : [[-0.45, 0], [0.45, 0]])) this.flare(pl.x + o[0], hy + o[1], 0.9, 0.7, this.lc(col, 2), 0.1);
             }
             break;
           }
@@ -589,7 +611,9 @@
           case 'silk': this.pickupPop(pl, PAL.paper, 1); break;
           case 'packet': this.pickupPop(pl, PAL.linen, 1); break;
           case 'chart': this.pickupPop(pl, PAL.paper, 2); this.loop(pl.x, PY, 2.5, PAL.paper); break;
-          case 'charm': this.pickupPop(pl, C.CHARMS[e.id].color, 2); this.loop(pl.x, PY, 1.6, C.CHARMS[e.id].color); if (e.id === 'bomb') this.flashAdd(PAL.madderHi, 0.4); break;
+          case 'charm': this.pickupPop(pl, C.CHARMS[e.id].color, 2); this.loop(pl.x, PY, 1.6, C.CHARMS[e.id].color); if (e.id === 'bomb') this.flashAdd(PAL.madderHi, e.up ? 0.6 : 0.4);
+            if (e.up) { this.loop(pl.x, PY, 2.4, PAL.saffron); this.ring(pl.x, PY + 0.2, 3.4, this.lc(PAL.saffron, 2.2), 0.5, 7); }   // an upgraded power-up: a second, gold loop
+            break;
           case 'double': this.loop(e.x, e.y, 2, PAL.madder); this.glints(e.x, e.y, 0.8, 16, this.lc(PAL.madderPale, 2.5), 5); this.ring(pl.x, PY + 0.2, 3, this.lc(PAL.madderPale, 2), 0.5, 7); break;
           case 'burn': this.lintPuff(e.x, GY, 0.5, 10, this.lc(PAL.darkBrown), 0.8, 2.4); this.glints(e.x, GY, 0.5, 18, this.lc(PAL.saffron, 3), 5, 0.3, 0.6);
             this.ripple(e.x, GY, 0.9, 6, 0.4, 2.5, true); this.shock(e.x, GY, 0.7, 0.9); this.flare(e.x, GY, 0.8, 2.6, this.lc(PAL.saffron, 2.5), 0.2); this.shake = Math.max(this.shake, 0.25); break;
@@ -957,10 +981,11 @@
         this.glow.emit(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r * 0.8, 1, -Math.cos(a) * r * 0.9, -Math.sin(a) * r * 0.7, 0, 0.9, 0.25, this.lc(phaseCol === this.lc(PAL.saffronInk) ? PAL.saffron : PAL.madderPale, 1.8), 0.8, 0, 1.2, 0.3); }
       if (!def.noWings && Math.random() < fdt * 8 * this.q.particles) { const sd = Math.random() < 0.5 ? -1 : 1; this.fibres(b.x + sd * def.halfW * 0.9, b.y + rnd(-1, 1), 1, 1, this.lc(PAL.tan), 1.5); }
       if (hpK < 0.35 && !b.enter) { u.drip += fdt * (1 - hpK) * 10; while (u.drip > 1) { u.drip--; this.strands(b.x + rnd(-def.halfW, def.halfW) * 0.8, b.y + rnd(-def.halfH, def.halfH) * 0.6, this.paletteOf(def.sprite), 1, 0.5); this.glints(b.x + rnd(-1, 1) * def.halfW, b.y, 1.2, 1, this.lc(PAL.saffron, 2), 1.5); } }
-      if (b.enter > 0) { if (Math.random() < fdt * 40) this.lintPuff(b.x + rnd(-def.halfW, def.halfW), b.y + def.halfH, 1, 1, this.lc(PAL.mist), 0.8, 1); }
+      if (b.enter > 0 && !(this.cine && this.cine.active)) { if (Math.random() < fdt * 40) this.lintPuff(b.x + rnd(-def.halfW, def.halfW), b.y + def.halfH, 1, 1, this.lc(PAL.mist), 0.8, 1); }
       else if (!u.entered) { u.entered = true; this.ripple(b.x, b.y, 1, 6, 0.7, 1.5); this.shock(b.x, b.y, 0.9, 1); this.shake = Math.max(this.shake, 0.35); this.lintPuff(b.x, b.y, 1, 16, this.lc(PAL.mist), 1.2, 3); }
     }
     bossDeath(e) {   // the Keeper unravels: shudder and pops, then stitch by stitch from the edge in, then a last burst
+      if (this.cine && this.cine.active && this.cine.kind === 'death') return;   // its death film (src/cine.js) owns the body and the whole collapse
       const g = this.bossGroup; if (!g) return;
       this.bossGroup = null;
       const def = C.KEEPERS[g.userData.id];
@@ -1194,7 +1219,8 @@
     syncDrops(sim, dt, fdt) {
       const map = this.views.drops, t = this.time, pl = sim.player;
       map.forEach(unsee);
-      for (let di = 0; di < sim.drops.length; di++) {
+      const nd = this.cine && this.cine.active && this.cine.kind === 'death' ? 0 : sim.drops.length;   // a death film has the cloth to itself: what the boss dropped appears when it ends
+      for (let di = 0; di < nd; di++) {
         const d = sim.drops[di];
         let v = map.get(d.id);
         if (!v) { v = { x: d.x, y: d.y, a: Math.random() * TAU, sp: rnd(0.4, 1.1), sparkle: 0 }; map.set(d.id, v); }
@@ -1211,7 +1237,11 @@
           this.spr.add(x, y, z - 0.2, 1.9, this.lc(ch.color, 1.2), 0.55 + 0.15 * Math.sin(t * 6), 0);
           this.spr.add(x, y, z + 0.2, 1.5, this.lc(ch.color, 2.6), 0.9, 7, t * 2.2);
           this.spr.add(x, y, z + 0.2, 1.15, this.lc(PAL.paper, 1.5), 0.5, 3);
-          hex = ch.color; size = 0.9;
+          if (d.up) {   // the upgraded form: a gold hoop turning the other way, and three gold stitches circling it
+            this.spr.add(x, y, z + 0.25, 2.3, this.lc(PAL.saffron, 2.4), 0.85, 7, -t * 1.6);
+            for (let k = 0; k < 3; k++) { const a = t * 2.4 + k * TAU / 3; this.spr.add(x + Math.cos(a) * 0.95, y + Math.sin(a) * 0.95, z + 0.3, 0.5, this.lc(PAL.glare, 2.6), 0.95, 1, a); }
+          }
+          hex = d.up ? PAL.saffron : ch.color; size = d.up ? 1.1 : 0.9;
         } else if (d.kind === 'dust') {
           this.compose(x, y, z, 0, d.t * 9 + d.id, 0, 1); this.dropPool('dust', 0.085).push(this.M, this.lc('#FFFFFF'), 0, sim.fx.gold > 0 ? 0.45 : 0.18);
           this.spr.add(x, y, z - 0.1, 0.75, this.lc(PAL.saffron, sim.fx.gold > 0 ? 1.8 : 1), 0.35, 0);
@@ -1409,7 +1439,8 @@
       this.playerGroup.position.set(pl.x, PY + 0.25, 0.75 - this.punch * 0.25 + Math.sin(this.time * 3) * 0.04);
       this.playerGroup.rotation.y = Math.max(-0.7, Math.min(0.7, this.vx * 0.045));
       this.playerGroup.rotation.z = Math.max(-0.2, Math.min(0.2, -this.vx * 0.012));
-      this.needleA.position.x = pl.dual ? -0.45 : 0; this.needleB.visible = pl.dual; this.needleB.position.x = 0.45;
+      const offs = sim.shipOffsets ? sim.shipOffsets() : pl.dual ? [[-0.45, 0], [0.45, 0]] : [[0, 0]];   // one ship, a twin, or a Triple Ship's V
+      for (let i = 0; i < 3; i++) { const n = i === 0 ? this.needleA : i === 1 ? this.needleB : this.needleC; if (!n) continue; n.visible = i < offs.length; if (i < offs.length) { n.position.x = offs[i][0]; n.position.y = offs[i][1]; } }
       // flashes: red when hurt, white while invincible, steel while charging
       this.hurtFlash = Math.max(0, (this.hurtFlash || 0) - dt * 3);
       const st = sim.fx.starch > 0 ? 0.25 + 0.15 * Math.sin(this.time * 12) : 0, ch = pl.charge > 0 ? Math.min(1, pl.charge * 1.5) * 0.4 : 0;
@@ -1424,10 +1455,10 @@
       if (!alive) { this.ramK = 0; return; }
       const eye = PY - 0.3;   // the needle's eye: the thread leaves from here
       // needle glint and the eye's lint sparkle
-      const tipY = PY + 0.25 + 0.62, cyc = (this.time % 2.6) / 2.6, sweep = cyc < 0.12 ? Math.sin(cyc / 0.12 * Math.PI) : 0;
-      for (let i = 0, nn = pl.dual ? 2 : 1; i < nn; i++) { const ox = pl.dual ? (i ? 0.45 : -0.45) : 0;
+      const tipY0 = PY + 0.25 + 0.62, cyc = (this.time % 2.6) / 2.6, sweep = cyc < 0.12 ? Math.sin(cyc / 0.12 * Math.PI) : 0;
+      for (let i = 0, nn = offs.length; i < nn; i++) { const ox = offs[i][0], tipY = tipY0 + offs[i][1];
         this.spr.add(pl.x + ox, tipY, 1.0, 0.55 + sweep * 1.6, this.lcs(PAL.glare, 2.2 + sweep * 2), 0.65 + sweep * 0.35, 1, this.time * 0.6);
-        this.spr.add(pl.x + ox, eye + 0.1, 0.8, 0.7, this.lc(PAL.madderHi, 1.6), 0.3, 0);
+        this.spr.add(pl.x + ox, eye + 0.1 + offs[i][1], 0.8, 0.7, this.lc(PAL.madderHi, 1.6), 0.3, 0);
       }
       if (Math.random() < fdt * 9 * this.q.particles) this.glow.emit(pl.x + rnd(-0.08, 0.08), eye, 0.6, rnd(-0.4, 0.4), rnd(-1.6, -0.8), 0, rnd(0.4, 0.7), rnd(0.15, 0.25), this.lc(PAL.glare, 2.2), 1, 1, 1, 0.3);
       // Full Sail, Signature, and the stitches a dash leaves
@@ -1440,18 +1471,20 @@
       if (sim.fx.dish > 0 && Math.random() < fdt * 20 * this.q.particles) { const a = Math.random() * TAU, r = 3.2; this.glow.emit(pl.x + Math.cos(a) * r, PY + Math.sin(a) * r, 0.5, -Math.cos(a) * 9, -Math.sin(a) * 9, 0, 0.32, 0.4, this.lc(PAL.steelHi, 2), 0.8, 4, 0, 0.3, a, 0, 0); }
       // dash after-images
       this.ghostsT = Math.max(0, this.ghostsT - dt);
-      if (pl.dashT > 0 || this.ghostsT > 0.1) { let g = null; for (const q of this.ghosts) if (q.t >= 1) { g = q; break; } if (g && (!this.lastGhost || now - this.lastGhost > 0.025)) { this.lastGhost = now; g.t = 0; g.m.position.set(pl.x + (pl.dual ? -0.45 : 0), PY + 0.25, 0.7); g.m.rotation.y = this.playerGroup.rotation.y; } }
+      if (pl.dashT > 0 || this.ghostsT > 0.1) { let g = null; for (const q of this.ghosts) if (q.t >= 1) { g = q; break; } if (g && (!this.lastGhost || now - this.lastGhost > 0.025)) { this.lastGhost = now; g.t = 0; g.m.position.set(pl.x + offs[0][0], PY + 0.25 + offs[0][1], 0.7); g.m.rotation.y = this.playerGroup.rotation.y; } }
       for (const g of this.ghosts) { g.t = Math.min(1, g.t + dt / 0.22); g.m.visible = g.t < 1; g.m.material.opacity = (1 - g.t) * 0.55; }
       // the threads
       this.frayT = Math.max(0, this.frayT - dt);
       const red = this.lc(PAL.madder), glow = this.lc(PAL.madderHi, 1.6), fray = this.frayT > 0 && Math.floor(this.time * 20) % 3 !== 0;
-      const nEx = pl.dual ? 2 : 1;
-      for (let i = 0; i < 2; i++) { const tr = this.trails[i]; if (i < nEx) { this.trailPush(tr, pl.dual ? pl.x + (i ? 0.45 : -0.45) : pl.x, eye, now); this.trailDraw(tr, now, red, glow, 0.085, fray); } else tr.n = 0; }
-      const dr = this.trails[2];
-      if (sim.droneOn) {
-        const dx = pl.x + (pl.x > 0 ? -1 : 1) * 0.95; this.trailPush(dr, dx, eye, now); this.trailDraw(dr, now, this.lc(PAL.brass), this.lc(PAL.saffron, 1.6), 0.06, false);
-        this.spr.add(dx, PY + 0.1, 0.9, 0.9, this.lc(PAL.saffron, 1.4), 0.35, 0);
-      } else dr.n = 0;
+      const SHIP_TR = [0, 1, 3];   // trails 0, 1 and 3 belong to the ships (2 and 4 to the drones)
+      for (let i = 0; i < 3; i++) { const tr = this.trails[SHIP_TR[i]]; if (i < offs.length) { this.trailPush(tr, pl.x + offs[i][0], eye + offs[i][1], now); this.trailDraw(tr, now, red, glow, 0.085, fray); } else tr.n = 0; }
+      for (let k = 0; k < 2; k++) {   // the drone, and with Twin Drones its pair on the other side
+        const dr = this.trails[k ? 4 : 2];
+        if (sim.droneOn && (!k || (sim.fxUp && sim.fxUp.drone))) {
+          const dx = sim.droneX ? sim.droneX(k) : pl.x + (pl.x > 0 ? -1 : 1) * (k ? -0.95 : 0.95); this.trailPush(dr, dx, eye, now); this.trailDraw(dr, now, this.lc(PAL.brass), this.lc(PAL.saffron, 1.6), 0.06, false);
+          this.spr.add(dx, PY + 0.1, 0.9, 0.9, this.lc(PAL.saffron, 1.4), 0.35, 0);
+        } else dr.n = 0;
+      }
     }
 
     // ---------- frame ----------
@@ -1474,7 +1507,9 @@
       if (this.focusK > 0.05 && Math.random() < 0.6 * this.q.particles * this.focusK) this.glow.emit(rnd(-HW, HW), rnd(B, H), 0.4, rnd(-0.05, 0.05), rnd(-0.05, 0.08), 0, 1.4, 0.2, this.lc(PAL.mist, 1.5), 0.6, 1, 0, 0.6);   // motes hanging still
       if (!this.droneMesh) { this.droneMesh = this.chart('bobbin', 0.08, true); this.scene.add(this.droneMesh); }
       const pl = sim.player;
-      this.droneMesh.visible = alive && sim.droneOn; this.droneMesh.position.set(pl.x + (pl.x > 0 ? -1 : 1) * 0.95, PY + 0.1 + Math.sin(this.time * 4) * 0.08, 0.7); this.droneMesh.rotation.z += dt * 3;
+      this.droneMesh.visible = alive && sim.droneOn; this.droneMesh.position.set(sim.droneX ? sim.droneX(0) : pl.x + (pl.x > 0 ? -1 : 1) * 0.95, PY + 0.1 + Math.sin(this.time * 4) * 0.08, 0.7); this.droneMesh.rotation.z += dt * 3;
+      if (!this.droneMesh2) { this.droneMesh2 = this.chart('bobbin', 0.08, true); this.scene.add(this.droneMesh2); }   // Twin Drones: the second, on the other side
+      this.droneMesh2.visible = alive && sim.droneOn && !!(sim.fxUp && sim.fxUp.drone); this.droneMesh2.position.set(sim.droneX ? sim.droneX(1) : pl.x - (pl.x > 0 ? -1 : 1) * 0.95, PY + 0.1 + Math.sin(this.time * 4 + 1.6) * 0.08, 0.7); this.droneMesh2.rotation.z -= dt * 3;
       this.syncBobbins(sim, dt, fdt, alive);
       this.syncEnemies(sim, dt, fdt);
       this.syncShots(sim, dt);
@@ -1537,7 +1572,7 @@
       this.gl.info.reset();
       this.time += dt; this.hs = 0; this.ft += dt; this.focusK *= 0.9; this.frayK = 0;
       for (let i = 0; i < this.gpu.length; i++) this.gpu[i].now = this.ft;
-      this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false; if (this.bobMesh) for (const m of this.bobMesh) m.visible = false; if (this.lassoMesh) this.lassoMesh.visible = false; PY = GY;
+      this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false; if (this.droneMesh2) this.droneMesh2.visible = false; if (this.bobMesh) for (const m of this.bobMesh) m.visible = false; if (this.lassoMesh) this.lassoMesh.visible = false; PY = GY;
       for (const g of this.ghosts) g.m.visible = false;
       this.trN.begin(this.ft); this.trA.begin(this.ft); this.halo.begin(); this.spr.begin();
       { const pl_ = this.pools_(); for (let i = 0; i < pl_.length; i++) pl_[i].begin(); }

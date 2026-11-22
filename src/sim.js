@@ -33,10 +33,12 @@
       this.d = ST.derive(p);
       this.spares = T.spares + (p.pattern.sparepin ? 1 : 0);
       this.lastKnot = !!p.pattern.lastknot;
-      this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, fireT: 0, charge: 0, fireT2: 0, charge2: 0, dashT: 0, dashDir: 0, dashN: this.d.dashMax, dashRe: 0,
+      this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, wings: 0, fireT: 0, charge: 0, fireT2: 0, charge2: 0, dashT: 0, dashDir: 0, dashN: this.d.dashMax, dashRe: 0,
         bx: 0, by: PY - 0.7, whip: 0, sp: 0, focus: 1, patchT: 0, grazeN: 0, beadN: 0, ram: 0 };
       this.focusOn = false;
       this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0, homing: 0, drone: 0, sign: 0 };
+      this.fxUp = {};          // power-up id -> true while the running effect is the upgraded form (C.CHARMS[id].up)
+      this.freezeT = 0;        // Freeze: seconds left of the stop before the slow motion
       this.armed = { thimble: !!p.pattern.headstart, pin: false, chalk: 0 };
       this.combo = 0; this.comboT = 0; this.bestCombo = 0;
       this.phase = 'idle';
@@ -97,7 +99,7 @@
     snapshot(at) {
       const pl = this.player;
       return { at, mode: this.modeId, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
-        nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, lastKnot: this.lastKnot,
+        nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, wings: pl.wings, lastKnot: this.lastKnot,
         perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed) };
     }
     static restore(profile, snap) {
@@ -106,7 +108,7 @@
       for (const k of ['panel', 'row', 'stitches', 'nightDust', 'nightSilk', 'spares', 'lastKnot', 'perfectSamplers', 'bestCombo', 'dualRun']) if (snap[k] !== undefined) s[k] = snap[k];
       s.panel = Math.max(0, Math.min(C.PANELS.length - 1, s.panel | 0)); s.row = Math.max(0, Math.min(C.STAGES.length - 1, s.row | 0));
       s.route = (snap.route || []).slice(); s.nightCharts = (snap.nightCharts || []).slice();
-      s.player.ply = Math.max(1, Math.min(s.d.ply, snap.ply || s.d.ply)); s.player.dual = !!snap.dual;
+      s.player.ply = Math.max(1, Math.min(s.d.ply, snap.ply || s.d.ply)); s.player.wings = Math.max(0, Math.min(2, snap.wings === undefined ? (snap.dual ? 1 : 0) : snap.wings | 0)); s.player.dual = s.player.wings > 0;
       s.lastNeedle = s.d.needle; Object.assign(s.armed, snap.armed || {}); s.skipMend = true;
       return s;
     }
@@ -181,12 +183,13 @@
       if (this.phase === 'idle' || this.phase === 'done') return;
       dt = Math.min(dt, 0.05);
       this.t += dt;
-      for (const k in this.fx) if (this.fx[k] > 0) this.fx[k] = Math.max(0, this.fx[k] - dt);
+      for (const k in this.fx) if (this.fx[k] > 0) { this.fx[k] = Math.max(0, this.fx[k] - dt); if (this.fx[k] === 0) this.fxUp[k] = false; }
+      if (this.freezeT > 0) this.freezeT = Math.max(0, this.freezeT - dt);
       if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
 
       if (this.phase === 'intro') { this.phaseT -= dt; if (this.phaseT <= 0) this.phase = 'play'; }
       this.updatePlayer(dt, input);
-      const slow = (this.fx.tangle > 0 ? 0.45 : 1) * (this.focusOn ? 0.35 : 1);
+      const slow = (this.fx.tangle > 0 ? (this.freezeT > 0 ? 0.04 : 0.45) : 1) * (this.focusOn ? 0.35 : 1);
       this.updateShots(dt);
       this.updateZones(dt);
       this.updateEnemies(dt * slow * this.speedMul(), dt);
@@ -209,6 +212,16 @@
     }
 
     // ---------- player ----------
+    /* Whether this power-up drops in its upgraded form: bought in the hideout, saved on the profile. */
+    upgraded(id) { return !!(this.p.charmUps && this.p.charmUps[id] && C.CHARMS[id] && C.CHARMS[id].up); }
+    /* The ships in flight, as offsets from the player: one, a twin side by side, or a triple in a V (the extra two a little behind). */
+    shipOffsets() {
+      const w = this.player.wings, c = this.offCache || (this.offCache = [[[0, 0]], [[-0.45, 0], [0.45, 0]], [[-0.9, -0.3], [0, 0], [0.9, -0.3]]]);
+      return c[w > 1 ? 2 : w > 0 ? 1 : 0];
+    }
+    /* Where a drone flies: beside the ship on the side nearer the middle (k = 1, Twin Drones' second, on the other side), clear of a Triple Ship's wings. */
+    droneX(k) { const pl = this.player, side = (pl.x > 0 ? -1 : 1) * (k ? -1 : 1); return pl.x + side * (0.95 + (pl.wings > 1 ? 0.7 : 0)); }
+    shipSpan() { const w = this.player.wings; return w > 1 ? 0.9 : w > 0 ? 0.45 : 0; }
     curThread() { return this.p.threads[this.p.thread] ? this.p.thread : 'running'; }
     /* The bobbin's weapon: the chosen second weapon, or any other weapon you own. None until you own two. */
     secondThread() {
@@ -249,7 +262,7 @@
         }
         pl.y = clamp(pl.y, PY + this.arena.floor, PY + T.roam);
       }
-      const lim = HW - 0.5 - (pl.dual ? 0.45 : 0) - this.arena.inset;
+      const lim = HW - 0.5 - this.shipSpan() - this.arena.inset;
       pl.x = clamp(pl.x, -lim, lim);
       pl.vx = (pl.x - ox) / dt; pl.vy = (pl.y - oy) / dt;
       if (!this.bobbinLock) this.updateBobbin(dt, second); else { pl.bx = this.bobbinLock.x; pl.by = this.bobbinLock.y; }   // a cocooned bobbin hangs where the cocoon is
@@ -259,9 +272,9 @@
 
       // stitching: the lead weapon from the ship, the second weapon from the bobbin, both always
       if (this.phase !== 'play') { pl.charge = pl.charge2 = 0; return; }
-      const rateMul = d.fireMul * (this.fx.beeswax > 0 ? 2 : 1) * (this.fx.bobbin > 0 ? 1.6 : 1);
+      const rateMul = d.fireMul * (this.fx.beeswax > 0 ? 2 : 1) * (this.fx.bobbin > 0 ? (this.fxUp.bobbin ? 2 : 1.6) : 1);
       const fy = pl.y + 0.7, fireOk = input.fire && !pl.ram;
-      this.gun('L', lead, fireOk, dt, rateMul, pl.dual ? [[pl.x - 0.45, fy], [pl.x + 0.45, fy]] : [[pl.x, fy]], 1);
+      this.gun('L', lead, fireOk, dt, rateMul, this.shipOffsets().map(o => [pl.x + o[0], fy + o[1]]), 1);
       if (second && !this.bobbinLock) {
         const bs = this.bobbins(), rest = Math.hypot(pl.bx - (pl.x - (d.twinBobbin ? 1.1 : 0)), pl.by - (pl.y - 0.7)) < 0.6 || d.freeBobbin;
         this.gun('B', second, fireOk && (second !== 'couching' || rest), dt, rateMul, bs.map(b => [b.x, b.y + 0.5]), T.bobbinDmg * (d.twinBobbin ? 0.6 : 1));
@@ -298,9 +311,11 @@
     fire(thread, L, origins, mul, src) {
       const pl = this.player, d = this.d, lead = src === 'L';
       const base = d.dmg * mul * (this.fx.sign > 0 ? 1.5 : 1);
-      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0), home = (d.homing && lead) || this.fx.homing > 0 || this.fx.sign > 0;
-      const extras = lead ? (d.wide ? 1 : 0) + (this.fx.fan > 0 ? 1 : 0) : 0;
-      const add = (x, y, o) => this.shots.push(Object.assign({ id: this.nextId++, x, y, vx: 0, vy: 17, dmg: base * L.dmg, pierce: basePierce, kind: thread, hit: null, t: 0, home, src }, o));
+      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0), brk = this.fx.staple > 0 && this.fxUp.staple ? 1 : 0;
+      const home = this.fx.homing > 0 && this.fxUp.homing ? 2 : (d.homing && lead) || this.fx.homing > 0 || this.fx.sign > 0;
+      const wide = this.fx.fan > 0 ? (this.fxUp.fan ? (lead ? 2 : 1) : lead ? 1 : 0) : 0;   // Wider Shot: two pairs from the lead weapon, one from the bobbin
+      const extras = (lead && d.wide ? 1 : 0) + wide;
+      const add = (x, y, o) => this.shots.push(Object.assign({ id: this.nextId++, x, y, vx: 0, vy: 17, dmg: base * L.dmg, pierce: basePierce, kind: thread, hit: null, t: 0, home, brk, src }, o));
       const ang = (deg, sp) => ({ vx: Math.sin(deg * Math.PI / 180) * sp, vy: Math.cos(deg * Math.PI / 180) * sp });
       let spread = 8;
       for (const [x, y] of origins) {
@@ -323,7 +338,10 @@
         }
       }
       if (lead && d.heavyBead && ++pl.beadN % 10 === 0) add(pl.x, pl.y + 0.7, { dmg: base * 2.5, pierce: 99, kind: 'bead', r: 0.26 });
-      if (lead && this.droneOn && thread !== 'couching') add(pl.x + (pl.x > 0 ? -1 : 1) * 0.95, pl.y + 0.3, { dmg: d.dmg * 0.7, kind: 'running' });
+      if (lead && this.droneOn && thread !== 'couching') {
+        if (!this.fxUp.drone) add(this.droneX(0), pl.y + 0.3, { dmg: d.dmg * 0.7, kind: 'running' });
+        else for (const k of [0, 1]) add(this.droneX(k), pl.y + 0.3, { dmg: d.dmg * 0.7, kind: 'running', home: home || true });   // Twin Drones: one each side, their shots curve toward enemies
+      }
       this.emit('fire', { thread, src, x: origins[0][0], y: origins[0][1] });
     }
     lance(x, y, halfW, dmg, src) {
@@ -342,11 +360,12 @@
         if (s.zig) s.x += Math.cos(s.t * 22) * 2.2 * dt;
         if (s.bounce > 0 && Math.abs(s.x) > HW - 0.2) { s.vx = -s.vx; s.x = Math.sign(s.x) * (HW - 0.2); s.bounce--; if (!s.bounced) { s.bounced = true; s.dmg *= 1.6; } }
         if (s.seek) { const e = s.seek > 0 ? this.enemies.find(q => q.id === s.seek) : null, tx = e ? e.x : this.boss ? this.boss.x : s.x, ty = e ? e.y : this.boss ? this.boss.y : s.y + 5, dx = tx - s.x, dy = ty - s.y, dd = Math.hypot(dx, dy) || 1; s.vx += (dx / dd * 16 - s.vx) * Math.min(1, dt * 6); s.vy += (dy / dd * 16 - s.vy) * Math.min(1, dt * 6); if (!e && s.seek > 0) s.seek = -1; }
-        if (s.home && this.enemies.length) {   // guided: lean toward the nearest enemy ahead
+        if (s.home === 2) this.seekShot(s, dt);
+        else if (s.home && this.enemies.length) {   // guided: lean toward the nearest enemy ahead
           let best = null, bd = 30; for (const e of this.enemies) { if (e.y < s.y) continue; const dd = Math.abs(e.x - s.x) + (e.y - s.y) * 0.4; if (dd < bd) { bd = dd; best = e; } }
           if (best) s.vx = clamp(s.vx + clamp((best.x - s.x) * 30, -40, 40) * dt, -9, 9);
         }
-        let dead = s.y > H + 0.5 || Math.abs(s.x) > HW + 0.5 || (s.life && s.t > s.life);
+        let dead = s.y > H + 0.5 || Math.abs(s.x) > HW + 0.5 || (s.life && s.t > s.life) || s.age > 2.4 || (s.home === 2 && s.y < BOT - 0.5);
         if (!dead) {
           const sr = s.r || 0.14;
           for (const e of this.enemies) {
@@ -356,8 +375,8 @@
             if (dx * dx + dy * dy < rr * rr) {
               if (s.burst) { this.burst(s.x, s.y, s.burst, s.dmg, s.src, true); dead = true; break; }
               // a Shield Bug in formation turns straight shots aside; angled shots, bounced shots, blasts and beams get through
-              if (e.guard && e.state === 'form' && !s.bounced && Math.abs(s.vx) < 3) { e.guardT = 0; this.emit('guard', { x: e.x, y: e.y - e.r }); dead = true; break; }
-              this.damageEnemy(e, this.shotDmg(s, e), false, s.src);
+              if (e.guard && e.state === 'form' && !s.bounced && !s.brk && Math.abs(s.vx) < 3) { e.guardT = 0; this.emit('guard', { x: e.x, y: e.y - e.r }); dead = true; break; }
+              this.damageEnemy(e, this.shotDmg(s, e), !!s.brk, s.src);   // Breaker Shots go through armour
               if (s.chain) this.chainFrom(e, s.chain, s.dmg * s.chainDmg, s.src);
               if (s.pierce > 0) { s.pierce--; (s.hit = s.hit || []).push(e.id); } else { dead = true; break; }
             }
@@ -381,6 +400,17 @@
         }
         if (dead) ss.splice(i, 1);
       }
+    }
+    /* Seeker Shots: each shot locks on to the nearest enemy, wherever it is, and chases it; when it dies the shot picks the next.
+       With nothing to chase it flies straight on. A seeker shot lives 2.4 s so it never circles for ever. */
+    seekShot(s, dt) {
+      s.age = (s.age || 0) + dt;
+      let e = null;
+      if (s.lock) for (const q of this.enemies) if (q.id === s.lock) { e = q; break; }
+      if (!e) { let bd = 81; for (const q of this.enemies) { if (q.state === 'enter' && q.t < 0) continue; if (s.hit && s.hit.indexOf(q.id) >= 0) continue; const dd = (q.x - s.x) ** 2 + (q.y - s.y) ** 2; if (dd < bd) { bd = dd; e = q; } } s.lock = e ? e.id : 0; }
+      const k = Math.min(1, dt * 7);
+      if (e) { const dx = e.x - s.x, dy = e.y - s.y, dd = Math.hypot(dx, dy) || 1; s.vx += (dx / dd * 17 - s.vx) * k; s.vy += (dy / dd * 17 - s.vy) * k; }
+      else { s.vx += (0 - s.vx) * k; s.vy += (17 - s.vy) * k; }
     }
     /* What a shot does on this hit: the Spread fades with distance, the Satin builds while it stays on one target. */
     shotDmg(s, target) {
@@ -446,16 +476,17 @@
       this.p.codex.moths[e.type] = (this.p.codex.moths[e.type] || 0) + 1;
       this.emit('kill', { x: e.x, y: e.y, type: e.type, pts: Math.round(pts * mult), mult });
       // drops
-      const dust = Math.max(1, Math.round(def.dust * (1 + (mult - 1) * T.comboCoin) * (this.fx.gold > 0 ? 2 : 1) * (m.dust || 1) * this.mode.pay));
+      const dust = Math.max(1, Math.round(def.dust * (1 + (mult - 1) * T.comboCoin) * (this.fx.gold > 0 ? (this.fxUp.gold ? 3 : 2) : 1) * (m.dust || 1) * this.mode.pay));
+      if (this.fx.bobbin > 0 && this.fxUp.bobbin) this.fx.bobbin = Math.min(this.charmDur('bobbin'), this.fx.bobbin + 0.5);   // Overdrive: kills keep it going
       const luck = 1 + 0.2 * (this.p.tempers.luck || 0);
       this.dropDust(e.x, e.y, dust);
       if (def.silk && (m.spinnerSilk || tracing || this.rand() < (def.silkChance || 1))) this.drop('silk', e.x, e.y, { v: def.silk });
       if (def.bursts && !tracing) for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + 0.3; this.eshot('frass', e.x, e.y, Math.cos(a) * 4, Math.sin(a) * 4); }
       if (def.packet && this.rand() < def.packet) this.drop('packet', e.x, e.y, {});
-      else if (this.rand() < T.charmChance * (m.charms || 1) * luck) this.drop('charm', e.x, e.y, { charm: this.pick(Object.keys(C.CHARMS)) });
+      else if (this.rand() < T.charmChance * (m.charms || 1) * luck) { const id = this.pick(Object.keys(C.CHARMS)); this.drop('charm', e.x, e.y, { charm: id, up: this.upgraded(id) }); }
       if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1) * (m.charts || 1) * luck) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
       if (def.splits && !tracing) for (const s of [-1, 1]) this.spawn('nibbler', { x: e.x + s * 0.5, y: e.y, state: 'dive', vx: s * 2.5, passes: 1 });
-      if (e.captive) { this.player.dual = true; this.emit('double', { x: e.x, y: e.y }); }
+      if (e.captive) { this.player.wings = Math.max(1, this.player.wings); this.player.dual = true; this.emit('double', { x: e.x, y: e.y }); }
       if (this.boss && ST.bossScripts && ST.bossScripts[this.boss.id] && ST.bossScripts[this.boss.id].onKill) ST.bossScripts[this.boss.id].onKill(this, this.boss, e);
     }
     dropDust(x, y, total) {
@@ -614,7 +645,7 @@
       if (this.d.palm && !this.palmUsed) { this.palmUsed = true; this.emit('slip', { why: 'Heavy ship' }); return; }
       if (this.fx.starch > 0) return;
       this.stage.hurt = true; this.combo = 0;
-      if (pl.dual) { pl.dual = false; pl.invuln = this.d.invuln; this.emit('captured', { dual: true }); return; }
+      if (pl.dual) { pl.wings = Math.max(0, pl.wings - 1); pl.dual = pl.wings > 0; pl.invuln = this.d.invuln; this.emit('captured', { dual: true }); return; }
       e.captive = true;
       this.emit('captured', { x: pl.x });
       this.loseSpare();
@@ -633,7 +664,8 @@
         if (!dead && s.kind === 'coal' && s.y < BOT + 1.3) { dead = true; this.hazards.push({ id: this.nextId++, kind: 'burn', x: s.x, w: 1.6, warn: 0, life: 4 }); this.emit('burn', { x: s.x }); }
         if (!dead && playing && this.touches(s.x, s.y, s.r)) {
           dead = true; const pl = this.player;
-          if (pl.dashT > 0 && this.d.dashGraze) this.graze(s);
+          if (this.fx.starch > 0 && this.fxUp.starch) this.absorb(s);   // Unstoppable: the shot becomes a coin and charges the special
+          else if (pl.dashT > 0 && this.d.dashGraze) this.graze(s);
           else if (this.d.palm && pl.patchT <= 0 && pl.invuln <= 0 && this.fx.starch <= 0 && !this.armed.thimble) { pl.patchT = 5; this.emit('patch', { x: s.x, y: s.y }); }
           else this.hurt();
         } else if (!dead && playing && !s.gz && s.kind !== 'knot') {
@@ -655,14 +687,15 @@
         const h = this.hazards[i];
         if (h.warn > 0) { h.warn -= dt; continue; }
         h.life -= dt;
-        if (this.phase === 'play' && Math.abs(this.player.x - h.x) < h.w / 2 + (this.player.dual ? 0.45 : 0)) this.hurt();
+        if (this.phase === 'play' && Math.abs(this.player.x - h.x) < h.w / 2 + this.shipSpan()) this.hurt();
         if (h.life <= 0) this.hazards.splice(i, 1);
       }
     }
     touches(x, y, r) {
       const pl = this.player, rr = r + this.d.radius, dy = y - (pl.y + 0.2);
-      if (pl.dual) return ((x - pl.x + 0.45) ** 2 + dy * dy < rr * rr) || ((x - pl.x - 0.45) ** 2 + dy * dy < rr * rr);
-      return (x - pl.x) ** 2 + dy * dy < rr * rr;
+      if (!pl.dual) return (x - pl.x) ** 2 + dy * dy < rr * rr;
+      for (const o of this.shipOffsets()) { const ex = x - pl.x - o[0], ey = dy - o[1]; if (ex * ex + ey * ey < rr * rr) return true; }
+      return false;
     }
     hurt() {
       const pl = this.player;
@@ -670,7 +703,7 @@
       if (this.armed.thimble) { this.armed.thimble = false; pl.invuln = 1; this.emit('thimble'); return; }
       this.stage.hurt = true; this.combo = 0;
       pl.invuln = this.d.invuln;
-      if (pl.dual) { pl.dual = false; this.emit('undouble'); return; }
+      if (pl.dual) { pl.wings = Math.max(0, pl.wings - 1); pl.dual = pl.wings > 0; this.emit('undouble', { wings: pl.wings }); return; }
       pl.ply--;
       this.emit('hurt', { ply: pl.ply });
       if (pl.ply <= 0) this.loseSpare();
@@ -687,6 +720,10 @@
       const pl = this.player; pl.sp = Math.min(1, pl.sp + T.graze); pl.grazeN++;
       if (this.d.padded && pl.grazeN % 8 === 0 && !this.armed.thimble) { this.armed.thimble = true; this.emit('repad'); }
       this.emit('graze', { x: s.x, y: s.y });
+    }
+    absorb(s) {
+      const pl = this.player; pl.sp = Math.min(1, pl.sp + T.graze);
+      this.drop('dust', s.x, s.y, { v: 1, vx: 0 }); this.emit('snip', { x: s.x, y: s.y });
     }
     patchSlow(x, y) { for (const z of this.zones) if (z.kind === 'patch' && (x - z.x) ** 2 + (y - z.y) ** 2 < z.r * z.r) return 0.5; return 1; }
     special() {
@@ -742,11 +779,11 @@
 
     // ---------- drops ----------
     updateDrops(dt) {
-      const pl = this.player, pull = this.phase === 'clear' || this.fx.dish > 0;
+      const pl = this.player, pull = this.phase === 'clear' || this.fx.dish > 0, coinPull = this.fx.gold > 0 && this.fxUp.gold;   // Triple Coins: coins fly to the ship
       for (let i = this.drops.length - 1; i >= 0; i--) {
         const d = this.drops[i]; d.t += dt;
         const dx = pl.x - d.x, dy = pl.y - d.y, dd = Math.hypot(dx, dy);
-        const near = dd < this.d.magnet || d.kind === 'chart' || pull || (d.kind !== 'dust' && dd < this.d.magnet * 1.3);
+        const near = dd < this.d.magnet || d.kind === 'chart' || pull || (coinPull && d.kind === 'dust' && d.t > 0.25) || (d.kind !== 'dust' && dd < this.d.magnet * 1.3);
         if (near && this.phase !== 'dying') { const sp = (d.kind === 'chart' && !pull ? 9 : 14) * dt; d.x += dx / (dd || 1) * sp; d.y += dy / (dd || 1) * sp; }
         else { d.y -= T.dropSpeed * dt; d.x += d.vx * dt * Math.max(0, 1 - d.t); }
         if (dd < 0.55 && this.phase !== 'dying') { this.collect(d); this.drops.splice(i, 1); continue; }
@@ -766,19 +803,33 @@
       else if (d.kind === 'chart') {
         if (!p.charts[d.chart]) { p.charts[d.chart] = true; this.nightCharts.push(d.chart); this.stage.charts.push(d.chart); this.emit('chart', { id: d.chart, name: C.CHARTS[d.chart].name, unseals: C.CHARTS[d.chart].unseals }); }
       }
-      else if (d.kind === 'charm') this.charm(d.charm);
+      else if (d.kind === 'charm') this.charm(d.charm, d.up);
     }
-    charm(id) {
-      const c = C.CHARMS[id], pl = this.player;
-      if (id === 'egg') { if (pl.ply < this.d.ply) pl.ply++; else { this.p.dust += 10; this.nightDust += 10; } }
-      else if (id === 'twin') pl.dual = true;
-      else if (id === 'bomb') {
-        this.emit('burst', { x: 0, y: H / 2, r: 9 }); this.eshots.length = 0; this.nets.length = 0;
-        for (const e of this.enemies.slice()) this.damageEnemy(e, 3, true);
-        if (this.boss && !this.boss.enter) this.damageBoss(25, this.boss.x, true);
+    /* How long a power-up lasts in the form it drops in, with Overtime. */
+    charmDur(id) { const c = C.CHARMS[id], u = this.upgraded(id) ? c.up : c; return u.dur * (this.p.pattern.overtime ? 1.3 : 1); }
+    /* A power-up picked up. `up` is the form it dropped in (undefined: the form the profile owns now). */
+    charm(id, up) {
+      const c = C.CHARMS[id], pl = this.player; up = up === undefined ? this.upgraded(id) : !!up && !!c.up;
+      if (id === 'drone' && this.fx.drone > 0 && this.fxUp.drone) up = true;   // a plain drone never downgrades running Twin Drones
+      const f = up ? c.up : c;
+      if (id === 'egg') {   // Shield +2: what does not fit becomes a one-hit pad
+        let n = up ? 2 : 1; while (n > 0 && pl.ply < this.d.ply) { pl.ply++; n--; }
+        if (n > 0 && up && !this.armed.thimble) { this.armed.thimble = true; n--; }
+        if (n > 0) { this.p.dust += 10 * n; this.nightDust += 10 * n; }
       }
-      else this.fx[id] = c.dur * (this.p.pattern.overtime ? 1.3 : 1);
-      this.emit('charm', { id, name: c.name, desc: c.desc });
+      else if (id === 'twin') { pl.wings = Math.max(pl.wings, up ? 2 : 1); pl.dual = true; }
+      else if (id === 'bomb') {
+        this.emit('burst', { x: 0, y: H / 2, r: 9, up });
+        if (up) for (const s of this.eshots) if (Math.abs(s.x) < HW && s.y > BOT && s.y < H) this.drop('dust', s.x, s.y, { v: 1, vx: 0 });   // Grand Unravel: every shot becomes a coin
+        this.eshots.length = 0; this.nets.length = 0;
+        for (const e of this.enemies.slice()) this.damageEnemy(e, up ? 6 : 3, true);
+        if (this.boss && !this.boss.enter) this.damageBoss(up ? 45 : 25, this.boss.x, true);
+      }
+      else {
+        this.fx[id] = Math.max(this.fx[id] || 0, f.dur * (this.p.pattern.overtime ? 1.3 : 1)); this.fxUp[id] = up;
+        if (id === 'tangle' && up) this.freezeT = c.up.freeze || 2;
+      }
+      this.emit('charm', { id, name: f.name, desc: f.desc, up });
     }
 
     // ---------- notions ----------
@@ -793,7 +844,7 @@
       else if (id === 'dish') this.fx.dish = 12;
       else if (id === 'button') this.spares++;
       else if (id === 'patch') { if (pl.ply >= this.d.ply) return false; pl.ply = this.d.ply; }
-      else if (id === 'drone') this.fx.drone = 25;
+      else if (id === 'drone') { if (!(this.fx.drone > 0)) this.fxUp.drone = false; this.fx.drone = Math.max(this.fx.drone, 25); }
       else if (id === 'shears') { this.eshots.length = 0; this.nets.length = 0; this.hazards = this.hazards.filter(h => h.kind === 'burn'); }
       else if (id === 'ripper') {
         if (this.boss && !this.boss.enter) this.damageBoss(14, this.boss.x + this.boss.def.soft[0].x, true);
@@ -832,7 +883,7 @@
       const b = this.boss, def = b.def, p = this.p;
       this.stitches += Math.round(def.pts * this.mode.pay);
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
-      this.emit('keeperdown', { name: def.name, sprite: def.sprite, x: b.x, y: b.y });
+      this.emit('keeperdown', { id: b.id, name: def.name, sprite: def.sprite, x: b.x, y: b.y });
       for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay / 3));
       this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay) });
       const open = def.charts.filter(id => !p.charts[id]);

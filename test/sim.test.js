@@ -158,5 +158,149 @@ function fly(profile, seed, skill, log) {
   p.dust = 9999; ST.shop.buyThread(p, 'backstitch'); ok(p.thread === 'backstitch' && p.thread2 === 'running', 'buying a second weapon fills the bobbin');
   for (const t of Object.values(C.THREADS)) ok(t.lv.length === 3 && t.weights.length === 3 && t.job, 'weapon levels: ' + t.name);
 }
+{ // power-up upgrades: content, purchase rules, save migration, and what each upgraded form does in flight
+  const S = ST.shop, ids = Object.keys(C.CHARMS);
+  ok(C.CHARM_TIERS.length === 3 && C.CHARM_TIERS[0].need === 0, 'three rows of power-up upgrades, the first open');
+  for (const id of ids) { const c = C.CHARMS[id], u = c.up;
+    ok(u && u.name && u.name !== c.name && u.desc && u.desc !== c.desc && typeof u.dur === 'number' && u.cost > 0 && C.CHARM_TIERS[u.tier], 'power-up upgrade defined: ' + id);
+    ok(u.dur >= c.dur, 'an upgrade never lasts shorter: ' + id); }
+  for (let t = 0; t < 3; t++) ok(ids.some(id => C.CHARMS[id].up.tier === t), 'row ' + (t + 1) + ' has upgrades');
+  const cost = t => ids.filter(id => C.CHARMS[id].up.tier === t).map(id => C.CHARMS[id].up.cost);
+  ok(Math.max(...cost(0)) < Math.min(...cost(1)) && Math.max(...cost(1)) < Math.min(...cost(2)), 'each row costs more than the one before');
+  ok(Math.min(...cost(0)) <= 30, 'the cheapest upgrade is within a first run or two');
+  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1300, 'the full set is a real investment (' + total + ' gems)');
+  ok(C.CHARMS.twin.up.name === 'Triple Ship', 'the twin ship becomes a triple ship');
+
+  // purchase rules
+  const p = ST.save.freshProfile(), t0 = ids.filter(id => C.CHARMS[id].up.tier === 0), t1 = ids.filter(id => C.CHARMS[id].up.tier === 1), t2 = ids.filter(id => C.CHARMS[id].up.tier === 2);
+  ok(S.charmUpState(p, t0[0]).why === 'short' && !S.buyCharmUp(p, t0[0]).ok, 'no gems: cannot buy');
+  ok(S.charmUpState(p, t1[0]).why === 'tier' && S.charmUpState(p, t1[0]).left === 2, 'second row closed at first');
+  p.silk = 2000;
+  ok(S.charmUpState(p, t1[0]).why === 'tier' && !S.buyCharmUp(p, t1[0]).ok && p.silk === 2000, 'second row closed even with gems');
+  ok(S.buyCharmUp(p, t0[0]).ok && p.charmUps[t0[0]] === true && p.silk === 2000 - C.CHARMS[t0[0]].up.cost, 'buy an upgrade: gems paid, kept on the profile');
+  ok(S.charmUpState(p, t0[0]).why === 'owned' && !S.buyCharmUp(p, t0[0]).ok, 'cannot buy twice');
+  ok(S.charmUpState(p, t1[0]).why === 'tier' && S.charmUpState(p, t1[0]).left === 1, 'one more from the first row to go');
+  S.buyCharmUp(p, t0[1]); ok(S.charmUpState(p, t1[0]).ok, 'second row opens after two from the first');
+  ok(S.charmUpState(p, t2[0]).why === 'tier', 'third row still closed');
+  S.buyCharmUp(p, t1[0]); S.buyCharmUp(p, t1[1]); ok(S.charmUpState(p, t2[0]).ok, 'third row opens after two from the second');
+  for (const id of ids) S.buyCharmUp(p, id);
+  ok(ids.every(id => p.charmUps[id]) && p.silk === 2000 - total, 'the whole set bought for its total');
+  ok(S.charmUpState(p, 'nope').why === 'none', 'unknown power-up is not for sale');
+
+  // save: old saves gain an empty set, junk is dropped, upgrades survive a reload
+  const b = ST.save.memoryBackend(), store = new ST.save.SaveStore(b), old = ST.save.freshProfile(); delete old.charmUps;
+  b.set('string-theory.pocket.0.v1', JSON.stringify(old)); const lo = store.load(0);
+  ok(lo && lo.charmUps && Object.keys(lo.charmUps).length === 0, 'an older save loads with no power-up upgrades');
+  old.charmUps = { twin: 1, gold: false, foo: true }; b.set('string-theory.pocket.0.v1', JSON.stringify(old));
+  ok(JSON.stringify(store.load(0).charmUps) === '{"twin":true}', 'save keeps only known, bought upgrades');
+  store.save(1, p); ok(ids.every(id => store.load(1).charmUps[id] === true), 'bought upgrades survive a reload');
+  { const q = ST.save.freshProfile(), s0 = new ST.Sim(q, 3); s0.startStage(); s0.player.wings = 2; s0.player.dual = true;
+    const snap = JSON.parse(JSON.stringify(s0.snapshot('stage'))); ok(ST.Sim.restore(q, snap).player.wings === 2, 'a triple ship survives closing the game mid-run');
+    delete snap.wings; snap.dual = true; const r = ST.Sim.restore(q, snap); ok(r.player.wings === 1 && r.player.dual, 'an older run save with a twin restores one wing ship'); }
+
+  // flight: a quiet test wave with one far-off moth so it never ends
+  const bench = (ups, opt) => {
+    const q = ST.save.freshProfile(); q.charmUps = {}; for (const id of ups) q.charmUps[id] = true; if (opt) opt(q);
+    const s = new ST.Sim(q, 9); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0;
+    s.spawn('nibbler', { state: 'form', slot: true, sx: 6.2, sy: 17.8, row: 0, hp: 999 }); return s;
+  };
+  const step = (s, sec, inp) => { const ev = []; for (let f = 0; f < sec * 60; f++) { s.update(1 / 60, Object.assign({ fire: false, notion: -1, dash: 0, targetX: s.player.x }, inp)); ev.push(...s.events); } return ev; };
+  const all = ids;
+
+  { // drops come in the form you own, and say so
+    const s = bench(['gold']), keep = C.TUNING.charmChance; C.TUNING.charmChance = 1;
+    const got = []; for (let i = 0; i < 60; i++) { s.drops.length = 0; s.kill(s.spawn('nibbler', { state: 'form', slot: true, sx: -2, sy: 12, row: 3 })); got.push(...s.drops.filter(d => d.kind === 'charm')); }
+    C.TUNING.charmChance = keep;
+    ok(got.some(d => d.charm === 'gold') && got.every(d => d.up === (d.charm === 'gold')), 'an owned upgrade drops as its upgraded form, the others plain');
+    const s2 = bench([]); s2.charm('gold', false); ok(!s2.fxUp.gold, 'a plain drop stays plain');
+    const s3 = bench(['gold']); s3.charm('gold'); const ev = s3.events.find(e => e.t === 'charm');
+    ok(ev && ev.up && ev.name === 'Triple Coins' && ev.desc === C.CHARMS.gold.up.desc, 'pickup announces the upgraded name');
+  }
+  { // Triple Coins: three times the coins, and coins fly to the ship
+    const coins = up => { const s = bench(up ? ['gold'] : []); s.charm('gold'); const e = s.spawn('weevil', { state: 'form', slot: true, sx: 0, sy: 10, row: 2 }); s.kill(e); return s.drops.filter(d => d.kind === 'dust').reduce((a, d) => a + d.v, 0); };
+    const a = coins(false), b2 = coins(true); ok(b2 === Math.round(a * 1.5), 'Triple Coins pays three times instead of two (' + a + ' -> ' + b2 + ')');
+    const far = up => { const s = bench(up ? ['gold'] : []); s.charm('gold'); s.drop('dust', 5, 14, { v: 1, vx: 0 }); const d = s.drops[s.drops.length - 1]; step(s, 1.8); return s.drops.indexOf(d) < 0 ? 0 : Math.hypot(d.x - s.player.x, d.y - s.player.y); };
+    ok(far(true) < 1 && far(false) > 8, 'Triple Coins pulls coins in from across the cloth');
+  }
+  { // Overdrive: twice the fire rate, kills add time up to the full length
+    const shots = up => { const s = bench(up ? ['bobbin'] : []); s.charm('bobbin'); return step(s, 3, { fire: true }).filter(e => e.t === 'fire' && e.src === 'L').length; };
+    const a = shots(false), b2 = shots(true); ok(b2 / a > 1.15 && b2 / a < 1.4, 'Overdrive fires faster than Rapid Fire (' + a + ' -> ' + b2 + ')');
+    const s = bench(['bobbin']); s.charm('bobbin'); s.fx.bobbin = 3; s.kill(s.spawn('nibbler', { state: 'form', slot: true, sx: 0, sy: 10, row: 3 }));
+    ok(Math.abs(s.fx.bobbin - 3.5) < 1e-6, 'a kill adds half a second to Overdrive');
+    s.fx.bobbin = 9.9; s.kill(s.spawn('nibbler', { state: 'form', slot: true, sx: 0, sy: 10, row: 3 })); ok(s.fx.bobbin <= C.CHARMS.bobbin.up.dur + 1e-6, 'Overdrive never runs past its full length');
+    const s2 = bench([]); s2.charm('bobbin'); s2.fx.bobbin = 3; s2.kill(s2.spawn('nibbler', { state: 'form', slot: true, sx: 0, sy: 10, row: 3 })); ok(s2.fx.bobbin === 3, 'plain Rapid Fire is not extended');
+  }
+  { // Breaker Shots: armour breaks in one hit, shields do not stop them
+    const hit = (up, type) => { const s = bench(up ? ['staple'] : []); s.charm('staple'); const e = s.spawn(type, { state: 'form', slot: true, sx: 0, sy: 6, row: 2 }); e.hp = 0.5;
+      const ev = step(s, 1, { fire: true }); return { dead: s.enemies.indexOf(e) < 0, uncase: ev.some(x => x.t === 'uncase'), guard: ev.some(x => x.t === 'guard') }; };
+    ok(!hit(false, 'casebearer').dead || hit(false, 'casebearer').uncase, 'Piercing Shots still lose the first hit to armour');
+    const bc = hit(true, 'casebearer'); ok(bc.dead && !bc.uncase, 'Breaker Shots break armour in one hit');
+    ok(hit(false, 'shieldbug').guard, 'a Shield Bug turns straight piercing shots aside');
+    const bs = hit(true, 'shieldbug'); ok(bs.dead && !bs.guard, 'Breaker Shots get past a Shield Bug');
+    ok(C.CHARMS.staple.up.dur > C.CHARMS.staple.dur, 'Breaker Shots last longer');
+  }
+  { // Wider Shot: two pairs of side shots from the lead weapon, one from the bobbin
+    const volley = up => { const s = bench(up ? ['fan'] : [], q => { q.threads = { running: 1, backstitch: 1 }; q.thread = 'running'; q.thread2 = 'backstitch'; }); s.charm('fan'); s.player.fireT = s.player.fireT2 = 0;
+      const n0 = s.shots.length; s.update(1 / 60, { fire: true, notion: -1, dash: 0, targetX: 0 }); const fresh = s.shots.slice(n0); return { L: fresh.filter(x => x.src === 'L' && x.kind === 'fan').length, B: fresh.filter(x => x.src === 'B' && x.kind === 'fan').length }; };
+    const a = volley(false), b2 = volley(true);
+    ok(a.L === 2 && a.B === 0, 'Wide Shot: one pair from the lead weapon (' + JSON.stringify(a) + ')');
+    ok(b2.L === 4 && b2.B === 2, 'Wider Shot: two pairs from the lead weapon and one from the bobbin (' + JSON.stringify(b2) + ')');
+  }
+  { // Unstoppable: shots that hit you become coins and charge the special
+    const take = up => { const s = bench(up ? ['starch'] : []); s.charm('starch'); s.player.sp = 0; const ply = s.player.ply;
+      s.eshot('frass', s.player.x, s.player.y + 0.6, 0, -1); const n0 = s.drops.length; step(s, 0.4); return { hurt: s.player.ply < ply, coins: s.drops.length - n0 + (s.p.dust > 0 ? 1 : 0), sp: s.player.sp, dur: C.CHARMS.starch[up ? 'up' : 'dur'] }; };
+    const a = take(false), b2 = take(true);
+    ok(!a.hurt && !b2.hurt, 'both forms keep you safe');
+    ok(b2.sp > a.sp && b2.coins > 0 && a.coins === 0, 'Unstoppable turns a shot into a coin and special charge');
+    ok(C.CHARMS.starch.up.dur > C.CHARMS.starch.dur, 'Unstoppable lasts longer');
+  }
+  { // Freeze: the cloth stops for two seconds, then runs at half speed
+    const drift = (up, wait) => { const s = bench(up ? ['tangle'] : []); s.charm('tangle'); step(s, wait); s.eshot('frass', 3, 12, 0, -4); const k = s.eshots[s.eshots.length - 1], y0 = k.y; step(s, 0.5); return y0 - k.y; };
+    const slow = drift(false, 0), frozen = drift(true, 0), after = drift(true, 2.2);
+    ok(frozen < slow * 0.2, 'Freeze stops enemy shots (' + frozen.toFixed(2) + ' vs ' + slow.toFixed(2) + ')');
+    ok(Math.abs(after - slow) < 0.15, 'after two seconds Freeze runs as Slow Motion');
+    const s = bench(['tangle']); s.charm('tangle'); ok(Math.abs(s.fx.tangle - C.CHARMS.tangle.up.dur) < 1e-6 && s.freezeT === C.CHARMS.tangle.up.freeze, 'Freeze lasts its full length');
+  }
+  { // Shield +2: two shields, any left over becomes a pad
+    const s = bench(['egg'], q => { q.tempers.ply = 2; }); s.player.ply = 1; s.charm('egg'); ok(s.player.ply === 3 && !s.armed.thimble, 'Shield +2 restores two shields');
+    s.player.ply = s.d.ply - 1; s.charm('egg'); ok(s.player.ply === s.d.ply && s.armed.thimble, 'left over shield becomes a one-hit pad');
+    const s2 = bench([]); s2.player.ply = 1; s2.charm('egg'); ok(s2.player.ply === 2, 'plain Shield +1 restores one');
+  }
+  { // Seeker Shots: a shot turns round for an enemy behind the ship
+    const behind = up => { const s = bench(up ? ['homing'] : []); s.charm('homing'); s.player.x = 0; const e = s.spawn('weevil', { state: 'loop', dir: 0, by: C.TUNING.playerY - 0.8, x: 2.5, y: C.TUNING.playerY - 0.8, t: 0, shotT: 99 }); e.hp = 50;
+      step(s, 1.5, { fire: true, targetX: 0 }); return e.hp < 50; };
+    ok(!behind(false), 'Guided Shots only lean toward enemies ahead');
+    ok(behind(true), 'Seeker Shots chase an enemy down even behind the ship');
+  }
+  { // Twin Drones: two drones fire, one each side
+    const drones = up => { const s = bench(up ? ['drone'] : []); s.charm('drone'); s.player.fireT = 0; const n0 = s.shots.length; s.update(1 / 60, { fire: true, notion: -1, dash: 0, targetX: 0 });
+      return s.shots.slice(n0).filter(x => x.kind === 'running' && Math.abs(Math.abs(x.x - s.player.x) - 0.95) < 0.01).length; };
+    ok(drones(false) === 1 && drones(true) === 2, 'Twin Drones fire two drone shots');
+    const s = bench(['drone']); s.charm('drone'); s.p.tray = [{ id: 'drone', n: 1 }]; s.useNotion(0); ok(s.fxUp.drone, 'the Bobbin Drone item does not cancel running Twin Drones');
+  }
+  { // Grand Unravel: twice the damage, every enemy shot becomes a coin
+    const blast = up => { const s = bench(up ? ['bomb'] : []); const e = s.spawn('weevil', { state: 'form', slot: true, sx: 0, sy: 12, row: 2 }); e.hp = 20;
+      for (let i = 0; i < 5; i++) s.eshot('frass', -4 + i * 2, 10, 0, -1); const n0 = s.drops.length; s.charm('bomb'); return { dmg: 20 - e.hp, coins: s.drops.length - n0, left: s.eshots.length }; };
+    const a = blast(false), b2 = blast(true);
+    ok(a.left === 0 && b2.left === 0, 'both forms clear enemy shots');
+    ok(Math.abs(b2.dmg - 2 * a.dmg) < 1e-6 && b2.coins === 5 && a.coins === 0, 'Grand Unravel hits twice as hard and turns shots into coins');
+  }
+  { // Triple Ship: three ships fire, each hit costs one
+    const s = bench(['twin'], q => { q.tempers.ply = 0; }); s.charm('twin'); ok(s.player.wings === 2 && s.player.dual, 'Triple Ship gives two extra ships');
+    s.player.fireT = 0; const n0 = s.shots.length; s.update(1 / 60, { fire: true, notion: -1, dash: 0, targetX: 0 }); ok(s.shots.slice(n0).filter(x => x.src === 'L').length === 3, 'three ships fire');
+    ok(s.touches(s.player.x + 0.9, s.player.y + 0.2 - 0.3, 0.1) && !s.touches(s.player.x + 0.5, s.player.y + 2, 0.1), 'each ship can be hit where it flies');
+    const ply = s.player.ply; s.player.invuln = 0; s.hurt(); ok(s.player.wings === 1 && s.player.dual && s.player.ply === ply, 'the first hit costs one extra ship');
+    s.player.invuln = 0; s.hurt(); ok(s.player.wings === 0 && !s.player.dual && s.player.ply === ply, 'the second hit costs the other');
+    s.player.invuln = 0; s.hurt(); ok(s.player.ply === ply - 1, 'then hits cost shield again');
+    const s2 = bench([]); s2.charm('twin'); ok(s2.player.wings === 1, 'plain Twin Ship gives one');
+    s2.charm('twin', true); ok(s2.player.wings === 2, 'a triple pickup tops a twin up to three ships');
+    const s3 = bench(['twin']); s3.charm('twin'); s3.player.x = 9; s3.update(1 / 60, { fire: false, notion: -1, dash: 0, targetX: 9 }); ok(s3.player.x + 0.9 <= C.TUNING.fieldW / 2 - 0.5 + 1e-6, 'the outer ship stays on the cloth');
+  }
+  { // a whole run with every upgrade owned and power-ups dropping often: no errors
+    const q = ST.save.freshProfile(); for (const id of all) q.charmUps[id] = true; q.threads = { backstitch: 2, running: 2 }; q.thread = 'backstitch'; q.thread2 = 'running';
+    const keep = C.TUNING.charmChance; C.TUNING.charmChance = 0.3; const r = fly(q, 21, true, null); C.TUNING.charmChance = keep;
+    ok(r.outcome && r.seen.charm > 20, 'a run with every upgraded power-up ends cleanly (' + r.outcome + ', ' + (r.seen.charm || 0) + ' pickups)');
+  }
+}
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
 process.exit(fails ? 1 : 0);

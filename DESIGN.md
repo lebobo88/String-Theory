@@ -38,7 +38,7 @@ A run is 8 stages. Every stage is three waves, a bonus wave, then a boss. After 
 
 ## Money
 - **Coins**: dropped by destroyed enemies, multiplied by your combo. Buy weapons, weapon levels, upgrades and items. Kept after game over.
-- **Gems**: from Spinners (1), bosses (5, 5, 6, 8, 12, 14, 16, 25), every stage cleared (2) and perfect bonus waves. Buy ships and perks.
+- **Gems**: from Spinners (1), bosses (5, 5, 6, 8, 12, 14, 16, 25), every stage cleared (2) and perfect bonus waves. Buy ships, perks and power-up upgrades.
 - **Combo**: every 8 kills without a 2.5s gap adds x0.5, up to x5. Score takes the full multiplier, coins a quarter of the bonus. Taking a hit resets it.
 - **Bonuses**: no-damage wave 12 coins x stage number, doubled on a boss; best combo of 12 or more pays the combo count in coins.
 
@@ -132,20 +132,22 @@ Hits on the weak spot do double damage; anywhere else 0.6. The Unraveller only t
 A quick shop opens after every wave with three items: buy one, or keep your coins. Destroyed Lappets sometimes drop a random item.
 
 ## Power-ups (temporary, dropped by destroyed enemies, 5% chance)
-| Power-up | Lasts | Effect |
-|---|---|---|
-| Double Coins | 12 s | Coins are worth double. |
-| Rapid Fire | 10 s | Fire 60% faster. |
-| Piercing Shots | 8 s | Shots pass through every enemy. |
-| Wide Shot | 10 s | Two extra side shots from your lead weapon. |
-| Invincible | 6 s | Nothing can hurt you. |
-| Slow Motion | 6 s | Enemies and their shots move at half speed. |
-| Shield +1 | instant | Restores one shield. |
-| Guided Shots | 10 s | Shots curve toward the nearest enemy. |
-| Bobbin Drone | 15 s | A drone flies beside you and fires with you. |
-| Unravel | instant | Damages every enemy on screen and clears their shots. |
-| Twin Ship | instant | A second ship flies and fires beside you until it is hit. |
+| Power-up | Lasts | Effect | Upgraded form (bought with gems, permanent) | Row | Gems | Upgraded effect |
+|---|---|---|---|---|---|---|
+| Double Coins | 12 s | Coins are worth double. | Triple Coins | 1 | 25 | Coins are worth triple and fly straight to your ship. |
+| Rapid Fire | 10 s | Fire 60% faster. | Overdrive | 2 | 70 | Fire twice as fast. Every kill adds half a second. |
+| Piercing Shots | 8 s | Shots pass through every enemy. | Breaker Shots | 1 | 40 | Shots pass through every enemy, break armour in one hit and get past shields. |
+| Wide Shot | 10 s | Two extra side shots from your lead weapon. | Wider Shot | 2 | 80 | Four extra side shots from your lead weapon, and two from your bobbin. |
+| Invincible | 6 s | Nothing can hurt you. | Unstoppable | 3 | 150 | Nothing can hurt you. Every shot that hits you turns into a coin and charges your special. |
+| Slow Motion | 6 s | Enemies and their shots move at half speed. | Freeze | 1 | 45 | Enemies and their shots freeze for 2 seconds, then move at half speed for 6 more. |
+| Shield +1 | instant | Restores one shield. | Shield +2 | 1 | 30 | Restores two shields. Any left over puts up a pad that blocks one hit. |
+| Guided Shots | 10 s | Shots curve toward the nearest enemy. | Seeker Shots | 2 | 90 | Every shot locks on to the nearest enemy and chases it down, even one behind you. |
+| Bobbin Drone | 15 s | A drone flies beside you and fires with you. | Twin Drones | 2 | 100 | Two drones, one on each side, fly with you. Their shots curve toward enemies. |
+| Unravel | instant | Damages every enemy on screen and clears their shots. | Grand Unravel | 3 | 170 | Hits every enemy on screen twice as hard, and turns every enemy shot into a coin. |
+| Twin Ship | instant | A second ship flies and fires beside you until it is hit. | Triple Ship | 3 | 220 | Two extra ships fly and fire beside you. Each hit costs one of them. |
 
+
+Upgrades are on the Perks tab of the hideout. Row 1 is open from the start; each later row opens once any two from the row before are owned.
 ## Perks (gems, permanent; each row unlocks left to right)
 | Row | Perk | Gems | Effect |
 |---|---|---|---|

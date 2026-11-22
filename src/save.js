@@ -16,6 +16,7 @@
       thread: 'running', thread2: null, threads: { running: 1 },   // id -> weight (1..3)
       tempers: { point: 0, eye: 0, ply: 0, pace: 0, magnet: 0, luck: 0 },
       pattern: {},                 // node id -> true
+      charmUps: {},                // power-up id -> true: that power-up drops in its upgraded form (C.CHARMS[id].up)
       tray: [],                    // [{id, n}] up to TUNING.traySlots
       charts: {},                  // blueprint id -> true
       codex: { moths: {}, keepers: {} },
@@ -49,6 +50,8 @@
         if (p[k] === undefined) p[k] = f[k];
         else if (f[k] && typeof f[k] === 'object' && !Array.isArray(f[k])) p[k] = Object.assign({}, f[k], p[k]);
       }
+      // power-up upgrades arrived after the first saves: keep only known ids, as plain true
+      const ups = {}; for (const id in p.charmUps || {}) if (p.charmUps[id] && C.CHARMS[id] && C.CHARMS[id].up) ups[id] = true; p.charmUps = ups;
       return p;
     }
     slots() { const out = []; for (let i = 0; i < SLOTS; i++) out.push(this.load(i)); return out; }
@@ -161,6 +164,23 @@
       const st = shop.patternState(p, id);
       if (!st.ok) return st;
       p.silk -= st.price; p.pattern[id] = true;
+      return R(true, 'bought');
+    },
+    /* Power-up upgrades: gems, permanent. Row 1 is open; each later row opens once enough of the row before it are owned. */
+    charmUpsIn(p, tier) { return Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up && C.CHARMS[id].up.tier === tier && (p.charmUps || {})[id]).length; },
+    charmTierLeft(p, tier) { return tier > 0 ? Math.max(0, C.CHARM_TIERS[tier].need - shop.charmUpsIn(p, tier - 1)) : 0; },
+    charmUpState(p, id) {
+      const c = C.CHARMS[id], u = c && c.up;
+      if (!u) return R(false, 'none');
+      if ((p.charmUps || {})[id]) return R(false, 'owned');
+      const left = shop.charmTierLeft(p, u.tier);
+      if (left > 0) return R(false, 'tier', { price: u.cost, left });
+      return p.silk >= u.cost ? R(true, 'buy', { price: u.cost }) : R(false, 'short', { price: u.cost });
+    },
+    buyCharmUp(p, id) {
+      const st = shop.charmUpState(p, id);
+      if (!st.ok) return st;
+      p.silk -= st.price; (p.charmUps = p.charmUps || {})[id] = true;
       return R(true, 'bought');
     }
   };

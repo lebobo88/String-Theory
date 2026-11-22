@@ -1,8 +1,16 @@
-/* String Theory — boss entrance films: ST.Cine (see docs/BOSS-CONTRACT.md).
-   A film is a function of its own clock: every frame it places the camera, the boss and the film-only pieces from the film
-   time alone, and fires one-shot effects (bursts, thuds, flashes) from a short list of timed steps. That makes the 1.5 second
-   cut (the same film from a later start, a little faster) and tap-to-skip free. Black bars, the sewn name and the weak-spot
-   hint are DOM; everything else uses the renderer's own batches, pools and emitters, so a film adds no render pass.
+/* String Theory — boss films: ST.Cine (see docs/BOSS-CONTRACT.md). Three per boss:
+     FILMS   the entrance (about 4 s, the King 6), the first time a boss is met;
+     SIGS    a 1.5 s signature beat of its own for a boss seen before (play(id, { short: true }));
+     DEATHS  the death film (3.6 to 4.4 s, the King 6.2), play(id, { kind: 'death' }) in the frame the sim emits keeperdown.
+   has(id, kind) says whether a film exists. A film is a function of its own clock: every frame it places the camera, the boss
+   and the film-only pieces from the film time alone, and fires one-shot effects (bursts, thuds, flashes) from a short list of
+   timed steps, so tap-to-skip (stop()) is free and leaves everything at rest. Reduced motion: an entrance is one held frame of
+   its film under the title card; a death plays its own timeline with the camera held and no shake or flashes. On the lite and
+   low tiers the same films run with fewer particles (r.n, q) and without some secondary layers (c.cheap); lengths never change.
+   A death film takes the boss's body from the renderer (the generic collapse in render.js does not run), takes it apart in its
+   own order (bfOrdered in render-boss.js), re-weaves any cloth the fight unravelled (cine.arena) and removes the body at the end.
+   Black bars, the sewn name with the weak-spot hint (entrances) or "Defeated" (deaths) are DOM; everything else uses the
+   renderer's own batches, pools and emitters, so a film adds no render pass and allocates nothing per frame.
    frame(dt) runs after the renderer has ended its batches for the frame, so anything drawn here is appended and re-ended. */
 (function (ST) {
   'use strict';
@@ -15,6 +23,7 @@
   const back = k => { const s = 1.9; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); };
   const rnd = (a, b) => a + (b - a) * Math.random();
   const hyp = (x, y) => Math.sqrt(x * x + y * y);   // (Math.hypot is slow and boxes its arguments)
+  const lerpA = (a, b, k) => { let d = b - a; while (d > PI) d -= TAU; while (d < -PI) d += TAU; return a + d * k; };
   const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const IV = 0.038;   // film seconds between sewn letters
 
@@ -62,42 +71,66 @@
 @keyframes stc-silk{0%{opacity:0;clip-path:inset(0 100% 0 0);text-shadow:0 0 .4em rgba(255,244,214,.9)}100%{opacity:1;clip-path:inset(0 0 0 0)}}
 .v-crown .stc-name span.on{animation:stc-crown .5s cubic-bezier(.25,.9,.3,1) both}.v-crown .stc-run{border-top-color:var(--saffron)}
 @keyframes stc-crown{0%{opacity:0;transform:translateY(-.55em);color:#E3A93C;text-shadow:0 0 .4em #E3A93C}45%{opacity:1;transform:translateY(.04em);color:#FFF4D6;text-shadow:0 0 .35em #E3A93C}100%{transform:none}}
-body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body.stc-on #floaters,body.stc-on #banner{opacity:0!important;transition:opacity .3s}
+.stc-card.al-l{align-items:flex-start;text-align:left;padding-left:7%;box-sizing:border-box}.stc-card.al-r{align-items:flex-end;text-align:right;padding-right:7%;box-sizing:border-box}
+.stc.death .stc-needle,.stc.death .stc-run{display:none}.stc.death .stc-hint{margin-top:.55em}.stc.death .stc-hint b{margin:0;color:var(--madder-pale);letter-spacing:.3em}
+.stc.death.out .stc-card{transition:opacity .25s}
+.v-dleaf .stc-name span.on{animation:stc-dleaf .5s cubic-bezier(.2,.8,.3,1) both}
+@keyframes stc-dleaf{0%{opacity:0;transform:translate(-1.1em,-.15em) rotate(-24deg)}70%{opacity:1;transform:translate(.05em,0) rotate(3deg)}100%{transform:none}}
+.v-dmoth .stc-name{color:var(--paper)}.v-dmoth .stc-name span.on{animation:stc-dmoth .45s steps(5) both}
+@keyframes stc-dmoth{0%{opacity:0;clip-path:circle(0 at 30% 40%)}100%{opacity:1;clip-path:circle(80% at 50% 50%)}}
+.v-dsmoke .stc-name span.on{animation:stc-dsmoke .8s ease-out both}.v-dsmoke .stc-hint b{color:var(--mist)}
+@keyframes stc-dsmoke{0%{opacity:0;transform:translateY(.45em) scaleX(.8);filter:blur(4px);color:#7A8296}60%{opacity:.8;filter:blur(1px)}100%{opacity:1;transform:none;filter:none}}
+.v-ddust .stc-name span.on{animation:stc-ddust .6s cubic-bezier(.3,.8,.3,1) both}
+@keyframes stc-ddust{0%{opacity:0;transform:scale(1.7);filter:blur(5px);color:#E3A93C}100%{opacity:1;transform:none;filter:none}}
+.v-dknit .stc-name span.on{animation:stc-dknit .3s steps(4) both}
+@keyframes stc-dknit{0%{clip-path:inset(100% 0 0 0)}100%{clip-path:inset(0 0 0 0)}}
+.v-dcrack .stc-name span.on{animation:stc-dcrack .28s cubic-bezier(.2,.9,.3,1) both}
+@keyframes stc-dcrack{0%{opacity:0;transform:translateY(-.5em) scale(1.25)}50%{opacity:1;transform:translateY(.03em) rotate(-4deg)}75%{transform:rotate(2deg)}100%{transform:none}}
+.v-dwrap .stc-name{color:var(--paper)}.v-dwrap .stc-name span.on{animation:stc-dwrap .5s ease-out both}
+@keyframes stc-dwrap{0%{opacity:0;transform:perspective(4em) rotateY(-100deg)}100%{opacity:1;transform:none}}
+.v-ddawn .stc-name span.on{animation:stc-ddawn .9s ease-out both}.v-ddawn .stc-hint b{color:var(--saffron)}
+@keyframes stc-ddawn{0%{opacity:0;transform:translateY(.3em);color:#FFF4D6;text-shadow:0 0 .6em #E3A93C,0 0 .15em #FFF4D6}50%{opacity:1;color:#FFF4D6}100%{transform:none}}
+body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body.stc-on #floaters,body.stc-on #banner,body.stc-on #coach{opacity:0!important;transition:opacity .3s}
 .hud,#bossbar,#mtop{transition:opacity .4s}
 `;
 
   class Cine {
     constructor(r) {
-      this.r = r; this.active = false; this.id = null; this.film = null; this.dom = null;
-      this.rt = 0; this.ft = 0; this.fdt = 0; this.len = 0; this.speed = 1; this.freeze = 0; this.lite = false; this.short = false;
+      this.r = r; this.active = false; this.id = null; this.film = null; this.dom = null; this.kind = 'entrance'; this.def = null;
+      this.rt = 0; this.ft = 0; this.fdt = 0; this.len = 0; this.speed = 1; this.freeze = 0; this.lite = false; this.reduce = false; this.cheap = false; this.short = false;
       this.si = 0; this.li = 0; this.offs = null; this.letters = []; this.flags = 0; this.fid = 0; this.touched = [];
       this.cam = { tx: 0, ty: 0, dk: 1, tilt: 0.2, az: 0, roll: 0, fov: 30 }; this.fov0 = 30;
       this.dark = 0; this.vig = 0; this.white = 0; this.aberr = 0;
       this.data = new Float32Array(1024); this.n1 = 0; this.n2 = 0; this.acc = 0; this.ang = 0; this.lx = 0; this.ly = 0;
       this.hx = 0; this.hy = 0; this.sx = 0; this.sy = 14.4; this.b = null; this.g = null; this.sim = null; this.K = null;
       this.meshes = {}; this.used = false;
+      // death films: the body they took over, the pose it died in, the cloth they re-weave, the order it comes apart in
+      this.dg = null; this.p0 = { x: 0, y: 0, z: 1, rx: 0, ry: 0, rz: 0, s: 1, w: 0, cr: 1, cg: 1, cb: 1 }; this.d0 = 0;
+      this.arenaO = { floor: 0, inset: 0 }; this.arena = null; this.F0 = 0; this.I0 = 0; this.ord = null; this.oi = 0; this.step = 1; this.ux = 0; this.uy = 0;
     }
 
     // ---------- public ----------
+    has(id, kind) { return !!(kind === 'death' ? DEATHS[id] : FILMS[id]); }
+    /* o.kind 'death': the boss's death film (call it in the frame the sim emits keeperdown). Otherwise its entrance; o.short for the
+       1.5 second signature beat of a boss seen before. */
     play(id, o) {
-      const film = FILMS[id]; if (!film) return false;
+      const death = !!(o && o.kind === 'death'), full = death ? DEATHS[id] : FILMS[id]; if (!full) return false;
       if (this.active) this.stop();
       const r = this.r, sim = (ST.game && ST.game.sim) || (r.bf && r.bf.sim) || null;
-      this.K = r.bfEnsure().K; this.sim = sim; this.id = id; this.film = film;
-      this.short = !!(o && o.short);
+      this.K = r.bfEnsure().K; this.sim = sim; this.id = id; this.def = C.KEEPERS[id]; this.kind = death ? 'death' : 'entrance';
+      this.short = !death && !!(o && o.short);
       let reduce = false; try { reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { /* no media queries */ }
-      this.lite = reduce || !!(o && o.reduced);
-      const t0 = this.short ? film.cut : 0;
-      if (this.lite) { this.len = this.short ? 1.4 : 2.2; this.speed = 1; this.ft = 0; }
-      else { this.len = this.short ? 1.5 : film.len; this.speed = (film.len - t0) / this.len; this.ft = t0; }
-      this.t0 = this.ft; this.rt = 0; this.freeze = 0; this.fdt = 0;
-      this.si = 0; while (this.si < film.steps.length && film.steps[this.si][0] < this.ft) this.si++;
-      this.n1 = -1; this.n2 = -1; this.acc = 0; this.ang = 0; this.flags = 0;
-      this.fov0 = r.camera.fov;
-      const b = sim && sim.boss; this.home(b);
+      this.reduce = reduce || !!(o && o.reduced);
+      this.lite = this.reduce && !death;   // reduced motion, entrance: one held frame of the boss's own film under its title card
+      this.cheap = r.quality === 'lite' || r.quality === 'low';
+      const film = this.film = this.short && !this.lite ? SIGS[id] : full;
+      this.len = this.lite ? 2.2 : film.len; this.speed = 1; this.ft = 0; this.t0 = 0; this.rt = 0; this.freeze = 0; this.fdt = 0;
+      this.si = 0; this.n1 = -1; this.n2 = -1; this.acc = 0; this.ang = 0; this.flags = 0;
+      this.fov0 = r.camera.fov; this.arena = null; this.ord = null; this.oi = 0; this.step = Math.max(1, Math.round(1 / Math.max(0.2, this.q())));
+      if (death) this.adopt(); else this.home(sim && sim.boss);
       if (film.init) film.init(this);
-      this.buildDom(C.KEEPERS[id], film.style);
-      this.titleAt = this.lite ? 0.08 : Math.max(film.title, this.ft + 0.08);
+      this.buildDom(this.def, death ? full.card.style : full.style, death ? full.card : null);
+      this.titleAt = death ? full.card.at : this.lite ? 0.08 : film.title;
       this.li = 0; this.offs = null;
       this.active = true; this.used = true;
       return true;
@@ -106,52 +139,68 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
     stop() {
       if (!this.used) return;
       this.used = false; this.active = false;
-      const r = this.r, cam = r.camera;
+      const r = this.r, cam = r.camera, bf = r.bf;
       cam.up.set(0, 1, 0); cam.fov = this.fov0; cam.updateProjectionMatrix(); r.placeCamera(0, 0);
-      const g = r.bossGroup;
-      if (g && g.userData && g.userData.mat) {
-        const u = g.userData, mu = u.mat.userData.u, cell = C.KEEPERS[u.id] ? C.KEEPERS[u.id].cell : 0.2, bu = u.body.userData;
-        g.scale.set(1, 1, 1); g.rotation.set(0, 0, 0); u.mat.color.setRGB(1, 1, 1); mu.uDissolve.value = -1; mu.uFlash.value.set(0, 0, 0);
-        if (u.aura) u.aura.visible = true; if (bu.body) bu.body.visible = true;
-        if (bu.left) { bu.left.position.x = -1.5 * cell; bu.right.position.x = 1.5 * cell; }
+      if (this.kind === 'death') {   // the boss is gone and the cloth is at rest, whenever this is called
+        const g = this.dg; this.dg = null;
+        if (g) { if (r.bfUnorder) r.bfUnorder(g); if (g.parent) g.parent.remove(g); }
+        this.arena = null; this.ord = null;
+        if (bf) { bf.floorV = bf.insetV = bf.floorFx = bf.insetFx = 0; if (bf.lost) for (let i = 0; i < bf.lost.meshes.length; i++) bf.lost.meshes[i].visible = false; bf.dark = bf.simDark = (this.sim && this.sim.dark) || 0; }
+        const rip = r.clothU.uRip.value; for (let i = 0; i < rip.length; i++) rip[i].w = 0;
+        r.flash.set(0, 0, 0); r.aberr = 0; r.shake = 0; r.hs = 0; r.shocks.length = 0;
+      } else {
+        const g = r.bossGroup;
+        if (g && g.userData && g.userData.mat) {
+          const u = g.userData, mu = u.mat.userData.u, cell = C.KEEPERS[u.id] ? C.KEEPERS[u.id].cell : 0.2, bu = u.body.userData;
+          g.scale.set(1, 1, 1); g.rotation.set(0, 0, 0); u.mat.color.setRGB(1, 1, 1); mu.uDissolve.value = -1; mu.uFlash.value.set(0, 0, 0);
+          if (u.aura) u.aura.visible = true; if (bu.body) bu.body.visible = true;
+          if (bu.left) { bu.left.position.x = -1.5 * cell; bu.right.position.x = 1.5 * cell; }
+        }
       }
       for (const k in this.meshes) { const m = this.meshes[k]; if (m.parent) m.parent.remove(m); }
-      if (r.bfSetDark) r.bfSetDark(r.bf ? r.bf.simDark : 0);
+      if (r.bfSetDark) r.bfSetDark(bf ? bf.simDark : 0);
       if (this.dom) { this.dom.root.className = 'stc'; document.body.classList.remove('stc-on'); }
       this.film = null; this.b = null; this.g = null;
     }
     frame(dt) {
       if (!this.active) return;
-      const r = this.r, film = this.film;
+      const r = this.r, film = this.film, death = this.kind === 'death';
       dt = Math.min(dt || 0, 0.1); this.rt += dt; this.fid++;
       if (this.freeze > 0) { this.freeze -= dt; this.fdt = 0; } else { this.fdt = dt * this.speed; this.ft += this.fdt; }
       if (this.rt >= this.len) { this.stop(); return; }
       const sim = (ST.game && ST.game.sim) || this.sim; this.sim = sim;
-      const b = sim && sim.boss; this.b = b;
-      if (b && (!r.bossGroup || r.bossGroup.userData.id !== b.id)) r.syncBoss(sim, 0, 0);   // a frame drawn without sync: build the boss anyway
-      this.g = b && r.bossGroup && r.bossGroup.userData.id === b.id ? r.bossGroup : null;
-      if (b) this.home(b);
-      this.dark = 0; this.vig = 0; this.white = 0; this.aberr = 0;
+      if (death) { this.b = null; this.g = this.dg; }
+      else {
+        const b = sim && sim.boss; this.b = b;
+        if (b && (!r.bossGroup || r.bossGroup.userData.id !== b.id)) r.syncBoss(sim, 0, 0);   // a frame drawn without sync: build the boss anyway
+        this.g = b && r.bossGroup && r.bossGroup.userData.id === b.id ? r.bossGroup : null;
+        if (b) this.home(b);
+      }
+      this.dark = 0; this.vig = 0; this.white = 0; this.aberr = 0; this.wash = null;
       const c = this.cam; c.tx = 0; c.ty = CY + 0.2; c.dk = 1; c.tilt = 0.2; c.az = 0; c.roll = 0; c.fov = this.fov0;
-      if (!this.lite) {
-        const g = this.g;
-        if (g) { const u = g.userData; g.scale.set(1, 1, 1); g.rotation.y = 0; u.mat.color.setRGB(1, 1, 1); u.mat.userData.u.uDissolve.value = -1; if (u.aura) u.aura.visible = false; for (const ring of u.rings) ring.visible = false; }
+      const g = this.g;
+      if (g) { const u = g.userData; g.scale.set(1, 1, 1); g.rotation.y = 0; u.mat.color.setRGB(1, 1, 1); u.mat.userData.u.uDissolve.value = -1; if (u.aura) u.aura.visible = false; for (let i = 0; i < u.rings.length; i++) u.rings[i].visible = false; }
+      if (this.lite) film.frame(this, film.key, 0);   // reduced motion: a still of the film, the camera at rest, no one-shot effects
+      else {
         const st = film.steps; while (this.si < st.length && st[this.si][0] <= this.ft) st[this.si++][1](this, this.ft);
         film.frame(this, this.ft, this.fdt);
-        this.applyCamera();
-        const pu = r.post.comp.uniforms;
-        pu.uVig.value += this.vig;
-        if (this.white > 0) { const w = this.K.glareLo; pu.uFlash.value.x += w[0] * this.white; pu.uFlash.value.y += w[1] * this.white; pu.uFlash.value.z += w[2] * this.white; }
-        if (r.q.distort && this.aberr > 0) pu.uAberr.value += this.aberr;
-        r.bfSetDark(Math.max(r.bf.simDark, this.dark));
-        r.spr.end(); r.halo.end(); r.trN.end(); r.trA.end();
-        for (let i = 0; i < this.touched.length; i++) this.touched[i].end(); this.touched.length = 0;
+        if (this.reduce) { r.shake = 0; r.flash.set(0, 0, 0); r.aberr = 0; r.hs = 0; r.shocks.length = 0; this.white = 0; this.aberr = 0; this.freeze = 0; }   // the camera stays put; no flashes
+        else this.applyCamera();
       }
+      const pu = r.post.comp.uniforms;
+      pu.uVig.value += this.vig;
+      if (this.white > 0) { const w = this.wash || this.K.glareLo; pu.uFlash.value.x += w[0] * this.white; pu.uFlash.value.y += w[1] * this.white; pu.uFlash.value.z += w[2] * this.white; }
+      if (r.q.distort && this.aberr > 0) pu.uAberr.value += this.aberr;
+      r.bfSetDark(death ? this.dark : Math.max(r.bf.simDark, this.dark));
+      r.spr.end(); r.halo.end(); r.trN.end(); r.trA.end();
+      for (let i = 0; i < this.touched.length; i++) this.touched[i].end(); this.touched.length = 0;
       this.title();
     }
 
     // ---------- the title card, bars and HUD (DOM) ----------
-    buildDom(def, style) {
+    /* card: null for an entrance (name + weak spot, low on the cloth); for a death film { pos: 'top'|'mid'|'low', al: 'l'|'c'|'r' }:
+       the name and "Defeated", placed and animated in that film's own way. */
+    buildDom(def, style, card) {
       if (!this.dom) {
         if (!document.getElementById('stc-style')) { const s = document.createElement('style'); s.id = 'stc-style'; s.textContent = CSS; document.head.appendChild(s); }
         const root = document.createElement('div'); root.className = 'stc'; root.setAttribute('aria-hidden', 'true');
@@ -159,40 +208,45 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
         document.body.appendChild(root);
         const name = root.querySelector('.stc-name'), live = document.createElement('div');
         live.className = 'stc-live'; live.setAttribute('role', 'status'); live.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)'; document.body.appendChild(live);
-        this.dom = { root, card: root.querySelector('.stc-card'), name, hint: root.querySelector('.stc-hint span'), live };
+        this.dom = { root, card: root.querySelector('.stc-card'), name, hint: root.querySelector('.stc-hint span'), label: root.querySelector('.stc-hint b'), live };
       }
       const d = this.dom, nm = def ? def.name : '', cv = this.r.canvas, rc = cv.getBoundingClientRect(), vw = window.innerWidth || rc.width, vh = window.innerHeight || rc.height;
       d.name.textContent = ''; this.letters.length = 0;
       for (const ch of nm) { const s = document.createElement('span'); s.textContent = ch; d.name.appendChild(s); this.letters.push(s); }
       d.run = document.createElement('i'); d.run.className = 'stc-run'; d.name.appendChild(d.run);
       d.needle = document.createElement('b'); d.needle.className = 'stc-needle'; d.needle.appendChild(document.createElement('i')); d.name.appendChild(d.needle);
-      d.hint.textContent = def ? def.softName || '' : '';
-      d.live.textContent = nm + (def && def.softName ? '. Weak spot: ' + def.softName : '');
+      d.label.textContent = card ? 'Defeated' : 'Weak spot';
+      d.hint.textContent = card ? '' : def ? def.softName || '' : '';
+      d.live.textContent = card ? nm + ' defeated' : nm + (def && def.softName ? '. Weak spot: ' + def.softName : '');
       const fw = rc.width || vw, fh = rc.height || vh, bar = Math.min(vh * 0.11, 104);
-      const fs = Math.max(28, Math.min(96, fh * 0.085, fw * 0.88 / (Math.max(6, nm.length) * 0.6)));
+      const fs = Math.max(28, Math.min(96, fh * 0.085, fw * 0.88 / (Math.max(6, nm.length) * 0.6))) * (card ? 0.78 : 1);
       d.name.style.fontSize = fs.toFixed(1) + 'px';
       d.hint.parentNode.style.fontSize = Math.max(14, Math.min(19, fw * 0.034)).toFixed(1) + 'px';
       d.card.style.left = rc.left + 'px'; d.card.style.width = fw + 'px';
-      d.card.style.bottom = Math.max(bar + 14, vh - rc.bottom + bar + fh * 0.06).toFixed(0) + 'px';
-      d.root.className = 'stc on v-' + style + (this.lite ? ' rm' : '');
+      d.card.className = 'stc-card' + (card && card.al === 'l' ? ' al-l' : card && card.al === 'r' ? ' al-r' : '');
+      const low = Math.max(bar + 14, vh - rc.bottom + bar + fh * 0.06);
+      if (card && card.pos === 'top') { d.card.style.bottom = ''; d.card.style.top = Math.max(bar + 18, rc.top + bar + fh * 0.04).toFixed(0) + 'px'; }
+      else if (card && card.pos === 'mid') { d.card.style.bottom = ''; d.card.style.top = (rc.top + fh * 0.5 - fs * 0.9).toFixed(0) + 'px'; }
+      else { d.card.style.top = ''; d.card.style.bottom = low.toFixed(0) + 'px'; }
+      d.root.className = 'stc on v-' + style + (card ? ' death' : '') + (this.reduce ? ' rm' : '');
       void d.root.offsetWidth;   // let the bars start off-screen, then stitch them in
       d.root.classList.add('in'); document.body.classList.add('stc-on');
       this.flags = 0;
     }
     title() {
       const d = this.dom; if (!d) return;
-      const t = this.lite ? this.rt : this.ft, n = this.letters.length, at = this.titleAt;
+      const t = this.lite ? this.rt : this.ft, n = this.letters.length, at = this.titleAt, iv = this.kind === 'death' ? IV * 0.8 : IV;
       if (this.li < n && t >= at) {
         if (!this.offs) { this.offs = new Float32Array(n + 1); for (let i = 0; i < n; i++) { const s = this.letters[i]; this.offs[i] = s.offsetLeft + s.offsetWidth * 0.5; } this.offs[n] = d.name.offsetWidth || 1; d.root.classList.add('sewing'); }
         if (this.lite) { for (let i = 0; i < n; i++) this.letters[i].className = 'on'; this.li = n; d.run.style.transform = 'none'; }
         let moved = false;
-        while (this.li < n && t >= at + this.li * IV) { this.letters[this.li].className = 'on'; this.li++; moved = true; }
+        while (this.li < n && t >= at + this.li * iv) { this.letters[this.li].className = 'on'; this.li++; moved = true; }
         if (moved && this.li > 0) {
           const x = this.offs[this.li - 1]; d.needle.style.transform = 'translateX(' + x.toFixed(1) + 'px)';
           d.run.style.transform = 'scaleX(' + Math.min(1, (x + this.letters[this.li - 1].offsetWidth * 0.5) / this.offs[n]).toFixed(3) + ')';
         }
       }
-      if (!(this.flags & 1) && this.li >= n && t >= at + n * IV + 0.06) { this.flags |= 1; d.root.classList.add('hint'); d.root.classList.remove('sewing'); }
+      if (!(this.flags & 1) && this.li >= n && t >= at + n * iv + 0.06) { this.flags |= 1; d.root.classList.add('hint'); d.root.classList.remove('sewing'); }
       if (!(this.flags & 2) && this.rt >= this.len - 0.3) { this.flags |= 2; d.root.classList.add('out'); d.root.classList.remove('in'); }
     }
 
@@ -201,6 +255,44 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
       if (!b) { this.hx = 0; this.hy = H + 4; this.sx = 0; this.sy = 14.4; return; }
       this.hx = b.x; this.hy = b.y; this.sx = 0; this.sy = b.def.move ? b.def.move[2] : 14.4;
     }
+    /* A death film takes the body over from the renderer (before or after its keeperdown handler ran) and notes the pose it died in. */
+    adopt() {
+      const r = this.r, id = this.id, P = this.p0, bf = r.bf;
+      let g = r.bossGroup && r.bossGroup.userData.id === id ? r.bossGroup : null;
+      if (g) r.bossGroup = null;
+      else if (r.corpse && r.corpse.g.userData.id === id) { g = r.corpse.g; r.corpse = null; r.flash.set(0, 0, 0); r.aberr = 0; r.shake = 0; r.hs = 0; }   // played after the generic collapse began: take it back
+      this.dg = g;
+      if (g) {
+        const u = g.userData, L = u.body.userData.left, wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+        P.x = g.position.x; P.y = g.position.y; P.z = g.position.z; P.rx = wrap(g.rotation.x); P.ry = wrap(g.rotation.y); P.rz = wrap(g.rotation.z);
+        P.s = g.scale.x; P.w = L ? L.rotation.y : 0; P.cr = u.mat.color.r; P.cg = u.mat.color.g; P.cb = u.mat.color.b;
+        u.mat.userData.u.uDissolve.value = -1; if (u.aura) u.aura.visible = false; for (let i = 0; i < u.rings.length; i++) u.rings[i].visible = false;
+      } else { const ps = bf && bf.pose; P.x = ps ? ps.lastX : 0; P.y = ps && ps.lastY ? ps.lastY : 14.4; P.z = 1; P.rx = P.ry = P.rz = 0; P.s = 1; P.w = 0; P.cr = P.cg = P.cb = 1; }
+      this.hx = P.x; this.hy = P.y;
+      this.d0 = bf ? bf.dark : 0; this.F0 = bf ? bf.floorV : 0; this.I0 = bf ? bf.insetV : 0; this.cased0 = bf && bf.pose ? bf.pose.cased || 0 : 0;
+    }
+    /* The boss in a death film: k = 0 is the pose it died in, 1 the film's pose. */
+    dboss(k, x, y, z, s, rz, wing, cr, cg, cb, glow, rx, ry) {
+      const P = this.p0;
+      this.boss(lerp(P.x, x, k), lerp(P.y, y, k), lerp(P.z, z, k), lerp(P.s, s, k), lerpA(P.rz, rz, k), lerp(P.w, wing, k), lerp(P.cr, cr, k), lerp(P.cg, cg, k), lerp(P.cb, cb, k), glow, lerpA(P.rx, rx || 0, k), lerpA(P.ry, ry || 0, k));
+    }
+    /* Switch the body to a film's unravelling order (see bfOrdered in render-boss.js). */
+    order(kind) { this.ord = this.dg && this.r.bfOrdered ? this.r.bfOrdered(this.dg, kind) : null; this.oi = 0; }
+    /* Every stitch the dissolve front k has passed since last frame: fn(c, x, y, z, rgb, order) for one in `step` (fewer on low tiers).
+       ux, uy: where the front is now. Returns the number emitted. */
+    unpick(k, fn) {
+      const o = this.ord, g = this.g; if (!o || !g) return 0;
+      const rz = g.rotation.z, cs = Math.cos(rz), sn = Math.sin(rz), fx = Math.cos(g.rotation.y) * g.scale.x, fy = Math.cos(g.rotation.x) * g.scale.y, px = g.position.x, py = g.position.y, pz = g.position.z;
+      let n = 0;
+      while (this.oi < o.n) {
+        const i = o.idx[this.oi]; if (o.ord[i] >= k) break; this.oi++;
+        const cl = o.cells[i], lx = cl.x * fx, ly = cl.y * fy, x = px + lx * cs - ly * sn, y = py + lx * sn + ly * cs; this.ux = x; this.uy = y;
+        if (this.oi % this.step) continue;
+        fn(this, x, y, pz, cl.rgb, o.ord[i]); n++;
+      }
+      return n;
+    }
+    edge(rgb, k) { if (this.g) { const e = this.g.userData.mat.userData.u.uEdge.value; e.set(rgb[0] * k, rgb[1] * k, rgb[2] * k); } }   // colour of the dissolve front
     view(tx, ty, dk, tilt, az, roll, fov) { const c = this.cam; c.tx = tx; c.ty = ty; c.dk = dk; c.tilt = tilt; c.az = az; c.roll = roll; c.fov = fov; }
     blend(k, tx, ty, dk, tilt, az, roll, fov) {
       if (k <= 0) return; const c = this.cam;
@@ -229,6 +321,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
     touch(pool) { if (pool.__cf !== this.fid) { pool.__cf = this.fid; this.touched.push(pool); } }
     push(pool, M, rgb, f0, f1, f2) { this.touch(pool); pool.push(M, rgb, f0, f1, f2); }
     ball(x, y, z, sx, sy, sz, rz, rgb, f0, f1) { this.push(this.r.bfP('ball'), this.r.bfM(x, y, z, rz || 0, 0, 0, sx, sy, sz), rgb, f0 || 0, f1 || 0, 0); }
+    gem(x, y, z, s, rz, ry, rgb, f0, f1) { this.push(this.r.bfP('gem'), this.r.bfM(x, y, z, rz, ry, 0.4, s, s * 1.4, s), rgb, f0 || 0, f1 || 0, 0); }
     moth(name, x, y, z, rz, s, a) {   // an ordinary enemy chart, through the renderer's own moth pools
       const r = this.r, bf = r.bf, noSplit = name === 'looper', sp = C.MOTHS[name].sprite, M = r.bfM(x, y, z, rz, 0, 0, s, s, s), white = this.K.white, cell = 0.088;
       this.push(r.mothPool(sp, 'body', noSplit), M, white, 0, 0.1, 0);
@@ -250,6 +343,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
       m.visible = true; return m;
     }
     hideMesh(name) { const m = this.meshes[name]; if (m) m.visible = false; }
+    lamp(name, x, y, size, rgb, k) { const m = this.mesh(name); m.position.set(x, y, 0.04); m.scale.set(size, size, 1); m.material.color.setRGB(rgb[0] * k, rgb[1] * k, rgb[2] * k); }
     q() { return this.r.q.particles; }
   }
 
@@ -284,7 +378,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
   const FILMS = {
     /* The dead leaf: a brown leaf falls, turning, settles; a beat; it snaps open into wings, scale dust bursts, colour floods back. */
     greatlappet: {
-      len: 4, cut: 2.1, title: 2.25, style: 'leaf',
+      len: 4, key: 2.2, title: 2.25, style: 'leaf',
       steps: [
         [1.92, c => { const r = c.r; r.ripple(c.lx, c.ly, 0.4, 3, 0.6, 2.2); r.lintPuff(c.lx, c.ly - 0.4, 0.4, 6, c.K.tan, 0.7, 1.2); }],
         [2.4, c => { const r = c.r, K = c.K, x = c.lx, y = c.ly, q = c.q();
@@ -313,7 +407,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
 
     /* The seam: the top of the cloth bulges, a seam rips stitch by stitch, her silk case pushes through, egg sacs roll at the low camera. */
     tinea: {
-      len: 4, cut: 1.75, title: 2.25, style: 'rip',
+      len: 4, key: 2.6, title: 2.25, style: 'rip',
       init(c) { c.seamY = c.hy > 10 && c.hy < H - 1 ? c.hy + 0.2 : 15.3; },
       steps: [
         [0.25, c => c.r.ripple(0, c.seamY, 0.5, 3, 0.6, 2)], [0.55, c => c.r.ripple(0.4, c.seamY, 0.6, 3, 0.6, 2)], [0.82, c => { c.r.ripple(-0.3, c.seamY, 0.7, 3.5, 0.7, 2); c.r.shake = Math.max(c.r.shake, 0.2); }],
@@ -367,7 +461,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
 
     /* Lights out: total dark, a match strikes, three lanterns thud alight left, middle, right; in the last flare he is a black shape against white. */
     greatwick: {
-      len: 4, cut: 1.8, title: 2.3, style: 'ember',
+      len: 4, key: 2.05, title: 2.3, style: 'ember',
       init(c) {
         const s = c.b && c.b.s, hk = s && (s.hooks || s.lanterns), d = c.data;
         const dflt = [-4.5, 17.4, 0, 17.4, 4.5, 17.4];   // the lantern hooks he hangs from in the fight
@@ -413,13 +507,13 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
         const lx = lit ? d[(lit - 1) * 2] * 0.3 : 0;
         c.view(lx * sm(1.0, 1.3, t), 12.4, 0.84, 0.46, 0, -lx * 0.006, c.fov0);
         c.blend(sm(2.15, 2.3, t), c.hx * 0.6, c.hy - 0.6, 0.62, 0.36, 0, 0, c.fov0);
-        c.blendHome(eio(sm(3.05, 3.85, t)));
+        c.blendHome(t >= 2.62 ? 1 : 0);   // a hard cut back while the white-out is still clearing
       }
     },
 
     /* The curtains: two enormous wings close in from the sides until they cover the cloth; the lids open one at a time and the pupils find you. */
     atlas: {
-      len: 4, cut: 1.5, title: 2.25, style: 'lid',
+      len: 4, key: 2.3, title: 2.25, style: 'lid',
       steps: [
         [1.3, c => { const r = c.r, K = c.K; for (let y = B + 1; y < H; y += 2.2) { r.lintPuff(0, y, 2.4, 3, K.tan, 0.8, 2); r.ripple(0, y, 0.5, 5, 0.5, 2.2); } r.shake = Math.max(r.shake, 0.4); r.hitStop(0.05, 0.3); }],
         [1.62, c => { const r = c.r; r.glints(c.data[0], c.data[1], 2.6, 10, c.K.glare, 4, 0.4, 0.6); r.ring(c.data[0], c.data[1], 3, c.K.saffHi, 0.35, 7); }],
@@ -463,7 +557,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
 
     /* The loose thread: one thread is pulled up, the weave unravels in a spiral round it, a dark hole opens, the camera is dragged in. */
     unraveller: {
-      len: 4, cut: 1.65, title: 2.3, style: 'unravel',
+      len: 4, key: 2.2, title: 2.3, style: 'unravel',
       steps: [
         [0.3, c => { c.r.fibres(0, 8.4, 0.3, 4, c.K.mist, 1.4); c.r.ripple(0, 8.4, 0.3, 3, 0.3, 3); }],
         [0.6, c => { c.r.fibres(0, 8.4, 0.3, 5, c.K.mist, 1.6); c.r.ripple(0, 8.4, 0.4, 3, 0.3, 3); }],
@@ -517,7 +611,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
 
     /* The lump: thumps before anything is seen, a lump circles the ship under the cloth, bursts through the frame, rolls past the lens, hits three rails. */
     beetle: {
-      len: 4, cut: 1.55, title: 2.15, style: 'thump',
+      len: 4, key: 1.1, title: 2.15, style: 'thump',
       init(c) { const pl = c.sim ? c.sim.player : { x: 0, y: GY }; c.px = pl.x; c.py = pl.y; c.ang = 0; c.n2 = -10; c.lx = 7; c.ly = 6;
         c.lumpP = c.lumpP || { x: 0, y: 0, r: 1.05 }; c.lumpV = c.lumpV || { lx: 0, ly: 0, acc: 0, seed: 0.3 }; c.lumpV.lx = -7.6; c.lumpV.ly = 5.5; },
       steps: [
@@ -566,13 +660,13 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
         if (t < 1.62) c.view((lump ? lx : 0) * 0.35, 3.4 + ((lump ? ly : 3.4) - 3.4) * 0.3, 0.72, 0.62, 0, Math.sin(time * 23) * 0.004, c.fov0 + 2);
         else if (t < 1.95) c.view(1.8, 1.6, 0.42, 1.12, 0, -0.08, c.fov0 + 10);
         else c.view(0, 7.8, 0.98 - 0.08 * punch, 0.42, 0, 0, c.fov0);
-        c.blendHome(eio(sm(3.15, 3.85, t)));
+        c.blendHome(ei(sm(3.2, 3.46, t)));   // whipped back
       }
     },
 
     /* The descent: silk shoots from the corners strand by strand and draws her web; she comes down one line, upside down, in a spotlight. */
     empress: {
-      len: 4, cut: 1.95, title: 2.3, style: 'silk',
+      len: 4, key: 2.5, title: 2.3, style: 'silk',
       steps: [
         [0.1, c => strandFx(c, 0)], [0.25, c => strandFx(c, 1)], [0.4, c => strandFx(c, 2)], [0.55, c => strandFx(c, 3)],
         [0.7, c => strandFx(c, 4)], [0.85, c => strandFx(c, 5)], [1.0, c => strandFx(c, 6)], [1.15, c => strandFx(c, 7)],
@@ -623,7 +717,7 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
     /* The coronation: every moth of the run pours in and spirals into his shape; a disc of moths eclipses the light; the crown comes down
        piece by piece; the cloth frays out in a ring under him; the camera rises round him, then slams back. */
     king: {
-      len: 6, cut: 4.15, title: 4.3, style: 'crown',
+      len: 6, key: 2.4, title: 4.3, style: 'crown',
       init(c) {
         const d = c.data, q = Math.max(0.35, c.q()), n = c.nV = Math.min(70, Math.round(70 * q)), nd = c.nD = Math.min(34, Math.round(26 * q) + 6);
         for (let i = 0; i < n; i++) { d[i * 6] = i % KING_MOTHS.length; d[i * 6 + 1] = Math.random() * TAU; d[i * 6 + 2] = 13 + Math.random() * 5; d[i * 6 + 3] = Math.random() * 0.7; d[i * 6 + 4] = 1.8 + Math.random() * 1.1; d[i * 6 + 5] = Math.random(); }
@@ -681,6 +775,467 @@ body.stc-on .hud,body.stc-on #bossbar,body.stc-on #mtop,body.stc-on #toasts,body
   function strandFx(c, i) { const r = c.r, K = c.K, a = WEB.a[i]; r.glints(a[0], a[1], 0.6, 6, K.linenHi, 3, 0.3, 0.4); r.lintPuff(a[0], a[1], 0.4, 3, K.linen, 0.5, 1.4); r.shake = Math.max(r.shake, 0.08); }
   function crownFx(c, k) { const r = c.r, K = c.K, x = c.hx * 0 + (k - 1.5) * 0.48, y = 11.2 + (c.b ? c.b.def.halfH * 0.93 : 2); r.flashAdd(PAL.saffron, 0.3); r.glints(x, y, 1.9, 14, K.saffHi, 5, 0.35, 0.6); r.ring(x, y, 2.2, K.saffHi, 0.35, 7); r.sparks(x, y, K.saffHi, 8, 6); r.shake = Math.max(r.shake, 0.2); r.hitStop(0.05, 0.25); }
 
-  Cine.FILMS = FILMS;
+  /* ---------- the 1.5 second signature beats ----------
+     A boss seen before gets one beat of its own instead of the tail of its film: a different camera move, motif, colour and
+     rhythm for each (table in the report). Each ends with the boss where its script put it and the camera at rest. */
+  const BROWN = [0.56, 0.42, 0.28];
+  const SIGS = {
+    /* Leaf drop: a dead leaf swings down in two arcs, the camera rolling with the swing; it snaps open into her colour. */
+    greatlappet: {
+      len: 1.5, title: 0.5,
+      steps: [[0.98, c => { const r = c.r, K = c.K, x = c.hx, y = c.hy;
+        for (let i = 0, n = r.n(40); i < n; i++) { const a = Math.random() * TAU, sp = rnd(3, 11); r.glow.emit(x + Math.cos(a) * 0.6, y + Math.sin(a) * 0.5, 1.2, Math.cos(a) * sp, Math.sin(a) * sp * 0.8, rnd(1, 8), rnd(0.5, 1), rnd(0.22, 0.45), i % 3 ? K.saffHi : K.tan, 1, i % 4 ? 1 : 6, 1.6, 0.4, undefined, rnd(-3, 3), -2); }
+        r.lintPuff(x, y, 1, 12, K.tan, 1.2, 4); r.ripple(x, y, 0.9, 7, 0.7, 1.6); r.shake = Math.max(r.shake, 0.3); }]],
+      frame(c, t) {
+        const u = clamp(t / 0.98, 0, 1), sw = Math.sin(u * TAU) * (1 - u), snap = t >= 0.98 ? back(clamp((t - 0.98) / 0.2, 0, 1)) : 0, fl = sm(0.98, 1.3, t);
+        const x = c.hx + sw * 2.4, y = lerp(c.hy + 7.5, c.hy, eo(u)), wing = 1.25 * (1 - snap) + Math.sin(t * 15) * 0.25 * sm(1.0, 1.12, t) * (1 - sm(1.2, 1.4, t));
+        c.boss(x, y, 1 + (1 - u) * 1.4, 1, Math.cos(u * TAU) * 0.55 * (1 - u) * (1 - snap), wing, lerp(BROWN[0], 1, fl), lerp(BROWN[1], 1, fl), lerp(BROWN[2], 1, fl), 0.22 * sm(0.98, 1.02, t) * (1 - sm(1.05, 1.35, t)));
+        c.dark = 0.22 * (1 - sm(0.98, 1.2, t));
+        c.view(0, CY + 0.2, lerp(0.92, 1, sm(1.0, 1.45, t)), 0.2, 0, -sw * 0.06, c.fov0);
+      }
+    },
+    /* Clutch: from low on the cloth looking up at her case, three egg sacs drop and plop in a triplet; the case cracks and shuts. */
+    tinea: {
+      len: 1.5, title: 0.55,
+      steps: [[0.4, c => plop(c, 0)], [0.58, c => plop(c, 1)], [0.76, c => plop(c, 2)],
+        [0.95, c => { const r = c.r; r.strands(c.hx, c.hy, [PAL.linen, PAL.paper], 10, 1.2); r.lintPuff(c.hx, c.hy, 1, 10, c.K.linen, 0.9, 2.4); r.shake = Math.max(r.shake, 0.25); }]],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, open = sm(0.92, 1.02, t) * (1 - sm(1.12, 1.35, t));
+        c.boss(c.hx, c.hy, 1, 1, 0, 0.15, 1, 1, 1, 0); c.touch(r.bfP('ball'));
+        r.bfCase(c.hx, c.hy, def.halfW, def.halfH, 1, open, r.time);
+        const sk = 0.38 * (1 - sm(1.1, 1.35, t));
+        for (let i = 0; i < 3; i++) {
+          const t0 = 0.2 + i * 0.18, u = clamp((t - t0) / 0.2, 0, 1); if (u <= 0 || sk < 0.01) continue;
+          const x = c.hx + (i - 1) * 1.3, y = lerp(c.hy - 1.4, c.hy - 4.4 - i * 0.5, u * u), z = 1 - u * 0.7 + (u >= 1 ? Math.abs(Math.sin((t - t0 - 0.2) * 14)) * 0.25 * Math.max(0, 1 - (t - t0 - 0.2) * 3) : 0);
+          c.ball(x, y, z, sk, sk * 1.15, sk * 0.85, 0, K.linen, 0, 0.12); r.spr.add(x, y, z + 0.3, sk * 2.2, K.silk, 0.4, 7, t * 3);
+        }
+        c.dark = 0.25 * (1 - sm(0.9, 1.3, t)); c.vig = 0.15;
+        c.view(0, c.hy - 3, 0.7, 0.95, 0, 0, c.fov0 + 2); c.blendHome(eio(sm(1.05, 1.47, t)));
+      }
+    },
+    /* Match: pitch dark, tight on his lamp; a match scratches, the flame takes, the three lanterns thud on and the camera backs away. */
+    greatwick: {
+      len: 1.5, title: 0.6,
+      steps: [[0.22, c => { const r = c.r, K = c.K, y = c.hy - c.def.halfH * 0.6; r.sparks(c.hx, y, K.saffHi, 12, 5); r.glints(c.hx, y, 1.6, 6, K.saffHi, 3); }],
+        [0.7, c => { const r = c.r, K = c.K; for (let i = 0; i < 3; i++) { const x = WICK_HOOKS[i]; r.flare(x, LANTERN_Y, 1.2, 3.4, K.saffHi, 0.28); r.glints(x, LANTERN_Y, 1.2, 6, K.saffHi, 4); } r.shake = Math.max(r.shake, 0.3); }]],
+      frame(c, t) {
+        const r = c.r, K = c.K, time = r.time, ly = c.hy - c.def.halfH * 0.6, f = 0.8 + 0.3 * Math.sin(time * 41) + 0.15 * Math.sin(time * 17), fk = sm(0.22, 0.45, t);
+        const col = sm(0.45, 1.1, t);
+        c.boss(c.hx, c.hy, 1, 1, Math.sin(time * 1.4) * 0.04, Math.sin(time * 3) * 0.2, col, col, col, 0);
+        if (fk > 0) { r.spr.add(c.hx, ly, 1.6, 2.4 * f * fk, K.saffDim, 2.6, 0); r.spr.add(c.hx, ly, 1.7, 0.8 * fk, K.glare, 0.9, 1, time); c.lamp('pool0', c.hx, ly - 0.6, 2 + 3 * fk, K.saff, 0.35 * fk * f); }
+        if (t >= 0.7) for (let i = 0; i < 3; i++) { const x = WICK_HOOKS[i], g = 0.85 + 0.15 * Math.sin(time * (27 + i * 4));
+          r.bfLine(r.trN, x, LANTERN_Y + 0.62, x, H + 1.2, 1.2, 0.05, K.tan, 0.9, 1); r.bfLoop(r.trN, x, LANTERN_Y, 0.34, 0.52, 0, 1.25, 0.05, K.brass, 0.95, 1, 14);
+          r.spr.add(x, LANTERN_Y, 1.3, 1.3 * g, K.saffHi, 0.7, 0); r.spr.add(x, LANTERN_Y, 1.35, 0.45, K.glare, 0.9, 1, time + i); }
+        c.dark = t < 0.6 ? 1 : 1 - eo(sm(0.6, 1.3, t)); c.vig = 0.3 * (1 - sm(0.8, 1.4, t));
+        c.view(c.hx, ly + 0.2, 0.5, 0.25, 0, 0, c.fov0); c.blendHome(eio(sm(0.45, 1.45, t)));
+      }
+    },
+    /* Open eyes: the cloth dims under her spread wings; both eyespots snap open together, the camera jolts in, the pupils find you. */
+    atlas: {
+      len: 1.5, title: 0.62,
+      steps: [[0.45, c => { const r = c.r, K = c.K; for (let i = 0; i < 2; i++) { r.glints(c.data[i * 2], c.data[i * 2 + 1], 2.4, 8, K.glare, 4, 0.4, 0.5); r.ring(c.data[i * 2], c.data[i * 2 + 1], 2.6, K.saffHi, 0.3, 7); } r.flashAdd(PAL.glare, 0.25); }]],
+      frame(c, t) {
+        const r = c.r, K = c.K, cell = c.def.cell, time = r.time, pl = c.sim ? c.sim.player : NOPL;
+        c.boss(c.hx, c.hy, 1, 1, 0, 0.05 + Math.sin(time * 1.4) * 0.04, 1, 1, 1, 0);
+        const open = sm(0.45, 0.57, t), look = sm(0.62, 0.7, t);
+        for (let i = 0; i < 2; i++) {
+          const ex = c.hx + ATLAS_EYES[i * 2] * cell, ey = c.hy + ATLAS_EYES[i * 2 + 1] * cell, er = 1.55 * cell; c.data[i * 2] = ex; c.data[i * 2 + 1] = ey;
+          if (open < 0.98) c.ball(ex, ey + er * open * 0.85, 1.25, er * 1.05, er * (1 - open) + 0.05, er * 0.3, 0, K.brown, 0, 0.05);
+          if (open > 0.02) { const dx = pl.x - ex, dy = pl.y - ey, dd = hyp(dx, dy) || 1, ox = dx / dd * er * 0.32 * look, oy = dy / dd * er * 0.32 * look;
+            r.spr.add(ex, ey, 1.6 + er, er * 2.4, K.saffDim, 2.2 * open, 0); r.halo.add(ex, ey, 1.5, er * 1.55, K.saff, open, 9); r.halo.add(ex + ox, ey + oy, 1.55, er * 0.8, K.char, open, 9); r.spr.add(ex + ox - er * 0.12, ey + oy + er * 0.14, 1.6, er * 0.35, K.glare, open, 1, time); }
+        }
+        c.dark = 0.45 * (1 - sm(0.75, 1.3, t)); c.vig = 0.25 * (1 - sm(0.8, 1.4, t));
+        const jolt = t >= 0.45 ? 1 - eio(sm(0.62, 1.45, t)) : 0;
+        c.view(0, CY + 0.2, 1, 0.2, 0, 0, c.fov0); c.blend(jolt * sm(0.45, 0.52, t), c.hx * 0.5, c.hy - 1.2, 0.72, 0.24, 0, 0, c.fov0);
+      }
+    },
+    /* Pull: a thread runs from the bottom hem up the cloth to its mouth, rows puckering behind it; the camera tilts up with the
+       thread and it knits itself in at the top. */
+    unraveller: {
+      len: 1.5, title: 0.62,
+      steps: [[0.05, c => { c.r.ripple(0, B + 0.6, 0.5, 5, 0.5, 2.2); c.r.lintPuff(0, B + 0.4, 0.3, 6, c.K.mist, 0.7, 1.6); }], [0.4, c => c.r.ripple(0, B + 2.2, 0.4, 5, 0.5, 2.4)],
+        [0.9, c => { const r = c.r, my = c.hy + c.def.softY; r.ring(c.hx, my, 3, c.K.mistHi, 0.35, 7); r.lintPuff(c.hx, my, 1, 10, c.K.mist, 0.9, 2.2); r.shake = Math.max(r.shake, 0.28); }]],
+      frame(c, t) {
+        const r = c.r, K = c.K, time = r.time, my = c.hy + c.def.softY, u = ei(clamp(t / 0.9, 0, 1)), ty = lerp(B + 0.2, my, u), tf = 1 - sm(0.95, 1.25, t);
+        if (tf > 0) { r.bfLine(r.trN, 0, B + 0.15, c.hx * u, ty, 0.08, 0.09, K.linen, tf, 1, 0.3 * (1 - u), 0.05, time * 6, tf, 0.08 + u * 1.1);
+          r.bfLine(r.trA, 0, B + 0.15, c.hx * u, ty, 0.1, 0.25, K.mistHi, 0.3 * tf, 0, 0.3 * (1 - u)); r.spr.add(c.hx * u, ty, 0.3 + u, 0.9, K.linenHi, tf, 1, time * 4);
+          for (let k = 0; k < 3; k++) { const yy = B + 0.45 + k * 0.42, p = sm(0.05 + k * 0.08, 0.3 + k * 0.08, t) * tf; if (p > 0.01) r.bfLine(r.trN, -HW, yy, HW, yy, 0.04, 0.06, k % 2 ? K.patch : K.coverHi, 0.8 * p, 1, -0.25 * p, 0.06, time * 4 + k); } }
+        if (t > 0.75) { c.boss(c.hx, c.hy, 1, 1, 0, 0, 1, 1, 1, 0.2 * (1 - sm(0.95, 1.3, t))); c.dissolve(1.02 - 1.08 * sm(0.78, 1.2, t)); } else c.hideBoss();
+        c.dark = 0.2 * (1 - sm(0.9, 1.3, t));
+        c.view(0, lerp(B + 3, my - 1.5, eio(clamp(t / 0.95, 0, 1))), 0.78, lerp(0.45, 0.25, u), 0, 0, c.fov0); c.blendHome(eio(sm(0.9, 1.45, t)));
+      }
+    },
+    /* Lane: its charge is chalked across the cloth, the shell rolls it, hits the rail with a freeze-frame and rolls home to unfurl. */
+    beetle: {
+      len: 1.5, title: 0.55,
+      steps: [[0.68, c => railFx(c, -6.7, 4.2)]],
+      frame(c, t, fdt) {
+        const r = c.r, K = c.K, def = c.def, x0 = c.hx, y0 = c.hy, x1 = -6.2, y1 = 4.2, chalk = eo(sm(0, 0.3, t)), lf = 1 - sm(0.7, 0.95, t);
+        if (lf > 0.01) { r.bfLine(r.trN, x0, y0, lerp(x0, x1, chalk), lerp(y0, y1, chalk), 0.04, 0.09, K.linen, 0.85 * lf, 2); r.bfLine(r.trA, x0, y0, lerp(x0, x1, chalk), lerp(y0, y1, chalk), 0.05, 2.2, K.saffDim, 0.12 * lf, 0); }
+        let k, bx, by; if (t < 0.68) { k = ei(sm(0.3, 0.68, t)); bx = lerp(x0, x1, k); by = lerp(y0, y1, k); } else { k = eo(sm(0.72, 1.2, t)); bx = lerp(x1, x0, k); by = lerp(y1, y0, k); }
+        const un = eo(sm(1.12, 1.35, t)), s = lerp(0.56, 1, un), d = hyp(bx - c.lx, by - c.ly); c.lx = bx; c.ly = by;
+        c.ang -= Math.min(2, d) / 0.8 * (1 - un) * (t < 0.68 ? 1 : -1);
+        c.boss(bx, by, 1, s, c.ang * (1 - un), 0, 1, 1, 1, 0.08 * (1 - un));
+        if (un < 1) r.spr.add(bx, by, 1.6, def.halfW * 2.2 * s, K.tan, 0.55 * (1 - un), 7, c.ang);
+        if (d > 0.05 && Math.random() < 0.5) r.lintPuff(bx, by - 0.5, 0.5, 1, K.tan, 0.6, 1.2);
+        const kick = t > 0.68 && t < 0.9 ? 1 - (t - 0.68) / 0.22 : 0;
+        c.view(bx * 0.25, 9 + (by - 9) * 0.2, 1.02 - 0.06 * kick, 0.3, 0, Math.sin(r.time * 23) * 0.003 + 0.02 * kick, c.fov0); c.blendHome(eio(sm(1.08, 1.34, t)));   // (the rail's freeze-frame holds the film clock 0.13 s)
+      },
+      init(c) { c.lx = c.hx; c.ly = c.hy; c.ang = 0; }
+    },
+    /* Drop line: she free-falls upside down on her line, it twangs taut, her web flashes in behind her; the camera cranes down. */
+    empress: {
+      len: 1.5, title: 0.55,
+      steps: [[0.5, c => { const r = c.r, K = c.K; r.glints(c.hx, c.hy, 1.4, 14, K.glare, 5, 0.3, 0.5); r.ripple(c.hx, c.hy, 0.5, 6, 0.6, 2); r.shake = Math.max(r.shake, 0.22); }]],
+      frame(c, t) {
+        const r = c.r, K = c.K, time = r.time, def = c.def, fall = ei(clamp(t / 0.5, 0, 1)), spr = t > 0.5 ? Math.exp(-(t - 0.5) * 6) * Math.sin((t - 0.5) * 26) * 0.6 : 0;
+        const flip = eo(sm(0.95, 1.2, t)), y = lerp(H + 3.5, c.hy, fall) + spr, top = H + 1.6;
+        c.boss(c.hx, y, 1, 1, PI * (1 - flip), Math.sin(time * 1.6) * 0.1, 1, 1, 1, 0.1);
+        r.bfLine(r.trA, c.hx, y + def.halfH * 0.4 * (1 - 2 * flip), c.hx, top, 1.1, 0.08, K.silk, 0.8 * (1 - flip), 7); r.bfLine(r.trN, c.hx, y + def.halfH * 0.4 * (1 - 2 * flip), c.hx, top, 1.09, 0.03, K.linen, 0.9 * (1 - flip), 1);
+        const web = t > 0.5 ? Math.exp(-(t - 0.5) * 2.4) : 0;
+        if (web > 0.02) for (let i = 0; i < 8; i++) { const a = WEB.a[i]; r.bfLine(r.trA, a[0], a[1], c.hx, c.hy, 0.4, 0.07, K.silk, 0.7 * web, 7, 0, 0.02 + spr * 0.2, time * 20 + i); r.bfLine(r.trN, a[0], a[1], c.hx, c.hy, 0.39, 0.025, K.linen, 0.8 * web, 1, 0, 0.02 + spr * 0.2, time * 20 + i); }
+        c.dark = 0.3 * (1 - sm(0.6, 1.2, t)); c.vig = 0.15;
+        c.view(0, lerp(c.hy + 1.5, c.hy - 0.5, eo(clamp(t / 0.6, 0, 1))), 0.82, 0.14, 0, 0, c.fov0); c.blendHome(eio(sm(0.75, 1.45, t)));
+      }
+    },
+    /* Eclipse: a disc of moths crosses the light and the cloth goes dark round his ember eyes; four crown jewels glint in turn. */
+    king: {
+      len: 1.5, title: 0.6,
+      init(c) { const d = c.data, n = c.nD = Math.min(18, Math.round(18 * Math.max(0.4, c.q()))); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, rr = Math.sqrt(Math.random()) * 1.9, o = 600 + i * 4; d[o] = Math.cos(a) * rr; d[o + 1] = Math.sin(a) * rr; d[o + 2] = i % KING_MOTHS.length; d[o + 3] = Math.random(); } },
+      steps: [[0.6, c => crownGlint(c, 0)], [0.72, c => crownGlint(c, 1)], [0.84, c => crownGlint(c, 2)], [0.96, c => crownGlint(c, 3)]],
+      frame(c, t) {
+        const r = c.r, K = c.K, d = c.data, time = r.time, def = c.def, Lx = -3.4, Ly = 17.1, ek = clamp(t / 0.75, 0, 1), Dx = lerp(-10, 4.5, ek), Dy = lerp(17.6, 16.8, ek), occ = clamp(1 - hyp(Dx - Lx, Dy - Ly) / 2.6, 0, 1);
+        c.boss(c.hx, c.hy, 1, 1, 0, Math.sin(time * 2.2) * 0.18, 1, 1, 1, 0);
+        r.spr.add(Lx, Ly, 2, 3.4, K.glare, 0.85 * (1 - 0.9 * occ) * (1 - sm(0.9, 1.3, t)), 9);
+        if (t < 0.85) for (let i = 0; i < c.nD; i++) { const o = 600 + i * 4, a = time * 1.4, ox = d[o] * Math.cos(a) - d[o + 1] * Math.sin(a), oy = d[o] * Math.sin(a) + d[o + 1] * Math.cos(a); c.moth(KING_MOTHS[d[o + 2] | 0], Dx + ox, Dy + oy, 2.2 + d[o + 3] * 0.6, a + i, 0.9, Math.sin(time * 24 + i) * 0.6); }
+        const dk = sm(0.1, 0.5, t) * (1 - sm(1.0, 1.4, t)), e = def.soft;
+        for (let i = 0; i < e.length; i++) r.spr.add(c.hx + e[i].x, c.hy + def.softY, 1.8, 0.9, K.ember, 0.9 * dk, 0);
+        c.dark = 0.85 * dk; c.vig = 0.3 * dk;
+        c.view(0, CY + 1.4, lerp(1.12, 0.94, eio(sm(0, 1.0, t))), 0.2, 0, 0, c.fov0); c.blendHome(eio(sm(1.0, 1.46, t)));
+      }
+    }
+  };
+  const NOPL = { x: 0, y: GY };
+  const WICK_HOOKS = [-4.5, 0, 4.5], LANTERN_Y = 17.4;
+  function plop(c, i) { const r = c.r, x = c.hx + (i - 1) * 1.3, y = c.hy - 4.4 - i * 0.5; r.ripple(x, y, 0.45, 5, 0.4, 2.6); r.lintPuff(x, y, 0.3, 5, c.K.linen, 0.6, 1.6); r.shake = Math.max(r.shake, 0.12); }
+  function crownGlint(c, k) { const r = c.r, K = c.K, x = c.hx + (k - 1.5) * 0.48, y = c.hy + c.def.halfH * 0.93; r.flare(x, y, 1.9, 2, K.saffHi, 0.25); r.glints(x, y, 1.9, 6, K.saffHi, 3, 0.35, 0.5); }
+
+  /* ---------- the eight death films ----------
+     Played in the frame the boss's hp reaches 0, while the game holds still. Each takes the boss's body from the renderer (no
+     generic collapse plays), takes it apart in its own order (bfOrdered in render-boss.js swaps in the order the dissolve
+     follows) and leaves the cloth at rest. Stitches the dissolve front passes go to the shared debris and particle pools, one in
+     `step` on lower tiers. A card with the name and "Defeated" closes each, placed and lettered in that film's own way. */
+  const LAND = [0.5, 1.02, 1.42, 1.72, 1.95, 2.13, 2.27, 2.4];   // the Beetle's landings: a plate cracks off at each
+  const DEATHS = {
+    /* Windfall. Shot down, she stiffens and folds into a dead leaf as her colour drains; two gusts take her from the left wing in,
+       flake by flake, and carry the litter off across the cloth. Camera: a slow sideways truck, drifting with the wind. */
+    greatlappet: {
+      len: 3.6, card: { at: 2.6, pos: 'low', al: 'r', style: 'dleaf' },
+      init(c) { c.order('wind'); c.edge(c.K.saff, 1.3); c.acc = 0; },
+      steps: [
+        [0.05, c => { const r = c.r, K = c.K; r.glints(c.hx, c.hy, 1.4, 10, K.saffHi, 4, 0.35, 0.5); r.lintPuff(c.hx, c.hy, 1, 8, K.tan, 0.9, 2); r.shake = Math.max(r.shake, 0.25); }],
+        [0.95, c => gust(c, 0.6)], [1.8, c => gust(c, 0.8)]
+      ],
+      frame(c, t, fdt) {
+        const r = c.r, K = c.K, k = sm(0, 0.3, t), drain = sm(0.15, 0.9, t), drift = eio(sm(0.9, 3.0, t)), fl = Math.sin(t * 7.3) * 0.22 * sm(0.8, 1.2, t);
+        const x = c.hx + drift * 2.6, y = c.hy - drift * 1.4 + Math.sin(t * 2.1) * 0.15, wing = lerp(0.1, 1.25, sm(0.05, 0.4, t)) + Math.sin(t * 9) * 0.12 * sm(0.9, 1.1, t);
+        const dk = 1.02 * (0.55 * sm(0.95, 1.7, t) + 0.45 * sm(1.8, 2.75, t));
+        c.dboss(k, x, y, 1 + 0.3 * sm(0.9, 2, t), 1, -0.35 * drift + fl * 0.5, wing, lerp(1, BROWN[0], drain), lerp(1, BROWN[1], drain), lerp(1, BROWN[2], drain), 0, fl, 0);
+        if (t < 0.95) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, leafFlake); if (dk >= 1.01) c.hideBoss(); }
+        if (t > 0.9 && t < 3.0) {   // the wind: fibres streaming across the whole cloth, thicker in the gusts
+          const gk = Math.max(1 - Math.abs(t - 1.05) * 4, 1 - Math.abs(t - 1.95) * 4, 0);
+          c.acc += fdt * (14 + 46 * gk) * c.q() * (c.cheap ? 0.6 : 1);
+          while (c.acc > 1) { c.acc--; r.lint.emit(rnd(-8.5, -6.5), rnd(B + 0.5, H - 0.5), rnd(0.4, 2), rnd(7, 11), rnd(-0.6, 0.6), 0, rnd(1.3, 1.8), rnd(0.3, 0.5), Math.random() < 0.6 ? K.tan : K.linen, 0.35, 2, 0.25, 1, 0, rnd(-1, 1), 0); }
+        }
+        c.dark = c.d0 * (1 - sm(0, 1, t)); c.vig = 0.15 * sm(0.5, 1.5, t) * (1 - sm(2.9, 3.5, t));
+        c.blend(eio(sm(0, 0.8, t)), c.hx + 1.2 + drift * 2.2, c.hy - 2.2 - drift, 0.8, 0.32, 0.1 + 0.12 * drift, 0, c.fov0);
+        c.blendHome(eio(sm(2.9, 3.55, t)));
+      }
+    },
+
+    /* Moth-eaten. Holes open in her one after another, faster and faster, like wool left in a drawer; what is left of her case
+       sags flat with a soft thump, and one small moth flutters up out of the empty case. Camera: straight down from overhead,
+       slowly turning. */
+    tinea: {
+      len: 3.8, card: { at: 2.95, pos: 'mid', al: 'c', style: 'dmoth' },
+      init(c) { c.order('holes'); c.edge(c.K.linen, 1.5); },
+      steps: [
+        [0.05, c => { const r = c.r; r.glints(c.hx, c.hy, 1.4, 8, c.K.linenHi, 3, 0.3, 0.5); r.shake = Math.max(r.shake, 0.2); }],
+        [0.4, nibble], [0.78, nibble], [1.08, nibble], [1.32, nibble], [1.52, nibble], [1.68, nibble], [1.82, nibble], [1.94, nibble], [2.04, nibble], [2.13, nibble],
+        [2.45, c => { const r = c.r; r.ripple(c.hx, c.hy, 0.6, 5, 0.6, 2.2); r.lintPuff(c.hx, c.hy, 0.4, 18, c.K.linen, 1, 2.6); r.shake = Math.max(r.shake, 0.25); }],
+        [2.8, c => { const r = c.r; r.glints(c.hx, c.hy, 1.2, 6, c.K.linenHi, 2, 0.3, 0.5); r.fibres(c.hx, c.hy, 0.8, 6, c.K.linen, 1.2); }]
+      ],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, k = sm(0, 0.3, t), col = sm(2.3, 2.7, t), flat = eio(col);
+        const dk = 1.02 * Math.pow(sm(0.25, 2.45, t), 1.5);
+        c.dboss(k, c.hx, c.hy, lerp(1, 0.15, flat), 1, 0, lerp(0.2, -0.1, flat), 1, 1, 1, 0);
+        if (c.g) c.g.scale.y *= lerp(1, 0.22, flat);
+        if (t < 0.25) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, nibbleFx); if (dk >= 1.01) c.hideBoss(); }
+        const ck = (c.cased0 > 0.3 ? 0.9 : 0) * (1 - sm(2.7, 3.4, t));   // her case (if she died in it), split and emptying, then flat
+        if (ck > 0.01) { c.touch(r.bfP('ball')); r.bfCase(c.hx, c.hy - flat * 0.4, def.halfW * 1.05, def.halfH * lerp(1, 0.3, flat), ck, 1, r.time); }
+        const u = sm(2.75, 3.65, t);   // the one that got away
+        if (u > 0 && u < 1) c.moth('nibbler', c.hx + Math.sin(u * 9) * 1.2 * u + u * 3, c.hy + u * 2, 1 + ei(u) * 16, u * 5, 1.15, Math.sin(r.time * 28) * 0.75);
+        c.dark = c.d0 * (1 - sm(0, 0.8, t)); c.vig = 0.2 * (1 - sm(3, 3.6, t));
+        c.blend(eio(sm(0, 0.7, t)), c.hx, c.hy - 0.3, 0.55, 0.02, 0, 0.4 * eio(sm(0, 3.4, t)), c.fov0);
+        c.blendHome(eio(sm(3.1, 3.75, t)));
+      }
+    },
+
+    /* Guttering. His lamp stutters and the three lanterns go out one by one as the room sinks into the dark; he melts like a
+       candle from the top, wax and embers running down; the flame dies to a curl of smoke. In the dark the camera cuts back, and
+       the house lights come up in three clunks. Camera: a slow push in to the flame, then a hard cut in the dark. */
+    greatwick: {
+      len: 4, card: { at: 3.0, pos: 'top', al: 'c', style: 'dsmoke' },
+      init(c) { c.order('melt'); c.edge(c.K.ember, 0.8); },
+      steps: [
+        [0.05, c => { const r = c.r, y = c.hy - c.def.halfH * 0.6; r.sparks(c.hx, y, c.K.ember, 10, 5); r.flare(c.hx, y, 1.6, 2, c.K.saffHi, 0.2); }],
+        [0.45, c => lanternOut(c, 0)], [0.75, c => lanternOut(c, 2)], [1.0, c => lanternOut(c, 1)],
+        [1.3, c => { const r = c.r, y = c.hy - c.def.halfH * 0.6; r.lintPuff(c.hx, y, 1.5, 8, c.K.mist, 0.8, 0.8); r.sparks(c.hx, y, c.K.ember, 6, 3); }],
+        [2.35, lightsUp], [2.6, lightsUp], [2.85, lightsUp]
+      ],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, time = r.time, k = sm(0, 0.25, t), ly = c.hy - def.halfH * 0.6, gut = sm(0.2, 1.3, t);
+        let fl = 0.8 + 0.3 * Math.sin(time * 41) + 0.25 * Math.sin(time * 17.3); if (hash(Math.floor(t * 14)) < gut * 0.7) fl *= 0.25;
+        const flame = (1 - sm(1.25, 1.35, t)) * (1 - 0.5 * gut) * fl;
+        if (flame > 0.01) { r.spr.add(c.hx, ly, 1.6, 2.4 * flame, K.saffDim, 2.6, 0); r.spr.add(c.hx, ly, 1.7, 0.8 * flame, K.glare, Math.min(1, flame), 1, time); c.lamp('pool0', c.hx, ly - 0.6, 2.4 + 1.2 * flame, K.saff, 0.3 * flame); } else c.hideMesh('pool0');
+        for (let i = 0; i < 3; i++) {   // the lanterns he hung between, snuffed one by one
+          const x = WICK_HOOKS[i], tl = i === 0 ? 0.45 : i === 2 ? 0.75 : 1.0, lk = (1 - sm(tl, tl + 0.12, t)) * (0.85 + 0.15 * Math.sin(time * (27 + i * 4))) * (hash(Math.floor(t * 18) + i * 7) < 0.25 * gut ? 0.4 : 1);
+          const cage = 1 - sm(2.9, 3.6, t);
+          r.bfLine(r.trN, x, LANTERN_Y + 0.62, x, H + 1.2, 1.2, 0.05, K.tan, 0.9 * cage, 1); r.bfLoop(r.trN, x, LANTERN_Y, 0.34, 0.52, 0, 1.25, 0.05, K.brass, 0.95 * cage, 1, 14);
+          if (lk > 0.01) { r.spr.add(x, LANTERN_Y, 1.3, 1.3 * lk, K.saffHi, 0.6 * lk, 0); r.spr.add(x, LANTERN_Y, 1.35, 0.45, K.glare, 0.9 * lk, 1, time + i); c.lamp(POOLS[i] === 'pool0' ? 'pool3' : POOLS[i], x, LANTERN_Y - 1.2, 2.6, K.saff, 0.3 * lk); }
+          else c.hideMesh(POOLS[i] === 'pool0' ? 'pool3' : POOLS[i]);
+        }
+        const dk = 1.02 * sm(0.55, 2.0, t), col = lerp(1, 0.4, sm(0.3, 1.3, t));
+        c.dboss(k, c.hx, c.hy - 0.4 * sm(0.6, 2, t), 1, Math.sin(time * 1.4) * 0.04 * (1 - gut), Math.sin(time * 3) * 0.15 * (1 - gut), col, col * 0.95, col * 0.9, 0);
+        if (t < 0.55) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, waxDrip); if (dk >= 1.01) c.hideBoss(); }
+        const th = 1 - sm(0.8, 1.6, t); if (th > 0.01) r.bfLine(r.trN, 0, LANTERN_Y - 0.95, c.hx, c.hy + def.halfH * 0.85 * (1 - dk), 1.1, 0.05, K.tan, 0.9 * th, 1);
+        const sk = sm(1.3, 1.6, t) * (1 - sm(2.6, 3.4, t));   // the smoke from the wick
+        if (sk > 0.01) { const h = 1.2 + 3.4 * sm(1.3, 2.6, t); r.bfLine(r.trA, c.hx, ly, c.hx + 0.4, ly + h, 1.4, 0.22, K.mist, 0.3 * sk, 0, 0.35, 0.3, time * 2.2, 0); r.bfLine(r.trN, c.hx, ly, c.hx + 0.4, ly + h, 1.4, 0.05, K.mist, 0.5 * sk, 1, 0.35, 0.3, time * 2.2, 0); }
+        const up = (sm(2.35, 2.45, t) + sm(2.6, 2.7, t) + sm(2.85, 2.95, t)) / 3;
+        c.dark = Math.max(c.d0 * (1 - sm(0, 0.3, t)), 0.95 * sm(0.2, 1.35, t)) * (1 - up); c.vig = 0.3 * (1 - up);
+        c.blend(eio(sm(0, 1.35, t)), c.hx, ly + 0.3, 0.55, 0.35, 0, 0, c.fov0);
+        c.blendHome(t >= 2.0 ? 1 : 0);   // the cut, in the dark
+      }
+    },
+
+    /* The last look. From behind the ship, looking up at her: the gaze cones swing wildly, stutter and lock on us; the eyes
+       shut one, then the other; then her wings fall to dust from the eyespots outward, drifting up in what light is left.
+       Camera: the ship's point of view, low, creeping forward. */
+    atlas: {
+      len: 3.8, card: { at: 2.85, pos: 'mid', al: 'c', style: 'ddust' },
+      init(c) { c.order('eyes'); c.edge(c.K.tan, 2); },
+      steps: [
+        [0.05, c => { const r = c.r; for (let i = 0; i < 2; i++) r.glints(c.data[i * 2], c.data[i * 2 + 1], 1.6, 6, c.K.saffHi, 3, 0.35, 0.5); r.shake = Math.max(r.shake, 0.2); }],
+        [1.0, c => eyeShut(c, 0)], [1.45, c => eyeShut(c, 1)],
+        [1.75, c => { const r = c.r; r.lintPuff(c.hx, c.hy, 1, 16, c.K.tan, 1.2, 1.6); r.ripple(c.hx, c.hy, 0.5, 4, 0.8, 1.8); }]
+      ],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, cell = def.cell, time = r.time, pl = c.sim ? c.sim.player : NOPL, k = sm(0, 0.25, t), sink = sm(1.6, 3.2, t);
+        const x = c.hx, y = c.hy - sink * 0.5, z = 1 - 0.3 * sink;
+        c.dboss(k, x, y, z, 1, 0, lerp(0.04, -0.25, sink), 1 - 0.35 * sink, 1 - 0.38 * sink, 1 - 0.42 * sink, 0);
+        const dk = 1.02 * eo(sm(1.75, 3.05, t));
+        if (t < 1.75) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, scaleDust); if (dk >= 1.01) c.hideBoss(); }
+        const lock = sm(0.3, 0.85, t); let lookAt = 0;
+        for (let i = 0; i < 2; i++) {
+          const ex = x + ATLAS_EYES[i * 2] * cell, ey = y + ATLAS_EYES[i * 2 + 1] * cell, er = 1.55 * cell, open = 1 - sm(1.0 + i * 0.45, 1.22 + i * 0.45, t);
+          c.data[i * 2] = ex; c.data[i * 2 + 1] = ey;
+          if (t < 1.75 && open < 0.98) c.ball(ex, ey + er * open * 0.85, z + 0.25, er * 1.05, er * (1 - open) + 0.05, er * 0.3, 0, K.brown, 0, 0.05);
+          let fl = 0.65 + 0.35 * Math.sin(time * (31 + i * 9)); if (hash(Math.floor(t * 16) + i * 5) < 0.3) fl *= 0.3;
+          if (open > 0.02) { const tr = Math.sin(time * 40 + i) * er * 0.04;
+            r.spr.add(ex, ey, z + 0.6 + er, er * 2.4, K.saffDim, 2.2 * open * fl, 0); r.halo.add(ex, ey, z + 0.5, er * 1.55, K.saff, open, 9);
+            r.halo.add(ex + tr, ey - er * 0.18 * lock, z + 0.55, er * 0.8, K.char, open, 9); r.spr.add(ex - er * 0.12, ey + er * 0.14, z + 0.6, er * 0.35, K.glare, open, 1, time); }
+          const nm = i ? 'cone2' : 'cone', ca = open * fl * 0.5;
+          if (ca > 0.02) { const m = c.mesh(nm), u = m.material.uniforms, aim = Math.atan2(pl.y - ey, pl.x - ex), wild = Math.sin(time * (3.1 + i * 1.7) + i * 2) * 0.9 + Math.sin(time * 7.3 + i) * 0.3, a = lerp(aim + wild, aim, lock), L = 17, gl = K.glare;
+            m.position.set(ex, ey, z + 0.4); m.rotation.z = a + PI / 2; m.scale.set(Math.tan(0.16) * L, L, 1); u.uColor.value.set(gl[0] * 0.4, gl[1] * 0.4, gl[2] * 0.4); u.uTime.value = r.ft; u.uAlpha.value = ca; u.uPull.value = 0.5; lookAt += open * lock; }
+          else c.hideMesh(nm);
+        }
+        c.white = 0.05 * lookAt;
+        c.dark = Math.max(c.d0 * (1 - sm(0, 0.5, t)), 0.5 * sm(1.0, 1.7, t)) * (1 - sm(2.9, 3.5, t)); c.vig = 0.25 * (1 - sm(3, 3.6, t));
+        c.blend(eio(sm(0, 0.5, t)), pl.x * 0.5, c.hy - 1.5, lerp(0.66, 0.56, sm(0.5, 3, t)), 1.12, 0, 0, c.fov0 - 2);
+        c.blendHome(eio(sm(3.05, 3.75, t)));
+      }
+    },
+
+    /* Unpicked. It gags, then is unpicked itself, one row at a time from the bottom up, back and forth like a knitted row being
+       pulled; the freed thread runs down the cloth into the hem it tore, where a shuttle weaves the lost rows back. Camera:
+       starts on its face and tilts down the cloth with the thread to the mended hem. */
+    unraveller: {
+      len: 4.4, card: { at: 3.3, pos: 'low', al: 'c', style: 'dknit' },
+      init(c) { c.order('rows'); c.edge(c.K.mistHi, 1); c.arena = c.arenaO; c.arenaO.floor = c.F0; c.arenaO.inset = c.I0; c.n1 = 0; c.ux = c.hx; c.uy = c.hy - c.def.halfH; },
+      steps: [
+        [0.05, c => { const r = c.r, my = c.hy + c.def.softY; r.lintPuff(c.hx, my, 1, 10, c.K.mist, 1, 2); r.shake = Math.max(r.shake, 0.22); }],
+        [0.4, c => c.r.snipFx(c.hx, c.hy - c.def.halfH)],
+        [2.92, c => { const r = c.r; r.ring(c.hx, c.hy, 4, c.K.mistHi, 0.4, 7); r.lintPuff(c.hx, c.hy, 1, 8, c.K.mist, 0.8, 1.4); }],
+        [3.2, c => { const r = c.r; r.glints(0, B + 0.3, 0.3, 12, c.K.saffHi, 4, 0.3, 0.5); r.ripple(0, B + 0.6, 0.4, 5, 0.6, 2.4); }]
+      ],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, time = r.time, k = sm(0, 0.3, t), gag = sm(0, 0.25, t) * (1 - sm(0.3, 0.7, t));
+        c.dboss(k, c.hx, c.hy, 1, 1, 0, 0, 1, 1, 1, 0.1 * (1 - sm(0, 0.4, t)));
+        if (c.g) c.g.scale.y *= 1 + 0.08 * gag;
+        const u = clamp((t - 0.4) / 2.5, 0, 1), dk = 1.02 * u;
+        if (t < 0.4) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, unpickFx); if (dk >= 1.01) c.hideBoss(); }
+        // the cloth it tore, woven back by a shuttle running along the hem
+        const rw = sm(0.6, 3.2, t), fl = c.F0 * (1 - rw), ins = c.I0 * (1 - rw); c.arenaO.floor = fl; c.arenaO.inset = ins;
+        const ey = B + Math.max(0.25, fl), sw = (1 - sm(3.1, 3.4, t)) * sm(0.5, 0.7, t), ph = t * PI * 2.4, sx = Math.sin(ph) * (HW - ins - 0.4);
+        if (sw > 0.01) { r.spr.add(sx, ey + 0.05, 0.3, 0.7, K.saffHi, sw, 1, time * 3); r.spr.add(sx, ey + 0.05, 0.25, 1.6, K.saffDim, 0.8 * sw, 0);
+          r.bfLine(r.trN, -HW + ins, ey + 0.1, sx, ey + 0.1, 0.05, 0.08, K.coverHi, 0.9 * sw, 1); if (!c.cheap) r.bfLine(r.trN, sx, ey - 0.12, HW - ins, ey - 0.12, 0.05, 0.07, K.patch, 0.8 * sw, 1); }
+        const turn = Math.floor(ph / PI + 0.5); if (turn !== c.n1 && sw > 0.2) { c.n1 = turn; const ex = (turn & 1 ? -1 : 1) * (HW - ins - 0.4); r.glints(ex, ey, 0.3, 4, K.saffHi, 2, 0.3, 0.4); }
+        // the thread being drawn out of it, running down into the hem
+        const tf = sm(0.4, 0.5, t) * (1 - sm(2.85, 3.0, t));
+        if (tf > 0.01) { const row = Math.floor(dk * 22), tc = row % 3 === 0 ? K.green : row % 3 === 1 ? K.steel : K.dbrown;
+          r.bfLine(r.trN, c.ux, c.uy, sx * 0.5, ey + 0.1, 1.0, 0.07, tc, 0.95 * tf, 1, 0.8, 0.12, time * 6, 0.9 * tf, 0.06);
+          r.spr.add(c.ux, c.uy, 1.3, 0.6, K.mistHi, 0.9 * tf, 1, time * 3); }
+        c.dark = c.d0 * (1 - sm(0, 1, t)); c.vig = 0.15;
+        c.blend(eio(sm(0, 0.4, t)), c.hx * 0.5, c.hy - 1, 0.66, 0.26, 0, 0, c.fov0);
+        c.blend(eio(sm(1.2, 2.8, t)), 0, B + 4.6 + fl * 0.5, 0.78, 0.5, 0, 0, c.fov0);
+        c.blendHome(eio(sm(3.4, 4.25, t)));
+      }
+    },
+
+    /* Cracked shell. It flips onto its back and bounces, each landing lower and sooner, and every landing cracks off a plate of
+       its shell with a freeze-frame; the last takes the head, and the dust settles. Camera: a crash zoom on every crack. */
+    beetle: {
+      len: 3.6, card: { at: 2.7, pos: 'top', al: 'l', style: 'dcrack' },
+      init(c) { c.order('plates'); c.edge(c.K.saffHi, 0.9); c.lx = -1; c.n2 = -10; const o = c.ord; c.data[0] = 0; for (let i = 0; i < 8; i++) c.data[i + 1] = o ? c.r.bfOrderAt(o, i + 0.72) : (i + 1) / 8; },
+      steps: LAND.map((tl, i) => [tl, c => crack(c, i)]),
+      frame(c, t, fdt) {
+        const r = c.r, K = c.K, def = c.def, time = r.time, k = sm(0, 0.2, t), flip = eo(sm(0, 0.35, t));
+        let i = -1; while (i + 1 < LAND.length && t >= LAND[i + 1]) i++;
+        let z = 1, u = 1;
+        if (i < LAND.length - 1) { const t0 = i < 0 ? 0.08 : LAND[i], t1 = LAND[i + 1]; u = clamp((t - t0) / (t1 - t0), 0, 1); z = 1 + 1.7 * Math.pow(0.72, i + 1) * Math.sin(PI * u); }
+        const x = c.hx - c.hx * 0.15 * sm(0, 2.4, t), rz = (i + 1) * 0.35 + u * 0.35 * (i < LAND.length - 1 ? 1 : 0);
+        c.dboss(k, x, c.hy, z, 1, rz, 0, 1, 1, 1, 0, 0, PI * flip);
+        const tgt = i < 0 ? -1 : i >= LAND.length - 1 ? 1.02 : c.data[i + 1]; c.lx = tgt < 0 ? -1 : c.lx < 0 ? tgt : c.lx + (tgt - c.lx) * Math.min(1, fdt * 40);
+        c.dissolve(c.lx); if (c.lx > 0) c.unpick(c.lx, plateChunk); if (c.lx >= 1.01) c.hideBoss();
+        const kick = 1 - sm(0.3, 2.0, t);   // its legs, kicking and slowing
+        if (kick > 0.01 && c.lx < 0.9) for (let j = 0; j < 6; j++) { const sd = j < 3 ? -1 : 1, jj = j % 3, lx = x + sd * def.halfW * (0.35 + jj * 0.12), ly = c.hy + def.halfH * (0.35 - jj * 0.35), kk = Math.sin(time * 14 * kick + j * 1.7) * 0.25 * kick;
+          r.bfLine(r.trN, lx, ly, lx + sd * (0.7 + kk * 0.3), ly + kk, z + 0.4, 0.09, K.dbrown, kick, 1, 0.12 * sd, 0, 0, kick, z + 0.7); }
+        const p = c.n2 > 0 && t - c.n2 < 0.3 ? 1 - (t - c.n2) / 0.3 : 0;
+        c.dark = c.d0 * (1 - sm(0, 0.6, t)); c.vig = 0.12 + 0.12 * p;
+        c.blend(eio(sm(0, 0.35, t)), c.hx * 0.7, c.hy - 0.6, 0.64, 0.34, 0, 0.03 * p * ((i & 1) ? 1 : -1), c.fov0 - 9 * p * p);
+        c.blendHome(eio(sm(2.9, 3.5, t)));
+      }
+    },
+
+    /* Wound. She spins on the spot faster and faster, paying out her own silk round herself until she is a white cocoon; the spin
+       stops dead; a line drops from above, catches it and hauls it up out of the picture. Camera: a tilted close-up that holds
+       still while she is taken out of it, then straightens and backs away. */
+    empress: {
+      len: 4.2, card: { at: 3.1, pos: 'top', al: 'r', style: 'dwrap' },
+      init(c) { c.order('edge'); c.edge(c.K.silk, 1.6); c.ang = c.p0.rz; },
+      steps: [
+        [0.05, c => { const r = c.r; r.glints(c.hx, c.hy, 1.4, 10, c.K.linenHi, 3, 0.3, 0.5); r.strands(c.hx, c.hy, [PAL.paper, PAL.linen], 6, 1); }],
+        [1.8, c => { const r = c.r, K = c.K; r.glints(c.hx, c.hy, 1.6, 14, K.glare, 5, 0.3, 0.5); r.ring(c.hx, c.hy, 3.6, K.silk, 0.35, 7); r.shake = Math.max(r.shake, 0.15); r.hitStop(0.05, 0.2); }],
+        [2.25, c => { const r = c.r; r.snipFx(c.hx, c.hy + c.def.halfH * 0.75); }],
+        [2.35, c => c.r.lintPuff(c.hx, c.hy, 1, 8, c.K.linen, 0.8, 1.6)]
+      ],
+      frame(c, t, fdt) {
+        const r = c.r, K = c.K, def = c.def, time = r.time, k = sm(0, 0.25, t), wrap = sm(0.15, 1.75, t), hoist = ei(sm(2.35, 3.4, t));
+        if (t < 1.8) c.ang += (2 + 26 * ei(sm(0.1, 1.75, t))) * fdt;
+        const x = c.hx + Math.sin(t * 3.1) * 0.4 * sm(2.3, 2.6, t) * (1 - hoist * 0.5), y = c.hy + hoist * (H + 5 - c.hy), wk = 0.3 + 0.7 * sm(0.5, 1.8, t);
+        c.dboss(k, x, y, 1, 1 - 0.25 * wrap, c.ang, Math.sin(time * 20) * 0.3 * (1 - wrap), lerp(1, 1.15, wrap), lerp(1, 1.12, wrap), lerp(1, 1.05, wrap), 0.1 * wrap);
+        const dk = 1.02 * sm(0.6, 1.8, t);
+        if (t < 0.6) c.dissolve(-1); else { c.dissolve(dk); c.unpick(dk, silkMote); }
+        if (t > 0.5) c.ball(x, y, 1.15, def.halfW * 0.5 * wk, def.halfH * 0.82 * wk, 0.7 * wk, c.ang * 0.15, K.linen, 0, 0.18);
+        const n = Math.floor(4 + 12 * wrap), hw = def.halfW * (0.95 - 0.38 * wrap), wz = lerp(1.35, 2.0, sm(0.5, 1.8, t));   // the wraps, laid over the pod
+        for (let j = 0; j < n; j++) { const rx = hw * (0.85 + 0.15 * hash(j)), rot = j * 0.7 + c.ang * 0.3;
+          r.bfLoop(r.trN, x, y, rx, rx * 0.34, rot, wz + j * 0.02, 0.05, j % 2 ? K.linen : K.paper, 0.9, 1, 20, j);
+          if (!c.cheap && j % 3 === 0) r.bfLoop(r.trA, x, y, rx, rx * 0.34, rot, wz + 0.01 + j * 0.02, 0.14, K.silk, 0.35, 7, 20, j); }
+        if (t > 1.85) { const top = H + 1.5, ly = lerp(top, y + def.halfH * 0.8, eo(sm(1.85, 2.25, t)));   // the line from above
+          r.bfLine(r.trA, x, ly, x, top, 1.4, 0.08, K.silk, 0.8, 7); r.bfLine(r.trN, x, ly, x, top, 1.39, 0.03, K.linen, 0.9, 1); }
+        if (t > 3.35 && t < 4.0 && Math.random() < 0.35 * c.q()) r.glow.emit(rnd(-5, 5), rnd(10, 16), 1.5, 0, rnd(-1.2, -0.4), 0, rnd(0.8, 1.2), 0.28, K.silk, 1, 1, 0.5, 0.3);   // dew shaken off
+        c.dark = c.d0 * (1 - sm(0, 0.8, t)); c.vig = 0.22 * (1 - sm(3.2, 3.9, t));
+        c.blend(eio(sm(0, 0.5, t)), c.hx, c.hy - 0.4, 0.5, 0.3, 0, 0.22, c.fov0);
+        c.blendHome(eio(sm(3.2, 4.0, t)));
+      }
+    },
+
+    /* Daybreak. The blow knocks his crown jewel loose and it falls in slow motion, the camera following it down the cloth; it
+       lands with a clink and a beat of silence; then he bursts into his swarm, the moths scatter past the lens in every
+       direction, the camera rises high over the cloth and daylight comes up as the frayed edges weave back. Camera: a close
+       follow of the falling jewel, then a long crane up to a high wide view. */
+    king: {
+      len: 6.2, card: { at: 4.6, pos: 'mid', al: 'c', style: 'ddawn' },
+      init(c) {
+        c.order('burst'); c.edge(c.K.saffHi, 1); c.arena = c.arenaO; c.arenaO.floor = c.F0; c.arenaO.inset = c.I0;
+        const d = c.data, n = c.nV = Math.min(48, Math.round(48 * Math.max(0.35, c.q())));
+        for (let i = 0; i < n; i++) { d[i * 5] = i % KING_MOTHS.length; d[i * 5 + 1] = (i / n) * TAU + Math.random() * 0.4; d[i * 5 + 2] = Math.random(); d[i * 5 + 3] = Math.random() * 0.5; d[i * 5 + 4] = Math.random(); }
+      },
+      steps: [
+        [0.05, c => { const r = c.r; r.hitStop(0.35, 0.25); r.flashAdd(PAL.madderHi, 0.15); r.shake = Math.max(r.shake, 0.3); }],
+        [0.45, c => { const r = c.r, K = c.K; r.glints(c.hx, c.hy + c.def.halfH * 0.93, 1.9, 12, K.saffHi, 4, 0.35, 0.5); r.ring(c.hx, c.hy + c.def.halfH * 0.93, 1.8, K.saffHi, 0.3, 7); }],
+        [1.6, c => { const r = c.r, K = c.K, x = c.hx + 0.6, y = c.hy - 4.6; r.ring(x, y, 2.6, K.saffHi, 0.45, 3); r.glints(x, y, 0.4, 10, K.saffHi, 4, 0.35, 0.5); r.ripple(x, y, 0.5, 5, 0.5, 2.2); }],
+        [1.75, c => c.r.glints(c.hx + 0.6, c.hy - 4.6, 0.4, 4, c.K.saffHi, 2, 0.3, 0.4)],
+        [2.0, c => { const r = c.r, K = c.K; r.shock(c.hx, c.hy, 1.4, 1.2, 0.8); r.ripple(c.hx, c.hy, 1.1, 7, 0.8, 1.6); r.lintPuff(c.hx, c.hy, 1, 16, K.tan, 1.3, 3.2); r.glints(c.hx, c.hy, 1.2, 20, K.saffHi, 7, 0.4, 0.6); r.shake = Math.max(r.shake, 0.6); r.flashAdd(PAL.saffron, 0.35); r.hitStop(0.08, 0.2); }],
+        [4.9, c => { const r = c.r, K = c.K, x = c.hx + 0.6, y = c.hy - 4.6; r.glints(x, y, 0.5, 12, K.saffHi, 3, 0.35, 0.6); r.ring(x, y, 1.6, K.saffHi, 0.4, 7); }]
+      ],
+      frame(c, t) {
+        const r = c.r, K = c.K, def = c.def, d = c.data, time = r.time, k = sm(0, 0.3, t), col = lerp(1, 0.55, sm(0.2, 1.8, t));
+        c.dboss(k, c.hx, c.hy, 1, 1, Math.sin(time * 30) * 0.01 * (1 - sm(0, 1, t)), Math.sin(time * 2.2) * 0.15, col, col * 0.9, col, 0);
+        const dk = 1.02 * eo(sm(2.0, 2.4, t));
+        if (t < 2.0) { c.dissolve(-1); const e = def.soft, gl = sm(0.4, 1.4, t); for (let i = 0; i < e.length; i++) r.spr.add(c.hx + e[i].x, c.hy + def.softY, 1.8, 0.9, K.ember, 0.8 * gl, 0); }
+        else { c.dissolve(dk); c.unpick(dk, swarmSpark); if (dk >= 1.01) c.hideBoss(); }
+        // the jewel: loose, a slow fall, a clink and two small bounces, then it melts into the light
+        const jf = clamp((t - 0.45) / 1.15, 0, 1), jj = jf * jf, y0 = c.hy + def.halfH * 0.93, y1 = c.hy - 4.6;
+        let jx = c.hx + 0.6 * jf, jy = lerp(y0, y1, jj), jz = lerp(1.7, 0.3, jj);
+        if (t > 1.6) jz += Math.abs(Math.sin(clamp((t - 1.6) / 0.15, 0, 1) * PI)) * 0.35 * (t < 1.75 ? 1 : 0) + Math.abs(Math.sin(clamp((t - 1.75) / 0.11, 0, 1) * PI)) * 0.12;
+        const js = 0.3 * (1 - sm(4.9, 5.5, t)), glint = t < 0.45 ? 0.3 : 0.6 + 0.4 * Math.sin(time * 5);
+        c.lx = jx; c.ly = jy;
+        if (js > 0.01) { c.gem(jx, jy, jz, js, time * 2.2 * (1 - sm(1.6, 2, t)), time * 1.3, K.saff, glint * 0.8, 0.9); r.spr.add(jx, jy, jz + 0.3, 0.6 + 0.6 * glint, K.saffHi, 0.6 * js / 0.3, 1, time); }
+        // the swarm scatters past the lens
+        if (t > 2.0 && t < 4.9) for (let i = 0; i < c.nV; i++) {
+          const u = clamp((t - 2.0 - d[i * 5 + 3]) / 2.3, 0, 1); if (u <= 0 || u >= 1) continue;
+          const a = d[i * 5 + 1], R = 0.6 + eo(u) * (10 + d[i * 5 + 2] * 5);
+          c.moth(KING_MOTHS[d[i * 5] | 0], c.hx + Math.cos(a) * R, c.hy + Math.sin(a) * R * 0.8, 1 + u * u * (6 + d[i * 5 + 4] * 8), a - PI / 2, 1, Math.sin(time * 26 + i) * 0.7);
+        }
+        // daylight, and the cloth whole again
+        const day = sm(2.3, 3.8, t) * (1 - sm(5.2, 6.0, t));
+        if (day > 0.01) { r.spr.add(-5.5, H - 0.5, 3, 13, K.glareDim, 0.9 * day, 8, 0.3); if (!c.cheap) r.spr.add(-5.5, H - 0.5, 3, 5, K.glare, 0.45 * day, 0); }
+        const rw = sm(2.6, 4.6, t); c.arenaO.floor = c.F0 * (1 - rw); c.arenaO.inset = c.I0 * (1 - rw);
+        c.white = 0.045 * sm(2.4, 3.4, t) * (1 - sm(4.4, 5.6, t)); c.wash = K.saffLo;
+        c.dark = Math.max(c.d0 * (1 - sm(0, 0.4, t)), 0.75 * sm(0.3, 1.6, t)) * (1 - sm(2.2, 4.2, t)); c.vig = 0.3 * (1 - sm(3.5, 5.5, t));
+        c.blend(eio(sm(0, 0.45, t)), jx, jy + 0.3, 0.38, 0.55, 0, 0, c.fov0);
+        c.blend(eio(sm(1.95, 4.2, t)), 0, CY + 0.5, 1.32, 0.04, 0, 0, c.fov0);
+        c.blendHome(eio(sm(4.7, 5.9, t)));
+      }
+    }
+  };
+  // ---------- death film pieces (static, so a frame allocates nothing) ----------
+  function gust(c, k) { const r = c.r, K = c.K; r.ripple(-6, c.hy - 1, k, 7, 0.6, 2); r.fibres(c.hx, c.hy, 1, 6, K.tan, 3); r.shake = Math.max(r.shake, 0.12 * k / 0.6); }
+  function leafFlake(c, x, y, z, rgb) {   // a flake of dead leaf, taken by the wind
+    const r = c.r; r.xs.emit(x, y, z + 0.2, rnd(3, 6.5), rnd(-0.8, 1.6), rnd(0.5, 2.5), rnd(1.1, 1.6), 1.0, rgb, 0.15, rnd(0, 6), rnd(-8, 8), rnd(-10, 10), 5, 0.6, 0);
+    if (Math.random() < 0.33) r.lint.emit(x, y, z, rnd(2, 4), rnd(-0.5, 0.5), 0.3, rnd(0.6, 1), rnd(0.3, 0.5), c.K.tan, 0.3, 6, 1.5, 1.5, undefined, rnd(-2, 2), 0.6);
+  }
+  function nibble(c) { const r = c.r, x = c.hx + rnd(-1, 1) * c.def.halfW * 0.7, y = c.hy + rnd(-1, 1) * c.def.halfH * 0.6; r.lintPuff(x, y, 1.2, 4, c.K.linen, 0.5, 1); r.ring(x, y, 0.9, c.K.linenHi, 0.25, 7); }
+  function nibbleFx(c, x, y, z, rgb) { const r = c.r; r.lint.emit(x, y, z + 0.1, rnd(-0.6, 0.6), rnd(-0.6, 0.6), rnd(0.5, 1.5), rnd(0.6, 1), rnd(0.25, 0.4), rgb, 0.7, 2, 1.5, 1, undefined, rnd(-4, 4), 1.5); }
+  function lanternOut(c, i) { const r = c.r, x = WICK_HOOKS[i]; r.lintPuff(x, LANTERN_Y + 0.3, 1.4, 4, c.K.mist, 0.5, 0.6); r.sparks(x, LANTERN_Y, c.K.ember, 3, 2); }
+  function lightsUp(c) { c.r.flashAdd(PAL.linen, 0.1); }
+  function waxDrip(c, x, y, z, rgb) {   // wax running down, and embers
+    const r = c.r; r.xs.emit(x, y, z, rnd(-0.3, 0.3), rnd(-0.6, 0), 0, rnd(0.8, 1.2), 1.0, rgb, 0.9, rnd(0, 6), rnd(-1, 1), rnd(-2, 2), 10, 1, 0, 0.5, -7);
+    if (Math.random() < 0.5) r.glow.emit(x, y, z + 0.2, rnd(-0.4, 0.4), rnd(-1.5, -0.4), 0, rnd(0.5, 0.9), 0.25, c.K.ember, 1, 0, 1, 0.3);
+  }
+  function eyeShut(c, i) { const r = c.r, x = c.data[i * 2], y = c.data[i * 2 + 1]; r.ring(x, y, 1.6, c.K.saffDim, 0.3, 3); r.lintPuff(x, y, 1.2, 5, c.K.tan, 0.6, 1); r.shake = Math.max(r.shake, 0.1); }
+  function scaleDust(c, x, y, z, rgb) {   // scale dust, rising in what is left of the light
+    const r = c.r; r.glow.emit(x, y, z + 0.1, rnd(-0.4, 0.4), rnd(0.2, 1.2), rnd(0.2, 1), rnd(1.1, 1.7), rnd(0.18, 0.32), rgb, 0.9, 0, 1.2, 0.6, undefined, 0, 0);
+    if (Math.random() < 0.33) r.lint.emit(x, y, z, rnd(-0.3, 0.3), rnd(0.3, 0.9), 0.3, rnd(1, 1.5), rnd(0.35, 0.55), c.K.tan, 0.3, 6, 1.2, 1.6, undefined, rnd(-1, 1), 0.3);
+  }
+  function unpickFx(c, x, y, z, rgb) { c.r.curls.emit(x, y, z + 0.2, rnd(-0.8, 0.8), rnd(-2.5, -1), rnd(0.5, 1.5), rnd(0.6, 1), 0.22, rgb, 0.2, rnd(0, 6), rnd(-6, 6), rnd(-4, 4), 7, 2, rnd(0.4, 0.9), 1.2); }
+  function crack(c, i) {   // a plate cracks off at a landing
+    const r = c.r, K = c.K, last = i === LAND.length - 1, w = last ? 1 : 0.5 + 0.06 * i;
+    if (last || (i & 1)) r.ripple(c.g ? c.g.position.x : c.hx, c.hy, 0.25 * w + 0.15, 6, 0.5, 2.6); r.lintPuff(c.hx, c.hy - 0.4, 0.5, last ? 16 : 6, K.tan, 0.9, last ? 3 : 2);
+    r.sparks(c.hx, c.hy, K.brassHi, last ? 10 : 5, 6); r.shake = Math.max(r.shake, 0.22 + 0.3 * w); r.hitStop(last ? 0.1 : 0.05, 0.2); c.n2 = c.ft;   // (no film freeze: a death keeps real time, so its sound stays in step)
+    if (last) r.flashAdd(PAL.umber, 0.25);
+  }
+  function plateChunk(c, x, y, z, rgb) {   // a piece of shell
+    const r = c.r; r.xs.emit(x, y, z + 0.2, (x - c.hx) * 2.2 + rnd(-1, 1), (y - c.hy) * 2.2 + rnd(-1, 1), rnd(3, 6), rnd(0.8, 1.2), 0.95, rgb, 0.5, rnd(0, 6), rnd(-9, 9), rnd(-12, 12), 16, 2, 0);
+    if (Math.random() < 0.25) r.glow.emit(x, y, z + 0.3, rnd(-3, 3), rnd(-3, 3), rnd(0, 2), rnd(0.2, 0.35), rnd(0.25, 0.4), c.K.brassHi, 1, 4, 4, 0.4, undefined, 0, 0);
+  }
+  function silkMote(c, x, y, z, rgb) {   // silk flicked off the spin
+    const r = c.r, dx = x - c.hx, dy = y - c.hy; r.glow.emit(x, y, z + 0.3, -dy * 2 + dx * 0.5, dx * 2 + dy * 0.5, rnd(0, 1), rnd(0.4, 0.7), rnd(0.2, 0.32), c.K.silk, 0.9, 1, 2.5, 0.3, undefined, rnd(-3, 3), 0);
+  }
+  function swarmSpark(c, x, y, z, rgb) { const r = c.r; r.glow.emit(x, y, z + 0.2, (x - c.hx) * 1.5 + rnd(-1, 1), (y - c.hy) * 1.5 + rnd(-1, 1), rnd(1, 4), rnd(0.5, 0.9), rnd(0.25, 0.4), Math.random() < 0.5 ? c.K.saffHi : rgb, 1, 0, 1.2, 0.4, undefined, 0, 0); }
+
+  Cine.FILMS = FILMS; Cine.SIGS = SIGS; Cine.DEATHS = DEATHS;
+
   ST.Cine = Cine;
 })(window.ST);

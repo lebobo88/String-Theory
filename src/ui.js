@@ -46,14 +46,34 @@
     homing: ['...a...', '.aaaaa.', '.a...a.', 'aa.b.aa', '.a...a.', '.aaaaa.', '...a...'],
     sign:   ['...a...', '...a...', 'aaaaaaa', '.aaaaa.', '..aaa..', '.aa.aa.', 'aa...aa'],
     twin:   ['.a...a.', '.a...a.', 'aaa.aaa', 'aaa.aaa', 'a.a.a.a', '.b...b.'],
+    triple: ['.....a.....', '.a...a...a.', '.a..aaa..a.', 'aaa.aaa.aaa', 'aaa.a.a.aaa', 'a.a..b..a.a', '.b.......b.'],
     other:  ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..']
   };
   const PW_SPRITE = { drone: 'bobbin', beeswax: 'beeswax', dish: 'dish', _t: 'thimble', _p: 'pin', _c: 'chalk' };
   const PW_NAME = { sign: 'Signature', _t: 'Thimble', _p: 'Safety Pin', _c: 'Dive warnings', _d: 'Twin ship' };
   const PW_COL = { beeswax: PAL.saffron, dish: PAL.steel, sign: PAL.madderPale, _t: PAL.steelHi, _p: PAL.steel, _c: PAL.paper, _d: PAL.madderPale };
-  const pwName = k => PW_NAME[k] || (C.CHARMS[k] || C.NOTIONS[k] || { name: k }).name;
-  const pwCol = k => PW_COL[k] || (C.CHARMS[k] && C.CHARMS[k].color) || PAL.saffron;
-  const pwIcon = (k, px) => PW_SPRITE[k] ? icon(PW_SPRITE[k], px) : stitched(PW_CHART[k === '_d' ? 'twin' : k] || PW_CHART.other, { a: pwCol(k), b: PAL.paper }, px);
+  /* An upgraded power-up (key ending in '+') wears a ring of saffron stitches round its chart: the same picture, embroidered. */
+  const isUp = k => k.charAt(k.length - 1) === '+', baseOf = k => isUp(k) ? k.slice(0, -1) : k;
+  const pwName = k => isUp(k) ? ((C.CHARMS[baseOf(k)] || {}).up || { name: k }).name : PW_NAME[k] || (C.CHARMS[k] || C.NOTIONS[k] || { name: k }).name;
+  const pwCol = k => PW_COL[baseOf(k)] || (C.CHARMS[baseOf(k)] && C.CHARMS[baseOf(k)].color) || PAL.saffron;
+  function outlined(rows) {
+    const w = rows[0].length + 2, h = rows.length + 2, g = [];
+    for (let y = 0; y < h; y++) { const r = rows[y - 1], row = []; for (let x = 0; x < w; x++) row.push(r && x > 0 && x <= rows[0].length ? r[x - 1] : '.'); g.push(row); }
+    const out = g.map(r => r.map(() => false)), st = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ((y === 0 || x === 0 || y === h - 1 || x === w - 1) && g[y][x] === '.') { out[y][x] = true; st.push([x, y]); }
+    while (st.length) { const [x, y] = st.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < w && ny < h && !out[ny][nx] && g[ny][nx] === '.') { out[ny][nx] = true; st.push([nx, ny]); } } }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (out[y][x] && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] && g[y + dy][x + dx] !== '.' && g[y + dy][x + dx] !== '+')) g[y][x] = '+';
+    return g.map(r => r.join(''));
+  }
+  const UPICONS = new Map();
+  function pwIcon(k, px) {
+    const b = baseOf(k), up = isUp(k), key = k + '|' + px; if (UPICONS.has(key)) return UPICONS.get(key);
+    let h;
+    if (!up) h = PW_SPRITE[k] ? icon(PW_SPRITE[k], px) : stitched(PW_CHART[k === '_d' ? 'twin' : k] || PW_CHART.other, { a: pwCol(k), b: PAL.paper }, px);
+    else if (PW_SPRITE[b]) { const sp = C.SPRITES[PW_SPRITE[b]]; h = stitched(outlined(sp.rows), Object.assign({}, sp.pal, { '+': PAL.saffron }), px); }
+    else h = stitched(outlined(PW_CHART[b === 'twin' ? 'triple' : b] || PW_CHART.other), { a: pwCol(b), b: PAL.paper, '+': PAL.saffron }, px);
+    if (UPICONS.size < 200) UPICONS.set(key, h); return h;
+  }
 
   /* The combo: up to eight turns of thread wound round the score, each one half behind the digits and half in front. */
   const TURNS = 8;
@@ -77,7 +97,7 @@
   const attr = (el, a, v) => { const k = '_a' + a; if (el && el[k] !== v) { el[k] = v; el.setAttribute(a, v); } };
 
   /* Sounds by action: tabs flick, equipping seats a spool, everything else is a soft tap. Items and the special make their own sound in play. */
-  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
+  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
 
   class UI {
     constructor(ctl) {
@@ -135,7 +155,8 @@
         case 'title': c.toTitle(); break;
         case 'depart': if (!c.midNight) this.snd('ui_start'); c.depart(); break;
         case 'tab': this.tab = arg; this.hem(); break;
-        case 'pick': this.sel[this.tab] = arg; this.hem(); break;
+        case 'pick': this.sel[this.selKey()] = arg; this.hem(); break;
+        case 'pview': this.patView = arg === 'ups' ? 'ups' : 'perks'; this.hem(); break;
         case 'buy': this.buy(arg); break;
         case 'nope': this.snd('ui_fail'); this.shake(); break;
         case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
@@ -272,7 +293,7 @@
         <div class="how">${rows.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>
         <div class="hprose"><p><b>Two weapons, always firing.</b> Your lead weapon fires from the ship. Your second fires from the bobbin trailing on its thread: hold still to stack both on one target, sweep to spread them. A target hit by both takes 25% more.</p>
         <p>A run is eight stages: three waves, a bonus wave, then a boss. Between stages you shop in the hideout and pick your route.</p>
-        <p>Quick kills build a combo that multiplies score and coins. Coins buy weapons, upgrades and items; gems buy ships and perks. Everything you buy is saved.</p></div>
+        <p>Quick kills build a combo that multiplies score and coins. Coins buy weapons, upgrades and items; gems buy ships, perks and stronger power-ups. Everything you buy is saved.</p></div>
         <div class="row"><button class="btn primary" data-act="title" data-focus>Back</button></div></div>`, 'paper', 'how');
     }
 
@@ -280,7 +301,7 @@
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
       const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use'],
-        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'permanent bonuses'], ['book', 'Collection', 'blueprints and enemies']];
+        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'and power-up upgrades'], ['book', 'Collection', 'blueprints and enemies']];
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared · next: ${C.PANELS[c.sim.panel].name}` : 'Between runs · everything you buy is saved';
       this.preview = null;
@@ -289,10 +310,19 @@
         <header><div><div class="eyebrow">${esc(sub)}</div><h2>Hideout</h2></div>
           <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}</div></header>
         <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
-        ${this.shipStrip()}
-        <div class="station st-${this.tab}">${body}</div>
+        ${this.tab === 'pattern' ? this.perkSeg() : this.shipStrip()}
+        <div class="station st-${this.tab}${this.tab === 'pattern' && this.patView === 'ups' ? ' st-ups' : ''}">${body}</div>
         <footer><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End run' : 'Main menu'}</button>
           <button class="btn primary" data-act="depart">${mid ? 'Continue run' : this.p.run ? 'Start a new run' : 'Start run'}</button></footer></div>`, 'paper', 'hem:' + this.tab);
+    }
+    /* Which selection a pick belongs to: the Perks tab holds two views, perks and power-up upgrades. */
+    selKey() { return this.tab === 'pattern' && this.patView === 'ups' ? 'ups' : this.tab; }
+    /* On the Perks tab the stats strip gives its row to a switch between the perks and the power-up upgrades, both bought with gems. */
+    perkSeg() {
+      const p = this.p, v = this.patView === 'ups' ? 'ups' : 'perks';
+      const nP = Object.keys(C.PATTERN.nodes), nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
+      const b = (id, name, got, all) => `<button class="tabb ${v === id ? 'on' : ''}" role="tab" aria-selected="${v === id}" data-act="pview" data-arg="${id}"><b>${name}</b><span class="mono">${got} of ${all}</span></button>`;
+      return `<nav class="pseg" role="tablist" aria-label="Bought with gems">${b('perks', 'Perks', nP.filter(k => p.pattern[k]).length, nP.length)}${b('ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length)}</nav>`;
     }
     /* The four numbers a purchase can move, for the ship and weapon in hand. */
     flight(p) {
@@ -389,15 +419,39 @@
         quote: '' });
     }
     st_pattern() {
+      if (this.patView === 'ups') return this.st_ups();
       const p = this.p, all = C.PATTERN.nodes, sel = this.sel.pattern && all[this.sel.pattern] ? this.sel.pattern : 'steady';
       const done = Object.keys(all).filter(k => p.pattern[k]).length;
       const grid = `<div class="sampler">${C.PATTERN.rows.map(r => `<div class="srow"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
         return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Unlocked' : all[id].cost + ' gems'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
       const n = all[sel], st = S.patternState(p, sel);
+      // a perk that moves one of the ship's numbers shows it, before and after
+      let moved = ''; if (!p.pattern[sel]) { const q = this.clone(); q.pattern[sel] = true; const a = this.flight(p), b = this.flight(q);
+        for (const [k, lab, dp, unit] of [['dmg', 'Damage', 2, ''], ['rate', 'Fire rate', 1, '/s'], ['ply', 'Shield', 0, ''], ['speed', 'Speed', 1, '']]) if (Math.abs(b[k] - a[k]) > 1e-6) moved += `<span>${lab} <b class="mono">${a[k].toFixed(dp)}${unit}</b> <em class="mono up">→ ${b[k].toFixed(dp)}${unit}</em></span>`; }
       return grid + this.detail({ kicker: `Perk · ${done} of ${Object.keys(all).length} unlocked`, name: n.name, desc: n.desc,
-        extra: '<p class="dim pnote">Permanent. Applies to every run and every ship.</p>',
+        extra: (moved ? `<p class="pmove">${moved}</p>` : '') + '<p class="dim pnote">Permanent. Applies to every run and every ship.</p>',
         state: st.why === 'owned' ? '<span class="state own">Unlocked</span>' : this.stateLine(st, 'silk'),
         buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="pattern:${sel}">Unlock · ${st.price} gems</button>` : this.nope(st, 'silk', 'Unlock'),
+        quote: '' });
+    }
+    /* Power-up upgrades: each power-up that drops in flight has one stronger form, bought once with gems. Three rows; a row opens
+       once two from the row before it are owned. Picture tiles, the details docked below with the power-up as it is now and after. */
+    st_ups() {
+      const p = this.p, ids = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
+      const sel = this.sel.ups && C.CHARMS[this.sel.ups] && C.CHARMS[this.sel.ups].up ? this.sel.ups : ids.find(id => C.CHARMS[id].up.tier === 0);
+      const lasts = (c, id) => c.dur ? c.dur + ' s' : id === 'twin' ? 'until hit' : 'instant';
+      const rows = C.CHARM_TIERS.map((tr, t) => { const left = S.charmTierLeft(p, t);
+        return `<div class="urow"><span class="eyebrow">${esc(tr.name)}</span>${ids.filter(id => C.CHARMS[id].up.tier === t).sort((a, b) => C.CHARMS[a].up.cost - C.CHARMS[b].up.cost).map(id => { const u = C.CHARMS[id].up, st = S.charmUpState(p, id), own = st.why === 'owned';
+          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${esc(u.name).replace(/([A-Za-z]{6})([A-Za-z]{4,})/g, '$1&shy;$2')}</b><span class="mono">${own ? 'Owned' : u.cost + ' gems'}</span></button>`; }).join('')}</div>`; }).join('');
+      const c = C.CHARMS[sel], u = c.up, st = S.charmUpState(p, sel), own = st.why === 'owned';
+      const cmp = `<div class="ucmp"><div class="${own ? 'was' : 'now'}">${pwIcon(sel === 'twin' ? '_d' : sel, 24)}<span><b>${own ? 'Was' : 'Now'} · ${esc(c.name)}</b><em class="mono">${lasts(c, sel)}</em><span>${esc(c.desc)}</span></span></div>
+        <div class="${own ? 'now' : 'next'}">${pwIcon(sel + '+', 24)}<span><b>${own ? 'Now' : 'Upgraded'} · ${esc(u.name)}</b><em class="mono${u.dur !== c.dur ? ' up' : ''}">${lasts(u, sel)}</em><span>${esc(u.desc)}</span></span></div></div>`;
+      const tierLine = st.why === 'tier' ? `<span class="state sealed">Buy ${st.left} more from ${esc(C.CHARM_TIERS[u.tier - 1].name.toLowerCase())} first</span>` : '';
+      const done = ids.filter(id => (p.charmUps || {})[id]).length;
+      return `<div class="ugrid">${rows}</div>` + this.detail({ kicker: `Power-up upgrade · ${done} of ${ids.length} bought`, name: u.name,
+        desc: own ? 'Every ' + c.name + ' that drops is now upgraded to ' + u.name + '.' : 'From now on, every ' + c.name + ' that drops is upgraded to ' + u.name + '.', extra: cmp,
+        state: own ? '<span class="state own">Owned</span>' : tierLine || this.stateLine(st, 'silk'),
+        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="charmup:${sel}">Upgrade · ${st.price} gems</button>` : own ? '' : this.nope(st, 'silk', 'Upgrade'),
         quote: '' });
     }
     st_book() {
@@ -419,8 +473,11 @@
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p, before = this.flight(p), d0 = p.dust, s0 = p.silk;
       const from = this.pressEl && this.pressEl.isConnected ? this.pressEl.getBoundingClientRect() : null;
-      const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id) : S.buyPattern(p, id);
-      if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy'); this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
+      const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
+        : kind === 'charmup' ? S.buyCharmUp(p, id) : S.buyPattern(p, id);
+      if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy');
+        if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
+        else this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
       else this.snd('ui_fail');
       this.hem();
       if (r.ok) this.celebrate(before, d0, s0, from);
@@ -611,8 +668,8 @@
       txt(H.M.dust, num(p.dust)); txt(H.M.silk, num(p.silk));
       // ---- running power-ups: a stitched badge each, its thread shortening as it runs out ----
       const want = [];
-      for (const k of Object.keys(sim.fx)) if (sim.fx[k] > 0) want.push([k, sim.fx[k]]);
-      if (sim.armed.thimble) want.push(['_t', 0]); if (sim.armed.pin) want.push(['_p', 0]); if (sim.armed.chalk) want.push(['_c', 0, sim.armed.chalk]); if (pl.dual) want.push(['_d', 0]);
+      for (const k of Object.keys(sim.fx)) if (sim.fx[k] > 0) want.push([sim.fxUp && sim.fxUp[k] && C.CHARMS[k] ? k + '+' : k, sim.fx[k]]);
+      if (sim.armed.thimble) want.push(['_t', 0]); if (sim.armed.pin) want.push(['_p', 0]); if (sim.armed.chalk) want.push(['_c', 0, sim.armed.chalk]); if (pl.dual) want.push([pl.wings > 1 ? 'twin+' : '_d', 0]);
       this.powerups(want);
       // ---- meters and item slots ----
       const T = H.T, nd = C.NEEDLES[d.needle] || C.NEEDLES.sharps, ready = pl.sp >= 1;
@@ -632,11 +689,12 @@
     }
     powerups(want) {
       const box = this.el.mfx, have = this.h.pw, keep = {};
+      flag(box, 'many', want.length > 8);   // wide screens: past eight running at once, the badges drop their names so the item slots stay on screen
       for (const [k, secs, n] of want) {
         keep[k] = 1; let w = have[k];
         const max = this.fxMax[k] = Math.max(this.fxMax[k] || 0, secs || 0);
         if (!w) {
-          const el = document.createElement('span'); el.className = 'pw'; el.setAttribute('role', 'img'); el.style.setProperty('--c', pwCol(k));
+          const el = document.createElement('span'); el.className = isUp(k) ? 'pw up' : 'pw'; el.setAttribute('role', 'img'); el.style.setProperty('--c', pwCol(k));
           el.innerHTML = `${pwIcon(k, 20)}<span class="pn" aria-hidden="true">${esc(pwName(k))}</span><b class="ps mono" aria-hidden="true"></b><em class="mono" aria-hidden="true"></em><i class="pt" aria-hidden="true"><i></i></i>`;
           box.appendChild(el); w = have[k] = { el, ps: el.querySelector('.ps'), em: el.querySelector('em'), fill: el.querySelector('.pt i') };
           if (!calm()) el.animate([{ transform: 'scale(.4)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 220, easing: 'cubic-bezier(.2,1.5,.4,1)' });

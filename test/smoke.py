@@ -1,10 +1,12 @@
 """Headless Chrome smoke test of the interface and the Night's flow (Three.js stubbed: nothing is drawn).
 Run: python3 test/smoke.py   (needs playwright + a Chrome at /usr/bin/google-chrome)"""
-import json, subprocess, sys, time, os
+import json, subprocess, sys, time, os, socket
 from playwright.sync_api import sync_playwright
 root = os.path.join(os.path.dirname(__file__), '..')
 target = sys.argv[1] if len(sys.argv) > 1 else 'index.html'
-srv = subprocess.Popen([sys.executable, '-m', 'http.server', '8765', '--bind', '127.0.0.1'], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+# a free port of our own: other test runs share this machine, and a clash would load their server's pages
+_s = socket.socket(); _s.bind(('127.0.0.1', 0)); PORT = _s.getsockname()[1]; _s.close()
+srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(PORT), '--bind', '127.0.0.1'], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errors = []
 try:
     with sync_playwright() as pw:
@@ -15,7 +17,7 @@ try:
             pg.on('console', lambda m: errors.append('console: ' + m.text) if m.type == 'error' and 'ERR_' not in m.text and 'Failed to load resource' not in m.text else None)
             pg.route('**/*', lambda r: r.continue_() if '127.0.0.1' in r.request.url else r.abort())
             pg.add_init_script(path=os.path.join(root, 'test', 'three-stub.js'))
-            pg.goto('http://127.0.0.1:8765/' + target); pg.wait_for_selector('.wordmark')
+            pg.goto(f'http://127.0.0.1:{PORT}/' + target); pg.wait_for_selector('.wordmark')
             pg.screenshot(path=f'/tmp/st-{name}-title.png')
             pg.click('text=Play'); pg.wait_for_selector('.pockets'); pg.screenshot(path=f'/tmp/st-{name}-pockets.png')
             assert pg.locator('.pcard.empty').count() == 3, 'three empty pockets'
@@ -25,19 +27,31 @@ try:
             pg.evaluate("""() => { const g = ST.game, p = g.profile; p.dust = 90000; p.silk = 9000; Object.keys(ST.content.CHARTS).forEach(k => p.charts[k] = true); g.saved(); }""")
             pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem'); pg.screenshot(path=f'/tmp/st-{name}-hem.png')
             for tab in ['Upgrades', 'Items', 'Ships', 'Perks', 'Collection', 'Weapons']:
-                pg.click(f'.tabb:has-text("{tab}")')
+                pg.click(f'.tabs .tabb:has-text("{tab}")')
+                if tab == 'Perks': pg.click('.pseg .tabb:has-text("Perks")')
                 for i in range(pg.locator('.list .card, .node').count()):
                     pg.locator('.list .card, .node').nth(i).click()
                     while pg.locator('.detail .btn.primary:not([disabled])').count():
                         before = pg.evaluate('JSON.stringify(ST.game.profile)')
                         pg.locator('.detail .btn.primary').first.click()
                         if pg.evaluate('JSON.stringify(ST.game.profile)') == before: break
-                if tab == 'Perks': pg.screenshot(path=f'/tmp/st-{name}-pattern.png')
+                if tab == 'Perks':
+                    pg.screenshot(path=f'/tmp/st-{name}-pattern.png')
+                    # the second view of the Perks tab: power-up upgrades, bought row by row (a row opens after two from the one before)
+                    pg.click('.pseg .tabb:has-text("Power-ups")'); pg.wait_for_selector('.utile')
+                    assert pg.locator('.utile').count() == 11, 'eleven power-up upgrades'
+                    for _ in range(3):
+                        for i in range(pg.locator('.utile').count()):
+                            pg.locator('.utile').nth(i).click()
+                            if pg.locator('.detail .btn.primary:not([disabled])').count(): pg.locator('.detail .btn.primary').first.click()
+                    pg.screenshot(path=f'/tmp/st-{name}-powerups.png')
+                    assert pg.locator('.utile.own').count() == 11, 'every power-up upgrade bought'
             prof = pg.evaluate('ST.game.profile')
             assert len(prof['needles']) == 9, 'ships bought'
             assert len(prof['pattern']) == 15 and prof['tempers'] == {'point': 5, 'eye': 5, 'ply': 3, 'pace': 3, 'magnet': 3, 'luck': 3}, 'perks + upgrades'
             assert all(v == 3 for v in prof['threads'].values()) and len(prof['threads']) == 8, 'weapons'
             assert len(prof['tray']) == 3, 'tray'
+            assert sorted(prof['charmUps']) == sorted(pg.evaluate('Object.keys(ST.content.CHARMS)')), 'power-up upgrades saved on the profile'
             pg.click('.hem >> text=Start run'); pg.wait_for_selector('[data-act=fly]:visible'); pg.screenshot(path=f'/tmp/st-{name}-route1.png')
             pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
             # a bot: fly under the moths, never get hurt, use real keys now and then
@@ -64,7 +78,7 @@ try:
                     pg.click('[data-act=continue]')
                 elif st == 'hem':
                     if stages >= 40: break
-                    labels = pg.locator('.tabb b').all_inner_texts()
+                    labels = pg.locator('.tabs .tabb b').all_inner_texts()
                     assert labels == ['Weapons', 'Upgrades', 'Items', 'Ships', 'Perks', 'Collection'], f'all six hideout tabs mid-run: {labels}'
                     assert pg.evaluate("[...document.querySelectorAll('.tabb')].every(t => { const r = t.getBoundingClientRect(), h = document.querySelector('.hem').getBoundingClientRect(); return r.left >= h.left && r.right <= h.right + 1; })"), 'every tab is inside the panel'
                     pg.click('text=Continue run')

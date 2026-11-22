@@ -39,13 +39,13 @@
       buy:    ['buy.mp3',    'Wooden drawer sliding shut with a brass latch click and a soft coin jingle, 0.6 seconds'],
       keeper: ['bossdown.mp3','Large tapestry tearing apart, heavy cloth collapsing, then a triumphant plucked chord, 2.5 seconds'],
       lance:  ['laser.mp3',  'Metal wire drawn taut and released, bright zinging whip, 0.5 seconds'],
-      burst:  ['bomb.mp3',   'Muffled pop of a stuffed cushion bursting, soft debris, 0.6 seconds'],
+      burst:  ['bomb.mp3',   'Arcade game bomb explosion: a compact deep boom with a sharp crack at the start, followed by a quick spray of small debris and snapping threads, powerful and satisfying, tight tail, 0.9 seconds'],
       phase:  ['bossphase.mp3','Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds'],
       // weapons: one voice each (the bobbin plays the same sound quieter and higher)
-      fire_backstitch:  ['fire_double.mp3', 'Two quick soft plucks of taut cotton thread one right after the other, dry, close, 0.25 seconds', 0.22, 'fire'],
+      fire_backstitch:  ['fire_double.mp3', 'Arcade game shot: two tight crisp string snaps in very quick succession, like a taut bowstring double-twang, bright sharp attack, the second slightly higher in pitch, punchy and dry, no reverb, 0.3 seconds', 0.22, 'fire'],
       fire_chain:       ['fire_chain.mp3',  'Short bright metallic chain-link jingle with a light zip, like a tiny chain flicked, dry, 0.3 seconds', 0.25, 'fire'],
       fire_herringbone: ['fire_spread.mp3', 'Soft fabric fan snapping open with a breathy spray of thread, wide and airy, dry, 0.3 seconds', 0.25, 'fire'],
-      fire_knot:        ['fire_knot.mp3',   'Low rubbery thunk of a heavy yarn ball launched from a sling, dull and round, 0.35 seconds', 0.4, 'fire'],
+      fire_knot:        ['fire_knot.mp3',   'Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds', 0.4, 'fire'],
       fire_cross:       ['fire_cross.mp3',  'Two crossing thread whips, a quick sharp X shaped swish, crisp, dry, 0.25 seconds', 0.25, 'fire'],
       fire_satin:       ['fire_satin.mp3',  'Very short silky tick, a smooth light thread flick for rapid fire, soft and high, 0.08 seconds', 0.14, 'fire'],
       charge:           ['laser_charge.mp3','A metal wire being wound tighter, rising pitch creak and hum building tension, 0.8 seconds', 0.3, null],
@@ -104,6 +104,22 @@
       emp_cocoon:  ['emp_cocoon.mp3',  'Something being wrapped tight in silk, three quick winding swishes and a muffled squeeze, 0.7 seconds', 0.7, 'hurt'],
       emp_fall:    ['emp_fall.mp3',    'A taut silk line snipped and a large body dropping onto cloth, sharp snip, a short fall and a soft heavy thud, 0.8 seconds', 0.8, 'burst'],
       in_king:     ['in_king.mp3',     'A thousand moths pouring in from every side, a rising storm of fluttering wings swirling into a vortex, the light dimming with a deep organ-like drone, four golden crown pieces locking into place each with a bright metallic strike, then a final thunderous chord, 6 seconds', 1, 'phase'],
+      ins_lappet: ['ins_lappet.mp3', 'The last 1.7 seconds of in_lappet.mp3 with a short fade in: the sting for the Great Lappet when its entrance has been seen before', 0.9, 'phase'],
+      ins_tinea: ['ins_tinea.mp3', 'The last 1.7 seconds of in_tinea.mp3 with a short fade in: the sting for the Mother Tinea when its entrance has been seen before', 0.9, 'phase'],
+      ins_wick: ['ins_wick.mp3', 'The last 1.7 seconds of in_wick.mp3 with a short fade in: the sting for the Great Wick when its entrance has been seen before', 0.9, 'phase'],
+      ins_atlas: ['ins_atlas.mp3', 'The last 1.7 seconds of in_atlas.mp3 with a short fade in: the sting for the Atlas when its entrance has been seen before', 0.9, 'phase'],
+      ins_unraveller: ['ins_unraveller.mp3', 'The last 1.7 seconds of in_unraveller.mp3 with a short fade in: the sting for the Unraveller when its entrance has been seen before', 0.9, 'phase'],
+      ins_beetle: ['ins_beetle.mp3', 'The last 1.7 seconds of in_beetle.mp3 with a short fade in: the sting for the Carpet Beetle when its entrance has been seen before', 0.9, 'phase'],
+      ins_empress: ['ins_empress.mp3', 'The last 1.7 seconds of in_empress.mp3 with a short fade in: the sting for the Silk Empress when its entrance has been seen before', 0.9, 'phase'],
+      ins_king: ['ins_king.mp3', 'The last 1.7 seconds of in_king.mp3 with a short fade in: the sting for the Moth King when its entrance has been seen before', 0.9, 'phase'],
+      out_lappet: ['out_lappet.mp3', 'A dry crack and papery crinkle as a large dead leaf stiffens, then a gust of wind peels dry leaves away with a rustle, a second stronger gust scatters the rest, the wind dies away to a breath, cinematic, 3.6 seconds', 1, 'keeper'],
+      out_tinea: ['out_tinea.mp3', 'A soft fabric thump, then tiny fabric-tearing nibbling ticks that speed up faster and faster for two seconds, then a muffled cloth sagging flat with a sigh, and finally one small moth fluttering up and away, cinematic, 3.8 seconds', 1, 'keeper'],
+      out_wick: ['out_wick.mp3', 'A large flame sputtering and guttering out with three small snuffing puffs and a final hiss of smoke in the first 1.3 seconds, one second of near silence, then three heavy electrical switch clunks one after another as big lights come back on, cinematic, 4 seconds', 1, 'keeper'],
+      out_atlas: ['out_atlas.mp3', 'An unstable wavering searchlight hum that locks into a held tone, then two slow heavy deep soft thuds like giant eyelids closing with the hum cutting out on the second, then a long dusty shimmering exhale as something huge crumbles to dust and drifts away, cinematic, 3.8 seconds', 1, 'keeper'],
+      out_unraveller: ['out_unraveller.mp3', 'A choked gulp, a scissor snip, then a long steady zipping of knitting being unravelled row by row with soft wooden loom shuttle clacks underneath for two and a half seconds, a final sharp thread pluck, then a small bright chime glint, cinematic, 4.4 seconds', 1, 'keeper'],
+      out_beetle: ['out_beetle.mp3', 'A hard shell scraping as a heavy armoured beetle flips onto its back, then a bouncing series of hard shell cracks with short thuds that come quicker and quicker like a dropped ball settling, ending in one biggest crack with a heavy thud and settling dust, cinematic, 3.6 seconds', 1, 'keeper'],
+      out_empress: ['out_empress.mp3', 'A spinning wheel whirring faster and faster with a rising silk whine for under two seconds, stopping dead with a taut string twang, a small silk snap, then a slow creaking rope hauling something heavy upward with a rising whoosh and a few delicate water drops at the end, cinematic, 4.2 seconds', 1, 'keeper'],
+      out_king: ['out_king.mp3', 'A deep slow-motion impact with time stretching, a falling crystalline shimmer, a clear glass jewel clink on a hard floor with two tiny bounces, a beat of silence, then an explosive burst of hundreds of moth wings fluttering away into the distance while a long warm orchestral dawn chord swells and resolves with a soft sparkle, epic and cinematic, 6.2 seconds', 1, 'keeper'],
       king_swarm:  ['king_swarm.mp3',  'A body bursting apart into a cloud of moths, an explosion of hundreds of fluttering wings scattering, 0.9 seconds', 0.75, 'phase'],
       king_eclipse:['king_eclipse.mp3','The lights going out: a deep descending drone as a shadow passes over, with a faint cold shimmer left behind, 1.5 seconds', 0.8, 'phase'],
       king_jewel:  ['king_jewel.mp3',  'A crown jewel shattering, bright crystalline crack with glittering fragments, 0.5 seconds', 0.75, 'silk'],
@@ -126,7 +142,7 @@
   };
   /* Playback uses plain <audio> elements, not fetch + decode: fetch is blocked when index.html is opened
      straight from disk (file://), and elements work there and on a server alike. */
-  const audio = { el: {}, ok: {}, pool: {}, turn: {}, last: {}, tried: false, track: null, cur: null, old: null, duck: 0 };
+  const audio = { el: {}, ok: {}, pool: {}, turn: {}, last: {}, buf: {}, decoding: false, tried: false, track: null, cur: null, old: null, duck: 0 };
   function loadAudio() {
     if (audio.tried || typeof Audio === 'undefined') return; audio.tried = true;
     const all = Object.assign({}, AUDIO.sfx); for (const k in AUDIO.music) all['music:' + k] = AUDIO.music[k];
@@ -137,11 +153,27 @@
       a.src = 'audio/' + all[k][0]; audio.el[k] = a; audio.pool[k] = [a]; audio.turn[k] = 0;
     }
   }
+  /* Effects are also decoded into memory where the page is served (the phone app, a web server): playing a decoded buffer costs
+     far less than starting an <audio> element, which matters with two weapons firing all the time. Opened from disk, fetch is
+     blocked, nothing is decoded, and the elements below are used as before. */
+  function decodeAudio() {
+    if (!ac || audio.decoding || typeof fetch === 'undefined' || !/^https?:$/.test(location.protocol)) return; audio.decoding = true;
+    const keys = Object.keys(AUDIO.sfx); let i = 0;
+    const next = () => { if (i >= keys.length) return; const k = keys[i++];
+      fetch('audio/' + AUDIO.sfx[k][0]).then(r => r.ok ? r.arrayBuffer() : Promise.reject()).then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no))).then(buf => { audio.buf[k] = buf; }).catch(() => { /* the element is still there */ }).then(next); };
+    next(); next(); next();
+  }
   function playSample(k, vol, rate) {
+    const buf = audio.buf[k];
+    if (buf && ac && ac.state === 'running') {
+      const src = ac.createBufferSource(), g = ac.createGain(); src.buffer = buf; if (rate && rate !== 1) src.playbackRate.value = rate;
+      g.gain.value = Math.max(0, Math.min(1, vol)); src.connect(g); g.connect(ac.destination); src.start(); return src;
+    }
     const pool = audio.pool[k]; let a = pool.find(x => x.paused || x.ended);
     if (!a) { if (pool.length < 4) { a = audio.el[k].cloneNode(); pool.push(a); } else a = pool[audio.turn[k]++ % pool.length]; }
     a.volume = Math.max(0, Math.min(1, vol)); try { a.currentTime = 0; if (rate && rate !== 1) { a.preservesPitch = false; a.playbackRate = rate; } else if (a.playbackRate !== 1) a.playbackRate = 1; } catch (e) { /* not seekable yet */ }
     const p = a.play(); if (p && p.catch) p.catch(() => { /* no user gesture yet */ });
+    return a;
   }
   /* Music never cuts: the new track fades in while the old one fades out, and both follow audio.level (volume setting, ducking, pause). */
   function playMusic(name) {
@@ -171,6 +203,8 @@
     'king:swarm': 'king_swarm', 'king:reform': 'atl_open', 'king:eclipse': 'king_eclipse', 'king:jewel': 'king_jewel', 'king:wrongjewel': 'deflect', 'king:crown': 'sp_ready', 'king:pair': 'xstitch', 'king:fail': 'atl_spotted', 'king:pass': 'charm', 'king:laststand': 'unr_unravel',
     stun: 'boss_stun'
   };
+  const SHORT_SFX = { greatlappet: 'ins_lappet', tinea: 'ins_tinea', greatwick: 'ins_wick', atlas: 'ins_atlas', unraveller: 'ins_unraveller', beetle: 'ins_beetle', empress: 'ins_empress', king: 'ins_king' };
+  const DEATH_SFX = { greatlappet: 'out_lappet', tinea: 'out_tinea', greatwick: 'out_wick', atlas: 'out_atlas', unraveller: 'out_unraveller', beetle: 'out_beetle', empress: 'out_empress', king: 'out_king' };
   const FILM_SFX = { greatlappet: 'in_lappet', tinea: 'in_tinea', greatwick: 'in_wick', atlas: 'in_atlas', unraveller: 'in_unraveller', beetle: 'in_beetle', empress: 'in_empress', king: 'in_king' };
   const GAP = { graze: 90, xstitch: 280, deflect: 120, armour: 70, tcut: 180, hit: 40, dust: 35, kill: 30, ui_tap: 60 };   // least milliseconds between two plays of one sound
   ST.audioState = audio;
@@ -194,6 +228,10 @@
       requestAnimationFrame(t => this.loop(t));
     }
     /* Play a sound by name. gain scales it, rate re-pitches it. A sound whose file is missing plays its stand-in; unknown names are silent. */
+    hush() {   // a skipped film takes its sound with it
+      const a = this.filmSnd; this.filmSnd = null; if (!a) return;
+      try { if (a.stop) a.stop(); else if (a.pause) a.pause(); } catch (e) { /* already ended */ }
+    }
     sfx(name, gain, rate) {
       const st = this.profile.settings; if (!st.sound) return;
       const v = (st.sfxVol === undefined ? 0.8 : st.sfxVol) / 0.8; if (v <= 0) return;
@@ -201,7 +239,7 @@
       if (!audio.ok[k] && def && def[3]) k = def[3];
       const now = performance.now(), gap = GAP[name] || 25; if (now - (audio.last[name] || 0) < gap) return; audio.last[name] = now;
       const base = def && def[2] ? def[2] : name === 'fire' ? 0.22 : name === 'dust' ? 0.35 : 0.6;
-      if (audio.ok[k]) playSample(k, base * (gain || 1) * v, rate); else if (SOUNDS[k] && v > 0) SOUNDS[k]();
+      if (audio.ok[k] || audio.buf[k]) return playSample(k, base * (gain || 1) * v, rate); else if (SOUNDS[k] && v > 0) SOUNDS[k]();
     }
     /* The first-run lesson. Each step shows one prompt and moves on when the player has done it (or after a while, so nobody gets stuck). */
     teach(sim) {
@@ -288,14 +326,14 @@
 
     // ---------- input ----------
     bind() {
-      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); };
+      const wake = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } else if (ac.state === 'suspended') ac.resume(); decodeAudio(); };
       window.addEventListener('keydown', e => {
         wake();
         if (this.state !== 'flight' && this.state !== 'paused') return;
         const k = e.code;
         if (k === 'Escape' || k === 'KeyP') { if (this.state === 'flight') this.pause(); else this.resume(); e.preventDefault(); return; }
         if (this.state !== 'flight') return;
-        if (this.renderer.cine && this.renderer.cine.active) { if (!e.repeat) this.renderer.cine.skip(); e.preventDefault(); return; }
+        if (this.renderer.cine && this.renderer.cine.active) { if (!e.repeat) { this.renderer.cine.skip(); this.hush(); } e.preventDefault(); return; }
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].indexOf(k) >= 0) e.preventDefault();
         if (!e.repeat) {
           const now = performance.now(), dir = (k === 'ArrowLeft' || k === 'KeyA') ? -1 : (k === 'ArrowRight' || k === 'KeyD') ? 1 : 0;
@@ -317,7 +355,7 @@
       const flick = (p, e, now) => { const dx = e.clientX - p.x0, dy = e.clientY - p.y0; return now - p.t0 < 230 && Math.abs(dx) > 30 && Math.abs(dx) > 1.5 * Math.abs(dy) ? Math.sign(dx) : 0; };
       st.addEventListener('pointerdown', e => {
         wake(); if (this.state !== 'flight' || !this.sim || (e.target.closest && e.target.closest('button'))) return;
-        if (this.renderer.cine && this.renderer.cine.active) { this.renderer.cine.skip(); e.preventDefault(); return; }
+        if (this.renderer.cine && this.renderer.cine.active) { this.renderer.cine.skip(); this.hush(); e.preventDefault(); return; }
         const now = performance.now(); this.touch = e.pointerType !== 'mouse';
         if (this.steer && this.steer.id !== e.pointerId) { this.tap2 = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: now }; e.preventDefault(); return; }
         const pl = this.sim.player;
@@ -412,7 +450,7 @@
             const id = e.keeper ? C.PANELS[sim.panel].keeper : null, film = id && r.cine && ST.bossScripts && ST.bossScripts[id];
             if (film) {   // the boss's entrance film carries its name; a shorter cut once you have seen it
               const seen = this.profile.codex.cine || (this.profile.codex.cine = {});
-              r.cine.play(id, { short: !!seen[id] }); this.sfx(seen[id] ? 'phase' : FILM_SFX[id]); seen[id] = true; this.saved();
+              r.cine.play(id, { short: !!seen[id] }); this.filmSnd = this.sfx(seen[id] ? SHORT_SFX[id] : FILM_SFX[id]); seen[id] = true; this.saved();
             } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); }
             this.hudNow = true; break; }
           case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, b ? 1.3 : 1); } break; }
@@ -427,7 +465,7 @@
           case 'kill': this.sfx('kill'); if (e.mult > 1 || e.pts >= 200) ui.floater(r.project(e.x, e.y), '+' + e.pts, e.mult > 1 ? 'hot' : ''); break;
           case 'dust': this.sfx('dust'); break;
           case 'silk': this.sfx('silk'); ui.floater(r.project(sim.player.x, 2.6), '+' + e.v + (e.v === 1 ? ' gem' : ' gems'), 'silk'); break;
-          case 'charm': this.sfx('charm'); ui.toast(e.name, e.desc); break;
+          case 'charm': this.sfx('charm', e.up ? 1.15 : 1, e.up ? 1.2 : 1); if (e.up) this.buzz(20); ui.toast(e.name, e.desc); break;
           case 'chart': this.sfx('chart'); ui.toast('Blueprint found', 'Unlocks ' + e.unseals + ' in the hideout'); break;
           case 'packet': this.sfx('charm'); ui.toast('Item found', e.name); break;
           case 'notion': this.sfx('buy'); ui.toast(e.name, C.NOTIONS[e.id].desc); break;
@@ -440,7 +478,11 @@
           case 'lastknot': this.sfx('chart'); ui.banner('Second Chance', 'You survive with 1 shield', 1500); break;
           case 'snap': this.sfx('snap'); break;
           case 'phase': this.sfx('phase'); ui.banner(e.tag, e.name + ' · Phase ' + e.phase, 1500); break;
-          case 'keeperdown': this.sfx('keeper'); this.buzz([40, 60, 140]); this.duck(2.5); ui.banner(e.name, 'Boss defeated', 2000); break;
+          case 'keeperdown': {   // each boss has its own death film, which carries its own closing card; without one, the plain banner
+            const id = e.id || C.PANELS[sim.panel].keeper;
+            if (r.cine && r.cine.has && r.cine.has(id, 'death')) { r.cine.play(id, { kind: 'death' }); this.filmSnd = this.sfx(DEATH_SFX[id]); this.duck(4); }
+            else { this.sfx('keeper'); this.duck(2.5); ui.banner(e.name, 'Boss defeated', 2000); }
+            this.buzz([40, 60, 140]); break; }
           case 'lance': this.sfx('lance'); break;
           case 'special': if (this.tutor) this.tutor.special = true; this.sfx('sp_' + e.id); this.buzz(30); this.duck(1.2); ui.banner(e.name, 'Special', 900); break;
           case 'patch': this.sfx('patch'); this.buzz(15); break;

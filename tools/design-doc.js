@@ -21,7 +21,7 @@ ${C.SAMPLER.count} moths fly a set pattern and never shoot. Each is worth ${C.SA
 
 ## Money
 - **Coins**: dropped by destroyed enemies, multiplied by your combo. Buy weapons, weapon levels, upgrades and items. Kept after game over.
-- **Gems**: from Spinners (1), bosses (${Object.values(C.KEEPERS).map(k => k.silk).join(', ')}), every stage cleared (${C.TUNING.panelSilk}) and perfect bonus waves. Buy ships and perks.
+- **Gems**: from Spinners (1), bosses (${Object.values(C.KEEPERS).map(k => k.silk).join(', ')}), every stage cleared (${C.TUNING.panelSilk}) and perfect bonus waves. Buy ships, perks and power-up upgrades.
 - **Combo**: every ${C.TUNING.comboStep} kills without a ${C.TUNING.comboWindow}s gap adds x0.5, up to x${C.TUNING.comboMax}. Score takes the full multiplier, coins a quarter of the bonus. Taking a hit resets it.
 - **Bonuses**: no-damage wave ${C.TUNING.cleanRowDust} coins x stage number, doubled on a boss; best combo of 12 or more pays the combo count in coins.
 
@@ -46,7 +46,9 @@ ${t(['Item', 'Price', 'Effect', 'Needs blueprint'], Object.values(C.NOTIONS).map
 A quick shop opens after every wave with three items: buy one, or keep your coins. Destroyed Lappets sometimes drop a random item.
 
 ## Power-ups (temporary, dropped by destroyed enemies, ${Math.round(C.TUNING.charmChance * 100)}% chance)
-${t(['Power-up', 'Lasts', 'Effect'], Object.values(C.CHARMS).map(c => [c.name, c.dur ? c.dur + ' s' : 'instant', c.desc]))}
+${t(['Power-up', 'Lasts', 'Effect', 'Upgraded form (bought with gems, permanent)', 'Row', 'Gems', 'Upgraded effect'], Object.values(C.CHARMS).map(c => [c.name, c.dur ? c.dur + ' s' : 'instant', c.desc].concat(c.up ? [c.up.name, c.up.tier + 1, c.up.cost, c.up.desc] : ['', '', '', ''])))}
+
+Upgrades are on the Perks tab of the hideout. Row 1 is open from the start; each later row opens once any two from the row before are owned.
 ## Perks (gems, permanent; each row unlocks left to right)
 ${t(['Row', 'Perk', 'Gems', 'Effect'], C.PATTERN.rows.flatMap(r => r.nodes.map(id => [r.name, C.PATTERN.nodes[id].name, C.PATTERN.nodes[id].cost, C.PATTERN.nodes[id].desc])))}
 ## Blueprints

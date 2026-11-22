@@ -13,7 +13,7 @@
   const hyp = (x, y) => Math.sqrt(x * x + y * y);   // (Math.hypot is slow and boxes its arguments)
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
-  const EMPTY = [], NODATA = Object.freeze({});
+  const EMPTY = [], NODATA = Object.freeze({}), NOARENA = Object.freeze({ floor: 0, inset: 0 });
   /* How far a ray from (x, y) at angle a runs before it leaves the cloth (capped at L): cones and their stitched edges stop at the frame. */
   const clipRay = (x, y, a, L) => {
     const dx = Math.cos(a), dy = Math.sin(a); let t = L;
@@ -434,7 +434,10 @@
 
   // ---------- the lost arena: unravelled cloth the ship cannot cross ----------
   P.bfArena = function (sim, dt, fdt) {
-    const bf = this.bf, K = bf.K, a = sim.arena || { floor: 0, inset: 0 }, f = Math.max(0, a.floor || 0), ins = Math.max(0, a.inset || 0);
+    /* A death film that re-weaves the lost cloth (cine.arena) drives the edges itself, with no easing and no tearing effects. */
+    const ov = this.cine && this.cine.active ? this.cine.arena : null;
+    const bf = this.bf, K = bf.K, a = ov || sim.arena || NOARENA, f = Math.max(0, a.floor || 0), ins = Math.max(0, a.inset || 0);
+    if (ov) { bf.floorV = bf.floorFx = f; bf.insetV = bf.insetFx = ins; }
     bf.floorV += (f - bf.floorV) * Math.min(1, dt * 5); bf.insetV += (ins - bf.insetV) * Math.min(1, dt * 5);
     if (Math.abs(f - bf.floorV) < 0.002) bf.floorV = f; if (Math.abs(ins - bf.insetV) < 0.002) bf.insetV = ins;
     const fv = bf.floorV, iv = bf.insetV;
@@ -1157,5 +1160,82 @@
     this.needleMat.emissive.r += 0.28 * d; this.needleMat.emissive.g += 0.3 * d; this.needleMat.emissive.b += 0.36 * d;
     this.bfLamp(pl.x, pl.y + 0.3, 2.8, K.steel, 0.4 * d);
     const bm = this.bobMesh; if (bm) for (let i = 0; i < bm.length; i++) if (bm[i].visible) this.spr.add(bm[i].position.x, bm[i].position.y, 0.9, 0.9, K.brassHi, 0.5 * d, 0);
+  };
+
+  // ---------- death films: the order a boss comes apart in ----------
+  /* The boss material discards every stitch whose aCell is below uDissolve. The chart's own aCell runs from the edge in; a death
+     film can ask for another order. That costs one Float32 attribute per chart part, built once per boss and kind and cached:
+     the new geometry shares the chart's position, normal and colour buffers, so nothing is re-uploaded but the order itself.
+     Each order function gets a stitch's centre (x, y in chart units), the chart's measures m and a per-stitch hash h. */
+  const HOLES = [-0.5, 0.3, 0, 0.42, -0.2, 0.1, 0.05, 0.55, 0.2, -0.25, -0.5, 0.28, 0.72, 0.42, 0.35, -0.75, -0.08, 0.42, 0.3, 0.12, 0.5, -0.05, -0.05, 0.56, 0.6, -0.62, 0.6];
+  const PLATES = [-0.78, 0.4, 0.8, -0.42, -0.72, -0.5, 0.76, 0.45, -0.28, -0.72, 0.3, -0.7, 0, 0.12, 0, 0.82];   // shell plates, outer first, the head last
+  const ORDERS = {
+    edge: (x, y, m, h, c) => c.o,                                                    // the chart's own order: from the edge in
+    wind: (x, y, m, h) => (x + m.hx) / (2 * m.hx) + h * 0.16,                         // peeled away from the left, as the wind takes it
+    holes(x, y, m, h) { const u = x / m.hx, v = y / m.hy; let best = 9;               // moth-eaten: holes that start one after another and widen
+      for (let k = 0; k < HOLES.length; k += 3) { const dx = u - HOLES[k], dy = v - HOLES[k + 1], d = HOLES[k + 2] + Math.sqrt(dx * dx + dy * dy) * 0.75; if (d < best) best = d; }
+      return best + h * 0.05; },
+    melt: (x, y, m, h, c, col) => (m.hy - y) / (2 * m.hy) + hash(col * 3.3 + 1) * 0.22, // wax: from the top down, each column dripping at its own pace
+    eyes(x, y, m, h) { const e = m.eyes; let best = 99;                               // from the eyespots outward
+      for (let k = 0; k < e.length; k += 2) { const dx = x - e[k], dy = y - e[k + 1], d = dx * dx + dy * dy; if (d < best) best = d; }
+      return Math.sqrt(best) + h * m.cell * 1.4; },
+    rows: (x, y, m, h, c, col, row) => row + ((row & 1) ? 1 - col / Math.max(1, m.w - 1) : col / Math.max(1, m.w - 1)) * 0.94,   // one row at a time from the bottom, back and forth
+    plates(x, y, m, h) { const u = x / m.hx, v = y / m.hy; let best = 99, rank = 0;  // plate by plate
+      for (let k = 0; k < PLATES.length; k += 2) { const dx = u - PLATES[k], dy = v - PLATES[k + 1], d = dx * dx + dy * dy; if (d < best) { best = d; rank = k / 2; } }
+      return rank + 0.3 + h * 0.4; },
+    burst(x, y, m, h) { const dy = y - m.hy * 0.25; return Math.sqrt(x * x + dy * dy) / Math.max(m.hx, m.hy) + h * 0.25; }   // out from the heart, fast
+  };
+  function orderOf(d, x, y, cellO) {
+    const m = d.m, col = Math.round(x / m.cell + m.cmid), row = Math.round(y / m.cell + m.rmid), h = hash(col * 31.7 + row * 7.13);
+    return ORDERS[d.kind](x, y, m, h, cellO, col, row);
+  }
+  /* Order data for one boss and kind: its stitches, each one's order 0..1, and the stitches sorted by it (for what flies off). */
+  P.bfOrderData = function (id, kind) {
+    const def = C.KEEPERS[id], key = def.sprite + ':' + def.cell + ':' + kind, cache = this.ordCache || (this.ordCache = {});
+    let d = cache[key]; if (d) return d;
+    const sp = C.SPRITES[def.sprite], cell = def.cell, cells = this.cells(def.sprite, cell), n = cells.length;
+    const m = { cell, w: sp.w, h: sp.h, cmid: (sp.w - 1) / 2, rmid: (sp.h - 1) / 2, hx: Math.max(cell, (sp.w - 1) / 2 * cell), hy: Math.max(cell, (sp.h - 1) / 2 * cell), eyes: null };
+    if (kind === 'eyes') {   // the eyespots: the glare stitches either side of the body
+      let lx = 0, ly = 0, ln = 0, rx = 0, ry = 0, rn = 0; const g = this.lc(PAL.glare);
+      for (const c of cells) if (c.rgb === g && Math.abs(c.x) > cell * 2) { if (c.x < 0) { lx += c.x; ly += c.y; ln++; } else { rx += c.x; ry += c.y; rn++; } }
+      m.eyes = ln && rn ? [lx / ln, ly / ln, rx / rn, ry / rn] : [-m.hx * 0.55, m.hy * 0.1, m.hx * 0.55, m.hy * 0.1];
+    }
+    d = { kind, m, cells, n, ord: new Float32Array(n), idx: new Uint16Array(n), lo: 0, span: 1, geos: {} };
+    let lo = 1e9, hi = -1e9;
+    for (let i = 0; i < n; i++) { const c = cells[i], v = orderOf(d, c.x, c.y, c); d.ord[i] = v; if (v < lo) lo = v; if (v > hi) hi = v; }
+    d.lo = lo; d.span = Math.max(1e-6, hi - lo);
+    for (let i = 0; i < n; i++) d.ord[i] = 0.005 + 0.99 * (d.ord[i] - lo) / d.span;
+    const ix = []; for (let i = 0; i < n; i++) ix.push(i); ix.sort((a, b) => d.ord[a] - d.ord[b]); d.idx.set(ix);
+    return (cache[key] = d);
+  };
+  /* Where a raw order value lands once normalised (films use it to time a step, e.g. "plate 3 is gone"). */
+  P.bfOrderAt = function (d, raw) { return 0.005 + 0.99 * (raw - d.lo) / d.span; };
+  /* Put a boss group's chart meshes onto the order `kind`; returns the order data. bfUnorder puts the chart's own geometry back. */
+  P.bfOrdered = function (g, kind) {
+    const u = g.userData, d = this.bfOrderData(u.id, kind); if (kind === 'edge') return d;
+    const T = this.T, parts = u.body.userData, cell = d.m.cell, nv = this.geo.leg ? this.geo.leg.attributes.position.count * 2 : 60;
+    for (const part of ['body', 'left', 'right']) {
+      const mesh = parts[part]; if (!mesh) continue;
+      if (!mesh.userData.g0) mesh.userData.g0 = mesh.geometry;
+      let geo = d.geos[part];
+      if (!geo) {
+        const base = mesh.userData.g0, pa = base.attributes.position, pos = pa.array, n = pa.count, a = new Float32Array(n), piv = part === 'left' ? -1.5 * cell : part === 'right' ? 1.5 * cell : 0;
+        for (let b0 = 0; b0 < n; b0 += nv) {
+          const e = Math.min(n, b0 + nv); let sx = 0, sy = 0;
+          for (let i = b0; i < e; i++) { sx += pos[i * 3]; sy += pos[i * 3 + 1]; }
+          const o = clamp(this.bfOrderAt(d, orderOf(d, sx / (e - b0) + piv, sy / (e - b0), base.attributes.aCell ? { o: base.attributes.aCell.array[b0] } : NODATA)), 0, 1);
+          for (let i = b0; i < e; i++) a[i] = o;
+        }
+        geo = d.geos[part] = new T.BufferGeometry();
+        geo.setAttribute('position', pa); geo.setAttribute('normal', base.attributes.normal); geo.setAttribute('color', base.attributes.color); geo.setAttribute('aCell', new T.BufferAttribute(a, 1));
+        if (!base.boundingSphere) base.computeBoundingSphere(); geo.boundingSphere = base.boundingSphere;
+      }
+      mesh.geometry = geo;
+    }
+    return d;
+  };
+  P.bfUnorder = function (g) {
+    const parts = g && g.userData.body ? g.userData.body.userData : NODATA;
+    for (const part of ['body', 'left', 'right']) { const mesh = parts[part]; if (mesh && mesh.userData.g0) { mesh.geometry = mesh.userData.g0; mesh.userData.g0 = null; } }
   };
 })(window.ST);

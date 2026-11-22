@@ -24,9 +24,12 @@ with sync_playwright() as pw:
         pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem')
         pg.wait_for_function("ST.audioState.track === 'hideout'", timeout=8000)
         sizes = set(); scroll = pg.evaluate("document.getElementById('overlay').scrollHeight <= document.getElementById('overlay').clientHeight")
+        box = "(() => { const b = document.querySelector('.hem').getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)].join(','); })()"
         for tab in ['Weapons', 'Upgrades', 'Items', 'Ships', 'Perks', 'Collection']:
-            pg.click(f'.tabb:has-text("{tab}")'); r = pg.evaluate("(() => { const b = document.querySelector('.hem').getBoundingClientRect(); return [Math.round(b.x), Math.round(b.y), Math.round(b.width), Math.round(b.height)].join(','); })()"); sizes.add(r)
+            pg.click(f'.tabs .tabb:has-text("{tab}")'); r = pg.evaluate(box); sizes.add(r)
             if tab in ('Upgrades', 'Items'): pg.screenshot(path=f'/tmp/disk-{name}-{tab.lower()}.png')
+            if tab == 'Perks':   # and its second view, the power-up upgrades
+                pg.click('.pseg .tabb:has-text("Power-ups")'); pg.wait_for_selector('.utile'); sizes.add(pg.evaluate(box)); pg.click('.pseg .tabb:has-text("Perks")')
         if len(sizes) != 1: fails.append(f'{name}: hideout panel changes size across tabs: {sizes}')
         if not scroll: fails.append(f'{name}: the page itself scrolls')
         if pg.evaluate("document.documentElement.scrollHeight > window.innerHeight + 1"): fails.append(f'{name}: document taller than the window')
