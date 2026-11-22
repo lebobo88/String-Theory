@@ -21,7 +21,7 @@
       codex: { moths: {}, keepers: {} },
       stats: { bestNight: 0, nights: 0, mended: 0, perfectSamplers: 0, longestDouble: 0 },
       run: null,                   // a run in progress (see Sim.snapshot), so closing the game does not lose it
-      settings: { sound: true, autofire: true, shadows: true, mode: 'normal' }
+      settings: { sound: true, autofire: true, shadows: true, mode: 'normal', controls: 'drag', liftSlow: true }
     };
   }
 
@@ -119,7 +119,7 @@
     },
     wind(p, id) {            // equip; the old thread hangs back on the wall, weight kept
       if (!p.threads[id] || p.thread === id) return;
-      if (p.thread2 === id) p.thread2 = p.thread;
+      if (p.thread2 === id || !p.thread2) p.thread2 = p.thread;   // the weapon you put down moves to the bobbin
       p.thread = id;
     },
     windSecond(p, id) { if (p.threads[id] && p.thread !== id) p.thread2 = id; },
@@ -148,7 +148,7 @@
       p.silk -= st.price; p.needles[id] = true; p.needle = id;
       return R(true, 'bought');
     },
-    takeUp(p, id) { if (p.needles[id]) { p.needle = id; if (id !== 'chenille') p.thread2 = null; } },
+    takeUp(p, id) { if (p.needles[id]) p.needle = id; },
     patternState(p, id) {
       if (p.pattern[id]) return R(false, 'owned');
       const row = C.PATTERN.rows.find(r => r.nodes.includes(id));
@@ -179,8 +179,10 @@
       radius: p.needle === 'sharps' ? 0.24 : 0.32,
       invuln: (p.needle === 'sharps' ? 1.7 : 1.3) * (pat.steady ? 1.5 : 1),
       magnet: C.TUNING.magnet * (pat.keen ? 1.5 : 1) * (1 + 0.35 * (t.magnet || 0)),
-      homing: p.needle === 'embroidery', drone: p.needle === 'tapestry', padded: p.needle === 'quilter',
-      dash: p.needle === 'between', wide: p.needle === 'darner', bigEye: p.needle === 'chenille',
+      homing: p.needle === 'embroidery', freeBobbin: p.needle === 'embroidery', twinBobbin: p.needle === 'tapestry', padded: p.needle === 'quilter',
+      wide: p.needle === 'darner', heavyBead: p.needle === 'beading', special: p.needle,
+      dashMax: p.needle === 'between' ? 2 : 1, dashRe: p.needle === 'between' ? 0.9 : 1.6, dashDist: p.needle === 'sail' ? 1.3 : 2.2, dashGraze: p.needle === 'between',
+      tether: C.TUNING.tether * (p.needle === 'chenille' ? 1.4 : 1), tetherCut: p.needle === 'chenille',
       palm: p.needle === 'sail', pierce: p.needle === 'beading' ? 1 : 0,
       pips: { ply: n.ply + t.ply, pace, eye, point }
     };

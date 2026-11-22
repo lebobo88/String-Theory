@@ -4,7 +4,7 @@
 (function (ST) {
   'use strict';
   const C = ST.content, T = C.TUNING;
-  const HW = T.fieldW / 2, H = T.fieldH, PY = T.playerY;
+  const HW = T.fieldW / 2, H = T.fieldH, PY = T.playerY, BOT = T.fieldBot || 0;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const ROWS_Y = [16.4, 15.2, 14.0, 12.8, 11.6];
 
@@ -33,15 +33,17 @@
       this.d = ST.derive(p);
       this.spares = T.spares + (p.pattern.sparepin ? 1 : 0);
       this.lastKnot = !!p.pattern.lastknot;
-      this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, fireT: 0, charge: 0, dashT: 0, dashCd: 0, dashDir: 0 };
-      this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0, homing: 0, drone: 0 };
+      this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, fireT: 0, charge: 0, fireT2: 0, charge2: 0, dashT: 0, dashDir: 0, dashN: this.d.dashMax, dashRe: 0,
+        bx: 0, by: PY - 0.7, whip: 0, sp: 0, focus: 1, patchT: 0, grazeN: 0, beadN: 0, ram: 0 };
+      this.focusOn = false;
+      this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0, homing: 0, drone: 0, sign: 0 };
       this.armed = { thimble: !!p.pattern.headstart, pin: false, chalk: 0 };
       this.combo = 0; this.comboT = 0; this.bestCombo = 0;
       this.phase = 'idle';
       this.clearField();
     }
     clearField() {
-      this.enemies = []; this.shots = []; this.eshots = []; this.drops = []; this.hazards = []; this.nets = [];
+      this.enemies = []; this.shots = []; this.eshots = []; this.drops = []; this.hazards = []; this.nets = []; this.zones = [];
       this.boss = null; this.sampler = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
     }
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
@@ -62,7 +64,7 @@
     hpMul() { return (1 + T.stageHp * this.panel) * this.mode.hp * (this.mods().hp || 1); }
     speedMul() { return (1 + T.stageSpeed * this.panel) * this.mode.speed; }
     shotMul() { return (1 + T.stageShot * this.panel) * this.mode.fire * (this.mods().shotSpeed || 1); }
-    get droneOn() { return this.d.drone || this.fx.drone > 0; }
+    get droneOn() { return this.fx.drone > 0; }
     rowSpec() {
       const base = C.PANELS[this.panel].rows[this.row], m = this.mods(), sp = Object.assign({}, base);
       if (m.crowd) { sp.spinners = 4; sp.mids = Math.min(10, sp.mids + 2); sp.nibs = 10; sp.diveEvery *= 0.85; }
@@ -82,7 +84,7 @@
       if (this.p.pattern.mended && this.row === 0 && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
       if (this.d.padded) this.armed.thimble = true;
       this.skipMend = false;
-      this.player.x = 0; this.player.invuln = 1.5; this.player.charge = 0;
+      { const pl = this.player; pl.x = 0; pl.y = PY; pl.bx = 0; pl.by = PY - 0.7; pl.invuln = 1.5; pl.charge = pl.charge2 = 0; pl.dashT = 0; pl.ram = 0; pl.dashN = this.d.dashMax; pl.patchT = 0; this.focusOn = false; }
       const kind = C.STAGES[this.row];
       if (kind === 'row') this.buildRow(this.rowSpec()); else if (kind === 'sampler') this.buildSampler(); else this.buildKeeper(pd.keeper);
       this.phase = 'intro'; this.phaseT = 1.8;
@@ -176,13 +178,14 @@
       if (this.phase === 'idle' || this.phase === 'done') return;
       dt = Math.min(dt, 0.05);
       this.t += dt;
-      const slow = this.fx.tangle > 0 ? 0.45 : 1;
       for (const k in this.fx) if (this.fx[k] > 0) this.fx[k] = Math.max(0, this.fx[k] - dt);
       if (this.combo > 0) { this.comboT -= dt; if (this.comboT <= 0) this.combo = 0; }
 
       if (this.phase === 'intro') { this.phaseT -= dt; if (this.phaseT <= 0) this.phase = 'play'; }
       this.updatePlayer(dt, input);
+      const slow = (this.fx.tangle > 0 ? 0.45 : 1) * (this.focusOn ? 0.35 : 1);
       this.updateShots(dt);
+      this.updateZones(dt);
       this.updateEnemies(dt * slow * this.speedMul(), dt);
       if (this.boss) this.updateBoss(dt * slow);
       this.updateEshots(dt * slow);
@@ -191,7 +194,7 @@
 
       if (this.phase === 'play') {
         const fieldEmpty = this.enemies.length === 0 && !this.boss;
-        if (fieldEmpty) { this.phase = 'clear'; this.phaseT = 1.6; this.eshots.length = 0; this.nets.length = 0; this.hazards.length = 0; }
+        if (fieldEmpty) { this.phase = 'clear'; this.phaseT = 1.6; this.eshots.length = 0; this.nets.length = 0; this.hazards.length = 0; this.zones.length = 0; }
       } else if (this.phase === 'clear') {
         this.phaseT -= dt;
         if (this.phaseT <= 0 && this.drops.length === 0) this.finishStage();
@@ -203,83 +206,124 @@
 
     // ---------- player ----------
     curThread() { return this.p.threads[this.p.thread] ? this.p.thread : 'running'; }
+    /* The bobbin's weapon: the chosen second weapon, or any other weapon you own. None until you own two. */
+    secondThread() {
+      const p = this.p, lead = this.curThread();
+      if (p.thread2 && p.thread2 !== lead && p.threads[p.thread2]) return p.thread2;
+      for (const id in p.threads) if (id !== lead && p.threads[id]) return id;
+      return null;
+    }
+    bobbins() {
+      const pl = this.player; if (!this.secondThread()) return [];
+      return this.d.twinBobbin ? [{ x: pl.bx, y: pl.by }, { x: pl.bx + 2.2, y: pl.by }] : [{ x: pl.bx, y: pl.by }];
+    }
     updatePlayer(dt, input) {
       const pl = this.player, d = this.d;
       if (this.phase === 'dying') return;
-      pl.invuln = Math.max(0, pl.invuln - dt);
-      pl.dashCd = Math.max(0, pl.dashCd - dt);
-      const thread = this.curThread();
-      const charging = thread === 'couching' && pl.charge > 0;
-      let speed = d.speed * (charging ? 0.5 : 1);
-      if (input.dash && d.dash && pl.dashCd <= 0) { pl.dashT = 0.12; pl.dashDir = input.dash; pl.dashCd = 0.7; pl.invuln = Math.max(pl.invuln, 0.2); this.emit('dash'); }
-      if (pl.dashT > 0) { pl.dashT -= dt; pl.x += pl.dashDir * (2 / 0.12) * dt; }
-      else if (input.targetX !== null && input.targetX !== undefined) {
-        const dx = input.targetX - pl.x; pl.x += clamp(dx, -speed * dt, speed * dt);
-      } else pl.x += (input.move || 0) * speed * dt;
+      pl.invuln = Math.max(0, pl.invuln - dt); pl.patchT = Math.max(0, pl.patchT - dt); pl.whip = Math.max(0, pl.whip - dt);
+      if (pl.dashN < d.dashMax) { pl.dashRe -= dt; if (pl.dashRe <= 0) { pl.dashN++; pl.dashRe = d.dashRe; } }
+      const lead = this.curThread(), second = this.secondThread();
+      const charging = lead === 'couching' && pl.charge > 0;
+      const speed = d.speed * (charging ? 0.5 : 1);
+      // lift to slow: time on the cloth runs slow while the focus spool lasts
+      const want = !!input.focus && this.phase === 'play' && !pl.ram;
+      this.focusOn = want && pl.focus > 0 && (this.focusOn || pl.focus > 0.2);
+      pl.focus = clamp(pl.focus + (this.focusOn ? -dt / T.focusLast : want ? 0 : dt / T.focusFill), 0, 1);
+
+      if (pl.ram) this.ramStep(dt, input, speed);
+      else {
+        if (input.dash && pl.dashN > 0 && pl.dashT <= 0) {
+          if (pl.dashN === d.dashMax) pl.dashRe = d.dashRe;
+          pl.dashN--; pl.dashT = 0.12; pl.dashDir = input.dash; pl.invuln = Math.max(pl.invuln, 0.24); pl.whip = 0.35; this.emit('dash', { dir: input.dash });
+        }
+        if (pl.dashT > 0) { pl.dashT -= dt; pl.x += pl.dashDir * (pl.basting ? 54 : d.dashDist / 0.12) * dt; if (pl.dashT <= 0) pl.basting = false; }
+        else {
+          if (input.targetX !== null && input.targetX !== undefined) pl.x += clamp(input.targetX - pl.x, -speed * dt, speed * dt); else pl.x += (input.move || 0) * speed * dt;
+          if (input.targetY !== null && input.targetY !== undefined) pl.y += clamp(input.targetY - pl.y, -speed * dt, speed * dt); else pl.y += (input.moveY || 0) * speed * dt;
+        }
+        pl.y = clamp(pl.y, PY, PY + T.roam);
+      }
       const lim = HW - 0.5 - (pl.dual ? 0.45 : 0);
       pl.x = clamp(pl.x, -lim, lim);
+      this.updateBobbin(dt, second);
 
-      if (input.swap && d.bigEye && this.p.thread2 && this.p.threads[this.p.thread2]) {
-        const a = this.p.thread; this.p.thread = this.p.thread2; this.p.thread2 = a; pl.charge = 0; this.emit('swap', { thread: this.p.thread });
-      }
       if (input.notion !== undefined && input.notion >= 0) this.useNotion(input.notion);
+      if (input.special && pl.sp >= 1 && this.phase === 'play' && !pl.ram) this.special();
 
-      // stitching
-      if (this.phase !== 'play') { pl.charge = 0; return; }
-      const th = C.THREADS[thread], w = this.p.threads[thread] || 1;
+      // stitching: the lead weapon from the ship, the second weapon from the bobbin, both always
+      if (this.phase !== 'play') { pl.charge = pl.charge2 = 0; return; }
       const rateMul = d.fireMul * (this.fx.beeswax > 0 ? 2 : 1) * (this.fx.bobbin > 0 ? 1.6 : 1);
-      pl.fireT -= dt;
-      if (thread === 'couching') {
-        if (input.fire && pl.fireT <= 0) {
-          pl.charge += dt * rateMul;
-          if (pl.charge >= th.rate[w - 1]) { pl.charge = 0; pl.fireT = 0.35; this.fire(thread, w); }
-        } else if (!input.fire) pl.charge = 0;
-      } else if (input.fire && pl.fireT <= 0) {
-        pl.fireT = th.rate[w - 1] / rateMul;
-        this.fire(thread, w);
+      const fy = pl.y + 0.7, fireOk = input.fire && !pl.ram;
+      this.gun('L', lead, fireOk, dt, rateMul, pl.dual ? [[pl.x - 0.45, fy], [pl.x + 0.45, fy]] : [[pl.x, fy]], 1);
+      if (second) {
+        const bs = this.bobbins(), rest = Math.hypot(pl.bx - (pl.x - (d.twinBobbin ? 1.1 : 0)), pl.by - (pl.y - 0.7)) < 0.6 || d.freeBobbin;
+        this.gun('B', second, fireOk && (second !== 'couching' || rest), dt, rateMul, bs.map(b => [b.x, b.y + 0.5]), T.bobbinDmg * (d.twinBobbin ? 0.6 : 1));
       }
     }
-    fire(thread, w) {
+    /* The bobbin trails the ship on its thread: tucked in when you hold still, swung wide when you sweep. */
+    updateBobbin(dt, second) {
       const pl = this.player, d = this.d;
-      const origins = pl.dual ? [-0.45, 0.45] : [0];
-      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0), home = d.homing || this.fx.homing > 0;
-      const extras = (d.wide ? 1 : 0) + (this.fx.fan > 0 ? 1 : 0);
-      const add = (ox, o) => this.shots.push(Object.assign({ id: this.nextId++, x: pl.x + ox, y: PY + 0.7, vx: 0, vy: 17, dmg: d.dmg, pierce: basePierce, kind: thread, hit: null, t: 0, home }, o));
+      let tx = pl.x - (d.twinBobbin ? 1.1 : 0), ty = pl.y - 0.7, lag = T.bobbinLag;
+      if (d.freeBobbin) {
+        let best = null, bd = 1e9; for (const e of this.enemies) { const dd = Math.abs(e.x - pl.x) + Math.abs(e.y - pl.y) * 0.5; if (dd < bd) { bd = dd; best = e; } }
+        tx = best ? best.x : this.boss && !this.boss.enter ? this.boss.x : pl.x; ty = pl.y + 1.4; lag = 3.5;
+      }
+      const k = 1 - Math.exp(-dt * lag);
+      pl.bx += (tx - pl.bx) * k; pl.by += (ty - pl.by) * k;
+      if (!d.freeBobbin) { const ax = pl.x - (d.twinBobbin ? 1.1 : 0), ay = pl.y - 0.7, dx = pl.bx - ax, dy = pl.by - ay, dd = Math.hypot(dx, dy); if (dd > d.tether) { pl.bx = ax + dx / dd * d.tether; pl.by = ay + dy / dd * d.tether; } }
+      pl.bx = clamp(pl.bx, -HW + 0.3, HW - 0.3 - (d.twinBobbin ? 2.2 : 0));
+      // the thread itself cuts: always for the Chenille, for every ship in the moment after a dash
+      const cut = !second || d.freeBobbin ? 0 : d.tetherCut ? 3.5 : pl.whip > 0 ? 10 : 0;
+      if (cut && this.phase === 'play') for (const b of this.bobbins()) for (const e of this.enemies.slice()) {
+        if (e.state === 'enter' && e.t < 0) continue;
+        const vx = b.x - pl.x, vy = b.y - pl.y, ll = vx * vx + vy * vy || 1, u = clamp(((e.x - pl.x) * vx + (e.y - pl.y) * vy) / ll, 0, 1);
+        if (Math.hypot(e.x - pl.x - vx * u, e.y - pl.y - vy * u) < e.r + 0.18) { if (e.cased) continue; this.damageEnemy(e, cut * dt * d.dmg, false, 'T'); }
+      }
+    }
+    gun(slot, thread, fireOk, dt, rateMul, origins, mul) {
+      const pl = this.player, L = C.THREADS[thread].lv[(this.p.threads[thread] || 1) - 1], tk = slot === 'L' ? 'fireT' : 'fireT2', ck = slot === 'L' ? 'charge' : 'charge2';
+      pl[tk] -= dt;
+      if (thread === 'couching') {
+        if (fireOk && pl[tk] <= 0) { pl[ck] += dt * rateMul; if (pl[ck] >= L.rate) { pl[ck] = 0; pl[tk] = 0.35; this.fire(thread, L, origins, mul, slot); } }
+        else if (!fireOk) pl[ck] = 0;
+      } else if (fireOk && pl[tk] <= 0) { pl[tk] = L.rate / rateMul; this.fire(thread, L, origins, mul, slot); }
+    }
+    fire(thread, L, origins, mul, src) {
+      const pl = this.player, d = this.d, lead = src === 'L';
+      const base = d.dmg * mul * (this.fx.sign > 0 ? 1.5 : 1);
+      const basePierce = d.pierce + (this.fx.staple > 0 ? 99 : 0), home = (d.homing && lead) || this.fx.homing > 0 || this.fx.sign > 0;
+      const extras = lead ? (d.wide ? 1 : 0) + (this.fx.fan > 0 ? 1 : 0) : 0;
+      const add = (x, y, o) => this.shots.push(Object.assign({ id: this.nextId++, x, y, vx: 0, vy: 17, dmg: base * L.dmg, pierce: basePierce, kind: thread, hit: null, t: 0, home, src }, o));
       const ang = (deg, sp) => ({ vx: Math.sin(deg * Math.PI / 180) * sp, vy: Math.cos(deg * Math.PI / 180) * sp });
       let spread = 8;
-      for (const ox of origins) {
-        if (thread === 'running') add(ox, { pierce: basePierce + (w >= 3 ? 1 : 0) });
-        else if (thread === 'backstitch') { const n = w >= 3 ? 3 : 2; for (let i = 0; i < n; i++) add(ox + (i - (n - 1) / 2) * 0.34, { dmg: d.dmg * 0.8 }); }
-        else if (thread === 'herringbone') {
-          const n = w >= 3 ? 5 : 3, sp = w >= 3 ? 30 : 20; spread = sp;
-          for (let i = 0; i < n; i++) add(ox, Object.assign({ zig: 1, dmg: d.dmg * 0.7 }, ang((i / (n - 1) - 0.5) * sp, 15)));
-        }
-        else if (thread === 'chain') add(ox, { chain: w >= 2 ? 2 : 1, chainDmg: w >= 3 ? 1 : 0.6, vy: 15 });
-        else if (thread === 'knot') add(ox, { vy: 8, burst: w >= 2 ? 2.5 : 1.5, dmg: d.dmg * 1.6, r: 0.3, home: false });
-        else if (thread === 'couching') this.lance(pl.x + ox, w >= 3 ? 1.0 : 0.5, d.dmg * 3.2);
+      for (const [x, y] of origins) {
+        if (thread === 'running') add(x, y, { pierce: basePierce + L.pierce, soft: 1.5 });
+        else if (thread === 'backstitch') for (let i = 0; i < L.n; i++) add(x + (i - (L.n - 1) / 2) * 0.34, y, {});
+        else if (thread === 'herringbone') { spread = L.arc; for (let i = 0; i < L.n; i++) add(x, y, Object.assign({ zig: 1, fall: 1 }, ang((i / (L.n - 1) - 0.5) * L.arc, 15))); }
+        else if (thread === 'chain') add(x, y, { chain: L.jumps, chainDmg: L.jd, vy: 15 });
+        else if (thread === 'knot') add(x, y, { vy: 8, burst: L.burst, r: 0.3, home: false });
+        else if (thread === 'couching') this.lance(x, y, L.half, base * L.dmg, src);
         else if (thread === 'cross') {
           spread = 50;
-          for (const a of [-25, 25]) add(ox, Object.assign({ bounce: w >= 2 ? 2 : 1, dmg: d.dmg * (w >= 2 ? 1.1 : 0.9), home: false }, ang(a, 15)));
-          if (w >= 3) add(ox, {});
+          for (const a of [-25, 25]) add(x, y, Object.assign({ bounce: L.bounce, home: false }, ang(a, 15)));
+          if (L.mid) add(x, y, { dmg: base * L.mid });
         }
-        else if (thread === 'satin') {
-          const n = w >= 2 ? 2 : 1;
-          for (let i = 0; i < n; i++) add(ox + (i - (n - 1) / 2) * 0.5, { zig: 1, t: this.t * 0.9 + i * 1.5, dmg: d.dmg * 0.42, vy: 19 });
-        }
+        else if (thread === 'satin') for (let i = 0; i < L.n; i++) add(x + (i - (L.n - 1) / 2) * 0.5, y, { zig: 1, ramp: 1, t: this.t * 0.9 + i * 1.5, vy: 19 });
         for (let k = 1; k <= extras; k++) {
           const a = spread / 2 + 9 * k;
-          add(ox, Object.assign({ dmg: d.dmg * 0.6, kind: 'fan' }, ang(-a, 16)));
-          add(ox, Object.assign({ dmg: d.dmg * 0.6, kind: 'fan' }, ang(a, 16)));
+          add(x, y, Object.assign({ dmg: base * 0.6, kind: 'fan' }, ang(-a, 16)));
+          add(x, y, Object.assign({ dmg: base * 0.6, kind: 'fan' }, ang(a, 16)));
         }
       }
-      if (this.droneOn && thread !== 'couching') add((pl.x > 0 ? -1 : 1) * 0.95, { dmg: d.dmg * 0.7, kind: 'running', y: PY + 0.3 });
-      this.emit('fire', { thread });
+      if (lead && d.heavyBead && ++pl.beadN % 10 === 0) add(pl.x, pl.y + 0.7, { dmg: base * 2.5, pierce: 99, kind: 'bead', r: 0.26 });
+      if (lead && this.droneOn && thread !== 'couching') add(pl.x + (pl.x > 0 ? -1 : 1) * 0.95, pl.y + 0.3, { dmg: d.dmg * 0.7, kind: 'running' });
+      this.emit('fire', { thread, src, x: origins[0][0], y: origins[0][1] });
     }
-    lance(x, halfW, dmg) {
-      this.emit('lance', { x, w: halfW * 2 });
-      for (const e of this.enemies.slice()) if (Math.abs(e.x - x) < halfW + e.r && e.y > PY) this.damageEnemy(e, dmg, true);
+    lance(x, y, halfW, dmg, src) {
+      this.emit('lance', { x, y, w: halfW * 2 });
+      for (const e of this.enemies.slice()) if (Math.abs(e.x - x) < halfW + e.r && e.y > y) this.damageEnemy(e, dmg, true, src);
       for (let i = this.eshots.length - 1; i >= 0; i--) { const s = this.eshots[i]; if (s.kind === 'knot' && Math.abs(s.x - x) < halfW + 0.3) this.eshots.splice(i, 1); }
-      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW) this.damageBoss(dmg, x);
+      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW) this.damageBoss(dmg, x, false, src);
     }
 
     updateShots(dt) {
@@ -288,7 +332,8 @@
         const s = ss[i]; s.t += dt;
         s.x += s.vx * dt; s.y += s.vy * dt;
         if (s.zig) s.x += Math.cos(s.t * 22) * 2.2 * dt;
-        if (s.bounce > 0 && Math.abs(s.x) > HW - 0.2) { s.vx = -s.vx; s.x = Math.sign(s.x) * (HW - 0.2); s.bounce--; }
+        if (s.bounce > 0 && Math.abs(s.x) > HW - 0.2) { s.vx = -s.vx; s.x = Math.sign(s.x) * (HW - 0.2); s.bounce--; if (!s.bounced) { s.bounced = true; s.dmg *= 1.6; } }
+        if (s.seek) { const e = s.seek > 0 ? this.enemies.find(q => q.id === s.seek) : null, tx = e ? e.x : this.boss ? this.boss.x : s.x, ty = e ? e.y : this.boss ? this.boss.y : s.y + 5, dx = tx - s.x, dy = ty - s.y, dd = Math.hypot(dx, dy) || 1; s.vx += (dx / dd * 16 - s.vx) * Math.min(1, dt * 6); s.vy += (dy / dd * 16 - s.vy) * Math.min(1, dt * 6); if (!e && s.seek > 0) s.seek = -1; }
         if (s.home && this.enemies.length) {   // guided: lean toward the nearest enemy ahead
           let best = null, bd = 30; for (const e of this.enemies) { if (e.y < s.y) continue; const dd = Math.abs(e.x - s.x) + (e.y - s.y) * 0.4; if (dd < bd) { bd = dd; best = e; } }
           if (best) s.vx = clamp(s.vx + clamp((best.x - s.x) * 30, -40, 40) * dt, -9, 9);
@@ -301,9 +346,9 @@
             if (s.hit && s.hit.indexOf(e.id) >= 0) continue;
             const dx = e.x - s.x, dy = e.y - s.y, rr = e.r + sr;
             if (dx * dx + dy * dy < rr * rr) {
-              if (s.burst) { this.burst(s.x, s.y, s.burst, s.dmg); dead = true; break; }
-              this.damageEnemy(e, s.dmg);
-              if (s.chain) this.chainFrom(e, s.chain, s.dmg * s.chainDmg);
+              if (s.burst) { this.burst(s.x, s.y, s.burst, s.dmg, s.src, true); dead = true; break; }
+              this.damageEnemy(e, this.shotDmg(s, e), false, s.src);
+              if (s.chain) this.chainFrom(e, s.chain, s.dmg * s.chainDmg, s.src);
               if (s.pierce > 0) { s.pierce--; (s.hit = s.hit || []).push(e.id); } else { dead = true; break; }
             }
           }
@@ -317,31 +362,55 @@
         if (!dead && this.boss && !this.boss.enter) {
           const b = this.boss;
           if (Math.abs(s.x - b.x) < b.def.halfW && Math.abs(s.y - b.y) < b.def.halfH * 0.75 && !(s.hit && s.hit.indexOf(-1) >= 0)) {
-            if (s.burst) this.emit('burst', { x: s.x, y: s.y, r: s.burst });
-            this.damageBoss(s.dmg, s.x);
+            if (s.burst) this.burst(s.x, s.y, s.burst, 0, s.src, true);
+            this.damageBoss(this.shotDmg(s, b), s.x, false, s.src, s.soft);
             if (s.pierce > 0 && !s.burst) { s.pierce--; (s.hit = s.hit || []).push(-1); } else dead = true;
           }
         }
         if (dead) ss.splice(i, 1);
       }
     }
-    burst(x, y, r, dmg) {
-      this.emit('burst', { x, y, r });
-      for (const e of this.enemies.slice()) { const dx = e.x - x, dy = e.y - y; if (dx * dx + dy * dy < (r + e.r) * (r + e.r)) this.damageEnemy(e, dmg); }
+    /* What a shot does on this hit: the Spread fades with distance, the Satin builds while it stays on one target. */
+    shotDmg(s, target) {
+      let dm = s.dmg;
+      if (s.fall) dm *= clamp(1 - (s.t * 15 - 5) / 9 * 0.5, 0.5, 1);
+      if (s.ramp) { const r = target.rampT > this.t - 0.4 ? Math.min(0.6, (target.ramp || 0) + 0.04) : 0; target.ramp = r; target.rampT = this.t; dm *= 1 + r; }
+      return dm;
     }
-    chainFrom(src, jumps, dmg) {
+    burst(x, y, r, dmg, src, clear) {
+      this.emit('burst', { x, y, r });
+      if (dmg) for (const e of this.enemies.slice()) { const dx = e.x - x, dy = e.y - y; if (dx * dx + dy * dy < (r + e.r) * (r + e.r)) this.damageEnemy(e, dmg, false, src); }
+      if (clear) this.unravel(x, y, r, false);
+    }
+    /* Remove enemy bullets inside a circle; with coins, each one drops a coin. Returns how many went. */
+    unravel(x, y, r, coins) {
+      let n = 0;
+      for (let i = this.eshots.length - 1; i >= 0; i--) { const s = this.eshots[i], dx = s.x - x, dy = s.y - y; if (dx * dx + dy * dy < r * r) { this.eshots.splice(i, 1); n++; this.emit('snip', { x: s.x, y: s.y }); if (coins) this.drop('dust', s.x, s.y, { v: 2, vx: 0 }); } }
+      return n;
+    }
+    chainFrom(src, jumps, dmg, from0) {
       let from = src; const seen = [src.id];
       for (let j = 0; j < jumps; j++) {
         let best = null, bd = 16;
         for (const e of this.enemies) { if (seen.indexOf(e.id) >= 0) continue; const dd = (e.x - from.x) ** 2 + (e.y - from.y) ** 2; if (dd < bd) { bd = dd; best = e; } }
         if (!best) break;
         this.emit('chain', { x1: from.x, y1: from.y, x2: best.x, y2: best.y });
-        seen.push(best.id); const nx = best; this.damageEnemy(best, dmg); from = nx;
+        seen.push(best.id); const nx = best; this.damageEnemy(best, dmg, false, from0); from = nx;
       }
     }
 
-    damageEnemy(e, dmg, force) {
+    /* Cross-stitch: a target hit by the lead weapon and the bobbin within a second takes a quarter more. */
+    crossStitch(t, src, x, y) {
+      if (src !== 'L' && src !== 'B') return 1;
+      const other = src === 'L' ? 'mB' : 'mL', hit = t[other] > this.t - 1; t[src === 'L' ? 'mL' : 'mB'] = this.t;
+      if (!hit) return 1;
+      this.player.sp = Math.min(1, this.player.sp + 0.004);
+      if (this.t - (this.xT || 0) > 0.3) { this.xT = this.t; this.emit('xstitch', { x, y }); }
+      return 1.25;
+    }
+    damageEnemy(e, dmg, force, src) {
       if (e.dead) return;
+      dmg *= this.crossStitch(e, src, e.x, e.y);
       if (e.cased && !this.d.pierceCase && !force) { e.cased = false; this.emit('uncase', { id: e.id, x: e.x, y: e.y }); return; }
       e.cased = false;
       e.hp -= dmg; e.hurt = 0.15;
@@ -354,7 +423,7 @@
       if (silent) return;
       const def = e.def, tracing = e.state === 'trace', diving = e.state !== 'form' && e.state !== 'enter';
       const m = this.mods();
-      this.combo++; this.comboT = T.comboWindow * (this.p.pattern.second ? 2 : 1);
+      this.combo++; this.comboT = T.comboWindow * (this.p.pattern.second ? 2 : 1); this.player.sp = Math.min(1, this.player.sp + 0.012);
       this.bestCombo = Math.max(this.bestCombo, this.combo); this.stage.best = Math.max(this.stage.best, this.combo);
       const mult = this.comboMult();
       let pts = tracing ? C.SAMPLER.pts : diving ? def.ptsDive : def.pts;
@@ -411,12 +480,13 @@
       }
       for (const e of this.enemies.slice()) {
         if (e.dead) continue;
+        const edt = dt * this.patchSlow(e.x, e.y);   // the Darner's patch
         e.flap += rawDt * (e.state === 'form' ? 6 : 14);
         if (e.hurt) e.hurt = Math.max(0, e.hurt - rawDt);
         const def = e.def;
         switch (e.state) {
           case 'enter': {
-            e.t += dt / 1.5;
+            e.t += edt / 1.5;
             const s = this.slotPos(e), u = clamp(e.t, 0, 1), v = 1 - u;
             e.x = v * v * e.ex + 2 * v * u * e.cx + u * u * s.x; e.y = v * v * e.ey + 2 * v * u * e.cy + u * u * s.y;
             if (e.t < 0) { e.x = e.ex; e.y = e.ey; }
@@ -425,33 +495,33 @@
           }
           case 'form': {
             const s = this.slotPos(e); e.x = s.x; e.y = s.y;
-            if (def.turret && playing) { e.shotT -= dt; if (e.shotT <= 0) { e.shotT = def.shotEvery * this.rr(1.6, 2.6); this.aim(e.x, e.y - 0.3, 5); } }
+            if (def.turret && playing) { e.shotT -= edt; if (e.shotT <= 0) { e.shotT = def.shotEvery * this.rr(1.6, 2.6); this.aim(e.x, e.y - 0.3, 5); } }
             break;
           }
           case 'trace': {      // Sampler: fly in, trace the figure once, fly off. They never fire.
-            e.t += dt;
+            e.t += edt;
             if (e.t < 0) break;
             const a = this.pathPoint(e.pattern, 0), lap = 1 / C.SAMPLER.speed;
             if (e.t < 1) { const k = e.t, q = k * k * (3 - 2 * k); e.x = (HW + 2) + (a.x - HW - 2) * q; e.y = (H + 1) + (a.y - H - 1) * q; }
-            else if (e.t < 1 + lap) { const pt = this.pathPoint(e.pattern, (e.t - 1) / lap); e.vx = (pt.x - e.x) / Math.max(dt, 1e-4); e.x = pt.x; e.y = pt.y; }
-            else { e.y += 9 * dt; e.x += 3 * dt; if (e.y > H + 1.5) { this.sampler.out++; this.kill(e, true); } }
+            else if (e.t < 1 + lap) { const pt = this.pathPoint(e.pattern, (e.t - 1) / lap); e.vx = (pt.x - e.x) / Math.max(edt, 1e-4); e.x = pt.x; e.y = pt.y; }
+            else { e.y += 9 * edt; e.x += 3 * edt; if (e.y > H + 1.5) { this.sampler.out++; this.kill(e, true); } }
             break;
           }
           case 'windup': {
-            const s = this.slotPos(e); e.x = s.x + Math.sin(this.t * 40) * 0.05; e.y = s.y; e.t -= dt;
+            const s = this.slotPos(e); e.x = s.x + Math.sin(this.t * 40) * 0.05; e.y = s.y; e.t -= edt;
             if (e.t <= 0) { e.state = e.next; e.mark = null; e.vx = 0; }
             break;
           }
           case 'dive': {
-            e.t += dt;
-            if (!def.charge) e.vx = clamp(e.vx + clamp((pl.x - e.x) * 2.2, -7, 7) * dt, -3.6, 3.6);
+            e.t += edt;
+            if (!def.charge) e.vx = clamp(e.vx + clamp((pl.x - e.x) * 2.2, -7, 7) * edt, -3.6, 3.6);
             else e.vx = e.t < 0.5 ? clamp((pl.x - e.x) * 5, -9, 9) : 0;
-            e.x += (e.vx + Math.sin(e.t * def.wob) * def.wobAmp) * dt;
-            e.y -= def.diveSpeed * dt;
+            e.x += (e.vx + Math.sin(e.t * def.wob) * def.wobAmp) * edt;
+            e.y -= def.diveSpeed * edt;
             e.x = clamp(e.x, -HW + 0.4, HW - 0.4);
-            e.shotT -= dt;
+            e.shotT -= edt;
             if (e.shotT <= 0 && e.y > 5 && playing) { e.shotT = def.shotEvery; if (this.panel >= 2 && e.type !== 'spinner') this.aim(e.x, e.y - 0.3, 6); else this.eshot(e.type === 'spinner' ? 'silk' : 'frass', e.x, e.y - 0.3, 0, -6.2); }
-            if (e.y < -1) {
+            if (e.y < BOT - 1) {
               if (e.slot) { e.y = H + 1; e.state = 'return'; }
               else if (e.passes-- > 0) { e.y = H + 1; e.x = this.rr(-5, 5); }
               else this.kill(e, true);
@@ -459,42 +529,42 @@
             break;
           }
           case 'return': {
-            const s = this.slotPos(e), dx = s.x - e.x, dy = s.y - e.y, dd = Math.hypot(dx, dy), st = 9 * dt;
+            const s = this.slotPos(e), dx = s.x - e.x, dy = s.y - e.y, dd = Math.hypot(dx, dy), st = 9 * edt;
             if (dd <= st) { e.x = s.x; e.y = s.y; e.state = 'form'; e.escorts = null; } else { e.x += dx / dd * st; e.y += dy / dd * st; }
             break;
           }
           case 'draw': {       // Spinner: the cocoon draw
-            const ty = 7.5, dx = e.tx - e.x, dy = ty - e.y, dd = Math.hypot(dx, dy), st = 7 * dt;
+            const ty = 7.5, dx = e.tx - e.x, dy = ty - e.y, dd = Math.hypot(dx, dy), st = 7 * edt;
             if (dd > st && !e.cone) { e.x += dx / dd * st; e.y += dy / dd * st; break; }
-            e.cone = (e.cone || 0) + dt;
+            e.cone = (e.cone || 0) + edt;
             if (e.cone > 0.5 && e.cone < 2.7 && playing) {
-              const half = 0.45 + (e.y - PY) * 0.15;
-              if (Math.abs(pl.x - e.x) < half && pl.invuln <= 0) { e.pull = (e.pull || 0) + dt; if (e.pull > 0.9) { this.capture(e); e.cone = 3; } }
+              const half = 0.45 + (e.y - pl.y) * 0.15;
+              if (Math.abs(pl.x - e.x) < half && pl.invuln <= 0) { e.pull = (e.pull || 0) + edt; if (e.pull > 0.9) { this.capture(e); e.cone = 3; } }
             }
             if (e.cone >= 2.7) { e.cone = 0; e.pull = 0; e.state = 'return'; }
             break;
           }
           case 'strafe': {     // Hawk
-            e.y -= def.diveSpeed * dt; e.shotT -= dt;
+            e.y -= def.diveSpeed * edt; e.shotT -= edt;
             if (e.shotT <= 0 && e.y > 3) { e.shotT = def.shotEvery; this.eshot('frass', e.x, e.y - 0.3, 0, -5.5); }
-            if (e.y < -1) this.kill(e, true);
+            if (e.y < BOT - 1) this.kill(e, true);
             break;
           }
           case 'loop': {       // Looper
-            e.t += dt; e.x += e.dir * 2.1 * dt; e.y = e.by + Math.abs(Math.sin(e.t * 2.4)) * 0.6; e.shotT -= dt;
+            e.t += edt; e.x += e.dir * 2.1 * edt; e.y = e.by + Math.abs(Math.sin(e.t * 2.4)) * 0.6; e.shotT -= edt;
             if (e.shotT <= 0 && Math.abs(e.x) < HW - 1) { e.shotT = def.shotEvery; this.eshot('knot', e.x, e.y - 0.3, 0, -1.6, { hang: this.rr(3, 6.5), life: 9 }); }
             if (Math.abs(e.x) > HW + 1.5) this.kill(e, true);
             break;
           }
           case 'coal': {       // Wick: straight down with its coal
-            e.y -= def.diveSpeed * dt;
-            if (e.y < PY - 0.4) { this.hazards.push({ id: this.nextId++, kind: 'burn', x: e.x, w: 1.6, warn: 0, life: 6 }); this.emit('burn', { x: e.x }); this.kill(e, true); }
+            e.y -= def.diveSpeed * edt;
+            if (e.y < BOT + 1.1) { this.hazards.push({ id: this.nextId++, kind: 'burn', x: e.x, w: 1.6, warn: 0, life: 6 }); this.emit('burn', { x: e.x }); this.kill(e, true); }
             break;
           }
         }
         if (e.dead) continue;
         // body contact
-        if (playing && e.y < PY + 1.2) {
+        if (playing && Math.abs(e.y - pl.y) < 2) {
           const hit = this.touches(e.x, e.y, e.r);
           if (hit) { this.kill(e); this.hurt(); }
         }
@@ -535,25 +605,34 @@
       this.loseSpare();
     }
 
-    aim(x, y, speed) { const dx = this.player.x - x, dy = PY - y, dd = Math.hypot(dx, dy) || 1; this.eshot('bead', x, y, dx / dd * speed, dy / dd * speed); }
+    aim(x, y, speed) { const dx = this.player.x - x, dy = this.player.y - y, dd = Math.hypot(dx, dy) || 1; this.eshot('bead', x, y, dx / dd * speed, dy / dd * speed); }
     eshot(kind, x, y, vx, vy, o) { if (kind !== 'knot') { const k = this.shotMul(); vx *= k; vy *= k; } this.eshots.push(Object.assign({ id: this.nextId++, kind, x, y, vx, vy, t: 0, r: kind === 'snake' ? 0.5 : kind === 'knot' ? 0.3 : 0.17 }, o)); }
     updateEshots(dt) {
       const playing = this.phase === 'play';
       for (let i = this.eshots.length - 1; i >= 0; i--) {
         const s = this.eshots[i]; s.t += dt;
-        if (s.kind === 'knot') { if (s.y > s.hang) s.y += s.vy * dt; else { s.life -= dt; } }
-        else { s.x += s.vx * dt; s.y += s.vy * dt; if (s.kind === 'silk') s.x += Math.cos(s.t * 5) * 2.4 * dt; }
-        let dead = s.y < -0.6 || Math.abs(s.x) > HW + 0.6 || (s.kind === 'knot' && s.life <= 0);
-        if (!dead && s.kind === 'coal' && s.y < PY - 0.2) { dead = true; this.hazards.push({ id: this.nextId++, kind: 'burn', x: s.x, w: 1.6, warn: 0, life: 4 }); this.emit('burn', { x: s.x }); }
-        if (!dead && playing && this.touches(s.x, s.y, s.r)) { dead = true; this.hurt(); }
+        const sdt = dt * this.patchSlow(s.x, s.y);
+        if (s.kind === 'knot') { if (s.y > s.hang) s.y += s.vy * sdt; else { s.life -= dt; } }
+        else { s.x += s.vx * sdt; s.y += s.vy * sdt; if (s.kind === 'silk') s.x += Math.cos(s.t * 5) * 2.4 * sdt; }
+        let dead = s.y < BOT - 0.6 || Math.abs(s.x) > HW + 0.6 || (s.kind === 'knot' && s.life <= 0);
+        if (!dead && s.kind === 'coal' && s.y < BOT + 1.3) { dead = true; this.hazards.push({ id: this.nextId++, kind: 'burn', x: s.x, w: 1.6, warn: 0, life: 4 }); this.emit('burn', { x: s.x }); }
+        if (!dead && playing && this.touches(s.x, s.y, s.r)) {
+          dead = true; const pl = this.player;
+          if (pl.dashT > 0 && this.d.dashGraze) this.graze(s);
+          else if (this.d.palm && pl.patchT <= 0 && pl.invuln <= 0 && this.fx.starch <= 0 && !this.armed.thimble) { pl.patchT = 5; this.emit('patch', { x: s.x, y: s.y }); }
+          else this.hurt();
+        } else if (!dead && playing && !s.gz && s.kind !== 'knot') {
+          const pl = this.player, gr = this.d.radius + 0.85, dx = s.x - pl.x, dy = s.y - (pl.y + 0.2);
+          if (dx * dx + dy * dy < gr * gr) { s.gz = true; this.graze(s); }
+        }
         if (dead) this.eshots.splice(i, 1);
       }
       for (let i = this.nets.length - 1; i >= 0; i--) {
         const n = this.nets[i]; const y0 = n.y; n.y += n.vy * dt;
-        if (playing && y0 >= PY && n.y < PY + 0.3 && !n.spent) {
+        if (playing && y0 >= this.player.y && n.y < this.player.y + 0.3 && !n.spent) {
           if (Math.abs(this.player.x - n.gapX) > n.gapW / 2 - 0.1) { n.spent = true; this.hurt(); }
         }
-        if (n.y < -1) this.nets.splice(i, 1);
+        if (n.y < BOT - 1) this.nets.splice(i, 1);
       }
     }
     updateHazards(dt) {
@@ -566,7 +645,7 @@
       }
     }
     touches(x, y, r) {
-      const pl = this.player, rr = r + this.d.radius, dy = y - (PY + 0.2);
+      const pl = this.player, rr = r + this.d.radius, dy = y - (pl.y + 0.2);
       if (pl.dual) return ((x - pl.x + 0.45) ** 2 + dy * dy < rr * rr) || ((x - pl.x - 0.45) ** 2 + dy * dy < rr * rr);
       return (x - pl.x) ** 2 + dy * dy < rr * rr;
     }
@@ -588,17 +667,75 @@
       pl.ply = 0; this.phase = 'dying'; this.phaseT = 1.6; this.emit('snap');
     }
 
+    // ---------- near misses, specials, zones ----------
+    graze(s) {
+      const pl = this.player; pl.sp = Math.min(1, pl.sp + T.graze); pl.grazeN++;
+      if (this.d.padded && pl.grazeN % 8 === 0 && !this.armed.thimble) { this.armed.thimble = true; this.emit('repad'); }
+      this.emit('graze', { x: s.x, y: s.y });
+    }
+    patchSlow(x, y) { for (const z of this.zones) if (z.kind === 'patch' && (x - z.x) ** 2 + (y - z.y) ** 2 < z.r * z.r) return 0.5; return 1; }
+    special() {
+      const pl = this.player, d = this.d, id = d.special, n = C.NEEDLES[id];
+      pl.sp = 0; pl.invuln = Math.max(pl.invuln, 0.5);
+      this.emit('special', { id, name: n.special, x: pl.x, y: pl.y });
+      if (id === 'between') { pl.dashT = 0.26; pl.dashDir = pl.x > 0 ? -1 : 1; pl.invuln = Math.max(pl.invuln, 0.8); pl.whip = 0.5; this.zones.push({ id: this.nextId++, kind: 'line', y: pl.y + 1.3, life: 3 }); pl.basting = true; }
+      else if (id === 'darner') this.zones.push({ id: this.nextId++, kind: 'patch', x: pl.x, y: Math.min(H - 5, pl.y + 6.5), r: 4.2, life: 4.5 });
+      else if (id === 'chenille') { this.burst(pl.x, pl.y, 3.6, d.dmg * 6, 'S', true); if (this.boss && !this.boss.enter && Math.hypot(this.boss.x - pl.x, this.boss.y - pl.y) < 3.6 + this.boss.def.halfW) this.damageBoss(d.dmg * 12, this.boss.x, true); }
+      else if (id === 'sail') { pl.ram = 1; pl.invuln = 3; }
+      else if (id === 'beading') {
+        const ts = this.enemies.slice().sort((a, b) => Math.hypot(a.x - pl.x, a.y - pl.y) - Math.hypot(b.x - pl.x, b.y - pl.y)).slice(0, 8);
+        const n8 = ts.length || (this.boss ? 8 : 0);
+        for (let i = 0; i < n8; i++) { const a = (i / Math.max(1, n8 - 1) - 0.5) * 100 * Math.PI / 180;
+          this.shots.push({ id: this.nextId++, x: pl.x, y: pl.y + 0.7, vx: Math.sin(a) * 11, vy: Math.cos(a) * 11, dmg: d.dmg * 4, pierce: 0, kind: 'bead', r: 0.26, hit: null, t: 0, seek: ts[i] ? ts[i].id : -1, src: 'S' }); }
+      }
+      else if (id === 'quilter') { this.unravel(pl.x, pl.y, 4, false); this.emit('burst', { x: pl.x, y: pl.y, r: 4 }); if (pl.ply < d.ply) pl.ply++; else this.armed.thimble = true; }
+      else if (id === 'embroidery') this.fx.sign = 5;
+      else if (id === 'tapestry') this.zones.push({ id: this.nextId++, kind: 'sweep', y: pl.y + 0.9, vy: 10, life: 4, hit: {} });
+      else { const got = this.unravel(pl.x, pl.y, 5, true); this.burst(pl.x, pl.y, 5, 0); for (const e of this.enemies.slice()) if (Math.hypot(e.x - pl.x, e.y - pl.y) < 2.4 + e.r) this.damageEnemy(e, d.dmg * 3, false, 'S'); this.nets.length = 0; void got; }
+    }
+    /* Full Sail: up the cloth as a ram, then drift home. */
+    ramStep(dt, input, speed) {
+      const pl = this.player, d = this.d; pl.invuln = Math.max(pl.invuln, 0.4);
+      if (input.targetX !== null && input.targetX !== undefined) pl.x += clamp(input.targetX - pl.x, -speed * dt, speed * dt); else pl.x += (input.move || 0) * speed * dt;
+      if (pl.ram === 1) {
+        pl.y += 15 * dt;
+        for (const e of this.enemies.slice()) if (Math.hypot(e.x - pl.x, e.y - pl.y) < e.r + 1.1) this.damageEnemy(e, d.dmg * 40 * dt, true, 'S');
+        this.unravel(pl.x, pl.y + 0.4, 1.3, false);
+        const b = this.boss;
+        if (b && !b.enter && Math.abs(b.x - pl.x) < b.def.halfW + 0.8 && pl.y > b.y - b.def.halfH - 0.8) { this.damageBoss(d.dmg * 22, pl.x, true); this.emit('burst', { x: pl.x, y: pl.y + 0.6, r: 2.2 }); pl.ram = 2; }
+        if (pl.y > H - 4) pl.ram = 2;
+      } else { pl.y -= 11 * dt; if (pl.y <= PY + T.roam * 0.5) { pl.ram = 0; pl.invuln = Math.max(pl.invuln, 0.6); } }
+    }
+    updateZones(dt) {
+      for (let i = this.zones.length - 1; i >= 0; i--) {
+        const z = this.zones[i]; z.life -= dt;
+        if (z.kind === 'line' || z.kind === 'sweep') {
+          if (z.kind === 'sweep') z.y += z.vy * dt;
+          for (const e of this.enemies.slice()) {
+            if (Math.abs(e.y - z.y) > e.r + 0.3 || (e.state === 'enter' && e.t < 0)) continue;
+            if (z.kind === 'line') this.damageEnemy(e, this.d.dmg * 5 * dt, false, 'S');
+            else if (!z.hit[e.id]) { z.hit[e.id] = 1; this.damageEnemy(e, this.d.dmg * 5, true, 'S'); }
+          }
+          for (let j = this.eshots.length - 1; j >= 0; j--) { const s = this.eshots[j]; if (Math.abs(s.y - z.y) < 0.35) { this.eshots.splice(j, 1); this.emit('snip', { x: s.x, y: s.y }); } }
+          const b = this.boss;
+          if (b && !b.enter && Math.abs(b.y - z.y) < b.def.halfH) { if (z.kind === 'line') this.damageBoss(this.d.dmg * 5 * dt, b.x, true); else if (!z.hit.boss) { z.hit.boss = 1; this.damageBoss(this.d.dmg * 18, b.x, true); } }
+          if (z.kind === 'sweep' && z.y > H + 1) z.life = 0;
+        }
+        if (z.life <= 0) this.zones.splice(i, 1);
+      }
+    }
+
     // ---------- drops ----------
     updateDrops(dt) {
       const pl = this.player, pull = this.phase === 'clear' || this.fx.dish > 0;
       for (let i = this.drops.length - 1; i >= 0; i--) {
         const d = this.drops[i]; d.t += dt;
-        const dx = pl.x - d.x, dy = PY - d.y, dd = Math.hypot(dx, dy);
+        const dx = pl.x - d.x, dy = pl.y - d.y, dd = Math.hypot(dx, dy);
         const near = dd < this.d.magnet || d.kind === 'chart' || pull || (d.kind !== 'dust' && dd < this.d.magnet * 1.3);
         if (near && this.phase !== 'dying') { const sp = (d.kind === 'chart' && !pull ? 9 : 14) * dt; d.x += dx / (dd || 1) * sp; d.y += dy / (dd || 1) * sp; }
         else { d.y -= T.dropSpeed * dt; d.x += d.vx * dt * Math.max(0, 1 - d.t); }
         if (dd < 0.55 && this.phase !== 'dying') { this.collect(d); this.drops.splice(i, 1); continue; }
-        if (d.y < -0.8) this.drops.splice(i, 1);
+        if (d.y < BOT - 0.8) this.drops.splice(i, 1);
       }
     }
     collect(d) {
@@ -655,11 +792,12 @@
     }
 
     // ---------- Keepers ----------
-    damageBoss(dmg, x, force) {
+    damageBoss(dmg, x, force, src, softMul) {
       const b = this.boss; if (!b || b.hp <= 0) return;
       const def = b.def;
+      dmg *= this.crossStitch(b, src, x, b.y - def.halfH * 0.5);
       let soft = def.soft.some(s => Math.abs(x - (b.x + s.x)) < s.r);
-      let mul = soft ? 2 : (def.armour || 0.6);
+      let mul = soft ? 2 * (softMul || 1) : (def.armour || 0.6);
       if (def.chews && !b.open) { mul = 0.3; soft = false; }
       if (force) { mul = 1; }
       b.hp -= dmg * mul; b.flash = 0.1;
@@ -734,14 +872,15 @@
       } else if (!st.hurt) { const v = T.cleanRowDust * (this.panel + 1) * (keeper ? 2 : 1); bonuses.push({ name: keeper ? 'No-damage boss' : 'No-damage wave', dust: v }); }
       if (st.best >= 12) bonuses.push({ name: 'Combo bonus: best combo ' + st.best, dust: st.best });
       if (keeper) bonuses.push({ name: 'Stage cleared', silk: T.panelSilk });
+      const dustGot = this.nightDust - st.dust0, silkGot = this.nightSilk - st.silk0;   // picked up on the cloth, before bonuses
       for (const b of bonuses) { if (b.dust) { p.dust += b.dust; this.nightDust += b.dust; } if (b.silk) { p.silk += b.silk; this.nightSilk += b.silk; } }
       if (info.kind === 'row' && m.mend && this.player.ply < this.d.ply) this.player.ply++;
       this.dualRun = this.player.dual ? this.dualRun + 1 : 0; p.stats.longestDouble = Math.max(p.stats.longestDouble || 0, this.dualRun);
       this.phase = 'done';
       const last = keeper && this.panel === C.PANELS.length - 1;
       if (last) this.closeNight(true);
-      this.result = { kind: 'clear', keeper, last, info, stitches: this.stitches - st.stitches0, dust: this.nightDust - st.dust0,
-        silk: this.nightSilk - st.silk0, nightSilk: this.nightSilk, bestCombo: st.best, bonuses, charts: st.charts.slice(),
+      this.result = { kind: 'clear', keeper, last, info, stitches: this.stitches - st.stitches0, dust: dustGot, silk: silkGot,
+        dustAll: this.nightDust - st.dust0, silkAll: this.nightSilk - st.silk0, nightSilk: this.nightSilk, nightDust: this.nightDust, bestCombo: st.best, bonuses, charts: st.charts.slice(),
         sampler: info.sampler ? { hit: this.sampler.hit, total: this.sampler.total } : null };
       this.emit('stageclear', this.result);
     }
@@ -763,5 +902,5 @@
   }
 
   ST.Sim = Sim;
-  ST.FIELD = { HW, H, PY };
+  ST.FIELD = { HW, H, PY, BOT };
 })(typeof window !== 'undefined' ? window.ST : globalThis.ST);

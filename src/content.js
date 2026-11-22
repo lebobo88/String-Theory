@@ -237,36 +237,55 @@
 
   // ---- Spool Wall: threads (weapons). Bought with Dust, kept for good; weights II/III cost +90/+160. ----
   const WEIGHT_COST = [0, 400, 900];
+  /* Each weapon has one job. lv = its three levels: rate is seconds between volleys (charge time for the laser), dmg is per shot in units of the ship's damage. */
   const THREADS = {
-    running:    { name: 'Single Stitch', price: 0,   color: PAL.linen,      rate: [0.30, 0.23, 0.23], desc: 'One shot, straight ahead.',
-      weights: ['One shot, straight ahead', 'Fires 30% faster', 'Shots pierce through one enemy'] },
-    backstitch: { name: 'Double Stitch',  price: 350, color: PAL.madder,     rate: [0.34, 0.26, 0.26], desc: 'Two shots side by side.',
-      weights: ['Two shots side by side', 'Fires 30% faster', 'Three shots side by side'] },
-    herringbone:{ name: 'Spread Stitch',  price: 600, color: PAL.saffron,    rate: [0.56, 0.28, 0.30], desc: 'Three shots that fan outward.', chart: 'bp_herringbone',
-      weights: ['Three shots in a fan', 'Fires twice as fast', 'Five shots in a wider fan'] },
-    chain:      { name: 'Chain Stitch',   price: 800, color: PAL.madderPale, rate: [0.42, 0.42, 0.42], desc: 'A hit jumps on to a second nearby enemy.', chart: 'bp_chain',
-      weights: ['Hits jump to a second enemy', 'Hits jump to a third enemy', 'Jumps do full damage'] },
-    knot:       { name: 'Knot Bomb',      price: 900, color: PAL.knot,       rate: [0.95, 0.95, 0.5],  desc: 'A slow bomb that explodes and damages everything nearby.', chart: 'bp_knot',
-      weights: ['A slow bomb with a small blast', 'A much bigger blast', 'Fires twice as fast'] },
-    couching:   { name: 'Wire Laser',     price: 1000, color: PAL.steel,      rate: [0.95, 0.6, 0.6],   desc: 'Charges up, then fires a beam that hits everything in its column. Your ship moves at half speed while it charges.', chart: 'bp_couching',
-      weights: ['A beam through the whole column', 'Charges faster', 'The beam is twice as wide'] },
-    cross:      { name: 'Cross Stitch',   price: 1100, color: PAL.blue,      rate: [0.36, 0.36, 0.30], desc: 'Two diagonal shots that bounce off the side walls.', chart: 'bp_cross',
-      weights: ['Two diagonal shots that bounce off the walls', 'Shots bounce twice and hit harder', 'Adds a third shot straight ahead'] },
-    satin:      { name: 'Satin Stitch',   price: 1200, color: PAL.green,     rate: [0.11, 0.11, 0.085], desc: 'A rapid stream of light shots that weaves from side to side.', chart: 'bp_satin',
+    running:    { name: 'Single Stitch', price: 0,   color: PAL.linen,      job: 'Boss killer', desc: 'One fast, precise shot. Hits boss weak spots 50% harder.',
+      lv: [{ rate: 0.28, n: 1, dmg: 1, pierce: 0 }, { rate: 0.22, n: 1, dmg: 1, pierce: 1 }, { rate: 0.20, n: 1, dmg: 1.3, pierce: 2 }],
+      weights: ['One shot, straight ahead', 'Fires faster and pierces one enemy', 'Hits harder and pierces two'] },
+    backstitch: { name: 'Double Stitch',  price: 350, color: PAL.madder,     job: 'All-rounder', desc: 'Shots side by side. Steady against everything.',
+      lv: [{ rate: 0.34, n: 2, dmg: 0.8 }, { rate: 0.28, n: 2, dmg: 0.9 }, { rate: 0.28, n: 3, dmg: 0.8 }],
+      weights: ['Two shots side by side', 'Fires faster', 'Three shots side by side'] },
+    chain:      { name: 'Chain Stitch',   price: 500, color: PAL.madderPale, job: 'Swarms', desc: 'A hit jumps on to nearby enemies. Weak against a lone target.', chart: 'bp_chain',
+      lv: [{ rate: 0.40, n: 1, dmg: 1.4, jumps: 1, jd: 0.6 }, { rate: 0.36, n: 1, dmg: 1.5, jumps: 2, jd: 0.7 }, { rate: 0.34, n: 1, dmg: 1.6, jumps: 3, jd: 0.8 }],
+      weights: ['Hits jump to a second enemy', 'Hits jump to a third enemy', 'Hits jump to a fourth enemy'] },
+    herringbone:{ name: 'Spread Stitch',  price: 650, color: PAL.saffron,    job: 'Close range', desc: 'A fan of shots that fade with distance: full damage up close, half at the far end. Fly forward.', chart: 'bp_herringbone',
+      lv: [{ rate: 0.50, n: 3, dmg: 0.9, arc: 20 }, { rate: 0.36, n: 3, dmg: 0.9, arc: 20 }, { rate: 0.34, n: 5, dmg: 0.85, arc: 30 }],
+      weights: ['Three shots in a fan', 'Fires faster', 'Five shots in a wider fan'] },
+    knot:       { name: 'Knot Bomb',      price: 700, color: PAL.knot,       job: 'Defence', desc: 'A slow bomb. The blast damages everything nearby and unravels enemy bullets inside it.', chart: 'bp_knot',
+      lv: [{ rate: 0.8, n: 1, dmg: 3.2, burst: 1.6 }, { rate: 0.8, n: 1, dmg: 3.4, burst: 2.6 }, { rate: 0.55, n: 1, dmg: 3.4, burst: 2.6 }],
+      weights: ['A slow bomb with a small blast', 'A much bigger blast', 'Fires faster'] },
+    cross:      { name: 'Cross Stitch',   price: 800, color: PAL.blue,      job: 'Flanks', desc: 'Diagonal shots that bounce off the side walls and hit 60% harder after a bounce.', chart: 'bp_cross',
+      lv: [{ rate: 0.36, n: 2, dmg: 0.8, bounce: 1 }, { rate: 0.34, n: 2, dmg: 0.8, bounce: 2 }, { rate: 0.30, n: 2, dmg: 0.8, bounce: 3, mid: 0.6 }],
+      weights: ['Two diagonal shots that bounce once', 'Shots bounce twice', 'Three bounces, and a third shot straight ahead'] },
+    couching:   { name: 'Wire Laser',     price: 900, color: PAL.steel,      job: 'Armour breaker', desc: 'Charges up, then fires a beam through its whole column, armour and all. Your ship moves at half speed while it charges.', chart: 'bp_couching',
+      lv: [{ rate: 0.9, n: 1, dmg: 3.6, half: 0.5 }, { rate: 0.6, n: 1, dmg: 3.6, half: 0.5 }, { rate: 0.55, n: 1, dmg: 4.2, half: 1.0 }],
+      weights: ['A beam through the whole column', 'Charges faster', 'Hits harder and twice as wide'] },
+    satin:      { name: 'Satin Stitch',   price: 1000, color: PAL.green,     job: 'Sustained', desc: 'A rapid weaving stream. Damage builds up to +60% while it stays on one target.', chart: 'bp_satin',
+      lv: [{ rate: 0.11, n: 1, dmg: 0.34 }, { rate: 0.11, n: 2, dmg: 0.30 }, { rate: 0.09, n: 2, dmg: 0.30 }],
       weights: ['A rapid weaving stream of light shots', 'Two streams side by side', 'Fires faster'] }
   };
+  for (const id in THREADS) THREADS[id].rate = THREADS[id].lv.map(l => l.rate);
 
   // ---- Needle Case: needles (ships). Bought with Silk, owned for good. Pips: Ply, Pace, Eye, Point. ----
   const NEEDLES = {
-    sharps:   { name: 'Sharps',   price: 0,   ply: 2, pace: 3, eye: 2, point: 2, trait: 'Balanced',      traitDesc: 'Smaller hitbox and longer invincibility after a hit.' },
-    between:  { name: 'Between',  price: 60,  ply: 1, pace: 5, eye: 2, point: 2, trait: 'Dash',          traitDesc: 'Fast and fragile. Double-tap a direction to dash.' },
-    darner:   { name: 'Darner',   price: 90,  ply: 2, pace: 2, eye: 3, point: 2, trait: 'Wide Shot',     traitDesc: 'Every weapon fires two extra side shots.', chart: 'bp_darner' },
-    chenille: { name: 'Chenille', price: 120,  ply: 3, pace: 2, eye: 4, point: 1, trait: 'Two Weapons',   traitDesc: 'Carries two weapons. Swap between them any time.', chart: 'bp_chenille' },
-    sail:     { name: 'Sail',     price: 150, ply: 4, pace: 1, eye: 1, point: 3, trait: 'Heavy',         traitDesc: 'Slow and tough. Blocks one capture beam every wave.', chart: 'bp_sail' },
-    beading:  { name: 'Beading',  price: 200, ply: 1, pace: 4, eye: 1, point: 4, trait: 'Piercing',      traitDesc: 'Fragile and hard-hitting. Every shot pierces one enemy.', chart: 'bp_beading' },
-    quilter:  { name: 'Quilter',  price: 180, ply: 3, pace: 2, eye: 2, point: 2, trait: 'Padded',       traitDesc: 'Starts every wave with a one-hit shield.', chart: 'bp_quilter' },
-    embroidery: { name: 'Embroidery', price: 220, ply: 2, pace: 3, eye: 2, point: 1, trait: 'Guided',    traitDesc: 'Every shot curves toward the nearest enemy.', chart: 'bp_embroidery' },
-    tapestry: { name: 'Tapestry', price: 260, ply: 2, pace: 3, eye: 3, point: 2, trait: 'Bobbin Drone', traitDesc: 'A small drone flies beside you and fires with you.', chart: 'bp_tapestry' }
+    sharps:   { name: 'Sharps',   price: 0,   ply: 2, pace: 3, eye: 2, point: 2, trait: 'All-rounder',   traitDesc: 'Smaller hitbox and longer invincibility after a hit.',
+      special: 'Tie Off', specialDesc: 'A ring that unravels every nearby bullet into coins.' },
+    between:  { name: 'Between',  price: 60,  ply: 1, pace: 5, eye: 2, point: 2, trait: 'Dodger',        traitDesc: 'Fast and fragile. Two dash charges, and dashing through bullets charges your special.',
+      special: 'Basting Line', specialDesc: 'Streaks across the cloth and leaves a thread that damages whatever crosses it for three seconds.' },
+    darner:   { name: 'Darner',   price: 90,  ply: 2, pace: 2, eye: 3, point: 2, trait: 'Wall',          traitDesc: 'Your lead weapon fires two extra side shots.', chart: 'bp_darner',
+      special: 'Darn', specialDesc: 'Weaves a patch over the cloth ahead. Enemies and bullets inside it move at half speed.' },
+    chenille: { name: 'Chenille', price: 120,  ply: 3, pace: 2, eye: 4, point: 1, trait: 'Whip',          traitDesc: 'A long, thick tether. The thread to your bobbin cuts every enemy it touches.', chart: 'bp_chenille',
+      special: 'Lasso', specialDesc: 'The bobbin swings a full circle around the ship, cutting enemies and bullets.' },
+    sail:     { name: 'Sail',     price: 150, ply: 4, pace: 1, eye: 1, point: 3, trait: 'Tank',          traitDesc: 'Slow and tough. A canvas patch blocks one bullet, then re-stitches after five seconds. Blocks one capture beam every wave.', chart: 'bp_sail',
+      special: 'Full Sail', specialDesc: 'Charges up the cloth as an invulnerable ram, then drifts back.' },
+    beading:  { name: 'Beading',  price: 200, ply: 1, pace: 4, eye: 1, point: 4, trait: 'Glass cannon',  traitDesc: 'Fragile and hard-hitting. Every shot pierces, and every tenth is a heavy bead that goes through everything.', chart: 'bp_beading',
+      special: 'String of Beads', specialDesc: 'Locks on to up to eight enemies and sends a homing bead at each.' },
+    quilter:  { name: 'Quilter',  price: 180, ply: 3, pace: 2, eye: 2, point: 2, trait: 'Survivor',      traitDesc: 'Starts every wave with a one-hit pad. Eight near-misses re-stuff it.', chart: 'bp_quilter',
+      special: 'Quilt', specialDesc: 'Turns nearby bullets into one point of shield.' },
+    embroidery: { name: 'Embroidery', price: 220, ply: 2, pace: 3, eye: 2, point: 1, trait: 'Marksman',  traitDesc: 'Lead shots curve toward enemies, and the bobbin flies free to hover under the nearest one.', chart: 'bp_embroidery',
+      special: 'Signature', specialDesc: 'For five seconds every shot homes in and hits 50% harder.' },
+    tapestry: { name: 'Tapestry', price: 260, ply: 2, pace: 3, eye: 3, point: 2, trait: 'Weaver',        traitDesc: 'Two bobbins, one each side of the ship.', chart: 'bp_tapestry',
+      special: 'Loom', specialDesc: 'Stretches a thread across the cloth and sweeps it upward through everything.' }
   };
 
   // ---- Gimp's Bench: tempers. Dust. Permanent on every needle (owner direction; the bible had them per-Night). ----
@@ -299,7 +318,7 @@
     gold:   { name: 'Double Coins', color: PAL.saffron,    dur: 12, desc: 'Coins are worth double.' },
     bobbin: { name: 'Rapid Fire',   color: PAL.madderPale, dur: 10, desc: 'Fire 60% faster.' },
     staple: { name: 'Piercing Shots',color: PAL.steelHi,   dur: 8,  desc: 'Shots pass through every enemy.' },
-    fan:    { name: 'Wide Shot',    color: PAL.mist,       dur: 10, desc: 'Two extra side shots.' },
+    fan:    { name: 'Wide Shot',    color: PAL.mist,       dur: 10, desc: 'Two extra side shots from your lead weapon.' },
     starch: { name: 'Invincible',   color: PAL.paper,      dur: 6,  desc: 'Nothing can hurt you.' },
     tangle: { name: 'Slow Motion',  color: PAL.green,      dur: 6,  desc: 'Enemies and their shots move at half speed.' },
     egg:    { name: 'Shield +1',    color: PAL.tan,        dur: 0,  desc: 'Restores one shield.' },
@@ -359,7 +378,7 @@
   };
 
   const TUNING = {
-    fieldW: 14, fieldH: 18.67, playerY: 1.5, spares: 2, traySlots: 3,
+    fieldW: 14, fieldH: 18.67, fieldBot: -3.4, playerY: -1.9, roam: 5.6, focusLast: 2.5, focusFill: 7, bobbinLag: 2.4, tether: 2.6, bobbinDmg: 0.6, graze: 0.07, spares: 2, traySlots: 3,
     comboWindow: 2.5, comboStep: 8, comboMax: 5, comboCoin: 0.25,
     charmChance: 0.045, chartChance: 0.01, magnet: 1.7, dropSpeed: 2.3,
     cleanRowDust: 12, panelSilk: 2,

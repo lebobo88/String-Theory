@@ -67,7 +67,7 @@
         case 'pocket': c.takePocket(arg); break;
         case 'resume': c.resume(); break;
         case 'abandon': c.abandon(); break;
-        case 'toggle': this.p.settings[arg] = !this.p.settings[arg]; c.saved(); c.applySettings(); this.settings(); break;
+        case 'toggle': this.p.settings[arg] = !(arg === 'liftSlow' ? this.p.settings[arg] !== false : this.p.settings[arg]); c.saved(); c.applySettings(); this.settings(); break;
         case 'settings': this.settings(); break;
         case 'back': if (c.state === 'paused') this.pause(); else this.menu(); break;
         case 'lview': this.ledgerView = arg; this.ledger(); break;
@@ -82,7 +82,8 @@
         case 'fly': c.flyPatch(arg); break;
         case 'how': this.how(); break;
         case 'notion': c.useNotion(+arg); break;
-        case 'swap': c.swap(); break;
+        case 'special': c.special(); break;
+        case 'ctl': this.p.settings.controls = this.p.settings.controls === 'follow' ? 'drag' : 'follow'; c.saved(); this.settings(); break;
         case 'pause': c.pause(); break;
       }
     }
@@ -180,12 +181,15 @@
     }
     how() {
       const touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-      const rows = touch ? [['Move', 'Drag anywhere on the cloth'], ['Fire', 'Automatic'], ['Use an item', 'Tap an item slot'], ['Dash', 'Double-tap to one side (Between ship only)'], ['Swap weapon', 'Tap Swap (Chenille ship only)'], ['Pause', 'Tap the pause button, top right']]
-        : [['Move', '<kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd>, or drag on the cloth'], ['Fire', 'Automatic, or hold <kbd>Space</kbd> with auto-fire off'], ['Use an item', '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>'], ['Dash', '<kbd>Shift</kbd> (Between ship only)'], ['Swap weapon', '<kbd>Q</kbd> (Chenille ship only)'], ['Pause', '<kbd>Esc</kbd> or <kbd>P</kbd>']];
+      const rows = touch ? [['Move', 'Drag anywhere. The ship moves as far as your finger does, up and down too.'], ['Dash', 'Flick sideways and let go'], ['Slow time', 'Lift your finger. Lasts while the Slow bar does.'],
+          ['Special', 'Graze bullets to fill the bar, then tap with a second finger'], ['Items', 'Tap an item slot'], ['Pause', 'Top right']]
+        : [['Move', '<kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or drag'], ['Dash', '<kbd>Shift</kbd>'], ['Slow time', 'Hold <kbd>F</kbd>'], ['Special', 'Graze bullets to fill the bar, then <kbd>E</kbd>'],
+          ['Items', '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>'], ['Pause', '<kbd>Esc</kbd>']];
       this.show(`<div class="sheet howto"><div class="eyebrow">Controls</div><h2>How to play</h2>
         <div class="how">${rows.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>
-        <p>A run is eight stages: three waves, a bonus wave that never shoots back, then a boss. After each stage you shop in the hideout and pick your route.</p>
-        <p>Quick kills build a combo that multiplies score and coins. Coins buy weapons, upgrades and items. Gems buy ships and perks. Blueprints unlock new things in the shop. Everything you buy is saved.</p>
+        <p><b>Two weapons, always firing.</b> Your lead weapon fires from the ship. Your second fires from the bobbin trailing on its thread: hold still to stack both on one target, sweep to spread them. A target hit by both takes 25% more.</p>
+        <p>A run is eight stages: three waves, a bonus wave, then a boss. Between stages you shop in the hideout and pick your route.</p>
+        <p>Quick kills build a combo that multiplies score and coins. Coins buy weapons, upgrades and items; gems buy ships and perks. Everything you buy is saved.</p>
         <div class="row"><button class="btn primary" data-act="title" data-focus>Back</button></div></div>`, 'paper');
     }
 
@@ -239,17 +243,21 @@
     }
     st_spool() {
       const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
+      const owned = ids.filter(id => p.threads[id]), second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : owned.find(id => id !== p.thread) || null;
       const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
         return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, dim: st.why === 'sealed',
-          meta: w ? (p.thread === id ? 'Equipped' : p.thread2 === id ? 'Second' : 'Owned') + ' · Lv ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price) }; });
+          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · Lv ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price) }; });
       const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
-      const weights = `<ol class="weights">${t.weights.map((d, i) => `<li class="${i < w ? 'on' : ''}"><b>${ROMAN[i + 1]}</b> ${esc(d)}${i > 0 ? ` <span class="mono dim">+${C.WEIGHT_COST[i]}</span>` : ''}</li>`).join('')}</ol>`;
+      const weights = `<ol class="weights">${t.weights.map((d, i) => `<li class="${i < w ? 'on' : ''}${i === w ? ' next' : ''}"><b>${ROMAN[i + 1]}</b> ${esc(d)}${i > 0 ? ` <span class="mono dim">+${C.WEIGHT_COST[i]}</span>` : ''}</li>`).join('')}</ol>`;
       let btn = '';
       if (st.ok) btn += `<button class="btn primary" data-act="buy" data-arg="thread:${sel}">${st.why === 'buy' ? 'Buy' : 'Upgrade to level ' + ROMAN[st.next]} · ${num(st.price)}</button>`;
-      if (w && p.thread !== sel) btn += `<button class="btn" data-act="wind" data-arg="${sel}">Equip</button>`;
-      if (w && p.thread !== sel && p.needle === 'chenille' && p.thread2 !== sel) btn += `<button class="btn" data-act="wind2" data-arg="${sel}">Equip as second weapon</button>`;
+      if (w && p.thread !== sel) btn += `<button class="btn" data-act="wind" data-arg="${sel}">Set as lead</button>`;
+      if (w && p.thread !== sel && second !== sel) btn += `<button class="btn" data-act="wind2" data-arg="${sel}">Put on bobbin</button>`;
+      const dd = ST.derive(p), L = t.lv[Math.max(1, w) - 1], per = dd.dmg * L.dmg, shots = L.n + (L.mid ? 1 : 0);
+      const role = p.thread === sel ? 'Your lead weapon: fires from the ship.' : second === sel ? 'On your bobbin: fires from the spool that trails your ship, at 60% damage.' : w ? 'Owned, not in use.' : '';
+      const wstat = `<div class="wstat"><span>Best at <b>${esc(t.job)}</b></span><span>${shots} ${shots > 1 ? 'shots' : 'shot'} \u00d7 <b class="mono">${per.toFixed(2)}</b></span><span><b class="mono">${(dd.fireMul / L.rate).toFixed(1)}</b> a second</span></div>${role ? `<p class="role">${role}</p>` : ''}`;
       if (st.ok || (w && p.thread !== sel)) { const q = this.clone(); q.thread = sel; q.threads[sel] = p.thread === sel || !w ? (st.ok ? st.next || 1 : w) : w; this.preview = q; }
-      return this.list(items, sel) + this.detail({ kicker: 'Weapon · bought with coins, kept forever', name: t.name, desc: t.desc, extra: weights,
+      return this.list(items, sel) + this.detail({ kicker: 'Weapon · bought with coins, kept forever', name: t.name, desc: t.desc, extra: wstat + weights,
         state: this.stateLine(st, 'dust') + (st.why === 'short' ? this.priceTag(st, 'dust') : ''), buttons: btn,
         quote: '' });
     }
@@ -288,7 +296,7 @@
       if (p.needles[sel] && p.needle !== sel) btn += `<button class="btn primary" data-act="takeup" data-arg="${sel}">Fly this ship</button>`;
       if (sel !== p.needle) { const q = this.clone(); q.needle = sel; this.preview = q; }
       const sealed = st.why === 'sealed' ? `<p class="state sealed">${esc(n.name)} is locked until you find its blueprint. Dropped by: ${esc(C.CHARTS[n.chart].from)}.</p>` : '';
-      return this.list(items, sel) + this.detail({ kicker: 'Ship · bought with gems, kept forever', name: n.name, desc: n.trait + ': ' + n.traitDesc, extra: stats + sealed,
+      return this.list(items, sel) + this.detail({ kicker: 'Ship · bought with gems, kept forever', name: n.name, desc: n.trait + ': ' + n.traitDesc, extra: `<p class="role"><b>Special \u00b7 ${esc(n.special)}:</b> ${esc(n.specialDesc)}</p>` + stats + sealed,
         state: (st.why === 'sealed' ? '' : this.stateLine(st, 'silk')) + (st.why === 'short' ? this.priceTag(st, 'silk') : ''), buttons: btn,
         quote: '' });
     }
@@ -329,9 +337,11 @@
     tally(res, pocket) {
       const info = res.info, keeper = res.keeper;
       const title = keeper ? (res.last ? 'Run complete' : info.panelName + ' cleared') : res.sampler ? 'Bonus wave \u00b7 ' + res.sampler.hit + ' of ' + res.sampler.total : 'Wave cleared';
-      const rows = [['Score', num(res.stitches)], ['Coins earned', dustTag(res.dust)], ['Gems earned', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]]
-        .concat(res.bonuses.map(b => [b.name, (b.stitches ? '+' + num(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust) : '+' + silkTag(b.silk))]))
-        .concat(keeper ? [['Gems this run', silkTag(res.nightSilk)]] : [])
+      const anyBonus = res.bonuses.length > 0;
+      const rows = [['Score', num(res.stitches)], ['Best combo', '×' + res.bestCombo], ['Coins picked up', dustTag(res.dust)], ['Gems picked up', silkTag(res.silk)]]
+        .concat(res.bonuses.map(b => ['Bonus: ' + b.name, (b.stitches ? '+' + num(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust) : '+' + silkTag(b.silk))]))
+        .concat(anyBonus ? [['<b>Total this ' + (keeper ? 'fight' : 'wave') + '</b>', dustTag(res.dustAll) + ' ' + silkTag(res.silkAll)]] : [])
+        .concat(keeper ? [['Earned this run so far', dustTag(res.nightDust) + ' ' + silkTag(res.nightSilk)]] : [])
         .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name)]));
       const next = keeper ? 'To the hideout' : ({ row: 'Next wave', sampler: 'Bonus wave', keeper: 'Fight the boss' })[C.STAGES[info.row + 1]];
       let pk = '';
@@ -343,7 +353,7 @@
         <div class="row"><button class="btn primary" data-act="continue" data-focus>${next}</button></div></div>`, 'paper');
     }
     snapped(res) {
-      const rows = [['Score', num(res.stitches)], ['Coins kept', dustTag(res.dust)], ['Gems kept', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]];
+      const rows = [['Score', num(res.stitches)], ['Coins earned this run', dustTag(res.dust)], ['Gems earned this run', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]];
       if (res.sweep) rows.push(['Coin Exchange', '+' + silkTag(res.sweep)]);
       res.charts.forEach(c => rows.push(['Blueprint found', esc(C.CHARTS[c].name)]));
       this.show(`<div class="sheet"><div class="eyebrow">${esc(res.info.panelName)} · ${esc(res.info.label)}</div><h2 class="madder">Game over</h2>
@@ -358,9 +368,10 @@
           <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper');
     }
     settings() {
-      const st = this.p.settings, row = (k, name, note) => `<button class="setrow" data-act="toggle" data-arg="${k}" role="switch" aria-checked="${!!st[k]}"><span><b>${name}</b><span>${note}</span></span><i class="sw ${st[k] ? 'on' : ''}">${st[k] ? 'On' : 'Off'}</i></button>`;
+      const st = Object.assign({ liftSlow: true, controls: 'drag' }, this.p.settings), row = (k, name, note) => `<button class="setrow" data-act="toggle" data-arg="${k}" role="switch" aria-checked="${!!st[k]}"><span><b>${name}</b><span>${note}</span></span><i class="sw ${st[k] ? 'on' : ''}">${st[k] ? 'On' : 'Off'}</i></button>`;
       this.show(`<div class="sheet narrow"><div class="eyebrow">Saved with your game</div><h2>Settings</h2>
-        <div class="setlist">${row('sound', 'Sound', 'Music and effects')}${row('autofire', 'Auto-fire', 'Fire without holding a button')}${row('shadows', 'Shadows', 'Turn off if the game runs slowly')}</div>
+        <div class="setlist">${row('sound', 'Sound', 'Music and effects')}${row('autofire', 'Auto-fire', 'Fire without holding a button')}${row('liftSlow', 'Lift to slow', 'Time slows when you take your finger off')}${row('shadows', 'Shadows', 'Turn off if the game runs slowly')}
+          <button class="setrow" data-act="ctl"><span><b>Steering</b><span>${st.controls === 'follow' ? 'The ship flies to your finger' : 'The ship moves as far as your finger moves'}</span></span><i class="sw on">${st.controls === 'follow' ? 'Follow' : 'Drag'}</i></button></div>
         <div class="row"><button class="btn primary" data-act="back" data-focus>Back</button></div></div>`, 'paper', 'settings');
     }
     fail(msg) { this.show(`<div class="sheet narrow"><h2>Could not start the game</h2><p>${esc(msg)}</p></div>`, 'paper'); }
@@ -380,7 +391,7 @@
       this.set('hudL', `<div class="wm">String Theory</div><div class="lab">Score</div><div class="score">${num(sim.stitches)}</div>
         <div class="lab">Best</div><div class="mono big">${num(Math.max(p.stats.bestNight, sim.stitches))}</div>
         <div class="lab">Progress</div>${chart}<div class="dim small">${esc(sim.stageInfo().panelName)} · ${esc(sim.stageInfo().label)}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</div>
-        <hr><div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Weapon level ${ROMAN[w]}</span></div></div>${combo}`);
+        <hr><div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Lead \u00b7 level ${ROMAN[w]}</span></div></div>${sim.secondThread() ? `<div class="thread"><i class="spool" style="--c:${C.THREADS[sim.secondThread()].color}"></i><div><b>${esc(C.THREADS[sim.secondThread()].name)}</b><span>Bobbin \u00b7 level ${ROMAN[p.threads[sim.secondThread()]]}</span></div></div>` : ''}${combo}`);
       let ply = '<div class="bobbin">'; for (let i = 0; i < d.ply; i++) ply += `<i class="${i < pl.ply ? (pl.ply === 1 && d.ply > 1 ? 'fray' : 'on') : ''}"></i>`; ply += '</div>';
       let pins = '<div class="cushion">'; for (let i = 0; i < sim.spares; i++) pins += '<i></i>'; pins += '</div>';
       const fx = Object.keys(sim.fx).filter(k => sim.fx[k] > 0).map(k => `<span class="fx" style="--c:${(C.CHARMS[k] || { color: PAL.saffron }).color}">${esc((C.CHARMS[k] || C.NOTIONS[k]).name)} <b class="mono">${Math.ceil(sim.fx[k])}</b></span>`).join('')
@@ -406,7 +417,11 @@
         + (sim.armed.thimble ? ring('_t', 'Thimble', PAL.saffron, 0) : '') + (sim.armed.pin ? ring('_p', 'Safety Pin', PAL.saffron, 0) : '')
         + (sim.armed.chalk ? ring('_c', 'Dive warnings', PAL.saffron, 0) : '') + (pl.dual ? ring('_d', 'Twin ship', '#E0726E', 0) : ''));
       const slots = [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('');
-      this.set('tray', `<div class="lab">Items</div><div class="slots">${slots}${d.bigEye && p.thread2 ? '<button class="slot txt" data-act="swap" aria-label="Swap weapon">Swap<kbd>Q</kbd></button>' : ''}<button class="slot txt pz" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
+      const nd = C.NEEDLES[d.needle] || C.NEEDLES.sharps, ready = pl.sp >= 1, coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+      let dash = ''; for (let i = 0; i < d.dashMax; i++) dash += `<i class="${i < pl.dashN ? 'on' : ''}"></i>`;
+      const meters = `<div class="meters"><button class="sp${ready ? ' ready' : ''}" data-act="special" aria-label="Special: ${esc(nd.special)}${ready ? ', ready' : ''}"><span>${esc(nd.special)}${ready ? (coarse ? ' · tap with a second finger' : ' · press E') : ''}</span><i style="width:${Math.round(pl.sp * 100)}%"></i></button>
+        <div class="fo${sim.focusOn ? ' on' : ''}" aria-label="Slow time"><span>Slow</span><i style="width:${Math.round(pl.focus * 100)}%"></i></div><div class="da" aria-label="Dash charges: ${pl.dashN}"><span>Dash</span>${dash}</div></div>`;
+      this.set('tray', `${meters}<div class="lab">Items</div><div class="slots">${slots}<button class="slot txt pz" data-act="pause" aria-label="Pause">Pause<kbd>Esc</kbd></button></div>`);
       const b = sim.boss;
       const sm = sim.sampler;
       this.set('bossbar', sm ? `<div class="bb"><b>Bonus wave \u00b7 ${sm.hit} of ${sm.total}</b><span>They never shoot back. Get them all.</span><div class="seam"><i style="width:${sm.hit / sm.total * 100}%"></i></div></div>` : b ? `<div class="bb"><b>${esc(b.def.name)}</b><span>Phase ${b.phase} · ${esc(b.def.phaseTag[b.phase - 1])}${b.def.chews ? (b.open ? ' · mouth open: shoot it' : ' · mouth shut') : ''}</span><div class="seam"><i style="width:${Math.max(0, b.hp / b.maxHp * 100)}%"></i></div></div>` : '');

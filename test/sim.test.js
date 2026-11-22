@@ -133,5 +133,29 @@ function fly(profile, seed, skill, log) {
   ok(!ST.modeUnlocked(p, 'hard') && ST.modeUnlocked(Object.assign(ST.save.freshProfile(), { stats: { won_normal: 1 } }), 'hard'), 'hard unlocks after a normal win');
   const after = ST.Sim.restore(p, Object.assign({}, snap, { at: 'after', row: 3 })); ok(Object.assign(after, { row: 4 }).advance() === 'hem' && after.panel === 3 && after.row === 0, 'a cleared boss resumes at the hideout before the next stage');
 }
+
+{ // phase 2: two weapons always firing, every ship's special, and totals that add up
+  for (const n of Object.keys(C.NEEDLES)) {
+    const p = ST.save.freshProfile('t'); p.needles[n] = true; p.needle = n; p.threads = { running: 2, backstitch: 2 }; p.thread = 'backstitch'; p.thread2 = 'running';
+    const sim = new ST.Sim(p, 3); sim.startStage(); let lead = 0, bob = 0, sp = 0, cleared = null, silk0 = p.silk, dust0 = p.dust;
+    for (let f = 0; f < 60 * 240 && !cleared; f++) {
+      const pl = sim.player; pl.invuln = 1; if (f % 300 === 0) pl.sp = 1;
+      let low = null; for (const e of sim.enemies) if (!low || e.y < low.y) low = e;
+      sim.update(1 / 60, { targetX: low ? low.x : 0, targetY: C.TUNING.playerY + (f % 600 < 300 ? 3 : 0), fire: true, notion: -1, dash: f % 200 === 0 ? 1 : 0, special: f % 300 === 5, focus: f % 500 < 60 });
+      for (const ev of sim.events) { if (ev.t === 'fire') { if (ev.src === 'B') bob++; else lead++; } if (ev.t === 'special') sp++; if (ev.t === 'stageclear') cleared = ev; }
+      ok(Number.isFinite(pl.x + pl.y + pl.bx + pl.by + pl.sp + pl.focus), 'ship state finite: ' + n);
+      ok(pl.y >= C.TUNING.playerY - 1e-6 && (pl.ram || pl.y <= C.TUNING.playerY + C.TUNING.roam + 1e-6), 'ship stays in its zone: ' + n);
+    }
+    ok(lead > 0 && bob > 0, 'lead and bobbin both fire: ' + n); ok(sp > 0, 'special fires: ' + n); ok(!!cleared, 'wave clears: ' + n);
+    if (cleared) {
+      const bs = cleared.bonuses.reduce((a, b) => a + (b.silk || 0), 0), bd = cleared.bonuses.reduce((a, b) => a + (b.dust || 0), 0);
+      ok(cleared.silkAll === cleared.silk + bs && cleared.dustAll === cleared.dust + bd, 'tally: picked up + bonuses = total');
+      ok(p.silk - silk0 === cleared.silkAll && p.dust - dust0 === cleared.dustAll, 'tally total is what the save gained');
+    }
+  }
+  const p = ST.save.freshProfile('t'); ok(!new ST.Sim(p, 1).secondThread(), 'no bobbin weapon with one weapon');
+  p.dust = 9999; ST.shop.buyThread(p, 'backstitch'); ok(p.thread === 'backstitch' && p.thread2 === 'running', 'buying a second weapon fills the bobbin');
+  for (const t of Object.values(C.THREADS)) ok(t.lv.length === 3 && t.weights.length === 3 && t.job, 'weapon levels: ' + t.name);
+}
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
 process.exit(fails ? 1 : 0);

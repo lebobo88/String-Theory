@@ -82,27 +82,27 @@ Hits on the weak spot do double damage; anywhere else 0.6. The Unraveller only t
 ## Weapons (coins, kept forever)
 | Weapon | Price | Level I | Level II (+400) | Level III (+900) | Needs blueprint |
 |---|---|---|---|---|---|
-| Single Stitch | Starter | One shot, straight ahead | Fires 30% faster | Shots pierce through one enemy | none |
-| Double Stitch | 350 | Two shots side by side | Fires 30% faster | Three shots side by side | none |
-| Spread Stitch | 600 | Three shots in a fan | Fires twice as fast | Five shots in a wider fan | Spread Stitch blueprint |
-| Chain Stitch | 800 | Hits jump to a second enemy | Hits jump to a third enemy | Jumps do full damage | Chain Stitch blueprint |
-| Knot Bomb | 900 | A slow bomb with a small blast | A much bigger blast | Fires twice as fast | Knot Bomb blueprint |
-| Wire Laser | 1000 | A beam through the whole column | Charges faster | The beam is twice as wide | Wire Laser blueprint |
-| Cross Stitch | 1100 | Two diagonal shots that bounce off the walls | Shots bounce twice and hit harder | Adds a third shot straight ahead | Cross Stitch blueprint |
-| Satin Stitch | 1200 | A rapid weaving stream of light shots | Two streams side by side | Fires faster | Satin Stitch blueprint |
+| Single Stitch | Starter | One shot, straight ahead | Fires faster and pierces one enemy | Hits harder and pierces two | none |
+| Double Stitch | 350 | Two shots side by side | Fires faster | Three shots side by side | none |
+| Chain Stitch | 500 | Hits jump to a second enemy | Hits jump to a third enemy | Hits jump to a fourth enemy | Chain Stitch blueprint |
+| Spread Stitch | 650 | Three shots in a fan | Fires faster | Five shots in a wider fan | Spread Stitch blueprint |
+| Knot Bomb | 700 | A slow bomb with a small blast | A much bigger blast | Fires faster | Knot Bomb blueprint |
+| Cross Stitch | 800 | Two diagonal shots that bounce once | Shots bounce twice | Three bounces, and a third shot straight ahead | Cross Stitch blueprint |
+| Wire Laser | 900 | A beam through the whole column | Charges faster | Hits harder and twice as wide | Wire Laser blueprint |
+| Satin Stitch | 1000 | A rapid weaving stream of light shots | Two streams side by side | Fires faster | Satin Stitch blueprint |
 
 ## Ships (gems, kept forever)
 | Ship | Price | Shield | Speed | Fire rate | Damage | Trait | Needs blueprint |
 |---|---|---|---|---|---|---|---|
-| Sharps | Starter | 2 | 3 | 2 | 2 | **Balanced**: Smaller hitbox and longer invincibility after a hit. | none |
-| Between | 60 | 1 | 5 | 2 | 2 | **Dash**: Fast and fragile. Double-tap a direction to dash. | none |
-| Darner | 90 | 2 | 2 | 3 | 2 | **Wide Shot**: Every weapon fires two extra side shots. | Darner blueprint |
-| Chenille | 120 | 3 | 2 | 4 | 1 | **Two Weapons**: Carries two weapons. Swap between them any time. | Chenille blueprint |
-| Sail | 150 | 4 | 1 | 1 | 3 | **Heavy**: Slow and tough. Blocks one capture beam every wave. | Sail blueprint |
-| Beading | 200 | 1 | 4 | 1 | 4 | **Piercing**: Fragile and hard-hitting. Every shot pierces one enemy. | Beading blueprint |
-| Quilter | 180 | 3 | 2 | 2 | 2 | **Padded**: Starts every wave with a one-hit shield. | Quilter blueprint |
-| Embroidery | 220 | 2 | 3 | 2 | 1 | **Guided**: Every shot curves toward the nearest enemy. | Embroidery blueprint |
-| Tapestry | 260 | 2 | 3 | 3 | 2 | **Bobbin Drone**: A small drone flies beside you and fires with you. | Tapestry blueprint |
+| Sharps | Starter | 2 | 3 | 2 | 2 | **All-rounder**: Smaller hitbox and longer invincibility after a hit. | none |
+| Between | 60 | 1 | 5 | 2 | 2 | **Dodger**: Fast and fragile. Two dash charges, and dashing through bullets charges your special. | none |
+| Darner | 90 | 2 | 2 | 3 | 2 | **Wall**: Your lead weapon fires two extra side shots. | Darner blueprint |
+| Chenille | 120 | 3 | 2 | 4 | 1 | **Whip**: A long, thick tether. The thread to your bobbin cuts every enemy it touches. | Chenille blueprint |
+| Sail | 150 | 4 | 1 | 1 | 3 | **Tank**: Slow and tough. A canvas patch blocks one bullet, then re-stitches after five seconds. Blocks one capture beam every wave. | Sail blueprint |
+| Beading | 200 | 1 | 4 | 1 | 4 | **Glass cannon**: Fragile and hard-hitting. Every shot pierces, and every tenth is a heavy bead that goes through everything. | Beading blueprint |
+| Quilter | 180 | 3 | 2 | 2 | 2 | **Survivor**: Starts every wave with a one-hit pad. Eight near-misses re-stuff it. | Quilter blueprint |
+| Embroidery | 220 | 2 | 3 | 2 | 1 | **Marksman**: Lead shots curve toward enemies, and the bobbin flies free to hover under the nearest one. | Embroidery blueprint |
+| Tapestry | 260 | 2 | 3 | 3 | 2 | **Weaver**: Two bobbins, one each side of the ship. | Tapestry blueprint |
 
 ## Upgrades (coins, permanent, apply to every ship)
 | Upgrade | Levels | Effect | Level prices |
@@ -136,7 +136,7 @@ A quick shop opens after every wave with three items: buy one, or keep your coin
 | Double Coins | 12 s | Coins are worth double. |
 | Rapid Fire | 10 s | Fire 60% faster. |
 | Piercing Shots | 8 s | Shots pass through every enemy. |
-| Wide Shot | 10 s | Two extra side shots. |
+| Wide Shot | 10 s | Two extra side shots from your lead weapon. |
 | Invincible | 6 s | Nothing can hurt you. |
 | Slow Motion | 6 s | Enemies and their shots move at half speed. |
 | Shield +1 | instant | Restores one shield. |

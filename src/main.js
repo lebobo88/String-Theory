@@ -89,7 +89,7 @@
       this.canvas = document.getElementById('cloth');
       this.renderer = new ST.Renderer(this.canvas, THREE, { shadows: this.profile.settings.shadows });
       this.sim = null; this.state = 'title'; this.midNight = false; this.visit = {};
-      this.keys = {}; this.pointer = null; this.one = { notion: -1, swap: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
+      this.keys = {}; this.pointer = null; this.steer = null; this.aim = null; this.tap2 = null; this.touch = false; this.one = { notion: -1, special: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
       this.acc = 0; this.last = 0; this.frame = 0;
       loadAudio();
       this.bind();
@@ -136,7 +136,10 @@
       this.midNight = false; this.renderer.clear(); this.state = 'route'; this.ui.hudVisible(false); this.ui.route();
     }
     flyPatch(id) { if (!this.sim) return; this.sim.setPatch(id); this.midNight = false; this.fly(); }
-    fly() { this.sim.startStage(); this.keep('stage'); this.state = 'flight'; this.ui.hide(); this.ui.hudVisible(true); this.acc = 0; this.pointer = null; this.pump(); this.ui.hud(this.sim); requestAnimationFrame(() => this.renderer.resize()); }
+    fly() { if (this.sim && this.profile.stats.nights === 0 && this.sim.panel === 0 && this.sim.row === 0 && !this.tipped) { this.tipped = true; const coarse = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        const tips = coarse ? [['Drag anywhere to fly', ''], ['Flick sideways to dash', ''], ['Lift your finger to slow time', '']] : [['Arrow keys or drag to fly', ''], ['Shift to dash', ''], ['Hold F to slow time', '']];
+        tips.forEach((t, i) => setTimeout(() => { if (this.state === 'flight') this.ui.toast(t[0], t[1]); }, 2200 + i * 3200)); }
+      this.sim.startStage(); this.keep('stage'); this.state = 'flight'; this.ui.hide(); this.ui.hudVisible(true); this.acc = 0; this.steer = null; this.aim = null; this.tap2 = null; this.pump(); this.ui.hud(this.sim); requestAnimationFrame(() => this.renderer.resize()); }
     depart() { if (this.midNight && this.sim) { this.state = 'route'; this.ui.route(); } else this.beginNight(); }
     continueNight() {
       const res = this.sim && this.sim.result;
@@ -149,7 +152,7 @@
     resume() { if (this.state === 'paused') { this.state = 'flight'; this.ui.hide(); this.last = 0; } }
     abandon() { if (this.sim) { if (!this.sim.record) this.sim.closeNight(false); this.closeBook(); this.profile.run = null; this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
     useNotion(i) { this.one.notion = i; }
-    swap() { this.one.swap = true; }
+    special() { this.one.special = true; }
 
     // ---------- input ----------
     bind() {
@@ -160,36 +163,61 @@
         const k = e.code;
         if (k === 'Escape' || k === 'KeyP') { if (this.state === 'flight') this.pause(); else this.resume(); e.preventDefault(); return; }
         if (this.state !== 'flight') return;
-        if (['ArrowLeft', 'ArrowRight', 'Space', 'KeyA', 'KeyD'].indexOf(k) >= 0) e.preventDefault();
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].indexOf(k) >= 0) e.preventDefault();
         if (!e.repeat) {
           const now = performance.now(), dir = (k === 'ArrowLeft' || k === 'KeyA') ? -1 : (k === 'ArrowRight' || k === 'KeyD') ? 1 : 0;
-          if (dir) { if (this.lastKey.code === k && now - this.lastKey.t < 260) this.one.dash = dir; this.lastKey = { code: k, t: now }; this.pointer = null; }
+          if (dir) { if (this.lastKey.code === k && now - this.lastKey.t < 260) this.one.dash = dir; this.lastKey = { code: k, t: now }; this.steer = null; this.touch = false; }
           if (k === 'Digit1' || k === 'Digit2' || k === 'Digit3') this.one.notion = +k.slice(5) - 1;
-          if (k === 'KeyQ') this.one.swap = true;
+          if (k === 'KeyE' || k === 'KeyX' || k === 'Enter') this.one.special = true;
           if (k === 'ShiftLeft' || k === 'ShiftRight') this.one.dash = this.keys.ArrowLeft || this.keys.KeyA ? -1 : this.keys.ArrowRight || this.keys.KeyD ? 1 : (this.sim && this.sim.player.x > 0 ? -1 : 1);
         }
         this.keys[k] = true;
       });
       window.addEventListener('keyup', e => { this.keys[e.code] = false; });
-      const cv = this.canvas;
-      cv.addEventListener('pointerdown', e => {
-        wake(); if (this.state !== 'flight') return;
-        const x = this.renderer.worldX(e.clientX), now = performance.now();
-        if (now - this.lastTap < 280 && this.sim) this.one.dash = x > this.sim.player.x ? 1 : -1;
-        this.lastTap = now; this.pointer = { id: e.pointerId, x }; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
+      /* Touch and mouse: drag anywhere and the ship moves as far as your finger does (or, in "follow" mode, flies to it).
+         A quick sideways flick dashes. A tap with a second finger fires the special. Lifting off slows time while the focus spool lasts. */
+      const st = document.getElementById('stage'), F = ST.FIELD, T = C.TUNING;
+      const perPx = () => { const a = this.renderer.project(-F.HW, F.PY).x, b = this.renderer.project(F.HW, F.PY).x; return F.HW * 2 / ((b - a) || 1); };
+      const worldPt = e => { const ya = this.renderer.project(0, F.PY).y, yb = this.renderer.project(0, F.PY + T.roam).y; return { x: this.renderer.worldX(e.clientX), y: F.PY + (e.clientY - ya) / ((yb - ya) || 1) * T.roam + 1.6 }; };
+      const follow = () => this.profile.settings.controls === 'follow';
+      const fence = a => { a.x = Math.max(-F.HW + 0.5, Math.min(F.HW - 0.5, a.x)); a.y = Math.max(F.PY, Math.min(F.PY + T.roam, a.y)); return a; };
+      const flick = (p, e, now) => { const dx = e.clientX - p.x0, dy = e.clientY - p.y0; return now - p.t0 < 230 && Math.abs(dx) > 30 && Math.abs(dx) > 1.5 * Math.abs(dy) ? Math.sign(dx) : 0; };
+      st.addEventListener('pointerdown', e => {
+        wake(); if (this.state !== 'flight' || !this.sim || (e.target.closest && e.target.closest('button'))) return;
+        const now = performance.now(); this.touch = e.pointerType !== 'mouse';
+        if (this.steer && this.steer.id !== e.pointerId) { this.tap2 = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: now }; e.preventDefault(); return; }
+        const pl = this.sim.player;
+        this.steer = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t0: now };
+        this.aim = fence(follow() ? worldPt(e) : { x: pl.x, y: pl.y });
+        try { st.setPointerCapture(e.pointerId); } catch (err) { /* older browsers */ }
         e.preventDefault();
       });
-      cv.addEventListener('pointermove', e => { if (this.pointer && this.pointer.id === e.pointerId) this.pointer.x = this.renderer.worldX(e.clientX); });
-      const up = e => { if (this.pointer && this.pointer.id === e.pointerId) this.pointer = null; };
-      cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+      st.addEventListener('pointermove', e => {
+        const p = this.steer; if (!p || p.id !== e.pointerId || !this.aim) return;
+        if (follow()) this.aim = fence(worldPt(e)); else { const k = perPx(); this.aim.x += (e.clientX - p.x) * k; this.aim.y -= (e.clientY - p.y) * k; fence(this.aim); }
+        p.x = e.clientX; p.y = e.clientY;
+      });
+      const up = e => {
+        const now = performance.now();
+        if (this.tap2 && this.tap2.id === e.pointerId) {
+          const d = flick(this.tap2, e, now), still = Math.hypot(e.clientX - this.tap2.x0, e.clientY - this.tap2.y0) < 26;
+          if (d) this.one.dash = d; else if (still && now - this.tap2.t0 < 400) this.one.special = true;
+          this.tap2 = null; return;
+        }
+        if (this.steer && this.steer.id === e.pointerId) { const d = e.type === 'pointerup' ? flick(this.steer, e, now) : 0; if (d) this.one.dash = d; this.steer = null; this.aim = null; }
+      };
+      st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
       window.addEventListener('pointerdown', wake, { passive: true });
       window.addEventListener('resize', () => this.renderer.resize());
       document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); });
     }
     input() {
-      const k = this.keys, move = ((k.ArrowRight || k.KeyD) ? 1 : 0) - ((k.ArrowLeft || k.KeyA) ? 1 : 0);
-      return { move, targetX: move === 0 && this.pointer ? this.pointer.x : null, fire: this.profile.settings.autofire || !!k.Space || !!this.pointer,
-        notion: this.one.notion, swap: this.one.swap, dash: this.one.dash };
+      const k = this.keys, st = this.profile.settings;
+      const move = ((k.ArrowRight || k.KeyD) ? 1 : 0) - ((k.ArrowLeft || k.KeyA) ? 1 : 0), moveY = ((k.ArrowUp || k.KeyW) ? 1 : 0) - ((k.ArrowDown || k.KeyS) ? 1 : 0);
+      const drag = move === 0 && moveY === 0 && this.steer && this.aim;
+      return { move, moveY, targetX: drag ? this.aim.x : null, targetY: drag ? this.aim.y : null, fire: st.autofire || !!k.Space || !!this.steer,
+        notion: this.one.notion, dash: this.one.dash, special: this.one.special,
+        focus: !!k.KeyF || (this.touch && !this.steer && st.liftSlow !== false) };
     }
 
     // ---------- frame ----------
@@ -204,7 +232,7 @@
           while (this.acc >= STEP) {
             this.acc -= STEP;
             this.sim.update(STEP, this.input());
-            this.one.notion = -1; this.one.swap = false; this.one.dash = 0;
+            this.one.notion = -1; this.one.special = false; this.one.dash = 0;
             for (const e of this.sim.events) events.push(e);
             if (this.sim.phase === 'done') { this.acc = 0; break; }
           }
@@ -239,6 +267,9 @@
           case 'phase': this.sfx('phase'); ui.banner(e.tag, e.name + ' · Phase ' + e.phase, 1500); break;
           case 'keeperdown': this.sfx('keeper'); ui.banner(e.name, 'Boss defeated', 2000); break;
           case 'lance': this.sfx('lance'); break;
+          case 'special': this.sfx('phase'); ui.banner(e.name, 'Special', 900); break;
+          case 'patch': this.sfx('hit'); break;
+          case 'repad': this.sfx('charm'); ui.toast('Pad re-stuffed', 'Next hit blocked.'); break;
           case 'burst': this.sfx('burst'); break;
           case 'stageclear': if (e.last) { this.closeBook(); this.profile.run = null; this.saved(); } else this.keep('after'); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
           case 'snapped': this.closeBook(); this.profile.run = null; this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;

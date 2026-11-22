@@ -7,8 +7,9 @@
 (function (ST) {
   'use strict';
   const C = ST.content, PAL = C.PAL, FX = ST.fx, SH = ST.shaders;
-  const W = C.TUNING.fieldW, H = C.TUNING.fieldH, PY = C.TUNING.playerY;
-  const SCROLL = 2.4, EYE = PY - 0.3, TAU = Math.PI * 2;
+  const W = C.TUNING.fieldW, H = C.TUNING.fieldH, GY = C.TUNING.playerY, B = C.TUNING.fieldBot || 0, FH = H - B, CY = (H + B) / 2;
+  let PY = GY;   // where the ship is right now; GY is its home row
+  const SCROLL = 2.4, EYE = GY - 0.3, TAU = Math.PI * 2;
   const rnd = (a, b) => a + (b - a) * Math.random();
 
   class Renderer {
@@ -177,7 +178,7 @@
     buildWorld() {
       const T = this.T, sc = this.scene;
       sc.add(new T.HemisphereLight(0xdfe6ff, 0x221a2e, 1.5));
-      const sun = this.sun = new T.DirectionalLight(0xfff0d8, 2.3); sun.position.set(-7, H / 2 + 6, 18); sun.target.position.set(0, H / 2, 0);
+      const sun = this.sun = new T.DirectionalLight(0xfff0d8, 2.3); sun.position.set(-7, CY + 6, 18); sun.target.position.set(0, CY, 0);
       sun.shadow.mapSize.set(2048, 2048);
       const sh = sun.shadow.camera; sh.left = -10; sh.right = 10; sh.top = 13; sh.bottom = -13; sh.near = 1; sh.far = 50; sh.updateProjectionMatrix(); sun.shadow.bias = -0.0015;
       sc.add(sun); sc.add(sun.target);
@@ -193,26 +194,26 @@
         s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vField;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvField = (modelMatrix * vec4(position, 1.)).xy;');
         s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\n' + SH.common + SH.clothPars)
-          .replace('#include <map_fragment>', 'clothCompute();\nvec4 sampledDiffuseColor = texture2D(map, vMapUv + cRipOff * vec2(' + (1 / W).toFixed(5) + ', ' + (1 / H).toFixed(5) + '));\ndiffuseColor *= sampledDiffuseColor;\ndiffuseColor.rgb *= cWeave;')
+          .replace('#include <map_fragment>', 'clothCompute();\nvec4 sampledDiffuseColor = texture2D(map, vMapUv + cRipOff * vec2(' + (1 / W).toFixed(5) + ', ' + (1 / FH).toFixed(5) + '));\ndiffuseColor *= sampledDiffuseColor;\ndiffuseColor.rgb *= cWeave;')
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal + mat3(viewMatrix) * vec3(cBump, 0.));')
           .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += cEmit;');
       };
       cm.customProgramCacheKey = () => 'cloth' + cm.defines.DETAIL;
-      const cloth = new T.Mesh(new T.PlaneGeometry(W, H), cm);
-      cloth.position.set(0, H / 2, 0); cloth.receiveShadow = true; sc.add(cloth); this.cloth = cloth;
+      const cloth = new T.Mesh(new T.PlaneGeometry(W, FH), cm);
+      cloth.position.set(0, CY, 0); cloth.receiveShadow = true; sc.add(cloth); this.cloth = cloth;
       // the embroidery frame: umber bars, brass pegs, linen lacing (merged: three draws)
       const wood = this.flat(PAL.umber, { roughness: 0.7 }), brass = this.flat(PAL.brass, { roughness: 0.35, metalness: 0.7 }), lace = this.flat(PAL.rule);
       const bars = [], pegs = [], laces = [], mm = (x, y, z, rx, ry, rz) => new T.Matrix4().compose(new T.Vector3(x, y, z), new T.Quaternion().setFromEuler(new T.Euler(rx || 0, ry || 0, rz || 0)), new T.Vector3(1, 1, 1));
       const bar = (x, y, w, h) => bars.push([new T.BoxGeometry(w, h, 0.7), mm(x, y, 0.2)]);
-      bar(0, -0.45, W + 1.8, 0.9); bar(0, H + 0.45, W + 1.8, 0.9); bar(-W / 2 - 0.45, H / 2, 0.9, H); bar(W / 2 + 0.45, H / 2, 0.9, H);
+      bar(0, B - 0.45, W + 1.8, 0.9); bar(0, H + 0.45, W + 1.8, 0.9); bar(-W / 2 - 0.45, CY, 0.9, FH); bar(W / 2 + 0.45, CY, 0.9, FH);
       const pg = new T.CylinderGeometry(0.16, 0.16, 0.5, 10);
-      for (const sx of [-1, 1]) for (let i = 0; i <= 6; i++) pegs.push([pg, mm(sx * (W / 2 + 0.45), i * H / 6, 0.65, Math.PI / 2)]);
+      for (const sx of [-1, 1]) for (let i = 0; i <= 6; i++) pegs.push([pg, mm(sx * (W / 2 + 0.45), B + i * FH / 6, 0.65, Math.PI / 2)]);
       const lg = new T.CylinderGeometry(0.035, 0.035, 1.1, 5);
-      for (let i = 0; i < 12; i++) { const y0 = i * H / 12 + H / 24, rz = i % 2 ? 0.9 : -0.9; laces.push([lg, mm(-W / 2 - 0.05, y0, 0.12, 0, 0, rz)]); laces.push([lg, mm(W / 2 + 0.05, y0, 0.12, 0, 0, rz)]); }
+      for (let i = 0; i < 12; i++) { const y0 = B + i * FH / 12 + FH / 24, rz = i % 2 ? 0.9 : -0.9; laces.push([lg, mm(-W / 2 - 0.05, y0, 0.12, 0, 0, rz)]); laces.push([lg, mm(W / 2 + 0.05, y0, 0.12, 0, 0, rz)]); }
       const add = (items, m, cast) => { const o = new T.Mesh(FX.merge(T, items), m); o.castShadow = cast; o.receiveShadow = true; sc.add(o); return o; };
       add(bars, wood, true); this.pegs = add(pegs, brass, false); add(laces, lace, false);
       const table = new T.Mesh(new T.PlaneGeometry(120, 120), new T.MeshStandardMaterial({ color: new T.Color(PAL.night), roughness: 1 }));
-      table.position.set(0, H / 2, -0.2); table.receiveShadow = true; sc.add(table);
+      table.position.set(0, CY, -0.2); table.receiveShadow = true; sc.add(table);
       this.bossGroup = null; this.corpse = null;
     }
     resize() {
@@ -222,7 +223,7 @@
       const cam = this.camera; cam.aspect = w / h;
       const t = Math.tan(cam.fov * Math.PI / 360);
       // upright screens are width-bound: zoom until the cloth spans the screen and let the frame's side rails run off the edges
-      const needH = H + 2.4, needW = W + (cam.aspect < 0.85 ? 0.5 : 2.4);
+      const needH = FH + 2.4, needW = W + (cam.aspect < 0.85 ? 0.5 : 2.4);
       this.dist = Math.max(needH / 2 / t, needW / 2 / (t * cam.aspect)) * 1.02;
       cam.updateProjectionMatrix(); this.placeCamera(0, 0);
       const db = this.gl.getDrawingBufferSize(this.tmpV);
@@ -233,15 +234,15 @@
     }
     placeCamera(ox, oy) {
       const cam = this.camera, tilt = 0.2;
-      cam.position.set(ox, H / 2 - Math.sin(tilt) * this.dist + oy, Math.cos(tilt) * this.dist);
-      cam.lookAt(ox, H / 2 + 0.2 + oy, 0);
+      cam.position.set(ox, CY - Math.sin(tilt) * this.dist + oy, Math.cos(tilt) * this.dist);
+      cam.lookAt(ox, CY + 0.2 + oy, 0);
     }
     project(x, y) {
       const v = this.tmpV.set(x, y, 0.3).project(this.camera), r = this.canvas.getBoundingClientRect();
       return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
     }
     worldX(clientX) {   // screen x -> field x at the needle's row (for pointer play)
-      const a = this.project(-W / 2, PY).x, b = this.project(W / 2, PY).x;
+      const a = this.project(-W / 2, GY).x, b = this.project(W / 2, GY).x;
       return -W / 2 + (clientX - a) / ((b - a) || 1) * W;
     }
 
@@ -424,10 +425,10 @@
           case 'fire': {
             this.punch = 1;
             if (this.time - this.muzzleT > 0.06) {
-              this.muzzleT = this.time; const th = C.THREADS[e.thread], col = th ? th.color : PAL.linen, hx = pl.x, hy = PY + 1.05;
+              this.muzzleT = this.time; const th = C.THREADS[e.thread], col = th ? th.color : PAL.linen, hx = e.x !== undefined ? e.x : pl.x, hy = (e.y !== undefined ? e.y : PY + 0.7) + 0.35;
               this.flare(hx, hy, 0.9, 0.65, this.lc(col, 1.7), 0.1, 0, 0.3);
               this.lintPuff(hx, hy, 0.8, 2, this.lc(PAL.linen), 0.3, 1);
-              if (pl.dual) { this.flare(hx - 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); this.flare(hx + 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); }
+              if (pl.dual && e.src !== 'B') { this.flare(hx - 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); this.flare(hx + 0.45, hy, 0.9, 0.7, this.lc(col, 2), 0.1); }
             }
             break;
           }
@@ -461,14 +462,19 @@
             this.hitStop(big ? 0.18 : 0.05, 0.25); if (big) this.flashAdd(PAL.madderHi, 0.35);
             break;
           }
+          case 'special': this.flashAdd(PAL.saffron, 0.35); this.loop(e.x, e.y, 3, PAL.saffron); this.loop(e.x, e.y, 1.8, PAL.paper); this.ring(e.x, e.y + 0.2, 5, this.lc(PAL.saffron, 2.4), 0.5, 3); this.shock(e.x, e.y, 1.2, 1.1); this.shake = Math.max(this.shake, 0.2); break;
+          case 'graze': this.glints(e.x, e.y, 0.7, 4, this.lc(PAL.paper, 2.4), 3, 0.25, 0.3); break;
+          case 'xstitch': this.darn(e.x, e.y, this.lc(PAL.saffron, 2), 0.5, 3); break;
+          case 'patch': this.ring(e.x, e.y, 2, this.lc(PAL.linen, 2), 0.35, 7); this.glints(e.x, e.y, 0.8, 10, this.lc(PAL.linen, 2.2), 4); break;
+          case 'repad': this.loop(pl.x, PY, 1.4, PAL.steelHi); break;
           case 'chain': this.arcs.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0, max: 0.32, side: Math.random() < 0.5 ? -1 : 1 }); this.glints(e.x2, e.y2, 0.8, 5, this.lc(PAL.madderPale, 2.4), 3); break;
           case 'lance': {
-            this.lances.push({ x: e.x, w: e.w, t: 0, max: 0.36 });
-            for (let y = PY + 1; y < H; y += 0.5) { if (Math.random() > this.q.particles) continue; const s = rnd(2, 6) * (Math.random() < 0.5 ? -1 : 1);
+            this.lances.push({ x: e.x, y: e.y !== undefined ? e.y : PY + 0.7, w: e.w, t: 0, max: 0.36 }); const ly = e.y !== undefined ? e.y : PY + 0.7;
+            for (let y = ly + 0.3; y < H; y += 0.5) { if (Math.random() > this.q.particles) continue; const s = rnd(2, 6) * (Math.random() < 0.5 ? -1 : 1);
               this.glow.emit(e.x + rnd(-0.1, 0.1) * e.w, y, 0.6, s, rnd(-1, 1), 0, rnd(0.15, 0.35), rnd(0.25, 0.4), this.lc(PAL.steelHi, 2.5), 1, 4, 5, 0.3, Math.atan2(0, s), 0, 0); }
-            for (let y = PY + 1; y < H; y += 1.6) this.fibres(e.x, y, 0.6, 1, this.lc(PAL.steelHi));
-            this.ripple(e.x, PY + 1, 0.6, 8, 0.4, 2.5); this.shake = Math.max(this.shake, 0.18); this.aberr = Math.max(this.aberr, 0.9);
-            this.flare(e.x, PY + 0.9, 1, 2, this.lc(PAL.steelHi, 3), 0.15);
+            for (let y = ly + 0.3; y < H; y += 1.6) this.fibres(e.x, y, 0.6, 1, this.lc(PAL.steelHi));
+            this.ripple(e.x, ly + 0.3, 0.6, 8, 0.4, 2.5); this.shake = Math.max(this.shake, 0.18); this.aberr = Math.max(this.aberr, 0.9);
+            this.flare(e.x, ly + 0.2, 1, 2, this.lc(PAL.steelHi, 3), 0.15);
             break;
           }
           case 'bosshit': {
@@ -505,8 +511,8 @@
           case 'chart': this.pickupPop(pl, PAL.paper, 2); this.loop(pl.x, PY, 2.5, PAL.paper); break;
           case 'charm': this.pickupPop(pl, C.CHARMS[e.id].color, 2); this.loop(pl.x, PY, 1.6, C.CHARMS[e.id].color); if (e.id === 'bomb') this.flashAdd(PAL.madderHi, 0.4); break;
           case 'double': this.loop(e.x, e.y, 2, PAL.madder); this.glints(e.x, e.y, 0.8, 16, this.lc(PAL.madderPale, 2.5), 5); this.ring(pl.x, PY + 0.2, 3, this.lc(PAL.madderPale, 2), 0.5, 7); break;
-          case 'burn': this.lintPuff(e.x, PY, 0.5, 10, this.lc(PAL.darkBrown), 0.8, 2.4); this.glints(e.x, PY, 0.5, 18, this.lc(PAL.saffron, 3), 5, 0.3, 0.6);
-            this.ripple(e.x, PY, 0.9, 6, 0.4, 2.5, true); this.shock(e.x, PY, 0.7, 0.9); this.flare(e.x, PY, 0.8, 2.6, this.lc(PAL.saffron, 2.5), 0.2); this.shake = Math.max(this.shake, 0.25); break;
+          case 'burn': this.lintPuff(e.x, GY, 0.5, 10, this.lc(PAL.darkBrown), 0.8, 2.4); this.glints(e.x, GY, 0.5, 18, this.lc(PAL.saffron, 3), 5, 0.3, 0.6);
+            this.ripple(e.x, GY, 0.9, 6, 0.4, 2.5, true); this.shock(e.x, GY, 0.7, 0.9); this.flare(e.x, GY, 0.8, 2.6, this.lc(PAL.saffron, 2.5), 0.2); this.shake = Math.max(this.shake, 0.25); break;
           case 'notion': this.loop(pl.x, PY, 1.8, PAL.saffron); this.ring(pl.x, PY + 0.2, 2.4, this.lc(PAL.saffron, 2), 0.35, 7);
             if (e.id === 'shears') { for (let i = 0; i < this.n(60); i++) { const y = rnd(PY + 1, H - 0.5), x = rnd(-W / 2, W / 2); this.glow.emit(x, y, 0.6, rnd(-6, 6), 0, 0, 0.3, 0.35, this.lc(PAL.steelHi, 2.5), 1, 5, 3, 0.2, Math.PI / 4, 8, 0); } this.flashAdd(PAL.steelHi, 0.25); }
             if (e.id === 'ripper') { this.flashAdd(PAL.madderHi, 0.2); this.shake = Math.max(this.shake, 0.35); }
@@ -872,11 +878,11 @@
       if (h.kind === 'burn') {
         const m = FX.shaderMat(T, { vs: SH.quadVS, fs: SH.burnFS, transparent: true, uniforms: { uTime: { value: 0 }, uLife: { value: 1 }, uSeed: { value: Math.random() * 50 }, uGrow: { value: 0 },
           uGlare: { value: new T.Vector3().fromArray(this.lc(PAL.glare)) }, uEmber: { value: new T.Vector3().fromArray(this.lc(PAL.saffron)) }, uChar: { value: new T.Vector3().fromArray(this.lc('#140C08')) } } });
-        const q = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); q.scale.setScalar(h.w * 1.9); q.position.set(0, PY, 0.03); q.renderOrder = 1; g.add(q); g.userData.burn = q;
+        const q = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); q.scale.setScalar(h.w * 1.9); q.position.set(0, GY, 0.03); q.renderOrder = 1; g.add(q); g.userData.burn = q;
       } else {
         const col = h.kind === 'glare' ? PAL.glare : PAL.madderHi;
         const m = FX.shaderMat(T, { vs: SH.quadVS, fs: SH.beamFS, transparent: true, uniforms: { uColor: { value: new T.Vector3().fromArray(this.lc(col)) }, uWarn: { value: 0 }, uOn: { value: 0 }, uTime: { value: 0 }, uKind: { value: h.kind === 'strike' ? 1 : 0 }, uW: { value: h.w }, uH: { value: H } } });
-        const beam = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); beam.scale.set(h.w, H, 1); beam.position.set(0, H / 2, 0.08); beam.renderOrder = 1; g.add(beam); g.userData.beam = beam;
+        const beam = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); beam.scale.set(h.w, FH, 1); beam.position.set(0, CY, 0.08); beam.renderOrder = 1; g.add(beam); g.userData.beam = beam;
         if (h.kind === 'strike') { const head = this.chart('hawk', 0.1, true); head.rotation.z = Math.PI; head.position.set(0, H + 2, 0.8); g.add(head); g.userData.head = head; }
       }
       g.position.x = h.x; g.userData.warn0 = Math.max(h.warn, 0.01); g.userData.life0 = h.life; g.userData.wasWarn = h.warn > 0; g.userData.age = 0;
@@ -890,8 +896,8 @@
         v.seen = true; const g = v.obj, u = g.userData; u.age += dt;
         if (u.burn) {
           const bu = u.burn.material.uniforms; bu.uTime.value = this.ft; bu.uGrow.value = Math.min(1, u.age * 5); bu.uLife.value = Math.min(1, h.life / 0.6);
-          if (Math.random() < fdt * 25 * this.q.particles) this.glow.emit(h.x + rnd(-0.6, 0.6), PY + rnd(-0.4, 0.4), 0.1, rnd(-0.3, 0.3), rnd(0.3, 1.2), rnd(1, 2), rnd(0.4, 0.8), rnd(0.15, 0.3), this.lc(Math.random() < 0.6 ? PAL.saffron : PAL.madderHi, 2.6), 1, 0, 1, 0.3, 0, 0, -1);
-          if (Math.random() < fdt * 6 * this.q.particles) this.lint.emit(h.x + rnd(-0.4, 0.4), PY + 0.2, 0.3, rnd(-0.2, 0.2), rnd(0.6, 1.2), 0.5, 1.2, 0.6, this.lc('#2A221E'), 0.35, 6, 0.5, 2.5, undefined, 1);
+          if (Math.random() < fdt * 25 * this.q.particles) this.glow.emit(h.x + rnd(-0.6, 0.6), GY + rnd(-0.4, 0.4), 0.1, rnd(-0.3, 0.3), rnd(0.3, 1.2), rnd(1, 2), rnd(0.4, 0.8), rnd(0.15, 0.3), this.lc(Math.random() < 0.6 ? PAL.saffron : PAL.madderHi, 2.6), 1, 0, 1, 0.3, 0, 0, -1);
+          if (Math.random() < fdt * 6 * this.q.particles) this.lint.emit(h.x + rnd(-0.4, 0.4), GY + 0.2, 0.3, rnd(-0.2, 0.2), rnd(0.6, 1.2), 0.5, 1.2, 0.6, this.lc('#2A221E'), 0.35, 6, 0.5, 2.5, undefined, 1);
         } else {
           const bu = u.beam.material.uniforms; bu.uTime.value = this.ft;
           if (h.warn > 0) { bu.uWarn.value = 1 - h.warn / u.warn0; bu.uOn.value = 0; }
@@ -900,13 +906,13 @@
             if (u.wasWarn) {   // the moment it lands
               u.wasWarn = false;
               const strike = h.kind === 'strike', c = strike ? PAL.madderHi : PAL.glare;
-              this.flare(h.x, PY + 0.5, 1, 3, this.lc(c, 2.5), 0.2); this.ripple(h.x, PY, 0.8, 7, 0.5, 2.5, strike); this.shock(h.x, PY + 1, strike ? 0.9 : 0.5, 1);
-              this.sparks(h.x, PY + 0.3, this.lc(c, 2.5), 14, 8); this.lintPuff(h.x, PY, 0.4, 6, this.lc(PAL.linen), 0.8, 2.5);
+              this.flare(h.x, GY + 0.5, 1, 3, this.lc(c, 2.5), 0.2); this.ripple(h.x, GY, 0.8, 7, 0.5, 2.5, strike); this.shock(h.x, GY + 1, strike ? 0.9 : 0.5, 1);
+              this.sparks(h.x, GY + 0.3, this.lc(c, 2.5), 14, 8); this.lintPuff(h.x, GY, 0.4, 6, this.lc(PAL.linen), 0.8, 2.5);
               this.shake = Math.max(this.shake, strike ? 0.35 : 0.15);
             }
-            if (Math.random() < fdt * 40 * this.q.particles) this.glow.emit(h.x + rnd(-0.5, 0.5) * h.w, rnd(PY, H), 0.5, 0, rnd(-6, -2), 0, 0.35, rnd(0.2, 0.35), this.lc(h.kind === 'glare' ? PAL.glare : PAL.madderPale, 2.5), 0.9, 4, 0, 0.5, Math.PI / 2);
+            if (Math.random() < fdt * 40 * this.q.particles) this.glow.emit(h.x + rnd(-0.5, 0.5) * h.w, rnd(GY, H), 0.5, 0, rnd(-6, -2), 0, 0.35, rnd(0.2, 0.35), this.lc(h.kind === 'glare' ? PAL.glare : PAL.madderPale, 2.5), 0.9, 4, 0, 0.5, Math.PI / 2);
           }
-          if (u.head) u.head.position.y = h.warn > 0 ? H + 2 : PY + 0.4 + (h.life / 0.3) * (H - PY);
+          if (u.head) u.head.position.y = h.warn > 0 ? H + 2 : GY + 0.4 + (h.life / 0.3) * (H - GY);
         }
       }
       map.forEach((v, id) => { if (!v.seen) { this.scene.remove(v.obj); for (const c of v.obj.children) if (c.material && c.material.isShaderMaterial) c.material.dispose(); map.delete(id); } });
@@ -960,7 +966,7 @@
       if (this.fireworks && this.fwN < 8) {
         this.fwT -= fdt;
         if (this.fwT <= 0) { this.fwT = 0.24; this.fwN++; const cols = [PAL.saffron, PAL.madderHi, PAL.linen, PAL.madderPale, PAL.glare, PAL.greenPale];
-          this.rockets.push({ x: rnd(-5, 5), y: PY + 0.5, vy: rnd(12, 15), t: 0, fuse: rnd(0.55, 0.8), col: cols[this.fwN % cols.length] }); }
+          this.rockets.push({ x: rnd(-5, 5), y: GY + 0.5, vy: rnd(12, 15), t: 0, fuse: rnd(0.55, 0.8), col: cols[this.fwN % cols.length] }); }
       }
       for (let i = this.rockets.length - 1; i >= 0; i--) {
         const r = this.rockets[i]; r.t += fdt; r.y += r.vy * fdt; r.vy *= 1 - 1.2 * fdt;
@@ -988,12 +994,37 @@
       }
       for (let i = this.lances.length - 1; i >= 0; i--) {   // the wire laser: a taut, vibrating silver wire
         const L = this.lances[i]; L.t += fdt; const k = L.t / L.max; if (k >= 1) { this.lances.splice(i, 1); continue; }
-        const n = 40, y0 = PY + 0.8, amp = 0.12 * (1 - k) * L.w;
+        const n = 40, y0 = L.y + 0.1, amp = 0.12 * (1 - k) * L.w;
         for (let j = 0; j < n; j++) { const u = j / (n - 1), y = y0 + (H + 0.5 - y0) * u; px[j] = L.x + Math.sin(u * Math.PI * 5) * Math.sin(this.ft * 70) * amp + Math.sin(u * 37 + this.ft * 90) * amp * 0.25; py[j] = y; pz[j] = 0.65; ps[j] = y; }
         const w = Math.max(0.05, L.w * 0.32 * (1 - k * 0.7));
         this.trA.strip(px, py, pz, ps, n, w * 4, w * 4, this.lc(PAL.steel, 1.4), 0.5 * (1 - k), 0.3 * (1 - k), 0);
         this.trA.strip(px, py, pz, ps, n, w, w, this.lc(PAL.steelHi, 3.2), 1 - k * 0.5, 1 - k, 3);
       }
+    }
+    /* The bobbin on its thread, the lines and patches that specials leave on the cloth. All drawn as stitches: rows of small glowing marks. */
+    syncBobbins(sim, dt, alive) {
+      const pl = sim.player, bs = alive ? sim.bobbins() : [], second = sim.secondThread();
+      this.bobMesh = this.bobMesh || [];
+      for (let i = 0; i < 2; i++) {
+        if (!this.bobMesh[i]) { this.bobMesh[i] = this.chart('bobbin', 0.075, true); this.scene.add(this.bobMesh[i]); }
+        const m = this.bobMesh[i], b = bs[i]; m.visible = !!b;
+        if (!b) continue;
+        m.position.set(b.x, b.y, 0.7 + Math.sin(this.time * 5 + i) * 0.04); m.rotation.z += dt * (2 + Math.hypot(b.x - pl.x, b.y - pl.y) * 2);
+        if (sim.d.freeBobbin) continue;
+        const col = this.lc(second ? C.THREADS[second].color : PAL.linen, pl.whip > 0 || sim.d.tetherCut ? 2.6 : 1.3), n = 9, hot = pl.whip > 0 || sim.d.tetherCut;
+        for (let j = 1; j < n; j++) { const u = j / n, sag = Math.sin(u * Math.PI) * 0.25; this.spr.add(pl.x + (b.x - pl.x) * u, pl.y + (b.y - pl.y) * u - sag, 0.55, hot ? 0.34 : 0.22, col, hot ? 0.95 : 0.7, 0); }
+      }
+      for (const z of sim.zones) {
+        if (z.kind === 'patch') {
+          const col = this.lc(PAL.mist, 1.6), n = 34;
+          for (let j = 0; j < n; j++) { const a = j / n * TAU + this.time * 0.4; this.spr.add(z.x + Math.cos(a) * z.r, z.y + Math.sin(a) * z.r, 0.25, 0.3, col, 0.8 * Math.min(1, z.life), 0); }
+          for (let j = 0; j < 8; j++) { const a = j / 8 * TAU - this.time * 0.25, r = z.r * 0.55; this.spr.add(z.x + Math.cos(a) * r, z.y + Math.sin(a) * r, 0.2, 0.22, col, 0.4 * Math.min(1, z.life), 0); }
+        } else {
+          const col = this.lc(z.kind === 'sweep' ? PAL.saffron : PAL.madderPale, 2.4), n = 30;
+          for (let j = 0; j <= n; j++) { const x = -W / 2 + W * j / n; this.spr.add(x, z.y + Math.sin(j * 1.7 + this.time * 14) * 0.06, 0.5, 0.36, col, Math.min(1, z.life * 2), 0); }
+        }
+      }
+      if (sim.focusOn && Math.random() < 0.5 * this.q.particles) this.glow.emit(rnd(-W / 2, W / 2), rnd(B, H), 0.4, 0, 0.4, 0, 0.6, 0.18, this.lc(PAL.mist, 1.5), 0.6, 1, 0, 0.3);
     }
     syncPlayer(sim, dt, fdt, alive) {
       const pl = sim.player, now = this.time;
@@ -1045,6 +1076,7 @@
 
     // ---------- frame ----------
     sync(sim, dt, events) {
+      PY = sim.player ? sim.player.y : GY;
       this.gl.info.reset();
       this.monitor(dt);
       this.time += dt;
@@ -1058,6 +1090,7 @@
       if (!this.droneMesh) { this.droneMesh = this.chart('bobbin', 0.08, true); this.scene.add(this.droneMesh); }
       const pl = sim.player;
       this.droneMesh.visible = alive && sim.droneOn; this.droneMesh.position.set(pl.x + (pl.x > 0 ? -1 : 1) * 0.95, PY + 0.1 + Math.sin(this.time * 4) * 0.08, 0.7); this.droneMesh.rotation.z += dt * 3;
+      this.syncBobbins(sim, dt, alive);
       this.syncEnemies(sim, dt, fdt);
       this.syncShots(sim, dt);
       this.syncEshots(sim, dt);
@@ -1113,7 +1146,7 @@
       this.gl.info.reset();
       this.time += dt; this.hs = 0; this.ft += dt;
       for (const p of this.gpu) p.now = this.ft;
-      this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false;
+      this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false; if (this.bobMesh) this.bobMesh.forEach(m => { m.visible = false; }); PY = GY;
       for (const g of this.ghosts) g.m.visible = false;
       this.trN.begin(this.ft); this.trA.begin(this.ft); this.halo.begin(); this.spr.begin();
       for (const k in this.pools) this.pools[k].begin();
