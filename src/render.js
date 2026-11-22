@@ -44,12 +44,13 @@
     // ---------- quality ----------
     pickQuality() {
       let q = this.opts.quality;
-      try { const m = /[?&]quality=(low|medium|high|auto)/.exec(location.search); if (m) q = m[1]; } catch (e) { /* no location */ }
+      try { const m = /[?&]quality=(low|lite|medium|high|auto)/.exec(location.search); if (m) q = m[1]; } catch (e) { /* no location */ }
       if (!q || q === 'auto') {
         this.auto = true;
         let mobile = false; try { mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) || (window.matchMedia && matchMedia('(pointer: coarse)').matches); } catch (e) { /* ignore */ }
-        this.step = mobile ? 2 : 0;
+        this.step = mobile ? 3 : 0;
       } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); }
+      this.step0 = this.step; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; this.noUp = {};
     }
     setQuality(q) {
       if (q === 'auto') { this.opts.quality = 'auto'; this.pickQuality(); } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); }
@@ -63,12 +64,17 @@
       if (this.sun && this.sun.shadow.mapSize.x !== this.q.shadowMap) { this.sun.shadow.mapSize.set(this.q.shadowMap, this.q.shadowMap); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; } }
       this.applyShadows();
     }
-    monitor(dt) {   // auto quality: step down the ladder if frames stay slow
-      if (!this.auto || this.step >= FX.LADDER.length - 1) return;
-      this.ema = this.ema ? this.ema * 0.94 + dt * 0.06 : dt;
+    /* Auto quality. Judged one second at a time by how many frames ran long, not by the average, so stutter counts.
+       Two bad seconds in a row: one step down. Twenty calm seconds: one step back up (once per step, so it cannot flap). */
+    monitor(dt) {
+      if (!this.auto) return;
       if (this.warm > 0) { this.warm -= dt; return; }
-      if (this.ema > 1 / 45) { this.slow += dt; if (this.slow > 2.5) { this.step++; this.applyQuality(); this.resize(); this.slow = 0; this.warm = 2.5; this.ema = 0; } }
-      else this.slow = Math.max(0, this.slow - dt * 0.5);
+      const w = this.win; w.t += dt; w.n++; if (dt > 0.026) w.slow++;
+      if (w.t < 1) return;
+      const frac = w.slow / w.n; w.t = 0; w.n = 0; w.slow = 0;
+      if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && this.step < FX.LADDER.length - 1) { this.noUp[this.step] = true; this.step++; this.applyQuality(); this.resize(); w.bad = 0; this.warm = 2; } }
+      else { w.bad = 0; if (frac < 0.03) w.calm++; else w.calm = 0;
+        if (w.calm >= 20 && this.step > this.step0 && !this.noUp[this.step - 1]) { this.step--; this.applyQuality(); this.resize(); w.calm = 0; this.warm = 2; } }
     }
     applyShadows() {
       const on = this.userShadows && this.q.shadows;
@@ -591,6 +597,7 @@
       }
       const g = this.bossGroup, u = g.userData, def = b.def, mu = u.mat.userData.u;
       const vx = (b.x - u.lastX) / Math.max(dt, 1e-3); u.lastX = b.x;
+      g.visible = !b.hidden;
       g.position.set(b.x, b.y, 1.0 + Math.sin(this.time * 1.7) * 0.08);
       g.rotation.z = Math.max(-0.12, Math.min(0.12, -vx * 0.03)); g.rotation.x = Math.sin(this.time * 1.3) * 0.05;
       const flap = 0.22 + 0.06 * b.phase;
@@ -1098,6 +1105,7 @@
       this.syncHazards(sim, dt, fdt);
       this.syncNets(sim);
       this.syncBoss(sim, dt, fdt);
+      if (this.syncBossFx) this.syncBossFx(sim, dt, fdt, events);   // src/render-boss.js: props, arena, poses
       this.syncSamplerPath(sim, fdt);
       this.heat += (((sim.comboMult ? sim.comboMult() : 1) - 1) / 4 - this.heat) * Math.min(1, dt * 2);
       this.slowMo += ((sim.fx.tangle > 0 ? 1 : 0) - this.slowMo) * Math.min(1, dt * 4);
@@ -1125,6 +1133,8 @@
       pu.uB1.value = 0.85 + this.heat * 0.35; pu.uB2.value = 0.55 + this.heat * 0.35; pu.uVig.value = 0.34 + this.heat * 0.08;
       const vc = this.lc(PAL.madderDeep), gc = this.lc(PAL.green), sm = this.slowMo * 0.6, hh = this.heat * 0.5;
       pu.uVigCol.value.set(vc[0] * hh + gc[0] * sm, vc[1] * hh + gc[1] * sm, vc[2] * hh + gc[2] * sm); pu.uVig.value += this.slowMo * 0.12;
+      if (this.cine === undefined) this.cine = ST.Cine ? new ST.Cine(this) : null;
+      if (this.cine && this.cine.active) this.cine.frame(dt);   // src/cine.js: boss entrances may move the camera and the post uniforms
       this.updateShocks(dt);
       this.render();
     }
@@ -1161,6 +1171,8 @@
       for (const l of this.loops) this.scene.remove(l.m); this.loops.length = 0;
       for (const t of this.trails) t.n = 0;
       if (this.bossGroup) { this.scene.remove(this.bossGroup); this.bossGroup = null; }
+      if (this.clearBossFx) this.clearBossFx();
+      if (this.cine) this.cine.stop();
       if (this.corpse) { this.scene.remove(this.corpse.g); this.corpse = null; }
       if (this.pathMesh) { this.scene.remove(this.pathMesh); this.pathMesh = null; }
       for (const p of this.gpu) p.reset();

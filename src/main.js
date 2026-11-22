@@ -89,6 +89,7 @@
       this.canvas = document.getElementById('cloth');
       this.renderer = new ST.Renderer(this.canvas, THREE, { shadows: this.profile.settings.shadows });
       this.sim = null; this.state = 'title'; this.midNight = false; this.visit = {};
+      this.evbuf = []; this.perf = { t: 0, frames: 0, sim: 0, hud: 0, draw: 0 }; this.drawDt = 0; this.hudN = 0; this.hudNow = true;
       this.keys = {}; this.pointer = null; this.steer = null; this.aim = null; this.tap2 = null; this.touch = false; this.one = { notion: -1, special: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
       this.acc = 0; this.last = 0; this.frame = 0;
       loadAudio();
@@ -106,7 +107,7 @@
       playMusic(t);
     }
     saved() { if (this.slot >= 0) this.store.save(this.slot, this.profile); }
-    applySettings() { this.renderer.setShadows(this.profile.settings.shadows); }
+    applySettings() { const st = this.profile.settings; this.renderer.setShadows(st.shadows); const g = st.graphics || 'auto'; if (g !== this.gfx) { this.gfx = g; this.renderer.setQuality(g); } }
     openPocket(i, name) {
       let p = this.store.load(i); if (!p) p = this.store.create(i, name);
       this.slot = i; this.profile = p; this.saved(); this.applySettings(); this.toTitle();
@@ -163,6 +164,7 @@
         const k = e.code;
         if (k === 'Escape' || k === 'KeyP') { if (this.state === 'flight') this.pause(); else this.resume(); e.preventDefault(); return; }
         if (this.state !== 'flight') return;
+        if (this.renderer.cine && this.renderer.cine.active) { if (!e.repeat) this.renderer.cine.skip(); e.preventDefault(); return; }
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyA', 'KeyD', 'KeyW', 'KeyS'].indexOf(k) >= 0) e.preventDefault();
         if (!e.repeat) {
           const now = performance.now(), dir = (k === 'ArrowLeft' || k === 'KeyA') ? -1 : (k === 'ArrowRight' || k === 'KeyD') ? 1 : 0;
@@ -184,6 +186,7 @@
       const flick = (p, e, now) => { const dx = e.clientX - p.x0, dy = e.clientY - p.y0; return now - p.t0 < 230 && Math.abs(dx) > 30 && Math.abs(dx) > 1.5 * Math.abs(dy) ? Math.sign(dx) : 0; };
       st.addEventListener('pointerdown', e => {
         wake(); if (this.state !== 'flight' || !this.sim || (e.target.closest && e.target.closest('button'))) return;
+        if (this.renderer.cine && this.renderer.cine.active) { this.renderer.cine.skip(); e.preventDefault(); return; }
         const now = performance.now(); this.touch = e.pointerType !== 'mouse';
         if (this.steer && this.steer.id !== e.pointerId) { this.tap2 = { id: e.pointerId, x0: e.clientX, y0: e.clientY, t0: now }; e.preventDefault(); return; }
         const pl = this.sim.player;
@@ -225,28 +228,53 @@
       requestAnimationFrame(t => this.loop(t));
       const dt = this.last ? Math.min(0.1, (ts - this.last) / 1000) : STEP; this.last = ts; this.frame++;
       if (this.frame % 20 === 0) this.music();
+      const r = this.renderer, P = this.perf, now = () => performance.now();
+      P.t += dt;
+      if (P.t >= 0.5) { if (this.profile.settings.showFps) this.ui.fps(Math.round(P.frames / P.t), r.quality, r.gl.getPixelRatio(), P.sim / Math.max(1, P.frames), P.hud / Math.max(1, P.frames), P.draw / Math.max(1, P.frames)); else this.ui.fps(null); P.t = 0; P.frames = 0; P.sim = 0; P.hud = 0; P.draw = 0; }
       if (this.state === 'flight' || (this.state === 'tally' && this.sim)) {
-        const events = [];
-        if (this.state === 'flight') {
+        const events = this.evbuf; events.length = 0;
+        const filming = r.cine && r.cine.active;
+        let stepped = 0;
+        if (this.state === 'flight' && !filming) {
           this.acc += dt;
-          while (this.acc >= STEP) {
-            this.acc -= STEP;
+          const t0 = now();
+          // at most three steps a frame (covers 20 frames a second): a long frame must not make the next one longer
+          while (this.acc >= STEP && stepped < 3) {
+            this.acc -= STEP; stepped++;
             this.sim.update(STEP, this.input());
             this.one.notion = -1; this.one.special = false; this.one.dash = 0;
             for (const e of this.sim.events) events.push(e);
             if (this.sim.phase === 'done') { this.acc = 0; break; }
           }
+          if (this.acc > STEP) this.acc = 0;
+          P.sim += now() - t0;
         }
+        this.drawDt += dt;
+        // screens faster than 60Hz: nothing new to show until the game has stepped, so don't draw it twice
+        if (!stepped && !filming && this.state === 'flight' && this.drawDt < 0.05) return;
+        const t1 = now();
         this.pump(events);
-        this.renderer.sync(this.sim, dt, events);
-        if (this.frame % 5 === 0 || events.length) this.ui.hud(this.sim);
-      } else this.renderer.idle(dt);
+        r.sync(this.sim, this.drawDt, events);
+        const t2 = now();
+        if (++this.hudN >= 6 || this.hudNow) { this.hudN = 0; this.hudNow = false; this.ui.hud(this.sim); }   // ten times a second, not every frame
+        P.hud += now() - t2; P.draw += t2 - t1; P.frames++; this.drawDt = 0;
+      } else {
+        // menus: thirty frames a second is plenty behind a sheet of paper
+        this.drawDt += dt; if (this.drawDt < 1 / 31) return;
+        r.idle(this.drawDt); this.drawDt = 0; P.frames++;
+      }
     }
     pump(events) {
       const ui = this.ui, sim = this.sim, r = this.renderer; let fired = false;
       for (const e of events || sim.events) {
         switch (e.t) {
-          case 'stage': ui.banner(e.keeper ? e.label : e.panelName + ' · ' + e.label, e.keeper ? e.panelName + ' · Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); break;
+          case 'stage': {
+            const id = e.keeper ? C.PANELS[sim.panel].keeper : null, film = id && r.cine && ST.bossScripts && ST.bossScripts[id];
+            if (film) {   // the boss's entrance film carries its name; a shorter cut once you have seen it
+              const seen = this.profile.codex.cine || (this.profile.codex.cine = {});
+              r.cine.play(id, { short: !!seen[id] }); seen[id] = true; this.saved(); this.sfx('phase');
+            } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); }
+            this.hudNow = true; break; }
           case 'fire': if (!fired) { fired = true; this.sfx('fire'); } break;
           case 'hit': case 'bosshit': case 'uncase': this.sfx('hit'); break;
           case 'kill': this.sfx('kill'); if (e.mult > 1 || e.pts >= 200) ui.floater(r.project(e.x, e.y), '+' + e.pts, e.mult > 1 ? 'hot' : ''); break;

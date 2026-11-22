@@ -83,6 +83,7 @@
         case 'how': this.how(); break;
         case 'notion': c.useNotion(+arg); break;
         case 'special': c.special(); break;
+        case 'gfx': { const o = ['auto', 'low', 'lite', 'medium', 'high'], st = this.p.settings; st.graphics = o[(o.indexOf(st.graphics || 'auto') + 1) % o.length]; c.saved(); c.applySettings(); this.settings(); break; }
         case 'ctl': this.p.settings.controls = this.p.settings.controls === 'follow' ? 'drag' : 'follow'; c.saved(); this.settings(); break;
         case 'pause': c.pause(); break;
       }
@@ -371,6 +372,8 @@
       const st = Object.assign({ liftSlow: true, controls: 'drag' }, this.p.settings), row = (k, name, note) => `<button class="setrow" data-act="toggle" data-arg="${k}" role="switch" aria-checked="${!!st[k]}"><span><b>${name}</b><span>${note}</span></span><i class="sw ${st[k] ? 'on' : ''}">${st[k] ? 'On' : 'Off'}</i></button>`;
       this.show(`<div class="sheet narrow"><div class="eyebrow">Saved with your game</div><h2>Settings</h2>
         <div class="setlist">${row('sound', 'Sound', 'Music and effects')}${row('autofire', 'Auto-fire', 'Fire without holding a button')}${row('liftSlow', 'Lift to slow', 'Time slows when you take your finger off')}${row('shadows', 'Shadows', 'Turn off if the game runs slowly')}
+          <button class="setrow" data-act="gfx"><span><b>Graphics</b><span>${({ auto: 'The game picks, and adjusts while you play', low: 'Fastest: no glow, no shadows', lite: 'Glow, no shadows', medium: 'Glow, shadows, lens effects', high: 'Everything, at full sharpness' })[st.graphics || 'auto']}</span></span><i class="sw on">${({ auto: 'Auto', low: 'Low', lite: 'Light', medium: 'Medium', high: 'High' })[st.graphics || 'auto']}</i></button>
+          ${row('showFps', 'Frame rate readout', 'Shows frames a second and where the time goes')}
           <button class="setrow" data-act="ctl"><span><b>Steering</b><span>${st.controls === 'follow' ? 'The ship flies to your finger' : 'The ship moves as far as your finger moves'}</span></span><i class="sw on">${st.controls === 'follow' ? 'Follow' : 'Drag'}</i></button></div>
         <div class="row"><button class="btn primary" data-act="back" data-focus>Back</button></div></div>`, 'paper', 'settings');
     }
@@ -425,6 +428,12 @@
       const b = sim.boss;
       const sm = sim.sampler;
       this.set('bossbar', sm ? `<div class="bb"><b>Bonus wave \u00b7 ${sm.hit} of ${sm.total}</b><span>They never shoot back. Get them all.</span><div class="seam"><i style="width:${sm.hit / sm.total * 100}%"></i></div></div>` : b ? `<div class="bb"><b>${esc(b.def.name)}</b><span>Phase ${b.phase} · ${esc(b.def.phaseTag[b.phase - 1])}${b.def.chews ? (b.open ? ' · mouth open: shoot it' : ' · mouth shut') : ''}</span><div class="seam"><i style="width:${Math.max(0, b.hp / b.maxHp * 100)}%"></i></div></div>` : '');
+    }
+    /* Frame-rate readout (Settings): frames a second, quality tier, sharpness, and milliseconds per frame for game logic, HUD and drawing. */
+    fps(n, q, pr, sim, hud, draw) {
+      let el = this.fpsEl; if (n === null) { if (el) el.style.display = 'none'; return; }
+      if (!el) { el = this.fpsEl = document.createElement('div'); el.id = 'fps'; document.body.appendChild(el); }
+      el.style.display = 'block'; el.textContent = n + ' fps \u00b7 ' + q + ' \u00b7 ' + pr.toFixed(2) + 'x \u00b7 game ' + sim.toFixed(1) + ' hud ' + hud.toFixed(1) + ' draw ' + draw.toFixed(1) + ' ms';
     }
     hudVisible(on) { document.body.classList.toggle('flying', on); }
     banner(big, small, ms) {

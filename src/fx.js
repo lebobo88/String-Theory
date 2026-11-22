@@ -11,10 +11,11 @@
   const QUALITY = {
     high:   { name: 'high',   pr: 2,    post: true,  bloom: 2, samples: 4, distort: true,  grain: true,  particles: 1,    shadowMap: 2048, shadows: true,  cloth: 2 },
     medium: { name: 'medium', pr: 1.5,  post: true,  bloom: 1, samples: 0, distort: true,  grain: true,  particles: 0.6,  shadowMap: 1024, shadows: true,  cloth: 1 },
+    lite:   { name: 'lite',   pr: 1.5,  post: true,  bloom: 1, samples: 0, distort: false, grain: false, particles: 0.5,  shadowMap: 512,  shadows: false, cloth: 1 },   // phones start here: bloom, but no shadow pass and no lens passes
     low:    { name: 'low',    pr: 1,    post: false, bloom: 0, samples: 0, distort: false, grain: false, particles: 0.35, shadowMap: 512,  shadows: false, cloth: 0 }
   };
   /* The automatic ladder: each step is cheaper than the last. */
-  const LADDER = [['high', 2], ['high', 1.5], ['medium', 1.5], ['medium', 1], ['low', 1], ['low', 0.75]];
+  const LADDER = [['high', 2], ['high', 1.5], ['medium', 1.5], ['lite', 1.5], ['lite', 1.25], ['low', 1], ['low', 0.75]];
 
   function shaderMat(T, o) {
     const m = new T.ShaderMaterial({

@@ -1,0 +1,148 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>String Theory: bosses, sound and performance plan</title>
+<style>
+:root{--ink:#1c2138;--ink2:#4a5070;--linen:#e9e2d0;--paper:#f3eee1;--madder:#a82a33;--rule:#b9b09a}
+*{box-sizing:border-box}body{margin:0;background:var(--linen);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font:400 32px/1.1 ui-monospace,Menlo,Consolas,monospace;margin:8px 0 4px}
+h2{font:400 24px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:44px 0 10px;padding-top:14px;border-top:2px dashed var(--ink)}
+h3{font:400 21px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:34px 0 2px}
+.sub{color:var(--madder);font-weight:700;margin:0 0 8px}
+p{margin:8px 0}.k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+dl{margin:8px 0 0;display:grid;grid-template-columns:118px 1fr;gap:0}dt,dd{margin:0;padding:7px 0;border-top:1px solid var(--rule)}dt{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding-top:10px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}td.n{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+ul{padding-left:20px;margin:6px 0}li{margin:5px 0}.note{border:1.5px dashed var(--ink2);padding:10px 12px;background:var(--paper);margin:14px 0;font-size:15px}
+@media(max-width:520px){dl{grid-template-columns:1fr}dt{border-top:1px solid var(--rule);padding-bottom:0}dd{border-top:0;padding-top:2px}table{font-size:13.5px}}
+</style></head><body><main>
+<div class="k">String Theory · plan for approval · nothing has been changed</div>
+<h1>Bosses, sound and performance</h1>
+
+<h2>1. What is wrong with the bosses today</h2>
+<p>You are right, and the code shows why. All eight bosses run the same routine:</p>
+<ul>
+<li><b>One movement.</b> Every boss sways left and right along the top of the cloth on the same sine wave. Only the width and speed differ.</li>
+<li><b>One shared attack list.</b> There are eleven attack types (spread, aimed shot, ring, silk, net, column strike, light beam, fireball, mine, spawn, pull). Each boss is a table of which ones fire on which timer.</li>
+<li><b>One way to win.</b> Sit under the weak spot and shoot. Nothing a boss does asks for the dash, slow time, the bobbin or flying forward.</li>
+</ul>
+<p>The fix is to stop describing bosses as timer tables. Each boss gets its own behaviour script, its own way of moving, one mechanic nobody else has, and a different answer to "how do I hurt it".</p>
+
+<h2>2. Rules every boss will follow</h2>
+<ul>
+<li><b>They use the whole cloth.</b> Bosses leave the top edge: they dive, roll, crawl the frame and cross your half.</li>
+<li><b>Every big attack is announced</b> with a stitched outline on the cloth and its own sound, so losing a shield never feels unfair.</li>
+<li><b>Fray meter.</b> Hitting the weak spot fills a second bar. When it fills, the boss is stunned for a few seconds and takes extra damage. That window is where holding still to stack both weapons, and your special, pay off.</li>
+<li><b>Each one teaches something</b> the next one assumes: dash, priority targets, timing, positioning, losing ground, baiting, cutting, then all of it.</li>
+<li><b>An entrance.</b> A short film of its own before the fight (section 4).</li>
+</ul>
+
+<h2>3. The eight bosses</h2>
+
+<h3>1 · The Great Lappet</h3><p class="sub">The falling leaf. Teaches the dash and moving up and down.</p>
+<dl><dt>Moves</dt><dd>Drifts in slow swooping arcs like a leaf, never straight.</dd>
+<dt>Only she does</dt><dd><b>Plays dead.</b> She folds her wings, goes brown and drops straight down the cloth. The landing sends a shockwave along that row, so you must be above or below it.</dd>
+<dt>Phases</dt><dd>1. Leaf falls, light spreads between them. 2. She splits into three look-alikes that fall in sequence; only the real one has the pale stripe.</dd>
+<dt>How you hurt her</dt><dd>Her wings shrug off shots. The stripe shows only while she lies stunned after a landing, right in your half of the cloth.</dd></dl>
+
+<h3>2 · Mother Tinea</h3><p class="sub">The brood mother. Teaches priority targets and the tether.</p>
+<dl><dt>Moves</dt><dd>Barely. She sits in a silk case at the top, then in phase 2 crawls around the wooden frame itself.</dd>
+<dt>Only she does</dt><dd><b>Lays egg sacs on the cloth.</b> They pulse and hatch into Nibblers after four seconds unless you destroy them. Sweeping your bobbin's thread through a row of them cuts them all.</dd>
+<dt>Phases</dt><dd>1. She is untouchable in her case; pop three sacs and the case splits for six seconds. 2. She circles the frame laying sacs from the sides and drops her net with one gap.</dd>
+<dt>How you hurt her</dt><dd>Only while the case is split. Ignore the eggs and the cloth floods.</dd></dl>
+
+<h3>3 · The Great Wick</h3><p class="sub">The lamp. Teaches timing.</p>
+<dl><dt>Moves</dt><dd>Does not fly. He blinks between three lantern hooks (left, middle, right) in a flare of light.</dd>
+<dt>Only he does</dt><dd><b>Lights fuses.</b> A flame runs along a stitched line toward knots of powder in your half. Shoot the line ahead of the flame, or dash through it, to cut the fuse. <b>Swelling fireball:</b> the ball he carries grows before he throws it.</dd>
+<dt>Phases</dt><dd>1. One fuse at a time, fireballs that leave burning patches. 2. Two fuses at once, and the cloth dims so his lamp is the main light.</dd>
+<dt>How you hurt him</dt><dd>Burst the fireball while it is swelling and it goes off in his face: big damage and a stun. Too late and it rains fire.</dd></dl>
+
+<h3>4 · The Atlas</h3><p class="sub">The watcher. Teaches stillness and position.</p>
+<dl><dt>Moves</dt><dd>Wide, slow sweeps that press down into the middle of the cloth to crowd you.</dd>
+<dt>Only she does</dt><dd><b>The gaze.</b> The eyespot on one wing opens and casts a cone of light. Move inside the cone and it fires at you; hold still and it does not. <b>Wing sweep:</b> a wing drags across one row and you go over or under.</dd>
+<dt>Phases</dt><dd>1. One eye at a time. 2. Both eyes with crossing cones, and the snake-head wingtips strike diagonally.</dd>
+<dt>How you hurt her</dt><dd>An eyespot is a weak spot only while it is open and looking, so the safest place to shoot from is the most dangerous place to stand.</dd></dl>
+
+<h3>5 · The Unraveller</h3><p class="sub">The mouth. Teaches fighting while you lose ground.</p>
+<dl><dt>Moves</dt><dd>The body stays put at the top. Two hook arms roam the cloth on their own.</dd>
+<dt>Only it does</dt><dd><b>Pulls the cloth apart.</b> Rows unravel from the bottom of your zone, leaving holes you cannot fly over. <b>Hooks your thread:</b> an arm snags your bobbin and reels the ship toward the mouth until you dash to snap it.</dd>
+<dt>Phases</dt><dd>1. Hooks and mines. 2. Unravelling begins and light beams fill columns. 3. It inhales: your ship, your coins and your shots are all dragged in.</dd>
+<dt>How you hurt it</dt><dd>The open mouth. Damage there re-stitches lost rows. A Knot Bomb or a special down its throat while it inhales stuns it outright.</dd></dl>
+
+<h3>6 · The Carpet Beetle</h3><p class="sub">The roller. Teaches baiting.</p>
+<dl><dt>Moves</dt><dd>On the cloth, not above it. It tucks into its shell and charges in straight lines, bouncing off the frame like a billiard ball.</dd>
+<dt>Only it does</dt><dd><b>Matador fight.</b> Each charge is drawn on the cloth first. Its shell bounces your shots back at you. In phase 3 it <b>burrows</b>: a lump travels under the cloth and erupts beneath you.</dd>
+<dt>Phases</dt><dd>1. Single charges. 2. Its larvae crawl out leaving bristle trails that stay on the cloth. 3. Burrowing, with faster double charges.</dd>
+<dt>How you hurt it</dt><dd>Stand in front of a rail and dash away at the last moment. It hits the frame, flips on its back, and its head is open for three seconds.</dd></dl>
+
+<h3>7 · The Silk Empress</h3><p class="sub">The weaver. Teaches cutting, and rescuing your bobbin.</p>
+<dl><dt>Moves</dt><dd>She runs along her own web, fast, from anchor to anchor.</dd>
+<dt>Only she does</dt><dd><b>Builds a web across your half.</b> Lines between anchors slow you and the web grows until you cut it by shooting anchors or dashing through lines. <b>Cocoons your bobbin:</b> your second weapon is gone until you shoot it free. <b>Marionettes:</b> enemies you kill get strung back up once.</dd>
+<dt>Phases</dt><dd>1. Web building and swaying silk. 2. Cocoons and marionettes. 3. She cocoons herself in the centre and spins ring storms through the gaps in her own web.</dd>
+<dt>How you hurt her</dt><dd>She is only still when she stops at an anchor to spin. Cut the line she is standing on and she falls, stunned.</dd></dl>
+
+<h3>8 · The Moth King</h3><p class="sub">The exam. Everything you learned, then his own tricks.</p>
+<dl><dt>Moves</dt><dd>Differently in each phase: holds court at the top, vanishes in the dark, then comes down to your half for the end.</dd>
+<dt>Only he does</dt><dd><b>Swarm body:</b> hit him hard and he bursts into a cloud of moths and reforms elsewhere. <b>Eclipse:</b> the lights go out and only your shots, your thread and his eyes glow. <b>Crown jewels:</b> four jewels orbit him and reflect shots; break them in the order they flash.</dd>
+<dt>Phases</dt><dd>1. Court: he calls one signature move from each earlier boss. 2. Eclipse. 3. Crown. 4. Last stand: the cloth frays inward from every edge while he throws everything.</dd>
+<dt>How you hurt him</dt><dd>His eyes. In the last stand both eyes must be hit within a second of each other, which is exactly what lead and bobbin together are for.</dd></dl>
+
+<div class="note"><b>What this costs to build.</b> A new boss-script system replacing the timer table, about ten new things that live on the cloth (egg sacs, fuses, web lines and anchors, holes, hooks, gaze cones, jewels, shockwave rows, bristle trails, burrow lump), a few new stitched icons, and a bot for each boss to prove it can be beaten and cannot get stuck. I would build and ship it in two halves: bosses 1 to 4, then 5 to 8. Balance still needs your hands; a bot cannot tell fun from fair.</div>
+
+<h2>4. Boss entrances</h2>
+<p>Each boss gets its own short film before the fight. The game holds still, black bars stitch in from the top and bottom, the HUD fades, the music drops away, and the camera leaves its fixed view for the first time in the game. Each ends with the boss's name sewn onto the screen letter by letter, with the weak-spot hint under it.</p>
+<table><tr><th>Boss</th><th>Entrance</th></tr>
+<tr><td><b>Great Lappet</b><br>"The dead leaf"</td><td>A quiet, empty cloth. One brown leaf drifts down, turning slowly, and settles. A beat of nothing. Then it snaps open into wings, scale dust bursts across the screen, the camera punches in and her colour floods back.</td></tr>
+<tr><td><b>Mother Tinea</b><br>"The seam"</td><td>The top of the cloth bulges. A seam rips open stitch by stitch and her silk case pushes through, threads snapping. Egg sacs spill out and roll toward the camera, which sits low and looks up at her. Small shapes skitter under the cloth.</td></tr>
+<tr><td><b>Great Wick</b><br>"Lights out"</td><td>Total darkness. A match strikes. One lantern lights on the left with a thud, then the middle, then the right. In the last flare he is a black shape against white-out. Embers drift past the lens and the cloth is left with a scorch ring.</td></tr>
+<tr><td><b>Atlas</b><br>"The curtains"</td><td>Two enormous wings close in from both sides of the frame like stage curtains until they cover the whole cloth. The camera pulls back to fit them. The eyespots are shut lids; they open one at a time and the pupils turn to find your ship. A cone of light sweeps the lens.</td></tr>
+<tr><td><b>Unraveller</b><br>"The loose thread"</td><td>One loose thread in the middle of the cloth is pulled upward. The weave comes apart in a spiral around it and a dark hole opens. The camera is dragged toward it while the edges of the picture stretch away. Hooks rise out. The letters of its name unravel as they appear.</td></tr>
+<tr><td><b>Carpet Beetle</b><br>"The lump"</td><td>Thumps and camera shake before you see anything. A lump travels under the cloth and circles your ship. It bursts through the wooden frame in splinters, rolls straight past the lens filling the screen, and hits three rails with a freeze-frame on each impact. Then it unrolls and a glint runs down the shell.</td></tr>
+<tr><td><b>Silk Empress</b><br>"The descent"</td><td>Silk shoots across the screen one strand at a time from the corners, drawing her web as you watch. The same thread writes her name. She comes down a single line from above, upside down and slow, in a spotlight, dew glinting along the web. She cuts the line, lands, and the whole web shivers.</td></tr>
+<tr><td><b>Moth King</b><br>"The coronation"</td><td>The longest. Every kind of enemy you fought this run pours in from all sides, swirls into a vortex and packs down into his shape. The light dims as a disc of moths crosses it. His crown comes down piece by piece, each locking in with a gold flash. The cloth frays outward in a ring beneath him, the camera rises around him, then slams back to the playing view.</td></tr></table>
+<ul>
+<li><b>Length:</b> about four seconds each, six for the King. After you have seen one, later runs play a 1.5 second cut, and a tap skips it.</li>
+<li><b>How they are made:</b> a small timeline system that moves the camera and fires the effects the game already has (cloth ripples and tears, glow, flash, shake, lens distortion, particles), plus a few new pieces: the black bars, darkness and spotlight, the sewn title, and the under-cloth lump.</li>
+<li><b>Frame rate:</b> the game is paused while they play, so they cost nothing during the fight. On the low graphics tier they run with fewer particles and no lens effects, and the "reduce motion" system setting cuts them to the title card.</li>
+<li><b>Sound:</b> each entrance gets its own sound sequence in place of one shared sting. That adds 7 sounds.</li>
+</ul>
+
+<h2>5. New sounds</h2>
+<p>Today 14 sounds cover everything and all 8 weapons share one. The new specials, dash, slow time and near-misses have no sound of their own at all. This is the list I would generate, about 70 effects and 2 music tracks.</p>
+<table><tr><th>Group</th><th>Count</th><th>What</th></tr>
+<tr><td>Weapons</td><td class="n">9</td><td>A firing sound for each of the 8 weapons, plus the laser charging up. The bobbin plays the same sound quieter and higher, so two weapons read as two voices.</td></tr>
+<tr><td>Hits</td><td class="n">2</td><td>Shot on armour, shot bounced off a shell.</td></tr>
+<tr><td>Ship</td><td class="n">11</td><td>Dash, near-miss, cross-stitch, slow time in, slow time out, special ready, low shield warning, life lost, Sail's patch blocking, Quilter's pad refilling, thread cutting an enemy.</td></tr>
+<tr><td>Specials</td><td class="n">9</td><td>One each: Tie Off, Basting Line, Darn, Lasso, Full Sail, String of Beads, Quilt, Signature, Loom.</td></tr>
+<tr><td>Bosses</td><td class="n">34</td><td>Three signature sounds per boss (for example leaf drop, landing shockwave, split; fuse hiss, fireball swell, misfire), an entrance sequence for each, plus a shared stun and final defeat.</td></tr>
+<tr><td>Menus</td><td class="n">5</td><td>Tap, tab change, cannot afford, equip, start run.</td></tr>
+<tr><td>Music</td><td class="n">2</td><td>A second boss theme for stages 5 to 7 and a final-boss theme.</td></tr></table>
+<ul>
+<li><b>Also in this pass:</b> music crossfades instead of cutting, dips under big sounds, muffles on pause; separate music and effects volume; vibration on hits, dash, specials and boss stuns.</li>
+<li><b>Cost:</b> all of it is generated with ElevenLabs on your credits. It is roughly three times the 22 sounds I quoted before.</li>
+<li><b>Getting files into the repo:</b> last time the workspace could not download from ElevenLabs and it took your browser and an upload. I will first test whether the connector can now hand files straight to me; if not I will save them into H:\string-theory through the desktop link.</li>
+</ul>
+
+<h2>6. Performance on the Pixel 7</h2>
+<p>I cannot run your phone, so these are findings from the code and from profiling the game at Pixel 7 screen size on a desktop. They are causes I can see, not a measured frame rate.</p>
+<table><tr><th>Finding</th><th>Why it hurts</th><th>Fix</th></tr>
+<tr><td><b>The HUD is rebuilt almost every frame</b> (54 of 55 frames measured). Before phase 2 it was about one frame in five.</td><td>With two weapons firing there is an event nearly every frame, and each one triggers a full rebuild of the status text and icons. That is new since phase 2 and is the most likely cause of what you are seeing.</td><td>Update the HUD ten times a second, and move the bars by changing their width instead of rebuilding them.</td></tr>
+<tr><td><b>The Pixel 7 has a 90Hz screen</b> and the game draws every screen refresh.</td><td>Half again as much drawing as 60 a second for no gain in a game that steps at 60. More heat, and a hot phone slows itself down after a few minutes.</td><td>Cap drawing at 60.</td></tr>
+<tr><td><b>Slow frames snowball.</b></td><td>When a frame runs long the game runs up to six catch-up steps in the next one, which makes that one long too.</td><td>Limit catch-up to two steps.</td></tr>
+<tr><td><b>Phones start on the "medium" tier.</b></td><td>That means bloom, lens distortion, film grain and soft shadows at 1.5 times resolution.</td><td>Start phones one step lower and let the game step up if it holds 60.</td></tr>
+<tr><td><b>Auto-quality reacts late and only downward.</b></td><td>It waits for 2.5 seconds under 45 frames a second, so stutters at 50 to 60 never trigger it, and it never recovers.</td><td>Judge by the worst frames, react in about a second, and step back up when things are calm.</td></tr>
+<tr><td><b>Throw-away memory every frame.</b></td><td>Several lists are copied each frame (enemy lists, bobbin positions, HUD strings). Clearing them out causes short hitches.</td><td>Reuse the lists.</td></tr></table>
+<ul>
+<li><b>A Graphics setting</b> (Auto, Low, Medium, High) so you are never stuck with the game's guess.</li>
+<li><b>A frame-rate readout</b> you can switch on in Settings, showing frames per second, the quality tier, and how the frame splits between game logic, HUD and drawing.</li>
+<li>For reference, an ordinary wave is about 125,000 triangles in 50 draw calls. That should be fine for a Pixel 7, which is why I think the items above matter more than the scene itself.</li>
+</ul>
+<div class="note"><b>One thing only you can do:</b> after the fix, play five minutes with the readout on and send me a screenshot. That is the only way to know the Pixel 7 holds 60 and stays there once it is warm.</div>
+
+<h2>7. Order I would build in</h2>
+<table><tr><th>Step</th><th>What</th><th>New build?</th></tr>
+<tr><td class="n">A</td><td>Performance fixes, Graphics setting, frame-rate readout</td><td>Yes, small and quick</td></tr>
+<tr><td class="n">B</td><td>Boss system, entrance timeline, bosses 1 to 4 with their entrances</td><td>Yes</td></tr>
+<tr><td class="n">C</td><td>Bosses 5 to 8 with their entrances</td><td>Yes</td></tr>
+<tr><td class="n">D</td><td>Sounds, music, volume controls, vibration</td><td>Yes</td></tr></table>
+<p>Performance goes first because eight heavier boss fights on top of a frame-rate problem would make it worse and harder to diagnose. Sounds go last so the boss sounds are written against fights that exist.</p>
+<p>Still open from phase 2 and not in this plan: enemy difficulty has not been retuned for dash, slow time and specials.</p>
+</main></body></html>

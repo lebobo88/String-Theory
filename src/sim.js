@@ -44,6 +44,7 @@
     }
     clearField() {
       this.enemies = []; this.shots = []; this.eshots = []; this.drops = []; this.hazards = []; this.nets = []; this.zones = [];
+      this.props = []; this.arena = { floor: 0, inset: 0 }; this.dark = 0; this.pull = null; this.suck = null; this.propSlow = 1; this.bobbinLock = null;
       this.boss = null; this.sampler = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
     }
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
@@ -170,6 +171,7 @@
       const hp = def.hp * this.mode.hp * (this.mods().hp || 1);
       this.boss = { id, def, x: 0, y: H + 4, hp, maxHp: hp, t: 0, phase: 1, enter: 2.2, timers: [], open: false, flash: 0 };
       this.spec = { diveEvery: 99, fireEvery: 99 };
+      if (ST.bossScripts && ST.bossScripts[id]) this.bossInit(this.boss);
     }
 
     // ---------- per-frame update ----------
@@ -187,7 +189,8 @@
       this.updateShots(dt);
       this.updateZones(dt);
       this.updateEnemies(dt * slow * this.speedMul(), dt);
-      if (this.boss) this.updateBoss(dt * slow);
+      if (this.boss) { if (ST.bossScripts && ST.bossScripts[this.boss.id]) this.bossScripted(dt * slow); else this.updateBoss(dt * slow); }
+      if (this.updateProps) this.updateProps(dt * slow);
       this.updateEshots(dt * slow);
       this.updateHazards(dt);
       this.updateDrops(dt);
@@ -214,8 +217,10 @@
       return null;
     }
     bobbins() {
-      const pl = this.player; if (!this.secondThread()) return [];
-      return this.d.twinBobbin ? [{ x: pl.bx, y: pl.by }, { x: pl.bx + 2.2, y: pl.by }] : [{ x: pl.bx, y: pl.by }];
+      const pl = this.player, c = this.bobCache || (this.bobCache = { none: [], one: [{ x: 0, y: 0 }], two: [{ x: 0, y: 0 }, { x: 0, y: 0 }] });   // reused every frame: no garbage
+      if (!this.secondThread()) return c.none;
+      const a = this.d.twinBobbin ? c.two : c.one; a[0].x = pl.bx; a[0].y = pl.by; if (a[1]) { a[1].x = pl.bx + 2.2; a[1].y = pl.by; }
+      return a;
     }
     updatePlayer(dt, input) {
       const pl = this.player, d = this.d;
@@ -224,7 +229,7 @@
       if (pl.dashN < d.dashMax) { pl.dashRe -= dt; if (pl.dashRe <= 0) { pl.dashN++; pl.dashRe = d.dashRe; } }
       const lead = this.curThread(), second = this.secondThread();
       const charging = lead === 'couching' && pl.charge > 0;
-      const speed = d.speed * (charging ? 0.5 : 1);
+      const speed = d.speed * (charging ? 0.5 : 1) * (this.propSlow || 1), ox = pl.x, oy = pl.y;
       // lift to slow: time on the cloth runs slow while the focus spool lasts
       const want = !!input.focus && this.phase === 'play' && !pl.ram;
       this.focusOn = want && pl.focus > 0 && (this.focusOn || pl.focus > 0.2);
@@ -241,11 +246,12 @@
           if (input.targetX !== null && input.targetX !== undefined) pl.x += clamp(input.targetX - pl.x, -speed * dt, speed * dt); else pl.x += (input.move || 0) * speed * dt;
           if (input.targetY !== null && input.targetY !== undefined) pl.y += clamp(input.targetY - pl.y, -speed * dt, speed * dt); else pl.y += (input.moveY || 0) * speed * dt;
         }
-        pl.y = clamp(pl.y, PY, PY + T.roam);
+        pl.y = clamp(pl.y, PY + this.arena.floor, PY + T.roam);
       }
-      const lim = HW - 0.5 - (pl.dual ? 0.45 : 0);
+      const lim = HW - 0.5 - (pl.dual ? 0.45 : 0) - this.arena.inset;
       pl.x = clamp(pl.x, -lim, lim);
-      this.updateBobbin(dt, second);
+      pl.vx = (pl.x - ox) / dt; pl.vy = (pl.y - oy) / dt;
+      if (!this.bobbinLock) this.updateBobbin(dt, second); else { pl.bx = this.bobbinLock.x; pl.by = this.bobbinLock.y; }   // a cocooned bobbin hangs where the cocoon is
 
       if (input.notion !== undefined && input.notion >= 0) this.useNotion(input.notion);
       if (input.special && pl.sp >= 1 && this.phase === 'play' && !pl.ram) this.special();
@@ -255,7 +261,7 @@
       const rateMul = d.fireMul * (this.fx.beeswax > 0 ? 2 : 1) * (this.fx.bobbin > 0 ? 1.6 : 1);
       const fy = pl.y + 0.7, fireOk = input.fire && !pl.ram;
       this.gun('L', lead, fireOk, dt, rateMul, pl.dual ? [[pl.x - 0.45, fy], [pl.x + 0.45, fy]] : [[pl.x, fy]], 1);
-      if (second) {
+      if (second && !this.bobbinLock) {
         const bs = this.bobbins(), rest = Math.hypot(pl.bx - (pl.x - (d.twinBobbin ? 1.1 : 0)), pl.by - (pl.y - 0.7)) < 0.6 || d.freeBobbin;
         this.gun('B', second, fireOk && (second !== 'couching' || rest), dt, rateMul, bs.map(b => [b.x, b.y + 0.5]), T.bobbinDmg * (d.twinBobbin ? 0.6 : 1));
       }
@@ -323,7 +329,8 @@
       this.emit('lance', { x, y, w: halfW * 2 });
       for (const e of this.enemies.slice()) if (Math.abs(e.x - x) < halfW + e.r && e.y > y) this.damageEnemy(e, dmg, true, src);
       for (let i = this.eshots.length - 1; i >= 0; i--) { const s = this.eshots[i]; if (s.kind === 'knot' && Math.abs(s.x - x) < halfW + 0.3) this.eshots.splice(i, 1); }
-      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW) this.damageBoss(dmg, x, false, src);
+      if (this.props.length) this.columnVsProps(x, halfW, y, dmg);
+      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW && this.boss.y > y) this.damageBoss(dmg, x, false, src, 1, this.boss.y);
     }
 
     updateShots(dt) {
@@ -359,12 +366,14 @@
             if (Math.abs(k.x - s.x) < 0.4 && Math.abs(k.y - s.y) < 0.4) { this.eshots.splice(j, 1); this.emit('snip', { x: k.x, y: k.y }); if (!(s.pierce > 0)) dead = true; break; }
           }
         }
-        if (!dead && this.boss && !this.boss.enter) {
+        if (!dead && this.props.length && this.shotVsProps && this.shotVsProps(s, s.dmg)) { if (s.burst) this.burst(s.x, s.y, s.burst, s.dmg, s.src, true); dead = true; }
+        if (!dead && this.boss && !this.boss.enter && !this.boss.hidden) {
           const b = this.boss;
           if (Math.abs(s.x - b.x) < b.def.halfW && Math.abs(s.y - b.y) < b.def.halfH * 0.75 && !(s.hit && s.hit.indexOf(-1) >= 0)) {
             if (s.burst) this.burst(s.x, s.y, s.burst, 0, s.src, true);
-            this.damageBoss(this.shotDmg(s, b), s.x, false, s.src, s.soft);
-            if (s.pierce > 0 && !s.burst) { s.pierce--; (s.hit = s.hit || []).push(-1); } else dead = true;
+            const res = this.damageBoss(this.shotDmg(s, b), s.x, false, s.src, s.soft, s.y);
+            if (res === 'reflect') { this.eshot('frass', s.x, s.y - 0.2, -s.vx * 0.4 + this.rr(-1, 1), -5.5); dead = true; }
+            else if (s.pierce > 0 && !s.burst) { s.pierce--; (s.hit = s.hit || []).push(-1); } else dead = true;
           }
         }
         if (dead) ss.splice(i, 1);
@@ -381,6 +390,7 @@
       this.emit('burst', { x, y, r });
       if (dmg) for (const e of this.enemies.slice()) { const dx = e.x - x, dy = e.y - y; if (dx * dx + dy * dy < (r + e.r) * (r + e.r)) this.damageEnemy(e, dmg, false, src); }
       if (clear) this.unravel(x, y, r, false);
+      if (dmg && this.props.length) this.areaVsProps(x, y, r, dmg);
     }
     /* Remove enemy bullets inside a circle; with coins, each one drops a coin. Returns how many went. */
     unravel(x, y, r, coins) {
@@ -443,6 +453,7 @@
       if (this.rand() < T.chartChance * (this.p.pattern.sight ? 2 : 1) * (m.charts || 1) * luck) this.dropChart(e.x, e.y, Object.keys(C.CHARTS).filter(k => C.CHARTS[k].loose));
       if (def.splits && !tracing) for (const s of [-1, 1]) this.spawn('nibbler', { x: e.x + s * 0.5, y: e.y, state: 'dive', vx: s * 2.5, passes: 1 });
       if (e.captive) { this.player.dual = true; this.emit('double', { x: e.x, y: e.y }); }
+      if (this.boss && ST.bossScripts && ST.bossScripts[this.boss.id] && ST.bossScripts[this.boss.id].onKill) ST.bossScripts[this.boss.id].onKill(this, this.boss, e);
     }
     dropDust(x, y, total) {
       const n = Math.min(4, total); let left = total;
@@ -792,17 +803,26 @@
     }
 
     // ---------- Keepers ----------
-    damageBoss(dmg, x, force, src, softMul) {
-      const b = this.boss; if (!b || b.hp <= 0) return;
-      const def = b.def;
+    damageBoss(dmg, x, force, src, softMul, y) {
+      const b = this.boss; if (!b || b.hp <= 0) return 0;
+      const def = b.def, scripted = ST.bossScripts && ST.bossScripts[b.id];
+      let soft, mul;
+      if (scripted) {
+        mul = this.bossHit(b, dmg, x, y === undefined ? b.y - def.halfH * 0.5 : y, force, src, softMul);
+        if (mul === 'reflect') { this.emit('bossblock', { x, y: b.y - def.halfH * 0.5, reflect: true }); return mul; }
+        if (!(mul > 0)) { if (!b.hidden) this.emit('bossblock', { x, y: b.y - def.halfH * 0.5 }); return 0; }
+        soft = !!b.softHit;
+      } else {
+        soft = def.soft.some(s => Math.abs(x - (b.x + s.x)) < s.r);
+        mul = soft ? 2 * (softMul || 1) : (def.armour || 0.6);
+        if (def.chews && !b.open) { mul = 0.3; soft = false; }
+        if (force) { mul = 1; }
+      }
       dmg *= this.crossStitch(b, src, x, b.y - def.halfH * 0.5);
-      let soft = def.soft.some(s => Math.abs(x - (b.x + s.x)) < s.r);
-      let mul = soft ? 2 * (softMul || 1) : (def.armour || 0.6);
-      if (def.chews && !b.open) { mul = 0.3; soft = false; }
-      if (force) { mul = 1; }
       b.hp -= dmg * mul; b.flash = 0.1;
       this.emit('bosshit', { x, y: b.y - def.halfH * 0.5, soft });
       if (b.hp <= 0) this.killBoss();
+      return mul;
     }
     killBoss() {
       const b = this.boss, def = b.def, p = this.p;
@@ -815,6 +835,7 @@
       if (open.length) this.drop('chart', b.x, b.y - 1, { chart: open[0], keeper: true });
       for (const e of this.enemies.slice()) this.kill(e, true);
       this.boss = null; this.eshots.length = 0; this.nets.length = 0; this.hazards.length = 0;
+      this.props.length = 0; this.arena.floor = 0; this.arena.inset = 0; this.dark = 0; this.bobbinLock = null;
     }
     updateBoss(dt) {
       const b = this.boss, def = b.def, pl = this.player;

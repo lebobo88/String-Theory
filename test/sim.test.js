@@ -1,7 +1,8 @@
 /* Headless checks: content integrity, shop rules, and full Nights flown by a bot.
    Run: node test/sim.test.js */
 const path = require('path');
-for (const f of ['content', 'save', 'sim']) require(path.join(__dirname, '..', 'src', f + '.js'));
+for (const f of ['content', 'save', 'sim', 'bosses']) require(path.join(__dirname, '..', 'src', f + '.js'));
+for (const f of require('fs').readdirSync(path.join(__dirname, '..', 'src', 'boss')).sort()) if (f.endsWith('.js')) require(path.join(__dirname, '..', 'src', 'boss', f));
 const ST = globalThis.ST, C = ST.content;
 let fails = 0;
 const ok = (c, m) => { if (!c) { fails++; console.log('FAIL', m); } };

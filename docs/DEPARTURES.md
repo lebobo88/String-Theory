@@ -21,3 +21,12 @@ Each entry: what changed, why, and how it came about.
 - **Weapons were retuned around one job each.** At level III the Spread Stitch out-damaged everything (11.7 a second against 4.3 to 10.7) with the widest coverage at the second-lowest price. It now fades with distance. Numbers live in `THREADS[id].lv` and `tools/bench.js` measures them.
 - **Dash is on every ship** (flick), time slows when you lift your finger, and steering is relative drag. The bible's steering put the ship under the thumb.
 - **Stage results list what you picked up, then each bonus, then the total.** Before, "earned" already included the bonuses listed under it, so the lines did not add up.
+
+## Boss rebuild and performance (November 2026)
+
+- **Every boss is a script of its own** (`src/boss/*.js` on the framework in `src/bosses.js`), replacing the shared table of timed attacks. Why: all eight swayed along the top edge on one sine wave, drew from one list of eleven attacks, and were beaten the same way. Each now has its own movement, one mechanic nobody else has, and its own way to be hurt. Full design: `docs/boss-plan.html`.
+- **Bosses have a fray meter and can be stunned.** Weak-spot damage fills it; a stunned boss takes half again as much.
+- **Bosses put things on the cloth** (egg sacs, fuses, web lines, charge lanes and so on) and three of them change the arena itself: lights out, rows unravelled from the bottom, edges fraying in.
+- **Boss sizes changed** where the fight needed it: the Carpet Beetle and the Silk Empress are smaller so they can move through the ship's half of the cloth.
+- **Each boss has an entrance film** (`src/cine.js`): the first camera movement in the game. Four seconds, six for the Moth King, 1.5 once seen, a tap skips.
+- **Phones start on a new "lite" graphics tier** (glow, no shadow pass, no lens passes), the HUD updates ten times a second instead of every frame, drawing is capped to one frame per game step, and the Android app asks the screen for 60Hz. Why: the HUD was being rebuilt on 54 of 55 frames after two always-on weapons made events constant, and 90Hz phones were drawing every frame twice in three.

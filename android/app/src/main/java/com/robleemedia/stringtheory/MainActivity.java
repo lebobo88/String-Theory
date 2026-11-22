@@ -14,6 +14,10 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);
+        // The game steps 60 times a second. On 90Hz and 120Hz screens ask for 60 so every drawn frame is a new one and the phone runs cooler.
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.preferredRefreshRate = 60f;
+        getWindow().setAttributes(lp);
         hideSystemBars();
     }
 

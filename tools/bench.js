@@ -1,7 +1,8 @@
 /* Balance bench: an invulnerable bot flies whole runs with each weapon as the lead (level III, no bobbin), then each as the bobbin beside a level-III Double Stitch.
    Prints minutes to finish the run: lower is stronger. Also fires every ship's special through a run to catch errors. Usage: node tools/bench.js */
 global.window = global; global.ST = {};
-for (const f of ['content', 'save', 'sim']) require('../src/' + f + '.js');
+for (const f of ['content', 'save', 'sim', 'bosses']) require('../src/' + f + '.js');
+for (const f of require('fs').readdirSync(require('path').join(__dirname, '..', 'src', 'boss')).sort()) if (f.endsWith('.js')) require('../src/boss/' + f);
 const C = ST.content;
 function run(setup, opts) {
   const p = ST.save.freshProfile('bench'); setup(p);

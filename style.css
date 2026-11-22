@@ -407,3 +407,8 @@ body.sheeted #toasts{display:none}
   #field{--bot:calc(158px + env(safe-area-inset-bottom))}.hud{height:calc(158px + env(safe-area-inset-bottom))}
   #toasts{bottom:auto;top:calc(126px + env(safe-area-inset-top))}
 }
+
+/* frame-rate readout, and bars that glide between the HUD's ten updates a second */
+#fps{position:fixed;left:6px;bottom:calc(4px + env(safe-area-inset-bottom));z-index:40;font:600 12px var(--mono);color:#fff;background:rgba(0,0,0,.6);padding:2px 6px;pointer-events:none;display:none}
+.meters i,.pw i,.seam i{transition:width .1s linear}
+@media (max-width: 860px), (max-aspect-ratio: 1/1){ #fps{bottom:calc(162px + env(safe-area-inset-bottom));left:4px} }
