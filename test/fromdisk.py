@@ -28,7 +28,9 @@ with sync_playwright() as pw:
         if pg.evaluate("document.documentElement.scrollHeight > window.innerHeight + 1"): fails.append(f'{name}: document taller than the window')
         pg.click('.hem >> text=Start run'); pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
         pg.wait_for_function("ST.audioState.track === 'flight' && !ST.audioState.cur.paused", timeout=8000)
-        pg.wait_for_timeout(2500)
+        # software rendering runs the game slower than real time (catch-up is bounded), so wait for the shot rather than a fixed time
+        try: pg.wait_for_function("ST.audioState.pool.fire.some(a => a.currentTime > 0 || !a.paused)", timeout=15000)
+        except Exception: pass
         fired = pg.evaluate("ST.audioState.pool.fire.some(a => a.currentTime > 0 || !a.paused)")
         if not fired: fails.append(f'{name}: the fire sample never played')
         if errs: fails.append(f'{name}: page errors {errs}')
