@@ -1,0 +1,128 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>String Theory · polish plan</title><style>
+:root{--ink:#1c2138;--ink2:#4a5070;--linen:#e9e2d0;--paper:#f3eee1;--madder:#a82a33;--rule:#b9b09a}
+*{box-sizing:border-box}body{margin:0;background:var(--linen);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font:400 32px/1.1 ui-monospace,Menlo,Consolas,monospace;margin:8px 0 4px}
+h2{font:400 24px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:44px 0 10px;padding-top:14px;border-top:2px dashed var(--ink)}
+h3{font:400 21px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:34px 0 2px}
+.sub{color:var(--madder);font-weight:700;margin:0 0 8px}
+p{margin:8px 0}.k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+dl{margin:8px 0 0;display:grid;grid-template-columns:118px 1fr;gap:0}dt,dd{margin:0;padding:7px 0;border-top:1px solid var(--rule)}dt{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding-top:10px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}td.n{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+ul{padding-left:20px;margin:6px 0}li{margin:5px 0}.note{border:1.5px dashed var(--ink2);padding:10px 12px;background:var(--paper);margin:14px 0;font-size:15px}
+@media(max-width:520px){dl{grid-template-columns:1fr}dt{border-top:1px solid var(--rule);padding-bottom:0}dd{border-top:0;padding-top:2px}table{font-size:13.5px}}
+</style></head><body>
+<main>
+<p class="k">String Theory · plan for approval · nothing below is built yet</p>
+<h1>The polish pass</h1>
+<p class="sub">Find the real cause of the cut-off effects, lock the menus, make the boss films a spectacle, prove the frame rate, get ready for Google Play.</p>
+<div class="note">Nothing here changes until you approve. One build at the end, when all of it is done and tested.</div>
+
+<h2>1 · The cut-off effects: what I got wrong, and the real cause</h2>
+<p>Last time I fixed the canvas stopping short of the item row. That was a real cut, but not the one you see. I have now replayed a perfect bonus wave frame by frame and the cause is on the capture.</p>
+<dl>
+<dt>Cause A (the fireworks)</dt><dd>The fireworks need about 3 seconds: eight rockets, one every 0.24 s, each with a fuse and a burst. The game only waits 1.6 s after the last enemy before the results sheet comes up. The sheet and its dark scrim are a layer <em>above</em> the game, so the fireworks go off behind it. What you see is the strip of fireworks that pokes out above the sheet, ending on the sheet's straight top edge, and the game picture freezes under the sheet so the rest never plays.</dd>
+<dt>Cause B (boss effects)</dt><dd>The same layering. The boss bar and the "Bonus wave" strip under the status row are solid bands drawn over the top of the cloth, exactly where a boss sits. Anything that flares upward from a boss stops on the straight bottom edge of that band. The results sheet does the same to the end of a boss fight.</dd>
+<dt>Cause C (flat effects)</dt><dd>Shock rings, cloth ripples and thread trails lie flat on the cloth. The wooden frame stands above the cloth, so anything flat that spreads past the cloth edge disappears under a straight rail. Ripples are part of the cloth's own surface and simply end where the cloth ends.</dd>
+</dl>
+<h3>The fix</h3>
+<ul>
+<li><b>Celebrations get their own time and their own layer.</b> The results sheet waits for the fireworks (and for a boss's death film) to finish, then rises. While the sheet is up, the game keeps drawing behind it instead of freezing, and a light version of the fireworks continues <em>over</em> the sheet's edges on a top layer, so nothing ends on an edge.</li>
+<li><b>The strip under the status row stops being a solid band.</b> Boss health and the bonus counter are drawn as a floating thread and label with nothing behind them. Effects pass behind the text, not behind a wall.</li>
+<li><b>Effects draw above the frame.</b> Rings, sparks and trails render in a pass after the frame so they spill over the rails. Ripples that reach the cloth edge carry on as a soft ring across the frame and table.</li>
+<li><b>Proof before the build.</b> A new test plays a perfect bonus wave and every boss kill for real and saves the frames, and fails if any effect pixel row ends on a UI edge. You get the before and after sheets in the report.</li>
+</ul>
+
+<h2>2 · Menus that stay put</h2>
+<p>Measured on a 412 × 915 phone, moving between the seven hideout views:</p>
+<table><tr><th>Part</th><th>What it does now</th></tr>
+<tr><td>Details panel</td><td class="n">top edge anywhere from 604 to 741 px; height 80 to 217 px</td></tr>
+<tr><td>Buy button</td><td class="n">at 762, 795 or 810 px depending on the tab</td></tr>
+<tr><td>Strip under the tabs</td><td class="n">41 px on most tabs, 56 on Upgrades, replaced by a switch on Perks</td></tr>
+<tr><td>List</td><td class="n">starts at 179, 182 or 194 px</td></tr></table>
+<p>Every tab sizes itself to its own content, so the frame moves under your thumb. The fix is one fixed skeleton shared by every tab: a fixed-height strip, a list area of fixed size, a details panel of one height with its parts in fixed slots (picture, name, before/after, price), and the buy button pinned to the same spot. Content changes; the frame never does. Long text shrinks to fit its slot or the slot's layout is redesigned, it never pushes.</p>
+<ul>
+<li>I'll read your <b>atelier</b> repo first and audit the hideout, route map, results sheets, settings and title against it, then apply the same grid, spacing scale and type scale everywhere.</li>
+<li>The screen audit gets a new rule: the named anchors (strip, list, details, buy button) must be at the same pixel position on every tab at every screen size, or the audit fails.</li>
+<li>Tab changes animate the content only (a short cross-stitch wipe inside the list and details), never the frame.</li>
+</ul>
+
+<h2>3 · The double-shot sound</h2>
+<p>Two one-prompt attempts have missed, and I cannot hear them, so a third blind attempt is the wrong method. Instead:</p>
+<ul>
+<li>Build it as a designed, layered sound: a tight low thump for weight, two bright string snaps a few milliseconds apart for the "double", and a short airy tail. Each layer is generated on its own and mixed, so each can be judged and swapped.</li>
+<li>Small random pitch and timing changes per shot so it never machine-guns.</li>
+<li>A <b>Sound test</b> page in Settings with three finished candidates for this weapon. You tap, pick, and the pick is what ships. The page stays in the game as a sound-effects jukebox, which players like anyway.</li>
+</ul>
+
+<h2>4 · Boss films, taken all the way</h2>
+<p>Today each film is a camera move over the game scene with particles. The next level is treating each as a short directed film with its own lens, light, score and art.</p>
+<h3>New film toolkit (built once, used by all sixteen films)</h3>
+<table><tr><th>Tool</th><th>What it gives</th></tr>
+<tr><td>Camera rig</td><td>Keyframed spline moves, rack focus, dolly-zoom, handheld, whip pans, speed ramps into slow motion and back.</td></tr>
+<tr><td>Lens</td><td>Depth of field with soft bokeh, anamorphic streak flares, light shafts through dust, film-gate letterbox that opens and closes, chromatic fringing on impacts.</td></tr>
+<tr><td>Real cloth and thread</td><td>The cloth actually deforms (bulges, tears, sags, re-weaves) instead of a ripple drawn on top. Threads are simulated ropes that snap, whip and go slack.</td></tr>
+<tr><td>Painted art</td><td>Codex-generated key art per boss: a stitched portrait for the title card, a backdrop the camera can pull through in layers, and an emblem. All in the Mendnight palette, checked against the art bible.</td></tr>
+<tr><td>Title design</td><td>Each name is stitched on screen letter by letter in that boss's own way (burned in for the Wick, unpicked for the Unraveller, spun for the Empress).</td></tr>
+<tr><td>Score and sound</td><td>A short musical sting per boss for the entrance and another for the death, plus 5 to 8 sounds per boss that exist nowhere else in the game, cut to the film's beats. Vibration is choreographed to the same beats.</td></tr></table>
+<h3>The sixteen films</h3>
+<table><tr><th>Boss</th><th>Entrance</th><th>Death</th></tr>
+<tr><td>Great Lappet</td><td>Autumn. One dead leaf in sharp focus spirals down a shaft of light past the lens; the focus racks to the cloth as it lands, and the "leaf" unfolds into wings with a crack.</td><td>A gale. The camera rides the wind as she is stripped to a skeleton leaf, vein by vein, and the last vein snaps.</td></tr>
+<tr><td>Mother Tinea</td><td>Macro horror. We are inside the weave, threads as thick as rope, something pushing through from behind until a seam bursts toward the lens.</td><td>Time-lapse. Holes spread like frost in fast motion, the cloth sags under its own weight, and one small moth lifts into a cone of light.</td></tr>
+<tr><td>Great Wick</td><td>Black screen. A match strikes in close-up, real flame light on the cloth, three lanterns catch one after another and the shadows swing. Then white-out.</td><td>The flame drowns in its own wax, smoke pours up through the light shafts, total dark, and the house lights come up one breaker at a time.</td></tr>
+<tr><td>Atlas</td><td>Scale. A slow tilt up wings that keep going, eyespots closed, then both open and their beams sweep across the lens and flare.</td><td>From the ship's point of view. The gaze locks on us, the lids close one at a time, and the wings fall as a curtain of gold dust the camera drifts through.</td></tr>
+<tr><td>Unraveller</td><td>A single thread is pulled, and the camera chases it at speed up the cloth as the weave comes apart behind it, straight into the mouth.</td><td>Reversed. A giant shuttle crosses the screen and re-weaves the world row by row, with the Unraveller knitted helplessly into the pattern.</td></tr>
+<tr><td>Carpet Beetle</td><td>Action cut. Ground-level shots as something heavy rolls past, impact freeze-frames with the rails splintering, three hits, title slams in.</td><td>Slow motion. He flips, and each bounce cracks one armour plate away in a spray, ending on a single plate spinning to rest.</td></tr>
+<tr><td>Silk Empress</td><td>Elegant and vertical. Silk lines drop through moonlight one by one, a web assembles in perfect symmetry, and she descends upside down into focus.</td><td>She spins herself into her own cocoon, is drawn up out of frame, and the web lets go strand by strand as dew falls.</td></tr>
+<tr><td>Moth King</td><td>The longest. A total eclipse made of moths, a ring of light, the crown assembling jewel by jewel in the dark, full orchestral build.</td><td>The jewel falls in silence, rings on the floor, the swarm breaks toward the lens, sunrise fills the cloth and the frayed world mends. Leads into the ending.</td></tr></table>
+<p>Each one is storyboarded as a beat sheet first, then built, then reviewed as a contact sheet of frames at phone size by a second pass that did not build it. Skippable at any moment, as now.</p>
+<h3>Keeping the frame rate</h3>
+<p>The game is frozen during a film, so the film has the whole frame budget to itself. The lens effects scale by graphics tier, and each film must hold the frame-rate target in the benchmark below before it ships.</p>
+
+<h2>5 · Performance, proven instead of guessed</h2>
+<p>I have been tuning without a way to measure your phone. That changes first.</p>
+<ul>
+<li><b>A benchmark built into the game</b> (Settings → Graphics → Test this phone). It plays a fixed 40-second reel: a late-stage wave, a boss fight, a film, the fireworks. It records every frame time and shows the result per graphics tier. One tap copies the numbers so you can paste them to me. The same reel runs on first launch to pick the right tier for that phone.</li>
+<li><b>Stutter from first use.</b> New enemy types, effects and bosses compile their shaders and upload their art the first time they appear, which lands in the middle of a later stage. Everything is warmed up on the loading screen instead. This is a strong candidate for "worse as the stages go on".</li>
+<li><b>Fewer, cheaper draws.</b> Each enemy pose is its own draw, twice with shadows (52 draws in stage 1, 84 by stage 8). Merge all stitched sprites into one atlas and one draw; give phones soft blob shadows instead of a second full pass.</li>
+<li><b>Cheaper pixels.</b> The cloth is a procedural surface computed for every pixel every frame. Bake it to a texture when a stage starts and animate only what moves. Run the glow passes at half size.</li>
+<li><b>90 Hz.</b> The Pixel 7 screen is 90 Hz and the game asks for 60. Decide with the benchmark whether to hold a clean 60 or offer 90 on High.</li>
+<li><b>Budget rule for the build:</b> the reel must hold the target with headroom on the tier the phone is given, or the build does not ship.</li>
+</ul>
+
+<h2>6 · Polish across the rest of the game</h2>
+<table><tr><th>Where</th><th>What</th></tr>
+<tr><td>First 10 seconds</td><td>A real title sequence: needle, thread, the wordmark stitched in, music hit. Splash and app icon to match.</td></tr>
+<tr><td>Stages</td><td>Each of the eight stages on its own fabric (denim, linen, tartan, velvet, silk and so on) with its own light and music, and a short stage card.</td></tr>
+<tr><td>Flight</td><td>Hit-stop on big kills, a camera kick tuned per weapon, weightier explosions, clearer telegraphs.</td></tr>
+<tr><td>Results and run end</td><td>Results sheet stitched on line by line with the count-up; a proper game-over, and a victory ending with credits after the Moth King.</td></tr>
+<tr><td>Hideout</td><td>Quiet ambient motion (lamp, dust, a cat's-cradle of thread) behind the fixed frame from section 2.</td></tr>
+<tr><td>Art</td><td>Codex-generated key art, boss portraits for the collection, and store artwork, all checked against the art bible.</td></tr>
+<tr><td>Access</td><td>Colour-blind-safe enemy shots, a text-size setting, full reduced-motion versions of every film.</td></tr></table>
+
+<h2>7 · Google Play readiness</h2>
+<table><tr><th>Item</th><th>State and plan</th></tr>
+<tr><td>Target Android version</td><td>Play requires new apps to target Android 16 (API 36). The project already targets 36.</td></tr>
+<tr><td>Signing</td><td>Builds are debug-signed with a new key each time, which is why you have to uninstall and lose your save. Move to one permanent release key and build a release bundle (.aab). After that, updates install over the top and saves survive. <b>The key must be yours</b> (see decisions).</td></tr>
+<tr><td>App behaviour</td><td>Pause and silence when the app goes to the background, back-button handling, edge-to-edge with notch and gesture-bar insets, save backup through Android's own backup.</td></tr>
+<tr><td>Store listing</td><td>Icon, feature graphic, phone screenshots, a 30-second trailer cut from the films, short and full description.</td></tr>
+<tr><td>Policy</td><td>Privacy policy page (the game collects nothing), data-safety form, content rating questionnaire.</td></tr>
+<tr><td>Testing gate</td><td>A personal developer account created after 13 November 2023 must run a closed test with at least 12 testers for 14 days in a row before it can publish. An organisation account (Rob Lee Media) is not subject to it. Worth deciding early because it sets the calendar.</td></tr>
+<tr><td>Name</td><td>Check "String Theory" against existing Play listings and trademarks before the listing is created.</td></tr></table>
+
+<h2>8 · How it gets built</h2>
+<ul>
+<li>Five workstreams that do not share files: effects layering and celebrations; menu skeleton and atelier audit; film toolkit and the sixteen films; performance and the benchmark; Play packaging and store assets. Sound runs alongside the films.</li>
+<li>You said Fable subagents are fine for this, so I'll use them where the work is hardest (films, renderer) and say which did what.</li>
+<li>Order inside the pass: benchmark and the cut-off fix first, because both tell us the truth about the current build. Films last, on top of the measured budget.</li>
+<li>One build when every item is done, every test and audit passes, and the film contact sheets have been reviewed.</li>
+</ul>
+
+<h2>9 · Decisions that are yours</h2>
+<ol>
+<li><b>Release signing key.</b> I should not create or hold the key that owns your app on Play. Either you generate it and add it as a repository secret (I'll give you the two commands), or you tell me to use Play App Signing with an upload key you create.</li>
+<li><b>Developer account type.</b> Personal (12 testers, 14 days) or Rob Lee Media as an organisation.</li>
+<li><b>Price model.</b> Paid, free, or free with a one-time unlock. This shapes the store listing and whether any billing code is needed. The plan assumes no ads and no data collection.</li>
+<li><b>Scope of section 6.</b> It is the largest optional block. Say "all of it" or strike rows.</li>
+</ol>
+</main></body></html>
