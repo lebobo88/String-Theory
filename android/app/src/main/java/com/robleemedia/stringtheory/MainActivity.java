@@ -30,6 +30,8 @@ public class MainActivity extends BridgeActivity {
         }
         getWindow().setAttributes(lp);
         hideSystemBars();
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(getBridge().getWebView(), (v, ins) -> { passInsets(v, ins); return ins; });
         // Back (button or gesture) goes to the game first: it skips a film, pauses a flight, closes a sheet or steps back a screen.
         // Only when the game has nothing left to go back from does the app move to the background.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -61,6 +63,17 @@ public class MainActivity extends BridgeActivity {
         super.onResume();
         getBridge().getWebView().onResume();
         getBridge().getWebView().evaluateJavascript("(function(){try{window.ST&&ST.game&&ST.game.wake&&ST.game.wake()}catch(e){}})()", null);
+        androidx.core.view.ViewCompat.requestApplyInsets(getBridge().getWebView());
+    }
+
+    /** The page's safe-area tokens (--safe-t/r/b/l, in CSS px) from the window's real cutout and gesture-bar insets, since a
+     *  full-screen WebView can report 0 for env(safe-area-inset-*). */
+    private void passInsets(android.view.View v, androidx.core.view.WindowInsetsCompat ins) {
+        androidx.core.graphics.Insets i = ins.getInsetsIgnoringVisibility(androidx.core.view.WindowInsetsCompat.Type.systemBars() | androidx.core.view.WindowInsetsCompat.Type.displayCutout());
+        float d = getResources().getDisplayMetrics().density;
+        String js = String.format(java.util.Locale.US, "(function(){var s=document.documentElement.style;s.setProperty('--safe-t','%.1fpx');s.setProperty('--safe-r','%.1fpx');s.setProperty('--safe-b','%.1fpx');s.setProperty('--safe-l','%.1fpx');window.dispatchEvent(new Event('resize'))})()",
+            i.top / d, i.right / d, i.bottom / d, i.left / d);
+        getBridge().getWebView().evaluateJavascript(js, null);
     }
 
     private void hideSystemBars() {
