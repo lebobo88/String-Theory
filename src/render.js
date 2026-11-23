@@ -21,11 +21,17 @@
   let PY = GY;   // where the ship is right now; GY is its home row
   const SCROLL = 2.4, TAU = Math.PI * 2;
   const rnd = (a, b) => a + (b - a) * Math.random();
+  const g0 = (sc, o) => !!(o && o.parent === sc);
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const EMPTY = [], LINEN = [PAL.linen], KNOT = [PAL.knot, PAL.madder, PAL.madderHi], COIN = [PAL.saffron, PAL.brass];
   const hash = n => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
   const eo = k => 1 - (1 - k) * (1 - k) * (1 - k), eio = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  const HW = W / 2, FZ = 3.2;   // FZ: the plane the low-shield fray is drawn on, just under the lens
+  const HW = W / 2, FZ = 3.2;
+  /* The cloth's fabric when a stage has none of its own (C.PANELS[i].fabric, src/content.js), and the weaves bakeCloth knows. */
+  const FABRIC0 = (C.PANELS[0] && C.PANELS[0].fabric) || { name: 'Coverlet', weave: 'plain', dens: 6, warp: '#18203D', weft: '#18203D', patchA: '#1D2749', patchB: '#24305A', stitch: '#E6DFD0', mottle: '#8C9AC6', stars: 0.22, seed: 0,
+    light: { sky: '#DFE6FF', ground: '#221A2E', sun: '#FFF0D8', back: '#6E5A8A', glare: '#FFF4D6' }, frame: '#3A2C20', lace: '#B9AE96', table: '#0F1428' };
+  const WEAVES = ['plain', 'linen', 'twill', 'tartan', 'velvet', 'knit', 'felt', 'royal', 'damask'];   // FZ: the plane the low-shield fray is drawn on, just under the lens
   /* The celebrations, as timed lists of shells: [launch time, kind, x, burst height, colour, second colour, size, fuse, quiet, sound].
      Kinds: 0 peony (a round head of X-stitches), 1 ring (one clean hoop), 2 willow (long drooping gold threads), 3 crossette
      (stars that each pop into a little cross-stitch), 4 crown (the finale: a peony with a willow's tails), 5 spark (the small
@@ -100,8 +106,10 @@
       this.fireworks = false; this.fwN = 0; this.fwT = 0;
       this.kick = 0; this.kickV = 0; this.zoomK = 0; this.hook = null; this.enterT = 0;
       this.post = new FX.Post(T, this.gl);
-      this.buildWorld(); this.buildFx(); this.buildPlayer();
-      this.ema = 0; this.slow = 0; this.warm = 3;
+      this.buildWorld(); this.buildFx(); this.buildPlayer(); this.setFabric(FABRIC0);
+      this.ema = 0; this.slow = 0; this.settleT = 3;
+      // a lost and restored context (a phone under memory pressure) empties every render target: bake the cloth again
+      try { canvas.addEventListener('webglcontextrestored', () => { this.bakeDirty = true; if (this.bk) this.bk.noiseDone = false; this.maskClear = false; this.warmedKey = null; }); } catch (e) { /* no canvas events */ }
       this.applyQuality();
       this.resize();
     }
@@ -114,21 +122,29 @@
       this.mobile = mobile;
       if (!q || q === 'auto') {
         this.auto = true;
-        this.step = mobile ? 3 : 0;
+        // where Auto starts: the tier this phone's frame test picked (src/perf.js; first launch, or Settings > Test this phone), else
+        // Light on a phone and High elsewhere
+        const pick = ST.Perf && ST.Perf.startTier ? ST.Perf.startTier() : null, at = pick ? FX.LADDER.findIndex(l => l[0] === pick) : -1;
+        this.step = at >= 0 ? at : mobile ? 3 : 0;
       } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); }
       this.step0 = this.step; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; this.noUp = {}; this.res = 1; this.resFail = {};
     }
     setQuality(q) {
       if (q === 'auto') { this.opts.quality = 'auto'; this.pickQuality(); } else { this.auto = false; this.step = Math.max(0, FX.LADDER.findIndex(l => l[0] === q)); this.res = 1; this.resFail = {}; this.win = { t: 0, n: 0, slow: 0, bad: 0, calm: 0 }; }
       this.applyQuality(); this.resize();
+      // a new tier may need programs the old one did not: compiled now behind the menus, or at the next menu if this is mid-flight
+      if (now() - (this.lastSync || -1e9) > 400) this.warmUp(); else this.warmLater = true;
     }
     /* The sharpness actually drawn: the tier's, times `res`. When the player has picked a tier by hand the look is kept and only
        this slides (see monitor), so a heavy stage costs a little sharpness instead of frames. Never below one screen pixel. */
     pixelRatio() { const top = Math.min(window.devicePixelRatio || 1, FX.LADDER[this.step][1]); return Math.max(Math.min(1, top), top * (this.res || 1)); }
     applyQuality() {
       const name = FX.LADDER[this.step][0]; this.quality = name;
-      // a phone's High keeps every effect but halves the two costs a small dense screen cannot show: 4x to 2x smoothing, and the shadow map
-      this.q = this.mobile && name === 'high' ? (this.qHiM || (this.qHiM = Object.assign({}, FX.QUALITY.high, { samples: 2, shadowMap: 1024 }))) : FX.QUALITY[name];
+      /* A phone's tiers (FX.PHONE) keep every effect but drop what a small dense screen cannot show and a phone pays most for:
+         the shadow map (stitched shadows instead), MSAA on the half-float target, and full-size glow. `override` is the frame
+         test's (src/perf.js) way to try one change at a time. */
+      const base = this.mobile ? FX.PHONE[name] : FX.QUALITY[name];
+      this.q = this.override ? Object.assign({}, base, this.override) : base;
       this.gl.setPixelRatio(this.pixelRatio());
       if (this.gpu) for (const p of this.gpu) p.setLimit(this.q.particles);
       if (this.clothMat && this.clothMat.defines.DETAIL !== this.q.cloth) { this.clothMat.defines.DETAIL = this.q.cloth; this.clothMat.needsUpdate = true; }
@@ -138,23 +154,27 @@
     /* Auto quality. Judged one second at a time by how many frames ran long, not by the average, so stutter counts.
        Two bad seconds in a row: one step down. Twenty calm seconds: one step back up (once per step, so it cannot flap). */
     monitor(dt) {
-      if (this.warm > 0) { this.warm -= dt; return; }
+      if (this.settleT > 0) { this.settleT -= dt; return; }
       const w = this.win; w.t += dt; w.n++; if (dt > 0.026) w.slow++;
       if (w.t < 1) return;
       const frac = w.slow / w.n; w.t = 0; w.n = 0; w.slow = 0;
       if (!this.auto) {   // a tier picked by hand: same judgement, but only sharpness moves (down in two bad seconds, back up after twenty calm ones, at most twice per level)
         const R = [1, 0.87, 0.75, 0.65], i = Math.max(0, R.indexOf(this.res));
-        if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && i < R.length - 1 && this.pixelRatio() > 1) { this.resFail[i] = (this.resFail[i] || 0) + 1; this.res = R[i + 1]; this.resize(); w.bad = 0; this.warm = 2; } }
+        if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && i < R.length - 1 && this.pixelRatio() > 1) { this.resFail[i] = (this.resFail[i] || 0) + 1; this.res = R[i + 1]; this.resize(); w.bad = 0; this.settleT = 2; } }
         else { w.bad = 0; if (frac < 0.03) w.calm++; else w.calm = 0;
-          if (w.calm >= 20 && i > 0 && (this.resFail[i - 1] || 0) < 2) { this.res = R[i - 1]; this.resize(); w.calm = 0; this.warm = 2; } }
+          if (w.calm >= 20 && i > 0 && (this.resFail[i - 1] || 0) < 2) { this.res = R[i - 1]; this.resize(); w.calm = 0; this.settleT = 2; } }
         return;
       }
-      if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && this.step < FX.LADDER.length - 1) { this.noUp[this.step] = true; this.step++; this.applyQuality(); this.resize(); w.bad = 0; this.warm = 2; } }
+      if (frac > 0.25) { w.calm = 0; if (++w.bad >= 2 && this.step < FX.LADDER.length - 1) { this.noUp[this.step] = true; this.step++; this.applyQuality(); this.resize(); w.bad = 0; this.settleT = 2; } }
       else { w.bad = 0; if (frac < 0.03) w.calm++; else w.calm = 0;
-        if (w.calm >= 20 && this.step > this.step0 && !this.noUp[this.step - 1]) { this.step--; this.applyQuality(); this.resize(); w.calm = 0; this.warm = 2; } }
+        if (w.calm >= 20 && this.step > this.step0 && !this.noUp[this.step - 1]) { this.step--; this.applyQuality(); this.resize(); w.calm = 0; this.settleT = 2; } }
     }
+    /* 'map': a real shadow map (desktop). 'stitch': every chart's own stitches flattened onto the cloth along the light, drawn with
+       the ground in one draw, and the frame's shadow read from the cloth's bake (phones). 'none'. */
+    shadowKind() { return !(this.userShadows && this.q.shadows) ? 'none' : this.q.shadowMode || 'map'; }
     applyShadows() {
-      const on = this.userShadows && this.q.shadows;
+      const kind = this.shadowKind(), on = kind === 'map';
+      if (this.st) { this.st.shadowOn = kind === 'stitch'; this.clothU.uShadeOn.value = kind === 'stitch' ? 1 : 0; }
       if (this.gl.shadowMap.enabled === on) return;
       this.gl.shadowMap.enabled = on; if (this.sun) this.sun.castShadow = on;
       this.scene.traverse(o => { if (o.material && o.material.needsUpdate !== undefined) o.material.needsUpdate = true; });
@@ -254,19 +274,87 @@
     }
 
     // ---------- the cloth, the hoop, the light ----------
-    clothTexture() {   // boro patches and sashiko outlines; the weave and the star-holes are in the shader
-      const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 1366;
-      const x = cv.getContext('2d'), w = cv.width, h = cv.height;
-      x.fillStyle = PAL.coverlet; x.fillRect(0, 0, w, h);
+    /* The mend map: where the cloth has been mottled, patched (boro) and outlined in sashiko, once at load, in four channels
+       (r mottling, 0.5 = none; g, b the two kinds of patch; a the sashiko outlines). Every fabric is painted through it in the
+       bake (each lays it differently). Same seed and layout as the old painted coverlet. */
+    mendTexture() {
+      const w = 1024, h = 1366, T = this.T, layer = () => { const cv = document.createElement('canvas'); cv.width = w; cv.height = h; return [cv, cv.getContext('2d')]; };
+      const [ca, a] = layer(), [cb, b] = layer(), [cc, c] = layer(), [cd, d] = layer();
+      a.fillStyle = 'rgb(128,128,128)'; a.fillRect(0, 0, w, h); for (const x of [b, c, d]) { x.fillStyle = '#000'; x.fillRect(0, 0, w, h); }
       let seed = 9; const r = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-      for (let i = 0; i < 900; i++) { x.fillStyle = r() < 0.5 ? 'rgba(140,154,198,.035)' : 'rgba(0,0,0,.05)'; x.beginPath(); x.arc(r() * w, r() * h, 6 + r() * 40, 0, 7); x.fill(); }
+      for (let i = 0; i < 900; i++) { a.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.05)'; a.beginPath(); a.arc(r() * w, r() * h, 6 + r() * 40, 0, 7); a.fill(); }
       for (let i = 0; i < 7; i++) {
-        const pw = 120 + r() * 220, ph = 100 + r() * 200, px = r() * (w - pw), py = r() * (h - ph);
-        x.fillStyle = i % 2 ? PAL.patch : '#1D2749'; x.globalAlpha = 0.55; x.fillRect(px, py, pw, ph); x.globalAlpha = 1;
-        x.setLineDash([10, 7]); x.strokeStyle = 'rgba(230,223,208,.28)'; x.lineWidth = 3; x.strokeRect(px + 6, py + 6, pw - 12, ph - 12); x.setLineDash([]);
+        const pw = 120 + r() * 220, ph = 100 + r() * 200, px = r() * (w - pw), py = r() * (h - ph), x = i % 2 ? c : b;
+        x.fillStyle = '#fff'; x.fillRect(px, py, pw, ph);
+        d.setLineDash([10, 7]); d.strokeStyle = '#fff'; d.lineWidth = 3; d.strokeRect(px + 6, py + 6, pw - 12, ph - 12); d.setLineDash([]);
       }
-      const tex = new this.T.CanvasTexture(cv); tex.colorSpace = this.T.SRGBColorSpace; tex.anisotropy = 4;
+      const A = a.getImageData(0, 0, w, h).data, Bd = b.getImageData(0, 0, w, h).data, Cd = c.getImageData(0, 0, w, h).data, D = d.getImageData(0, 0, w, h).data;
+      const out = new Uint8Array(w * h * 4);
+      for (let y = 0; y < h; y++) { const src = y * w * 4, dst = (h - 1 - y) * w * 4;   // bottom row first: uv (0,0) is the cloth's lower left
+        for (let x = 0, k = 0; x < w; x++, k += 4) { out[dst + k] = A[src + k]; out[dst + k + 1] = Bd[src + k]; out[dst + k + 2] = Cd[src + k]; out[dst + k + 3] = D[src + k]; } }
+      for (const cv of [ca, cb, cc, cd]) { cv.width = 1; cv.height = 1; }
+      const tex = new T.DataTexture(out, w, h, T.RGBAFormat, T.UnsignedByteType); tex.magFilter = T.LinearFilter; tex.minFilter = T.LinearFilter;
+      tex.wrapS = tex.wrapT = T.RepeatWrapping; tex.needsUpdate = true;
       return tex;
+    }
+    /* The bake: the cloth's colour and weave (RT0, sRGB, mipmapped), its star-holes and the frame's shadow (RT1), at about the
+       screen's own density on the cloth. Redrawn when the fabric changes (a stage starts) and when the screen changes size by much. */
+    bakeSize() {
+      const db = this.gl.getDrawingBufferSize(this.tmpV), span = Math.max(4, (this.viewTop || H) - (this.viewBot === undefined ? B : this.viewBot));
+      const ppu = Math.max(36, Math.min(96, Math.ceil(db.y / span * 1.25)));
+      return [Math.min(2048, Math.round(W * ppu)), Math.min(2048, Math.round(FH * ppu))];
+    }
+    bakeCloth() {
+      const T = this.T, gl = this.gl, f = this.fabric || FABRIC0, [bw, bh] = this.bakeSize();
+      if (!this.bakeRT || this.bakeRT[0].width !== bw || this.bakeRT[0].height !== bh) {
+        if (this.bakeRT) for (const rt of this.bakeRT) rt.dispose();
+        const mk = cs => new T.WebGLRenderTarget(bw, bh, { type: T.UnsignedByteType, colorSpace: cs, depthBuffer: false, generateMipmaps: true, minFilter: T.LinearMipmapLinearFilter, magFilter: T.LinearFilter });
+        this.bakeRT = [mk(T.SRGBColorSpace), mk(T.NoColorSpace)]; this.bakeRT[0].texture.anisotropy = 4; this.bakeRT[1].texture.anisotropy = 4;
+        this.clothMat.map = this.bakeRT[0].texture; this.clothU.tCloth2.value = this.bakeRT[1].texture; this.clothMat.needsUpdate = true;
+      }
+      if (!this.bk) {
+        const quad = new T.Mesh(new T.PlaneGeometry(2, 2)); quad.frustumCulled = false; const sc = new T.Scene(); sc.add(quad);
+        const u = { tMend: { value: this.mendTexture() }, uField: { value: new T.Vector4(-HW, B, HW, H) }, uPass: { value: 0 }, uWeave: { value: 0 }, uDens: { value: 6 }, uStars: { value: 0.22 }, uSeed: { value: 0 },
+          uWarp: { value: new T.Vector3() }, uWeft: { value: new T.Vector3() }, uAlt: { value: new T.Vector3() }, uAlt2: { value: new T.Vector3() }, uPatchA: { value: new T.Vector3() }, uPatchB: { value: new T.Vector3() },
+          uStitch: { value: new T.Vector3() }, uMottle: { value: new T.Vector3() }, uLight: { value: new T.Vector3() }, uFrame: { value: new T.Vector4(0.55, 0, 0, 0) }, uMendT: { value: new T.Vector4() } };
+        const mat = FX.shaderMat(T, { vs: SH.fsVS, fs: SH.bakeFS, uniforms: u, depthTest: false, depthWrite: false });
+        // the repeating noise for the light behind the cloth, made once
+        const noise = new T.WebGLRenderTarget(512, 512, { type: T.UnsignedByteType, depthBuffer: false, wrapS: T.RepeatWrapping, wrapT: T.RepeatWrapping, minFilter: T.LinearFilter, magFilter: T.LinearFilter });
+        this.bk = { quad, sc, cam: new T.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat, u, noise, noiseDone: false, noiseMat: FX.shaderMat(T, { vs: SH.fsVS, fs: SH.noiseFS, depthTest: false, depthWrite: false }) };
+        this.clothU.tNoise.value = noise.texture;
+      }
+      const k = this.bk, u = k.u, prev = gl.getRenderTarget(), srgb = hex => { const c = this.tmpC.set(hex); c.convertLinearToSRGB(); return c; };   // the bake composes in sRGB, as paint would
+      if (!k.noiseDone) { k.quad.material = k.noiseMat; gl.setRenderTarget(k.noise); gl.render(k.sc, k.cam); k.noiseDone = true; }
+      u.uWeave.value = Math.max(0, WEAVES.indexOf(f.weave)); u.uDens.value = f.dens || 6; u.uStars.value = f.stars === undefined ? 0.22 : f.stars; u.uSeed.value = f.seed || 0;
+      for (const [key, hex] of [['uWarp', f.warp], ['uWeft', f.weft || f.warp], ['uAlt', f.alt || f.warp], ['uAlt2', f.alt2 || f.weft || f.warp], ['uPatchA', f.patchA], ['uPatchB', f.patchB], ['uStitch', f.stitch], ['uMottle', f.mottle]]) { const c = srgb(hex); u[key].value.set(c.r, c.g, c.b); }
+      const sd = f.seed || 0; u.uMendT.value.set((sd * 0.618) % 1, (sd * 0.381) % 1, sd % 2, Math.floor(sd / 2) % 2);
+      u.uLight.value.copy(this.lightDir);
+      k.quad.material = k.mat;
+      for (let pass = 0; pass < 2; pass++) { u.uPass.value = pass; gl.setRenderTarget(this.bakeRT[pass]); gl.render(k.sc, k.cam); }
+      gl.setRenderTarget(prev);
+      this.clothU.uStarK.value = u.uStars.value;
+      this.bakeDirty = false; this.bakedAt = bw + 'x' + bh;
+    }
+    /* A stage's fabric (C.PANELS[i].fabric): the cloth is baked again, and the lamp, the sky, the light behind the cloth, the frame,
+       its lacing and the table take the fabric's own colours. */
+    setFabric(f) {
+      f = f || FABRIC0; if (f === this.fabric && !this.bakeDirty) return; this.fabric = f;
+      const L = f.light || FABRIC0.light, c = this.cool, T = this.T;
+      c.sky.set(L.sky); c.sun.set(L.sun); this.hemi.groundColor.set(L.ground); this.focusK0 = -1;
+      this.hemi.color.lerpColors(c.sky, c.skyC, this.focusK * 0.8); this.sun.color.lerpColors(c.sun, c.sunC, this.focusK * 0.7);
+      this.clothU.uGlare.value.fromArray(this.lc(L.glare)); this.clothU.uBack.value.fromArray(this.lc(L.back));
+      const sh = f.sheen; if (sh) { const k = this.lc(sh[0]); this.clothU.uSheen.value.set(k[0] * sh[1], k[1] * sh[1], k[2] * sh[1], sh[2]); } else this.clothU.uSheen.value.set(0, 0, 0, 1);
+      this.woodMat.color.set(f.frame || PAL.umber); this.laceMat.color.set(f.lace || PAL.rule); this.tableMat.color.set(f.table || PAL.night); this.scene.background.set(f.table || PAL.night);
+      // render-boss.js keeps what "full light" is while it dims the arena: tell it the new fabric's
+      const bl = this.bf && this.bf.lights; if (bl) { bl.glare.copy(this.clothU.uGlare.value); bl.back.copy(this.clothU.uBack.value); bl.bg.set(f.table || PAL.night); bl.k = -1; }
+      this.shadeTone(); this.bakeDirty = true;
+    }
+    /* How dark a shadow on the cloth is: what is left when the lamp is blocked, the sky alone (per channel). Used by the stitched
+       shadows and the frame's baked shadow, so both match the real shadow map's darkness. */
+    shadeTone() {
+      const sky = this.hemi.color, gr = this.hemi.groundColor, hi = this.hemi.intensity, sun = this.sun.color, si = this.sun.intensity, nl = Math.max(0.2, this.lightDir.z), v = this.st.uDark.value;
+      const ch = (a, b, s) => { const amb = (a + b) * 0.5 * hi, dir = s * si * nl; return Math.pow(Math.min(1, (amb + 0.02) / (amb + dir + 0.02)), 1.25); };   // (^1.25: matched to the shadow map's measured darkness on the cloth, which also loses the lamp's sheen)
+      v.set(ch(sky.r, gr.r, sun.r), ch(sky.g, gr.g, sun.g), ch(sky.b, gr.b, sun.b)); this.clothU.uShade.value.copy(v);
     }
     buildWorld() {
       const T = this.T, sc = this.scene;
@@ -278,25 +366,31 @@
       sc.add(sun); sc.add(sun.target);
       // the cloth: a standard lit material with the weave, the star-holes, the light behind and the ripples injected
       const rip = [], ripB = []; for (let i = 0; i < 8; i++) { rip.push(new T.Vector4(0, 0, 0, 0)); ripB.push(new T.Vector4(1, 1, 1, 0)); }
+      const blank = () => { const t = new T.DataTexture(new Uint8Array([24, 32, 61, 0]), 1, 1); t.needsUpdate = true; return t; };   // until the first bake
+      this.lightDir = sun.position.clone().sub(sun.target.position).normalize();
       this.clothU = { uTime: { value: 0 }, uHeat: { value: 0 }, uRip: { value: rip }, uRipB: { value: ripB },
-        uGlare: { value: new T.Vector3().fromArray(this.lc(PAL.glare)) }, uBack: { value: new T.Vector3().fromArray(this.lc('#6E5A8A')) }, uField: { value: new T.Vector4(-HW, B, HW, H) } };
+        uGlare: { value: new T.Vector3().fromArray(this.lc(PAL.glare)) }, uBack: { value: new T.Vector3().fromArray(this.lc('#6E5A8A')) }, uField: { value: new T.Vector4(-HW, B, HW, H) },
+        tCloth2: { value: blank() }, tNoise: { value: blank() }, uShade: { value: new T.Vector3(1, 1, 1) }, uShadeOn: { value: 0 }, uSheen: { value: new T.Vector4(0, 0, 0, 1) }, uStarK: { value: 0.22 },
+        tShMask: { value: blank() }, uShRes: { value: new T.Vector2(1, 1) } };
       this.ripI = 0;
-      const cm = this.clothMat = new T.MeshStandardMaterial({ map: this.clothTexture(), roughness: 1 });
+      const map0 = blank(); map0.colorSpace = T.SRGBColorSpace;
+      const cm = this.clothMat = new T.MeshStandardMaterial({ map: map0, roughness: 1 });
       cm.defines = { DETAIL: 2 };
       cm.onBeforeCompile = s => {
         Object.assign(s.uniforms, this.clothU);
         s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nvarying vec2 vField;')
           .replace('#include <begin_vertex>', '#include <begin_vertex>\nvField = (modelMatrix * vec4(position, 1.)).xy;');
-        s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\n' + SH.common + SH.clothPars)
-          .replace('#include <map_fragment>', 'clothCompute();\nvec4 sampledDiffuseColor = texture2D(map, vMapUv + cRipOff * vec2(' + (1 / W).toFixed(5) + ', ' + (1 / FH).toFixed(5) + '));\ndiffuseColor *= sampledDiffuseColor;\ndiffuseColor.rgb *= cWeave;')
+        s.fragmentShader = s.fragmentShader.replace('#include <uv_pars_fragment>', '#include <uv_pars_fragment>\n' + SH.common + SH.clothPars)
+          .replace('#include <map_fragment>', 'clothCompute();\nvec4 sampledDiffuseColor = texture2D(map, vMapUv + cRipOff * vec2(' + (1 / W).toFixed(5) + ', ' + (1 / FH).toFixed(5) + '));\n'
+            + 'diffuseColor.rgb *= sampledDiffuseColor.rgb * mix(vec3(1.), uShade, uShadeOn * (1. - cLit));\n#if DETAIL > 0\ncEmit += cBackL * sampledDiffuseColor.a * .22;\n#endif')
           .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize(normal + mat3(viewMatrix) * vec3(cBump, 0.));')
-          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += cEmit;');
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += cEmit + uSheen.rgb * pow(1. - clamp(dot(normal, normalize(vViewPosition)), 0., 1.), uSheen.w);');
       };
-      cm.customProgramCacheKey = () => 'cloth' + cm.defines.DETAIL;
+      cm.customProgramCacheKey = () => 'clothB' + cm.defines.DETAIL;
       const cloth = new T.Mesh(new T.PlaneGeometry(W, FH), cm);
       cloth.position.set(0, CY, 0); cloth.receiveShadow = true; sc.add(cloth); this.cloth = cloth;
       // the embroidery frame: umber bars, brass pegs, linen lacing (merged: three draws)
-      const wood = this.flat(PAL.umber, { roughness: 0.7 }), brass = this.flat(PAL.brass, { roughness: 0.35, metalness: 0.7 }), lace = this.flat(PAL.rule);
+      const wood = this.woodMat = new T.MeshStandardMaterial({ color: new T.Color(PAL.umber), roughness: 0.7, metalness: 0 }), brass = this.flat(PAL.brass, { roughness: 0.35, metalness: 0.7 }), lace = this.laceMat = new T.MeshStandardMaterial({ color: new T.Color(PAL.rule), roughness: 0.95, metalness: 0 });
       const bars = [], pegs = [], laces = [], mm = (x, y, z, rx, ry, rz) => new T.Matrix4().compose(new T.Vector3(x, y, z), new T.Quaternion().setFromEuler(new T.Euler(rx || 0, ry || 0, rz || 0)), new T.Vector3(1, 1, 1));
       const bar = (x, y, w, h) => bars.push([new T.BoxGeometry(w, h, 0.7), mm(x, y, 0.2)]);
       bar(0, B - 0.45, W + 1.8, 0.9); bar(0, H + 0.45, W + 1.8, 0.9); bar(-W / 2 - 0.45, CY, 0.9, FH); bar(W / 2 + 0.45, CY, 0.9, FH);
@@ -306,7 +400,7 @@
       for (let i = 0; i < 12; i++) { const y0 = B + i * FH / 12 + FH / 24, rz = i % 2 ? 0.9 : -0.9; laces.push([lg, mm(-W / 2 - 0.05, y0, 0.12, 0, 0, rz)]); laces.push([lg, mm(W / 2 + 0.05, y0, 0.12, 0, 0, rz)]); }
       const add = (items, m, cast) => { const o = new T.Mesh(FX.merge(T, items), m); o.castShadow = cast; o.receiveShadow = true; sc.add(o); return o; };
       const frame = add(bars, wood, true); this.pegs = add(pegs, brass, false); const lacing = add(laces, lace, false);
-      const table = new T.Mesh(new T.PlaneGeometry(120, 120), new T.MeshStandardMaterial({ color: new T.Color(PAL.night), roughness: 1 }));
+      const table = new T.Mesh(new T.PlaneGeometry(120, 120), this.tableMat = new T.MeshStandardMaterial({ color: new T.Color(PAL.night), roughness: 1 }));
       table.position.set(0, CY, -0.2); table.receiveShadow = true; sc.add(table);
       /* The ground. Table, cloth and frame are drawn first, in this order, and then the depth buffer is cleared: everything else
          (moths, shots, sprites, rings, trails, debris) is drawn over the ground whatever its height, so nothing is ever cut where
@@ -346,6 +440,7 @@
       for (const s of [this.lint, this.glow, this.halo, this.spr]) if (s) s.mat.uniforms.uScale.value = scale;
       this.viewTop = this.onPlane(0, this.ndT, 0.5).y; this.viewBot = this.onPlane(0, this.ndB, 0.5).y;
       this.edges();
+      if (this.bakeRT) { const [bw] = this.bakeSize(); if (Math.abs(bw - this.bakeRT[0].width) > this.bakeRT[0].width * 0.2) this.bakeDirty = true; }   // much sharper or softer than baked: bake again
     }
     onPlane(nx, ny, z) {   // where the ray through a screen point (NDC) meets the plane at height z, with the camera at rest
       const cam = this.camera; cam.updateMatrixWorld();
@@ -414,23 +509,20 @@
       shape('bead', new T.SphereGeometry(0.17, 10, 8), 120, true);
       shape('beadring', new T.TorusGeometry(0.2, 0.035, 5, 16), 120, false);
       shape('eknot', new T.TorusKnotGeometry(0.2, 0.05, 40, 5, 2, 3), 40, true);
+      // every counted chart (moths in every pose, pickups) in one draw; begun and ended with the pools
+      this.st = new FX.Stitches(T, C.SPRITES); sc.add(this.st.mesh); sc.add(this.st.shadow); this.pools.stitches = this.st; this.poolList = null;
       this.loops = []; this.loopFree = [];
     }
-    mothPool(name, part, noSplit) {   // looked up per enemy per frame: cached by name, no key string built
+    /* A moth's part (body, left or right wing, or the whole chart when noSplit) in the stitch batch. Looked up per enemy per frame:
+       cached by name, no key string built. The handle pushes like the old per-chart pools (push(matrix, rgb, flash, glow, warn)),
+       but every chart, every pose and every pickup goes into one draw. */
+    mothPool(name, part, noSplit) {
       const m = this.mp[name] || (this.mp[name] = { body: null, left: null, right: null, solo: null }), slot = noSplit ? 'solo' : part;
-      let p = m[slot];
-      if (!p) {
-        const key = 'm:' + name + ':' + part + ':' + (noSplit ? 1 : 0);
-        p = this.pools[key] || (this.pools[key] = new FX.Pool(this.T, this.chartGeo(name, 0.088, part, noSplit), this.yarnM, 64, true));
-        this.scene.add(p.mesh); m[slot] = p; this.poolList = null;
-      }
-      return p;
+      return m[slot] || (m[slot] = this.st.handle(name, slot, 0.088));
     }
-    dropPool(name, cell) {
-      let p = this.dp[name];
-      if (!p) { p = this.dp[name] = this.pools['d:' + name] = new FX.Pool(this.T, this.chartGeo(name, cell, 'body', true), this.yarnM, name === 'dust' ? 160 : 40, true); this.scene.add(p.mesh); this.poolList = null; }
-      return p;
-    }
+    dropPool(name, cell) { return this.dp[name] || (this.dp[name] = this.st.handle(name, 'solo', cell)); }
+    /* Any chart in the stitch batch at any cell size (render-boss.js and the films can use it in place of a pool of their own). */
+    chartPool(name, part, cell) { const k = name + ':' + part + ':' + cell, c = this.cp || (this.cp = {}); return c[k] || (c[k] = this.st.handle(name, part, cell)); }
     n(k) { return Math.max(1, Math.round(k * this.q.particles)); }   // spawn count for this quality
 
     // ---------- little emitters ----------
@@ -593,7 +685,8 @@
       for (let i = 0; i < events.length; i++) {
         const e = events[i];
         switch (e.t) {
-          case 'stage': this.ripple(0, H / 2, 0.7, 7, 0.9, 1.2); this.sewn = 0; this.afterglowStop(); if (e.keeper) { this.flashAdd(PAL.madderDeep, 0.25); this.shake = Math.max(this.shake, 0.25); } break;
+          case 'stage': { const pd = C.PANELS[sim.panel]; this.setFabric(pd && pd.fabric); }
+            this.ripple(0, H / 2, 0.7, 7, 0.9, 1.2); this.sewn = 0; this.afterglowStop(); if (e.keeper) { this.flashAdd(PAL.madderDeep, 0.25); this.shake = Math.max(this.shake, 0.25); } break;
           case 'celebrate': this.celebrate(e); break;
           case 'fire': {
             const kk = KICK[e.thread] || KICK.running, bob = e.src === 'B' ? 0.4 : 1;   // each weapon has its own weight: the ship recoils, the heavy ones jolt the lens
@@ -1041,6 +1134,32 @@
     }
 
     // ---------- bosses ----------
+    /* The stitched shadow of a chart drawn as its own meshes (the boss): each part gets a child that flattens the same geometry
+       onto the cloth along the light (SH.projVS), drawn with the ground like the stitch batch's shadow. It follows the part's
+       geometry (poses and films swap it) and its unravelling (uDissolve). */
+    shadowKids(chart, dissolve) {
+      const T = this.T, st = this.st, kids = chart.userData.kids = [];
+      const mat = FX.shadowMat(T, SH.projVS, SH.shadeFS, { uLight: st.uLight, uStrength: st.uStrength, uDissolve: dissolve || { value: -1 } });
+      for (const part of ['body', 'left', 'right']) { const m = chart.userData[part]; if (!m) continue;
+        const k = new T.Mesh(m.geometry, mat); k.frustumCulled = false; k.visible = st.shadowOn; k.layers.set(1); m.add(k); kids.push(k); }
+      return kids;
+    }
+    syncKids(chart) {
+      const kids = chart && chart.userData.kids; if (!kids) return; const on = this.st.shadowOn;
+      for (let i = 0; i < kids.length; i++) { const k = kids[i], m = k.parent; k.visible = on; if (m && k.geometry !== m.geometry) k.geometry = m.geometry; }
+    }
+    /* What only lends its outline to the stitched shadows: the ship (and its twin or triple), the bobbins, the drones. */
+    shadowCasters() {
+      const st = this.st; if (!st.shadowOn) return;
+      const white = this.lc('#FFFFFF'), pg = this.playerGroup;
+      if (pg.visible && this.needleName) {
+        pg.updateMatrixWorld(true); const h = this.needleSh || (this.needleSh = {}), sh = h[this.needleName] || (h[this.needleName] = st.handle(this.needleName, 'solo', 0.1, true));
+        for (let i = 0; i < 3; i++) { const n = i === 0 ? this.needleA : i === 1 ? this.needleB : this.needleC; if (n && n.visible) sh.push(n.matrixWorld, white, 0, 0, 0); }
+      }
+      const bob9 = this.bobSh || (this.bobSh = st.handle('bobbin', 'solo', 0.09, true)), bob8 = this.droneSh || (this.droneSh = st.handle('bobbin', 'solo', 0.08, true));
+      const bm = this.bobMesh; if (bm) for (let i = 0; i < bm.length; i++) { const m = bm[i]; if (m.visible) { m.updateMatrixWorld(); bob9.push(m.matrixWorld, white, 0, 0, 0); } }
+      for (let i = 0; i < 2; i++) { const m = i ? this.droneMesh2 : this.droneMesh; if (m && m.visible) { m.updateMatrixWorld(); bob8.push(m.matrixWorld, white, 0, 0, 0); } }
+    }
     bossMaterial() {
       const T = this.T, m = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0 });
       const u = { uFlash: { value: new T.Vector3() }, uDissolve: { value: -1 }, uEdge: { value: new T.Vector3().fromArray(this.lc(PAL.saffron, 3)) } };
@@ -1061,13 +1180,14 @@
       if (!this.bossGroup || this.bossGroup.userData.id !== b.id) {
         if (this.bossGroup) this.scene.remove(this.bossGroup);
         const g = new T.Group(), mat = this.bossMaterial();
-        const body = this.chart(b.def.sprite, b.def.cell, !!b.def.noWings, mat); g.add(body);
+        const body = this.chart(b.def.sprite, b.def.cell, !!b.def.noWings, mat); g.add(body); this.shadowKids(body, mat.userData.u.uDissolve);
         const aura = this.hoopMesh(2, b.def.halfW * 3.4, PAL.madder, PAL.madder, -0.7); aura.renderOrder = 1; g.add(aura);
         g.userData = { id: b.id, body, mat, aura, rings: [], phaseT: 0, lastX: b.x, entered: false, drip: 0 };
         for (const s of b.def.soft) { const r = this.hoopMesh(4, s.r * 2.9, PAL.saffron, PAL.saffron, 0.6); r.material.depthTest = false; r.renderOrder = 9; r.position.set(s.x, b.def.softY, 0.6); g.add(r); g.userData.rings.push(r); }
         this.scene.add(g); this.bossGroup = g;
       }
       const g = this.bossGroup, u = g.userData, def = b.def, mu = u.mat.userData.u;
+      this.syncKids(u.body);
       const vx = (b.x - u.lastX) / Math.max(dt, 1e-3); u.lastX = b.x;
       g.visible = !b.hidden;
       g.position.set(b.x, b.y, 1.0 + Math.sin(this.time * 1.7) * 0.08);
@@ -1108,7 +1228,7 @@
     }
     updateCorpse(fdt) {
       const c = this.corpse; if (!c) return;
-      c.t += fdt; const g = c.g, u = g.userData, mu = u.mat.userData.u, def = c.def, t = c.t;
+      c.t += fdt; const g = c.g, u = g.userData, mu = u.mat.userData.u, def = c.def, t = c.t; this.syncKids(u.body);
       const T1 = 0.45, T2 = 1.05, T3 = 1.25;
       const jit = t < T2 ? (t < T1 ? 0.12 : 0.06) : 0;
       g.position.set(c.x + rnd(-jit, jit), c.y + rnd(-jit, jit), 1 + t * 0.2);
@@ -1806,7 +1926,7 @@
 
     // ---------- frame ----------
     sync(sim, dt, events) {
-      PY = sim.player ? sim.player.y : GY;
+      PY = sim.player ? sim.player.y : GY; this.lastSync = now();
       this.cb = !!(sim.p && sim.p.settings && sim.p.settings.cbShots);   // colour-blind-safe enemy shots (Settings)
       if (this.cel.on && sim.phase !== 'clear' && sim.phase !== 'done') this.afterglowStop();   // the next stage has begun: the celebration is over (a stage's first event never reaches here)
       this.gl.info.reset();
@@ -1838,6 +1958,7 @@
       this.syncNets(sim);
       this.syncBoss(sim, dt, fdt);
       if (this.syncBossFx) this.syncBossFx(sim, dt, fdt, events);   // src/render-boss.js: props, arena, poses
+      this.shadowCasters();
       this.syncSamplerPath(sim, fdt);
       this.heat += (((sim.comboMult ? sim.comboMult() : 1) - 1) / 4 - this.heat) * Math.min(1, dt * 2);
       this.slowMo += ((sim.fx.tangle > 0 ? 1 : 0) - this.slowMo) * Math.min(1, dt * 4);
@@ -1885,15 +2006,135 @@
       }
     }
     render() {
+      if (this.bakeDirty) this.bakeCloth();
+      if (this.st.shadowOn) {   // nothing casts (menus, between waves): the mask is cleared once and then left alone
+        const any = this.st.shGeo.instanceCount > 0 || !!this.bossGroup || !!this.corpse;
+        if (any || !this.maskClear) { this.shadowMask(); this.maskClear = !any; }
+      }
       const lost = this.bf && this.bf.lost; if (lost && lost.mat.depthWrite) lost.mat.depthWrite = false;   // unravelled cloth (render-boss.js) is a flat sheet like the ground: it must not slice sprites either
       if (this.q.post && this.post.rt) this.post.render(this.scene, this.camera);
       else { this.gl.setRenderTarget(null); this.gl.render(this.scene, this.camera); }
       const inf = this.gl.info.render, st = this.stats;
       st.calls = inf.calls; st.triangles = inf.triangles; st.points = inf.points; st.quality = this.quality; st.pixelRatio = this.gl.getPixelRatio();
     }
+    /* The warm-up, behind the loading screen (ST.Perf.warm): one of everything the game can draw is built and its shader compiled
+       now, on this tier, instead of the first time it appears in a stage (a new kind of moth, a boss, a burning patch, a net, a
+       light cone, the first flying stitch). Compiled in the background where the browser can (compileAsync), then one frame of
+       all of it is drawn and straight away the real frame over it, so nothing shows. The warm set's materials are kept for good:
+       three.js deletes a program when the last material using it is disposed (a burning patch, a net and a hazard dispose theirs
+       when they end), and the next one would compile it again mid-fight. */
+    warmSet() {
+      if (this.warmG) return this.warmG;
+      const T = this.T, g = new T.Group(), at = (o, x, y) => { o.position.set(x || 0, y === undefined ? CY : y, 0.6); g.add(o); return o; };
+      at(this.chart('nibbler', 0.088, false), -3, 4); at(this.chart('looper', 0.088, true), 3, 4);   // charts as meshes: bobbins, drones, the strike head, captives
+      const bm = this.bossMaterial(), boss = at(this.chart('tinea', 0.1, false, bm), 0, 10); this.shadowKids(boss, bm.userData.u.uDissolve);
+      at(this.hoopMesh(2, 4, PAL.madder, PAL.madder, 0)); at(this.hoopMesh(4, 2, PAL.saffron, PAL.saffron, 0));
+      at(this.chart('sharps', 0.1, true, this.needleMat), 0, 1);
+      const ghost = new T.Mesh(this.chartGeo('sharps', 0.1, 'body', true), this.ghostMat.clone()); at(ghost, 1, 1);
+      { const l = new T.Mesh(this.shared('loop', () => new T.TorusGeometry(1, 0.035, 5, 40)), new T.MeshStandardMaterial({ roughness: 0.9, transparent: true, emissiveIntensity: 0.6 })); at(l, 2, 2); }
+      for (const kind of ['burn', 'strike', 'glare']) g.add(this.makeHazard({ kind, x: 0, w: 1.2, warn: 0.5, life: 1 }));
+      { const m = FX.shaderMat(T, { vs: SH.quadVS, fs: SH.netFS, transparent: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uGapX: { value: 0 }, uGapW: { value: 1 }, uW: { value: W }, uColor: { value: new T.Vector3() }, uKnot: { value: new T.Vector3() } } });
+        at(new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m), 0, 8); }
+      { const pg = new T.BufferGeometry(); pg.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, 1, 0, 0, 0, 1, 0], 3)); pg.setAttribute('aP', new T.Float32BufferAttribute([0, 1, 0, 1, 1, 1, 0, -1, 0], 3));
+        const m = FX.shaderMat(T, { vs: SH.pathVS, fs: SH.pathFS, transparent: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uSewn: { value: 0 }, uLinen: { value: new T.Vector3() }, uHot: { value: new T.Vector3() } } });
+        at(new T.Mesh(pg, m), 0, 6); }
+      const cg = this.shared('cone', () => { const b = new T.BufferGeometry(); b.setAttribute('position', new T.Float32BufferAttribute([0, 0, 0, -1, -1, 0, 1, -1, 0], 3)); b.setAttribute('uv', new T.Float32BufferAttribute([0.5, 1, 0, 0, 1, 0], 2)); return b; });
+      at(new T.Mesh(cg, this.coneMaterial()), 0, 9); at(new T.Mesh(cg, this.coneMaterial(false)), 1, 9);
+      // render-boss.js: a lamp pool and the darkness quads (its pools share the yarn material, already in the scene)
+      try { if (this.bfEnsure) { this.bfEnsure(); if (this.bfLampMesh) { const lm = this.bfLampMesh(); if (lm.parent) lm.parent.remove(lm); at(lm, 0, 5); } } } catch (e) { /* not loaded */ }
+      at(new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), new T.MeshBasicMaterial({ color: new T.Color('#05060C') })), 0, 3);
+      at(new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), new T.MeshBasicMaterial({ color: new T.Color(PAL.glare), transparent: true, opacity: 0.5, depthWrite: false })), 0, 3);
+      g.traverse(o => { o.frustumCulled = false; });
+      // the charts still drawn as meshes, built now rather than when they first appear: every boss, every ship, the bobbin
+      for (const id in C.KEEPERS) { const d = C.KEEPERS[id]; for (const part of d.noWings ? ['body'] : ['body', 'left', 'right']) this.chartGeo(d.sprite, d.cell, part, !!d.noWings); }
+      for (const id in C.NEEDLES) { this.chartGeo(id, 0.1, 'body', true); this.chartGeo(id, 0.06, 'body', true); }
+      for (const c of [0.09, 0.08, 0.06]) this.chartGeo('bobbin', c, 'body', true);
+      this.chartGeo('hawk', 0.1, 'body', true);
+      return (this.warmG = g);
+    }
+    /* Make every batch draw one item for the warm frame (they are invisible while empty, so their programs would wait for the
+       first kill, the first shot, the first ring). */
+    warmBatches(on) {
+      const list = [this.lint, this.glow, this.halo, this.spr, this.trN, this.trA, this.xs, this.curls];
+      if (on) {
+        this.lint.emit(0, CY, 0.5, 0, 0, 0, 1, 0.5, this.lc(PAL.linen), 0.1, 6, 0, 1); this.glow.emit(0, CY, 0.5, 0, 0, 0, 1, 0.5, this.lc(PAL.linen), 0.1, 0, 0, 1);
+        this.xs.emit(0, CY, 0.5, 0, 0, 0, 1, 0.3, this.lc(PAL.linen), 0, 0, 0, 0, 0, 0, 0); this.curls.emit(0, CY, 0.5, 0, 0, 0, 1, 0.3, this.lc(PAL.linen), 0, 0, 0, 0, 0, 0, 0);
+        this.halo.begin(); this.spr.begin(); this.halo.add(0, CY, 0.5, 1, this.lc(PAL.linen), 0.1, 9); this.spr.add(0, CY, 0.5, 1, this.lc(PAL.linen), 0.1, 0);
+        this.trN.begin(this.ft); this.trA.begin(this.ft); this.tline(this.trN, -1, CY, 1, CY, 0.5, 0.1, this.lc(PAL.linen), 0.1, 1); this.tline(this.trA, -1, CY, 1, CY, 0.5, 0.1, this.lc(PAL.linen), 0.1, 0);
+        const M = this.compose(0, CY, 0.5, 0, 0, 0, 1), white = this.lc('#FFFFFF');
+        for (const p of this.pools_()) if (p !== this.st) { p.begin(); p.push(M, white, 0, 0, 0); }
+        this.st.begin(); this.mothPool('nibbler', 'body').push(M, white, 0, 0, 0); if (this.st.shadowOn) this.st.handle('sharps', 'solo', 0.1, true).push(M, white, 0, 0, 0);
+        for (const p of this.pools_()) p.end();
+        this.halo.end(); this.spr.end(); this.trN.end(); this.trA.end();
+        for (const p of this.gpu) p.update(this.ft);
+      } else {
+        for (const p of [this.lint, this.glow, this.xs, this.curls]) p.reset();
+        for (const p of this.gpu) p.update(this.ft);
+        for (const p of this.pools_()) { p.begin(); p.end(); }
+        for (const o of [this.halo, this.spr]) { o.begin(); o.end(); } this.trN.begin(this.ft); this.trA.begin(this.ft); this.trN.end(); this.trA.end();
+      }
+      void list;
+    }
+    /* Stand-ins for the batches that live in the scene (sharing their geometry and material), so the warm-up can compile their
+       programs from its own scene while the real ones stay empty and the game keeps drawing. */
+    warmProxies() {
+      if (this.warmP) return this.warmP;
+      const T = this.T, P = [], st = this.st;
+      for (const b of [this.lint, this.glow, this.halo, this.spr]) P.push(new T.Points(b.geo, b.mat));
+      for (const b of [this.trN, this.trA, this.xs, this.curls]) P.push(new T.Mesh(b.geo, b.mat));
+      for (const p of this.pools_()) if (p !== st && p.mesh) { const m = new T.InstancedMesh(p.geo, p.mesh.material, 1); m.instanceColor = p.mesh.instanceColor; m.castShadow = p.mesh.castShadow; P.push(m); }
+      const sm = new T.Mesh(st.geo, st.mat); sm.castShadow = true; sm.customDepthMaterial = st.depth; P.push(sm); P.push(new T.Mesh(st.shGeo, st.shMat));
+      for (const o of P) o.frustumCulled = false;
+      return (this.warmP = P);
+    }
+    /* Compile in the background from a scene of its own (the play scene's lights), so the game never stops drawing; then, when no
+       flight is running, one frame of everything (the shadow-map variants, the uploads) drawn and at once drawn over. */
+    warmUp(onProgress, quiet) {
+      const key = this.quality + ':' + this.shadowKind() + ':' + (this.q.samples || 0) + ':' + (this.q.bloomDiv || 4) + ':' + this.q.cloth;
+      if (this.warmedKey === key) { if (onProgress) onProgress(1); return Promise.resolve(); }
+      if (this.warming) return this.warming.then(() => this.warmUp(onProgress, quiet));
+      const gl = this.gl, sc = this.scene, T = this.T;
+      this.warming = (async () => {
+        try {
+          if (this.bakeDirty) this.bakeCloth();
+          const g = this.warmSet(), ws = this.warmScene || (this.warmScene = new T.Scene());
+          ws.add(g); for (const o of this.warmProxies()) ws.add(o);
+          if (onProgress) onProgress(0.1);
+          for (const t of [this.st.atlas.tex, this.bk && this.bk.u.tMend.value]) if (t) try { gl.initTexture(t); } catch (e) { /* uploaded when drawn */ }
+          // the programs' variants depend on where they draw (the post target or the screen): set it for the synchronous part
+          const prev = gl.getRenderTarget(); gl.setRenderTarget(this.q.post && this.post.rt ? this.post.rt : null);
+          let p = null; try { p = gl.compileAsync ? gl.compileAsync(ws, this.camera, sc) : (gl.compile(ws, this.camera, sc), null); } catch (e) { p = null; }
+          gl.setRenderTarget(prev);
+          if (p) try { await p; } catch (e) { /* compiled as drawn instead */ }
+          if (onProgress) onProgress(0.8);
+          if (now() - (this.lastSync || -1e9) > 400) {   // not mid-flight: one frame of everything, then the real frame over it
+            sc.add(g); this.warmBatches(true); this.render(); sc.remove(g); this.warmBatches(false); this.render(); ws.add(g);
+          }
+          this.warmedKey = key; this.warmed = true;
+        } finally { this.warming = null; if (g0(sc, this.warmG)) sc.remove(this.warmG); }
+        if (onProgress) onProgress(1);
+      })();
+      return this.warming;
+    }
+    /* The stitched shadows (phones): what is on layer 1 (the stitch batch's shadow, the boss's shadow children) drawn from the play
+       camera into a mask a quarter of the screen's size; the cloth reads it (SH.clothPars). */
+    shadowMask() {
+      const T = this.T, gl = this.gl, db = gl.getDrawingBufferSize(this.tmpV), w = Math.max(1, db.x >> 1), h = Math.max(1, db.y >> 1);
+      let rt = this.maskRT;
+      if (!rt || rt.width !== w || rt.height !== h) { if (rt) rt.dispose(); rt = this.maskRT = new T.WebGLRenderTarget(w, h, { type: T.UnsignedByteType, depthBuffer: false, minFilter: T.LinearFilter, magFilter: T.LinearFilter }); this.clothU.tShMask.value = rt.texture; }
+      this.clothU.uShRes.value.set(1 / db.x, 1 / db.y);
+      const cam = this.camera, prev = gl.getRenderTarget(), bg = this.scene.background, cc = this.tmpC;
+      gl.getClearColor(cc); const ca = gl.getClearAlpha();
+      this.scene.background = null; cam.layers.set(1); gl.setClearColor(0x000000, 0); gl.setRenderTarget(rt); gl.clear(true, false, false);
+      const sm = gl.shadowMap.autoUpdate; gl.shadowMap.autoUpdate = false;
+      gl.render(this.scene, cam);
+      gl.shadowMap.autoUpdate = sm; cam.layers.set(0); this.scene.background = bg; gl.setClearColor(cc, ca); gl.setRenderTarget(prev);
+    }
     still() { this.gl.info.reset(); this.render(); }   // paused: the same frame again (nothing moves, nothing vanishes)
     idle(dt) {   // behind menus: just the cloth and any settling thread
       this.gl.info.reset();
+      if (this.fabric !== FABRIC0 && !(this.cine && this.cine.active)) this.setFabric(FABRIC0);   // the menus and the hideout are on the home cloth
+      if (this.warmLater) { this.warmLater = false; this.warmUp(); }
       this.time += dt; this.hs = 0; this.ft += dt; this.focusK *= 0.9; this.frayK = 0;
       for (let i = 0; i < this.gpu.length; i++) this.gpu[i].now = this.ft;
       this.playerGroup.visible = false; if (this.droneMesh) this.droneMesh.visible = false; if (this.droneMesh2) this.droneMesh2.visible = false; if (this.bobMesh) for (const m of this.bobMesh) m.visible = false; if (this.lassoMesh) this.lassoMesh.visible = false; PY = GY;

@@ -22,7 +22,8 @@
       codex: { moths: {}, keepers: {} },
       stats: { bestNight: 0, nights: 0, mended: 0, perfectSamplers: 0, longestDouble: 0 },
       run: null,                   // a run in progress (see Sim.snapshot), so closing the game does not lose it
-      settings: { sound: true, autofire: true, shadows: true, mode: 'normal', controls: 'drag', liftSlow: true }
+      settings: { sound: true, autofire: true, shadows: true, mode: 'normal', controls: 'drag', liftSlow: true,
+        textSize: 'normal', cbShots: false }   // ---- interface (A2) ---- Settings > Display: text size ('normal' | 'large'), colour-blind-safe enemy shots
     };
   }
 

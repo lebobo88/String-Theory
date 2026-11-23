@@ -6,6 +6,7 @@ Then every death film, played the way main.js plays it (in the frame of the kill
 for the Beetle on medium, after it), screenshotted at three moments, with the state checked at rest after a full play and after
 a skip in the middle; particle emits per film are counted. Reduced motion: an entrance still and a death with the camera held.
 Screenshots go to /tmp/cine/. Run: python3 test/cine.py   (needs playwright + a Chrome at /usr/bin/google-chrome)
+The film kit alone (every documented tool once, the warm-up, a directed entrance and death, on all four tiers): python3 test/cine.py --kit
 
 One film's contact sheet (docs/FILM-KIT.md): python3 test/cine.py --film greatwick [--kind entrance|sig|death] [--tier lite] [--times 0.5,1.2,...]
 plays that film alone at phone size with the film clock stepped a sixtieth of a second per drawn frame, holds it at twelve
@@ -16,7 +17,7 @@ from playwright.sync_api import sync_playwright
 
 root = os.path.join(os.path.dirname(__file__), '..')
 out = '/tmp/cine'; os.makedirs(out, exist_ok=True)
-PORT = 8831
+PORT = int(os.environ.get("CINE_PORT", "8831"))   # 8830-8839 belong to the film kit
 BOSSES = ['greatlappet', 'tinea', 'greatwick', 'atlas', 'unraveller', 'beetle', 'empress', 'king']
 LONG = 240000
 srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(PORT), '--bind', '127.0.0.1'], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -91,7 +92,7 @@ KITSINK = r'''() => {
       k.rope(0).lay(10, -3, H, 1, -3, H - 3, 1).pin(0, -3, H, 1).weight(-1, 6);
       k.rope(1).lay(8, 2, 12, 1, 5, 12, 1, 1.2).pin(0, 2, 12, 1).pin(-1, 5, 12, 1).onCloth();
       k.stitched('nibbler', 0.2); k.shade('nibbler', 0.2, 0);
-      k.layer('backdrop', { aspect: 1.5, cells: 24, order: 'rows' }); k.layer('glow', { add: true, paint(x, w, h) { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, '#fff'); g.addColorStop(1, '#000'); x.fillStyle = g; x.fillRect(0, 0, w, h); } });
+      k.layer('backdrop', { aspect: 1.5, cells: 24, order: 'rows' }); k.layer('panel', { order: 'random', edge: '#E3A93C', solid: true }); k.layer('wash', { order: 'out', tint: '#2F3A5A' }); k.layer('disc', { order: 'lr', cells: 12, renderOrder: 4 }); k.layer('glow', { add: true, paint(x, w, h) { const g = x.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); g.addColorStop(0, '#fff'); g.addColorStop(1, '#000'); x.fillStyle = g; x.fillRect(0, 0, w, h); } });
       k.prop('box', T => new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshStandardMaterial({ color: 0x886644 })));
       k.cue(0.1, 'sink_d'); k.buzz(0.1, 15);
       k.r.bfOrders.sinkdiag = (x, y) => x + y;
@@ -104,6 +105,10 @@ KITSINK = r'''() => {
       cl.sag(0.3 * u).wind(0.1, 1, 0.3, 4, t * 3).crumple(0.04, 0.8, t).bulge(-3, 4, 1.2, 0.8 * k.beat('tear.lift')).wave(2, 3, t * 2, 0.2, 0.5).pull(4, 12, -0.5, 0, 1.5);
       cl.tear(-3, 8, 3, 9, 1.4 * u, 0.5, 0.8).backing(K.back, 0.6); if (k.begun('weave')) cl.rows(0, k.beat('weave'));
       const z = cl.z(-3, 4);
+      if (t > 1.4 && t < 1.5) k.rope(0).free(0).gravity(0, -20, -2); else if (t >= 1.5 && t < 1.6) k.rope(0).pin(0, -3, H, 1).gravity(0, -26, 0).weight(-1, 4);
+      if (!(k.rope(0).endX() + k.rope(0).endY() + k.rope(0).endZ() < 1e9)) window.__sink.bad = 'rope end';
+      k.boss(0, 12, 1, 1, 0, 0).sewBoss(k.span(0, 1)).hideBoss();   // no boss in a film that belongs to none: these do nothing, safely
+      k.layer('panel').at(-3, 3, 0.4, 2, 2).reveal(k.span(0, 1.5)); k.layer('wash').at(3, 3, 0.2, 2, 2).alpha(0.4); k.layer('disc').at(0, 3, 0.6, 1.5, 1.5);
       k.rope(0).draw(0.06, k.lit(K.linen, -3, H - 2, 1), 1, 1); k.rope(1).slack(1 + u * 0.2).draw(0.05, K.saffHi, 0.8, 0, true, 1, 6); k.rope(1).point(0.5);
       k.thread(-5, 2, 0.5, 5, 2, 0.5, 0.06, K.madder, 1, 2, 0.5).thread(-5, 1, 0.5, 5, 1, 0.5, 0.2, K.silk, 0.5, 7, 0, true);
       const s = k.stitched('nibbler', 0.2).at(0, 6, 1 + z, 0.2, 1.5, null, 0.1).edge(K.saffHi, 1); const emit = () => { window.__sink.stitches++; };
@@ -112,6 +117,7 @@ KITSINK = r'''() => {
       k.layer('backdrop').at(0, 13, 0.3, 9, 6).reveal(k.span(0.2, 1.5)).lit(0, 0.1).tint(K.linen, 1); k.layer('glow').at(3, 6, 2, 3, 3, t).alpha(0.5).blur(2);
       const box = k.prop('box'); box.position.set(-4, 13, 0.6); box.rotation.z = t;
       cam.full(1 - out).frame(0, 8, 12, 12, 0.3, 0.2, 0, 34).mark().shot('sweep', k.span(0.6, 2)).mix(k.ease.io(k.span(0.5, 0.9))).mark();
+      if (t > 0.45 && t < 0.5) cam.at(0, 2, 12, 0, 8, 0, 0.02, 34).motion(0.3);
       cam.orbit(0, 6, 1, cam.fit(5, 5), 0.5, -0.3).whip(k.span(2.0, 2.3), 2, 8, 1).crash(k.span(2.3, 2.5), 0.2).handheld(0.05, 2).motion(0.5).mix(k.ease.io(k.span(1.9, 2.1))).dollyZoom(40).mark().home().mix(out);
       lens.focus(0, 6, 1, 1.5, 0.014).rays(-2, 9, 2, 0.6, K.saff, 0.8, 1.2).streak(0.5, K.saff, 1.5, 1).fringe(k.pulse(1.2, 0.05, 0.3)).exposure(1 + 0.5 * k.pulse(1.2, 0.05, 0.3)).flash(K.glare, 0.3 * k.pulse(2.5, 0.05, 0.2)).vignette(0.1).smear(0.002, 0, 0);
       if (t > 1.6 && t < 2.4) lens.irisOn(0, 6, 1, 0.5, 0.2); else if (t > 2.4) lens.iris(0.9, 0.3); if (t > 2.9) lens.focusAt(20, 0.5);
@@ -129,6 +135,62 @@ KITDEATH = r'''() => { window.__old = ST.Cine.DEATHS.tinea; window.__n = 0;
       k.dark(0.8 * o, 0.3 * o).light(0, c.hx, c.hy, 3, [1, 0.9, 0.8], 40, 12).beam(c.hx, c.hy + 5, 2, -Math.PI / 2, 8, 0.3, K.glareDim, 0.4);
       k.cam.frame(c.hx, c.hy - 1, 8, 8, 0.3, 0.2 * t).mark().home().mix(k.beat('out')); k.lens.focus(c.hx, c.hy, 1, 1, 0.012); } } });
   return true; }'''
+
+KITENTRANCE = r'''() => { window.__oldIn = ST.Cine.FILMS.tinea; window.__sewn = 0;
+  ST.registerFilm('tinea', { entrance: { kit: true, len: 2.4, key: 1.2, lights: 1, beats: { sew: [0.1, 1.6, 'io'], out: [1.9, 2.4, 'io'] }, title: { at: 1.0, in: 'unpick', pos: 'top', to: 2.2 },
+    frame(k, t) { const c = k.c, K = k.K, o = k.beat('out');
+      k.boss(c.hx, c.hy, 1, 1, 0, 0.2 * Math.sin(t * 6), 1, 1, 1, 0.3 * (1 - o)).sewBoss(k.beat('sew'), 'spiral', () => { window.__sewn++; });
+      k.dark(0.7 * (1 - o)).light(0, c.hx, c.hy + 2, 3, K.saff, 30, 10).pool(c.hx, c.hy, 4, K.saff, 0.15 * (1 - o));
+      k.cam.orbit(c.hx, c.hy, 1, k.cam.fit(6, 6), 0.4, 0.3).mark().home().mix(o); k.lens.focus(c.hx, c.hy, 1, 1.2 * (1 - o), 0.012); } } });
+  return true; }'''
+
+def kit_only(b, quality):
+    """The film kit on its own, on one tier at phone size: the warm-up, every tool in the test film, a still, a directed entrance that sews its boss on and a directed death that unpicks it."""
+    pg = b.new_page(viewport={'width': 412, 'height': 915})
+    pg.on('pageerror', lambda e: errors.append(f'[kit {quality}] pageerror: {e}'))
+    pg.on('console', lambda m: errors.append(f'[kit {quality}] console: {m.text}') if m.type in ('error', 'warning') and 'Failed to load resource' not in m.text and 'ERR_' not in m.text and 'GPU stall' not in m.text and 'WebGL' not in m.text else None)
+    pg.route('**/*', lambda r: r.continue_() if '127.0.0.1' in r.request.url else r.abort())
+    pg.goto(f'http://127.0.0.1:{PORT}/index.html?quality={quality}'); pg.wait_for_selector('.wordmark', timeout=LONG)
+    w = pg.evaluate("() => { const t0 = performance.now(), n = ST.FilmKit.warm(ST.game.renderer); return [n, performance.now() - t0, ST.FilmKit.warm(ST.game.renderer)]; }")
+    print(f'[kit {quality}] ST.FilmKit.warm: {w[0]} compile passes in {w[1]:.0f} ms (software GL); called again: {w[2]}')
+    check(w[0] >= 1, f'[kit {quality}] FilmKit.warm compiles ({w})')
+    kr = pg.evaluate(KITREST); check(kr['cloth'] and kr['lights'] == 0 and kr['left'] == 0 and not kr['rts'], f'[kit {quality}] FilmKit.warm left nothing in the scene ({kr})')
+    pg.click('text=Play'); pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run', timeout=LONG)
+    pg.click('text=Start run'); pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"', timeout=LONG)
+    pg.evaluate("() => { window.__god = setInterval(() => { const s = ST.game.sim; if (!s) return; s.player.invuln = 1; s.spares = 3; if (s.player.ply < 1) s.player.ply = 1; }, 30); const g = ST.game; g.tutor = null; if (g.ui.coach) g.ui.coach(null); }")
+    pg.evaluate(KITSINK); check(pg.evaluate("ST.Cine.play('kitsink')"), f'[kit {quality}] the kit test film plays')
+    pg.wait_for_function("!ST.Cine.active() || ST.game.renderer.cine.ft >= 1.5", timeout=LONG, polling=40)
+    pg.screenshot(path=f'{out}/kit-{quality}-kitsink.png')
+    pg.wait_for_function('!ST.Cine.active()', timeout=LONG, polling=50); pg.wait_for_timeout(120)
+    kr = pg.evaluate(KITREST); sk = pg.evaluate("Object.assign({ missed: Object.keys(ST.game.renderer.cine.kit.missed) }, window.__sink)")
+    check(kr['cloth'] and not kr['lens'] and kr['lights'] == 0 and kr['left'] == 0 and not kr['rts'], f'[kit {quality}] kit test film: everything back ({kr})')
+    check(sk['on'] == 3 and sk.get('down') == 1 and sk['stitches'] > 10 and not sk['missed'] and not sk.get('bad'), f'[kit {quality}] kit test film: beats, steps, stitches and teardown all ran ({sk})')
+    pg.evaluate("() => ST.Cine.play('kitsink', { reduced: true })"); pg.wait_for_timeout(400)
+    check(pg.evaluate("ST.game.renderer.cine.kit.still && ST.game.renderer.cine.kit.dt === 0"), f'[kit {quality}] kit test film: reduced motion is a still')
+    pg.evaluate("() => ST.Cine.skip()"); kr = pg.evaluate(KITREST); check(kr['cloth'] and kr['lights'] == 0 and kr['left'] == 0, f'[kit {quality}] kit test film: still skipped, everything back ({kr})')
+    pg.evaluate(KITENTRANCE); pg.evaluate(KITDEATH)
+    pg.evaluate("() => { const s = ST.game.sim; ST.game.state = 'flight'; s.panel = 1; s.row = 4; s.startStage(); }")
+    pg.wait_for_function("!!(ST.game.sim.boss && ST.game.sim.boss.id === 'tinea' && ST.game.renderer.bossGroup && ST.game.renderer.bossGroup.userData.id === 'tinea')", timeout=LONG)
+    pg.evaluate("() => ST.game.renderer.cine.skip()"); pg.wait_for_timeout(300)
+    check(pg.evaluate("ST.game.renderer.cine.play('tinea', {}) && ST.game.renderer.cine.kitOn"), f'[kit {quality}] directed entrance plays')
+    pg.wait_for_function('!ST.game.renderer.cine.active', timeout=LONG, polling=50); pg.wait_for_timeout(120)
+    kr = pg.evaluate(KITREST); dis = pg.evaluate("ST.game.renderer.bossGroup ? ST.game.renderer.bossGroup.userData.mat.userData.u.uDissolve.value : -1")
+    check(kr['cloth'] and kr['lights'] == 0 and kr['left'] == 0 and dis == -1 and pg.evaluate('window.__sewn') > 20, f'[kit {quality}] directed entrance sewed its boss on and put everything back ({kr}, dissolve {dis}, {pg.evaluate("window.__sewn")} stitches)')
+    for mode in ('full', 'skip'):
+        pg.wait_for_timeout(600)
+        ln = pg.evaluate(KILL, ['tinea', False]); check(ln == 3 and pg.evaluate('ST.game.renderer.cine.kitOn'), f'[kit {quality}] directed death film plays ({ln})')
+        pg.wait_for_function("!ST.game.renderer.cine.active || ST.game.renderer.cine.ft >= 1.4", timeout=LONG, polling=40)
+        if mode == 'skip': pg.evaluate('() => ST.game.renderer.cine.skip()')
+        pg.wait_for_function('!ST.game.renderer.cine.active', timeout=LONG, polling=50)
+        death_rest(pg, f'kit-{quality}-directed-death-{mode}', 'tinea'); kr = pg.evaluate(KITREST)
+        check(kr['cloth'] and not kr['lens'] and kr['lights'] == 0 and kr['left'] == 0 and pg.evaluate('window.__n') > 20, f'[kit {quality}] directed death {mode}: the kit put everything back ({kr})')
+        if mode == 'full':
+            pg.evaluate("() => { const s = ST.game.sim; ST.game.state = 'flight'; s.panel = 1; s.row = 4; s.startStage(); }")
+            pg.wait_for_function("!!(ST.game.sim.boss && ST.game.sim.boss.id === 'tinea' && ST.game.renderer.bossGroup && ST.game.renderer.bossGroup.userData.id === 'tinea')", timeout=LONG)
+            pg.evaluate("() => ST.game.renderer.cine.skip()")
+    pg.evaluate("() => { ST.registerFilm('tinea', { entrance: window.__oldIn, death: window.__old }); clearInterval(window.__god); }")
+    print(f'[kit {quality}] every kit tool ran')
+    pg.close()
 
 def death_rest(pg, tag, bid):
     pg.wait_for_timeout(120)
@@ -259,7 +321,7 @@ def run(b, quality, all_bosses, shots, counts, vp=None):
     pg.wait_for_function('!ST.Cine.active()', timeout=LONG, polling=50); pg.wait_for_timeout(120)
     kr = pg.evaluate(KITREST); sk = pg.evaluate("Object.assign({ missed: Object.keys(ST.game.renderer.cine.kit.missed) }, window.__sink)")
     check(kr['cloth'] and not kr['lens'] and kr['lights'] == 0 and kr['left'] == 0 and not kr['rts'], f'[{quality}] kit test film: everything back ({kr})')
-    check(sk['on'] == 3 and sk.get('down') == 1 and sk['stitches'] > 10 and not sk['missed'], f'[{quality}] kit test film: beats, steps, stitches and teardown all ran ({sk})')
+    check(sk['on'] == 3 and sk.get('down') == 1 and sk['stitches'] > 10 and not sk['missed'] and not sk.get('bad'), f'[{quality}] kit test film: beats, steps, stitches and teardown all ran ({sk})')
     pg.evaluate("() => ST.Cine.play('kitsink', { reduced: true })"); pg.wait_for_timeout(400)
     check(pg.evaluate("ST.game.renderer.cine.kit.still && ST.game.renderer.cine.kit.dt === 0"), f'[{quality}] kit test film: reduced motion is a still')
     pg.evaluate("() => ST.Cine.skip()"); kr = pg.evaluate(KITREST); check(kr['cloth'] and kr['lights'] == 0 and kr['left'] == 0, f'[{quality}] kit test film: still skipped, everything back ({kr})')
@@ -371,6 +433,7 @@ def sheet(b, film, kind, tier):
     pg.on('console', lambda m: errors.append(f'[sheet] console: {m.text}') if m.type == 'error' and 'Failed to load resource' not in m.text and 'ERR_' not in m.text else None)
     pg.route('**/*', lambda r: r.continue_() if '127.0.0.1' in r.request.url else r.abort())
     pg.goto(f'http://127.0.0.1:{PORT}/index.html?quality={tier}&filmstep=60&filmstats=1'); pg.wait_for_selector('.wordmark', timeout=LONG)
+    if arg('--eval'): pg.evaluate(open(arg('--eval')).read())   # e.g. register an older cut of the film first, for a before-and-after sheet
     check(pg.evaluate(f"ST.Cine.has('{film}', '{kind}')"), f'{film} has a {kind} film')
     pg.evaluate("() => { ST.FilmKit.dev.pauseAt = 0; }")
     pg.evaluate(f"() => ST.FilmKit.preview('{film}', '{kind}')")
@@ -379,7 +442,7 @@ def sheet(b, film, kind, tier):
     info = pg.evaluate("""() => { const c = ST.game.renderer.cine, f = c.film, F = f.__fk; return { len: c.lite ? 0 : f.len, kit: !!f.kit, sheet: f.sheet || null, still: c.lite,
       beats: F ? F.list.map(b => [b.name, b.a, b.b]) : [] }; }""")
     two = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(r))))"
-    tag = f'{film}-{kind}' + ('' if tier == 'lite' else f'-{tier}') + ('-still' if info['still'] else '')
+    tag = f'{film}-{kind}' + ('' if tier == 'lite' else f'-{tier}') + ('-still' if info['still'] else '') + (f'-{arg("--tag")}' if arg('--tag') else '')
     if info['still']:
         pg.wait_for_timeout(700); pg.screenshot(path=f'{out}/{tag}.png'); print(f'reduced-motion still: {out}/{tag}.png')
         pg.evaluate("() => { ST.FilmKit.dev.pauseAt = null; }"); pg.wait_for_function('!ST.game.renderer.cine.active', timeout=LONG, polling=50); pg.close(); ctx.close(); return
@@ -416,6 +479,15 @@ def sheet(b, film, kind, tier):
     pg.close(); ctx.close()
 
 try:
+    if '--kit' in sys.argv:   # the film kit alone, on every tier: python3 test/cine.py --kit
+        with sync_playwright() as pw:
+            b = pw.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])
+            try:
+                for q in ('low', 'lite', 'medium', 'high'): kit_only(b, q)
+            finally: b.close()
+        if errors: print('\n'.join(sorted(set(errors))))
+        if errors or fails: print(f'{len(fails)} failed checks, {len(set(errors))} page errors'); srv.terminate(); sys.exit(1)
+        print('kit ok'); srv.terminate(); sys.exit(0)
     if '--film' in sys.argv:
         with sync_playwright() as pw:
             b = pw.chromium.launch(executable_path='/usr/bin/google-chrome', args=['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'])

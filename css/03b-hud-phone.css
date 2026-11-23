@@ -1,0 +1,97 @@
+
+/* ---- UPRIGHT: the cloth fills the screen; a slim status row above it, one band of power-ups, special and items below ---- */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  #stage { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  #hudL, #hudR { display: none; }
+  #side.hud { position: absolute; left: 0; right: 0; bottom: 0; height: var(--hud-bot); padding: var(--sp-4) calc(var(--sp-8) + var(--safe-r)) calc(var(--sp-8) + var(--safe-b)) calc(var(--sp-8) + var(--safe-l)); z-index: var(--z-side); pointer-events: none; justify-content: flex-end; gap: var(--sp-6); }
+  #mtop { display: block; position: absolute; left: 0; right: 0; top: 0; padding: calc(var(--sp-4) + var(--safe-t)) calc(var(--sp-6) + var(--safe-r)) 0 calc(var(--sp-6) + var(--safe-l)); pointer-events: none; visibility: hidden; z-index: var(--z-status); }
+  body.flying #mtop { visibility: visible; }
+  /* the status row is a deliberate panel: a strip of the cloth in a brass-edged frame */
+  .mpanel { display: grid; grid-template-columns: auto minmax(0, 1fr) auto var(--tap); grid-template-areas: "l c r p"; align-items: center; gap: var(--sp-8); height: var(--status-h); padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-8); background: var(--pat-cloth), var(--coverlet); border: var(--ln) dashed var(--line-dark); outline: var(--sp-4) solid var(--umber); box-shadow: 0 0 0 var(--sp-6) var(--brass); border-radius: var(--r-1); }
+  body.lefty .mpanel { grid-template-columns: var(--tap) auto minmax(0, 1fr) auto; grid-template-areas: "p l c r"; padding: var(--sp-2) var(--sp-8) var(--sp-2) var(--sp-2); }
+  .mcol { display: flex; flex-direction: column; min-width: 0; }
+  .mcol.l { grid-area: l; align-items: flex-start; gap: var(--sp-6); } .mcol.c { grid-area: c; align-items: center; text-align: center; gap: var(--sp-2); } .mcol.r { grid-area: r; align-items: flex-end; gap: var(--sp-2); }
+  .mlab { font: 700 var(--t-floor)/var(--lh-tight) var(--text); color: var(--saffron-hi); white-space: nowrap; overflow: hidden; max-width: 100%; }
+  .mlives { display: flex; gap: var(--sp-2); align-items: center; min-height: var(--sp-16); color: var(--linen); font-size: var(--t-floor); }
+  .mscore { display: flex; align-items: center; justify-content: center; gap: var(--sp-12); max-width: 100%; }
+  #mtop .score { font-size: var(--d-sm); line-height: .9; }
+  #mtop .wound svg { left: -6%; width: 112%; top: -12%; height: 124%; }
+  #mtop .tag { height: var(--sp-20); font-size: var(--t-floor); padding: 0 var(--sp-8) 0 var(--sp-16); clip-path: polygon(var(--sp-8) 0, 100% 0, 100% 100%, var(--sp-8) 100%, 0 50%); } #mtop .tag .ic { transform: scale(.8); }
+  #mtop .bobbin { height: var(--sp-16); padding: 0 var(--sp-6); } #mtop .bobbin i { width: var(--sp-12); }
+  .mpause { grid-area: p; display: flex; gap: var(--sp-4); align-items: center; justify-content: center; width: var(--tap); height: var(--tap); background: transparent; border: var(--ln) dashed var(--line-dark); pointer-events: auto; padding: 0; }
+  .mpause i { width: var(--sp-4); height: var(--sp-16); background: var(--linen); }
+  #mfx { display: flex; flex-wrap: nowrap; justify-content: center; gap: var(--sp-4); height: var(--badge-h); margin: 0; overflow: hidden; }
+  .pw { display: flex; flex: 0 1 var(--sp-40); min-width: var(--sp-32); padding: 0 0 var(--sp-4); justify-content: center; gap: 0; }
+  .pw .pn, .pw .ps { display: none; } .pw em { left: auto; right: var(--sp-2); top: 1px; }
+  .pw .pt { left: var(--sp-2); right: var(--sp-2); }
+  #tray { pointer-events: auto; margin-top: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "m s"; gap: var(--sp-8); align-items: stretch; }
+  body.lefty #tray { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "s m"; }
+  #tray .lab { display: none; }
+  .meters { grid-area: m; justify-content: space-between; gap: var(--sp-4); margin: 0; min-width: 0; }
+  .meters .mm { display: flex; gap: var(--sp-12); height: var(--sp-16); }
+  .meters .mm .fo, .meters .mm .da { height: var(--sp-16); padding: 0; background: none; border: 0; gap: var(--sp-6); font-size: var(--t-floor); text-shadow: 0 1px 0 var(--night), 0 0 var(--sp-4) var(--night); }
+  .meters .mm .fo { flex: 1; }
+  .slots { grid-area: s; flex-wrap: nowrap; gap: var(--sp-6); justify-content: flex-end; }
+  .slot { border: var(--ln) dashed var(--line-dark); outline: var(--ln-3) solid var(--umber); }
+  .slot kbd, .slot.pz { display: none; }
+  #bossbar { top: calc(var(--hud-top) + var(--sp-8)); left: calc(var(--sp-16) + var(--safe-l)); right: calc(var(--sp-16) + var(--safe-r)); }
+  /* narrow: the name, the thread under it, then what the boss is doing */
+  .bb { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "seam" "tag"; }
+  .bb b { font-size: var(--d-sm); } .bb span { text-align: left; }
+  #coach { top: calc(var(--hud-top) + var(--sp-8)); }
+  #bossbar.on ~ #coach { transform: translate(-50%, calc(var(--sp-64) + var(--sp-8))); }
+  body.toasting #coach { opacity: 0; }
+  /* a results sheet, game over or victory fills an upright screen: the status row, the item row and the boss's name step back so nothing peeks round it */
+  body.flying.resulting #mtop, body.flying.resulting #side, body.resulting #bossbar { opacity: 0; visibility: hidden; transition: opacity var(--dur-2) var(--ease), visibility 0s var(--dur-2); }   /* a notice and the lesson prompt share the space under the status row: the notice has it while it shows */
+  #banner { top: 42%; }
+  #toasts { left: 50%; right: auto; bottom: auto; top: calc(var(--hud-top) + var(--sp-64)); transform: translateX(-50%); align-items: center; width: min(92vw, 420px); } /* atelier-ignore: component width */
+  .toast { align-items: center; text-align: center; padding: var(--sp-4) var(--sp-12); } .toast span { display: none; }
+  body.bossing #toasts { top: calc(var(--hud-top) + var(--sp-64) + var(--sp-32)); }   /* a boss's name and thread, or the bonus count, have the top line: notices sit under them */
+}
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint SHORT */
+  #mtop { padding-top: calc(var(--sp-2) + var(--safe-t)); }
+  #side.hud { padding: var(--sp-2) calc(var(--sp-6) + var(--safe-r)) calc(var(--sp-6) + var(--safe-b)) calc(var(--sp-6) + var(--safe-l)); gap: var(--sp-4); }
+  .pw { flex-basis: var(--sp-32); } .pw .ic { width: var(--sp-16); height: var(--sp-16); }
+  .meters .mm, .meters .mm .fo, .meters .mm .da { height: var(--sp-12); line-height: 1; }
+}
+/* ---- SIDEWAYS: the cloth at full height, a slim panel each side ---- */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  #field { grid-column: 2; grid-row: 1; }
+  #side { grid-column: 3; grid-row: 1; } body.lefty #side { grid-column: 1; }
+  #hudL, #hudR { display: none; }
+  #mtop { display: block; position: fixed; top: 0; bottom: 0; left: 0; width: max(var(--hud-side), calc((100vw - 100vh * .78) / 2)); padding: max(var(--sp-8), var(--safe-t)) var(--sp-8) var(--sp-8) max(var(--sp-8), var(--safe-l)); pointer-events: none; visibility: hidden; z-index: var(--z-status); }
+  body.flying #mtop { visibility: visible; }
+  body.lefty #mtop { left: auto; right: 0; padding: max(var(--sp-8), var(--safe-t)) max(var(--sp-8), var(--safe-r)) var(--sp-8) var(--sp-8); }
+  .mpanel { display: flex; flex-direction: column; align-items: stretch; gap: var(--sp-12); padding: var(--sp-12); background: var(--pat-cloth), var(--coverlet); border: var(--ln) dashed var(--line-dark); outline: var(--sp-4) solid var(--umber); box-shadow: 0 0 0 var(--sp-6) var(--brass); border-radius: var(--r-1); margin: var(--sp-6); }
+  .mcol { display: flex; flex-direction: column; gap: var(--sp-6); }
+  .mcol.c { order: -1; align-items: flex-start; gap: var(--sp-8); }
+  .mlab { font: 700 var(--t-floor)/var(--lh-tight) var(--text); color: var(--saffron-hi); }
+  .mscore { display: flex; align-items: center; gap: var(--sp-16); flex-wrap: wrap; }
+  #mtop .score { font-size: var(--d-lg); line-height: .9; }
+  .mlives { display: flex; gap: var(--sp-4); align-items: center; min-height: var(--sp-16); color: var(--linen); font-size: var(--t-floor); }
+  #mtop .bobbin { height: var(--sp-16); padding: 0 var(--sp-6); } #mtop .bobbin i { width: var(--sp-12); }
+  .mcol.r { flex-direction: row; flex-wrap: wrap; gap: var(--sp-6); }
+  #mtop .tag { height: var(--sp-24); font-size: var(--t-sm); padding: 0 var(--sp-8) 0 var(--sp-16); }
+  #side.hud { padding: max(var(--sp-8), var(--safe-t)) max(var(--sp-12), var(--safe-r)) max(var(--sp-12), var(--safe-b)) var(--sp-12); justify-content: flex-end; gap: var(--sp-8); overflow: hidden; }
+  body.lefty #side.hud { padding-left: max(var(--sp-12), var(--safe-l)); padding-right: var(--sp-12); }
+  #mfx { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin: 0; align-content: flex-end; }
+  .pw { display: flex; flex: 0 0 var(--sp-40); padding: 0 0 var(--sp-4); justify-content: center; gap: 0; transition: none; }
+  .pw .pn, .pw .ps { display: none; } .pw em { left: auto; right: var(--sp-2); }
+  #tray { margin: 0; pointer-events: auto; } #tray .lab { display: none; }
+  .meters { margin: 0 0 var(--sp-8); }
+  .slots { flex-wrap: nowrap; gap: var(--sp-6); }
+  .slot { flex: none; border: var(--ln) dashed var(--line-dark); outline: var(--ln-3) solid var(--umber); }
+  .slot kbd, .slot.pz .pzt { display: none; }
+  .slot.pz { display: inline-flex; margin-left: auto; } .slot.pz .pzi { display: flex; }
+  body.lefty .slot.pz { margin-left: 0; order: -1; margin-right: auto; }
+  #toasts { left: 50%; right: auto; bottom: auto; top: var(--sp-64); transform: translateX(-50%); width: min(300px, calc(100vh * .74)); align-items: center; } /* atelier-ignore: component width */
+  body.bossing #toasts { top: calc(var(--sp-64) + var(--sp-32)); }
+  .toast { align-items: center; text-align: center; padding: var(--sp-4) var(--sp-12); } .toast span { display: none; }
+  .bb { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "seam" "tag"; }
+  .bb b { font-size: var(--d-sm); } .bb span { text-align: left; }
+  #banner .rib b { font-size: var(--d-md); }
+  /* the lesson prompt waits under the status panel, off the cloth altogether */
+  #coach { position: fixed; left: max(var(--sp-8), var(--safe-l)); right: auto; top: auto; bottom: max(var(--sp-12), var(--safe-b)); transform: none; width: calc(max(var(--hud-side), calc((100vw - 100vh * .78) / 2)) - max(var(--sp-8), var(--safe-l)) - var(--sp-8)); max-width: none; }
+  #bossbar.on ~ #coach { transform: none; }
+  body.lefty #coach { left: auto; right: max(var(--sp-8), var(--safe-r)); width: calc(max(var(--hud-side), calc((100vw - 100vh * .78) / 2)) - max(var(--sp-8), var(--safe-r)) - var(--sp-8)); }
+}

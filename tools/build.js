@@ -12,6 +12,10 @@ fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist', 'index.html'), html);
 fs.mkdirSync(path.join(root, 'dist', 'vendor'), { recursive: true });
 for (const f of ['three.module.min.js', 'three.global.js']) { const v = path.join(root, 'vendor', f); if (fs.existsSync(v)) fs.copyFileSync(v, path.join(root, 'dist', 'vendor', f)); }
+// painted film layers (art/films/<boss>/*.webp|png); films show their stand-ins when a picture is missing
+(function copyArt(src, dst) { if (!fs.existsSync(src)) return; fs.mkdirSync(dst, { recursive: true });
+  for (const f of fs.readdirSync(src)) { const a = path.join(src, f), b = path.join(dst, f);
+    if (fs.statSync(a).isDirectory()) copyArt(a, b); else if (/\.(webp|png|jpg)$/i.test(f)) fs.copyFileSync(a, b); } })(path.join(root, 'art'), path.join(root, 'dist', 'art'));
 const au = path.join(root, 'audio'); fs.mkdirSync(path.join(root, 'dist', 'audio'), { recursive: true });
 for (const f of fs.readdirSync(au)) if (f.endsWith('.mp3')) fs.copyFileSync(path.join(au, f), path.join(root, 'dist', 'audio', f));
 console.log('dist/index.html', (html.length / 1024).toFixed(0) + ' KB');

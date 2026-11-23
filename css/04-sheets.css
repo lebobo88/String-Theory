@@ -1,0 +1,142 @@
+
+/* ============ 6 · sheets and menus ============ */
+.overlay { position: fixed; inset: 0; display: none; z-index: var(--z-overlay); overflow: hidden; padding: max(var(--ov-pad), var(--safe-t)) max(var(--ov-pad), var(--safe-r)) max(var(--ov-pad), var(--safe-b)) max(var(--ov-pad), var(--safe-l)); }
+.overlay.on { display: flex; align-items: center; justify-content: center; }
+.overlay.night, .overlay.paper { background: var(--veil); }
+/* over a live scene (results, game over, victory, pause): a vignette round the sheet that fades to nothing, so effects never end on an edge */
+.overlay.veil { background: radial-gradient(ellipse 85% 70% at 50% 50%, var(--veil-soft) 0%, color-mix(in srgb, var(--night) 46%, transparent) 55%, color-mix(in srgb, var(--night) 14%, transparent) 82%, transparent 100%); }
+.sheet, .hem { position: relative; background: var(--pat-chart), var(--linen); color: var(--ink); margin: auto; border: var(--frame) solid var(--umber); box-shadow: 0 var(--sp-16) var(--sp-48) var(--shade); }
+.sheet { width: min(100%, 640px); max-height: 100%; overflow: hidden; padding: var(--sheet-pad); display: flex; flex-direction: column; gap: var(--sp-16); } /* atelier-ignore: component width */
+.sheet.narrow { width: min(100%, 400px); } /* atelier-ignore: component width */
+.sheet.wide { width: min(100%, 900px); } /* atelier-ignore: component width */
+.sheet h2, .hem h2 { font: 400 var(--d-xl)/.95 var(--display); }
+.sheet p { font: 400 var(--t-md)/var(--lh-read) var(--text); }
+.sub { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
+.stack { display: flex; flex-direction: column; gap: var(--sp-8); width: min(100%, 320px); } /* atelier-ignore: component width */
+.row { display: flex; gap: var(--sp-8); flex-wrap: wrap; align-items: center; justify-content: center; }
+
+/* ---- title and main menu ---- */
+.title { margin: auto; max-width: 560px; max-height: 100%; padding: 0 var(--sp-12); text-align: center; display: flex; flex-direction: column; align-items: center; gap: var(--sp-16); } /* atelier-ignore: component width */
+.mhead { display: flex; flex-direction: column; align-items: center; gap: var(--sp-8); } /* atelier-ignore: component width */
+.wordmark { font: 400 var(--d-3xl)/.85 var(--display); color: var(--linen); text-shadow: 0 var(--sp-4) 0 var(--madder); }
+/* a length of red thread stitched under the name */
+.thr { width: min(100%, 320px); height: var(--sp-8); background: var(--pat-thread) center / 100% var(--ln-3) no-repeat; } /* atelier-ignore: component width */
+.tagline { font: 700 var(--t-md)/var(--lh-tight) var(--text); color: var(--saffron-hi); }
+.lede { font: 400 var(--t-lg)/var(--lh-read) var(--text); color: var(--mist-hi); max-width: 34em; }
+.sheet .lede { color: inherit; }
+.who { font: 400 var(--t-body)/var(--lh-tight) var(--text); color: var(--mist-hi); } .who b { color: var(--linen); }
+.purse { display: flex; align-items: center; gap: var(--sp-8); flex-wrap: wrap; justify-content: center; }
+.purse .mono { flex-basis: 100%; text-align: center; font-size: var(--t-sm); }
+/* the title film (src/cine.js) hides the page while it plays; when it ends the page fades back in */
+#overlay { transition: opacity var(--dur-4) var(--ease); }
+
+/* ---- save slots: three pockets ---- */
+.pockets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-12); }
+.pcard { min-height: 230px; padding: var(--sp-16); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); border-radius: 0 0 var(--r-3) var(--r-3); display: flex; flex-direction: column; gap: var(--sp-6); align-items: flex-start; text-align: left; transition: transform var(--dur-1) var(--ease); } /* atelier-ignore: component height */
+.pcard.sel { border: var(--ln-2) solid var(--saffron-ink); box-shadow: 0 0 0 var(--ln-3) var(--saffron) inset; background: var(--cream); }
+.pcard.empty { align-items: center; justify-content: center; text-align: center; color: var(--ink-2); }
+.pname { font: 400 var(--d-lg)/1 var(--display); color: var(--ink); }
+.pcard > span { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
+.pneedles { display: flex; gap: var(--sp-6); min-height: var(--sp-24); align-items: flex-end; }
+.pcard dl { margin-top: var(--sp-4); width: 100%; }
+.pcard dl div { display: flex; justify-content: space-between; padding: var(--sp-2) 0; border-bottom: var(--ln) dotted var(--rule); font: 400 var(--t-sm)/var(--lh-snug) var(--text); }
+.pcard dt { color: var(--ink-2); } .pcard dd { font: 600 var(--t-sm)/var(--lh-snug) var(--mono); }
+.namer { display: flex; flex-direction: column; gap: var(--sp-4); }
+.namer input { min-height: var(--ctl); padding: 0 var(--sp-12); font: 700 var(--t-md)/1 var(--text); background: var(--paper); color: var(--ink); border: var(--ln-2) dashed var(--ink); width: 200px; border-radius: 0; } /* atelier-ignore: component width */
+.namer input:focus-visible { outline: var(--ln-3) solid var(--saffron); outline-offset: var(--sp-2); }
+.note { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--ink-2); }
+
+/* ---- how to play ---- */
+.how { display: grid; }
+.how div { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: var(--sp-12); padding: var(--sp-6) 0; border-bottom: var(--ln) dotted var(--rule); align-items: center; }
+.how b { font: 700 var(--t-md)/var(--lh-tight) var(--text); } .how span { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
+.hprose { display: flex; flex-direction: column; gap: var(--sp-8); }
+.howto p { font-size: var(--t-body); line-height: var(--lh-read); }
+
+/* ---- settings: three short tabs; threads for volume ---- */
+.settings { gap: var(--sp-12); }
+.stabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-4); }
+.stabs .tabb, .seg .tabb, .shipf .tabb { flex: none; align-items: center; justify-content: center; text-align: center; padding: 0 var(--sp-6); }
+.setlist { display: flex; flex-direction: column; border-top: var(--ln-2) dashed var(--ink); }
+.setrow { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-12); min-height: var(--sp-64); padding: var(--sp-8) var(--sp-2); background: transparent; border: 0; border-bottom: var(--ln) dotted var(--rule); text-align: left; color: var(--ink); }
+.setrow > span { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.setrow b { font: 700 var(--t-md)/var(--lh-tight) var(--text); } .setrow span span { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--ink-2); }
+/* the state of a switch: a stitched label box, inked in when on */
+.sw { flex: none; min-width: var(--sp-64); text-align: center; padding: var(--sp-6) var(--sp-4); font: 600 var(--t-body)/1 var(--mono); font-style: normal; border: var(--ln-2) dashed var(--ink-2); color: var(--ink-2); }
+.sw.on { border: var(--ln-2) solid var(--ink); background: var(--ink); color: var(--paper); }
+.setrow.slide { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto var(--tap); align-items: center; gap: 0 var(--sp-12); padding: var(--sp-8) var(--sp-2) var(--sp-2); cursor: default; }
+.setrow.slide output { font-size: var(--t-md); color: var(--ink); }
+.setrow.slide input { grid-column: 1 / -1; }
+.setrow input[type=range] { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: var(--tap); margin: 0; background: transparent; cursor: pointer; font: inherit; color: var(--ink); }
+.setrow input[type=range]:focus-visible { outline: var(--ln-3) solid var(--saffron); outline-offset: var(--sp-2); }
+.setrow input[type=range]::-webkit-slider-runnable-track { height: var(--sp-8); background: var(--pat-thread-fine) left center / var(--v, 50%) var(--sp-6) no-repeat, var(--pat-holes-ink) center / 100% var(--ln-2) no-repeat; }
+.setrow input[type=range]::-moz-range-track { height: var(--sp-8); background: var(--pat-holes-ink) center / 100% var(--ln-2) no-repeat; }
+.setrow input[type=range]::-moz-range-progress { height: var(--sp-6); background: var(--pat-thread-fine); }
+/* the thumb is a four-hole button */
+.setrow input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: var(--sp-32); height: var(--sp-32); margin-top: calc(var(--sp-12) * -1); border-radius: var(--r-round); border: 0; background: var(--pat-button); box-shadow: 0 var(--sp-2) 0 var(--shade); }
+.setrow input[type=range]::-moz-range-thumb { width: var(--sp-32); height: var(--sp-32); border-radius: var(--r-round); border: 0; background: var(--pat-button); box-shadow: 0 var(--sp-2) 0 var(--shade); }
+
+/* ---- lists of results (also the stats on Records and the facts on the route map) ---- */
+.tally { border-top: var(--ln-2) dashed var(--ink); }
+.tally > div { position: relative; display: flex; justify-content: space-between; align-items: center; gap: var(--sp-12); min-height: var(--sp-40); padding: var(--sp-4) 0; border-bottom: var(--ln) dotted var(--rule); }
+.tally dt { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
+.tally dd { font: 600 var(--t-md)/var(--lh-tight) var(--mono); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: var(--sp-6); text-align: right; }
+.tally .total dt { font-weight: 700; color: var(--ink); }
+.tally dd.txt { font: 700 var(--t-body)/var(--lh-snug) var(--text); }
+
+/* ---- UPRIGHT ---- */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .sheet h2, .hem h2 { font-size: var(--d-lg); }
+  .wordmark { font-size: var(--d-2xl); }
+  .lede { font-size: var(--t-md); }
+  .pockets { grid-template-columns: 1fr; gap: var(--sp-8); }
+  .pcard { min-height: 0; padding: var(--sp-12) var(--sp-16); border-radius: 0 0 var(--r-3) var(--r-3); gap: var(--sp-2); }
+  .pcard.empty { flex-direction: row; gap: var(--sp-12); justify-content: flex-start; text-align: left; }
+  .pcard dl { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-16); }
+  .pname { font-size: var(--d-md); }
+  .howto { gap: var(--sp-8); }
+  .how div { grid-template-columns: 6.5em minmax(0, 1fr); padding: var(--sp-4) 0; }
+}
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint SHORT */
+  .sheet { gap: var(--sp-8); }
+  .sheet h2, .hem h2 { font-size: var(--d-md); }
+  .wordmark { font-size: var(--d-xl); } .title { gap: var(--sp-8); } .stack { gap: var(--sp-6); }
+  .pcard { padding: var(--sp-8) var(--sp-12); } .pname { font-size: var(--d-sm); }
+  .setrow { min-height: var(--ctl); padding: var(--sp-4) var(--sp-2); }
+  .tally > div { min-height: var(--sp-32); padding: var(--sp-2) 0; }
+  .howto p { font-size: var(--t-sm); line-height: var(--lh-snug); } .how div { padding: var(--sp-2) 0; } .how span { font-size: var(--t-sm); }
+}
+@media (min-width: 600px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint TABLET */
+  .sheet h2, .hem h2 { font-size: var(--d-xl); }
+  .wordmark { font-size: var(--d-3xl); }
+}
+/* ---- SIDEWAYS: two columns wherever one would be too tall ---- */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .overlay { padding: max(var(--ov-pad), var(--safe-t)) max(var(--sp-12), var(--safe-r)) max(var(--ov-pad), var(--safe-b)) max(var(--sp-12), var(--safe-l)); }
+  .sheet { gap: var(--sp-8); }
+  .sheet h2, .hem h2 { font-size: var(--d-md); }
+  .title { gap: var(--sp-8); }
+  .title .wordmark { font-size: var(--d-2xl); }
+  .title.cover .lede { font-size: var(--t-body); }
+  .title.menu { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); grid-template-areas: "h s" "c s"; align-items: center; gap: var(--sp-8) var(--sp-24); max-width: 780px; width: 100%; text-align: left; } /* atelier-ignore: component width */
+  .title.menu .mhead { grid-area: h; display: flex; flex-direction: column; gap: var(--sp-8); align-items: flex-start; }
+  .title.menu .stack { grid-area: s; width: 100%; gap: var(--sp-6); }
+  .title.menu .mchips { grid-area: c; justify-content: flex-start; }
+  .title.menu .purse { justify-content: flex-start; } .title.menu .purse .mono { text-align: left; }
+  .title.menu .btn { min-height: var(--tap); }
+  .saves .pockets { gap: var(--sp-8); }
+  .saves .pcard { min-height: 0; padding: var(--sp-8) var(--sp-12); gap: var(--sp-2); }
+  .saves .pname { font-size: var(--d-sm); } .saves .pcard dl div { padding: 0; }
+  .howto { width: min(100%, 860px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "h h" "l p" "l b"; gap: var(--sp-6) var(--sp-24); align-items: start; } /* atelier-ignore: component width */
+  .howto .hhead { grid-area: h; } .howto .how { grid-area: l; } .howto .hprose { grid-area: p; } .howto > .row { grid-area: b; justify-content: flex-end; }
+  .howto p { font-size: var(--t-sm); line-height: var(--lh-snug); } .how div { grid-template-columns: 6em minmax(0, 1fr); padding: var(--sp-4) 0; } .how span { font-size: var(--t-sm); }
+  /* settings: the name, the three tabs and Back share one row, so six settings fit under them */
+  .sheet.settings { width: min(100%, 680px); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "head tabs back" "list list list"; align-items: center; gap: var(--sp-8) var(--sp-12); } /* atelier-ignore: component width */
+  .settings .shead .sub { display: none; }
+  .settings .shead { grid-area: head; } .settings .stabs { grid-area: tabs; } .settings .setlist { grid-area: list; } .settings .sfoot { grid-area: back; }
+  .settings .setrow { min-height: var(--tap); padding: var(--sp-2); }
+  .settings .setrow > span { flex-direction: row; align-items: baseline; gap: var(--sp-12); }
+  .settings .setrow.slide { grid-template-columns: 150px minmax(0, 1fr) var(--ctl); grid-template-rows: var(--tap); padding: 0 var(--sp-2); } /* atelier-ignore: component width */
+  .settings .setrow.slide input { grid-column: 2; grid-row: 1; } .settings .setrow.slide output { grid-column: 3; grid-row: 1; text-align: right; } .settings .setrow.slide > span > span { display: none; }
+  .tally > div { min-height: var(--sp-32); padding: var(--sp-2) 0; }
+}

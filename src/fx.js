@@ -14,6 +14,20 @@
     lite:   { name: 'lite',   pr: 1.5,  post: true,  bloom: 1, samples: 0, distort: false, grain: false, particles: 0.5,  shadowMap: 512,  shadows: false, cloth: 1 },   // phones start here: bloom, but no shadow pass and no lens passes
     low:    { name: 'low',    pr: 1,    post: false, bloom: 0, samples: 0, distort: false, grain: false, particles: 0.35, shadowMap: 512,  shadows: false, cloth: 0 }
   };
+  /* Phones (any touch-first screen) get their own version of each tier. Same effects; what changes is what a phone's graphics chip
+     pays most for and a small dense screen cannot show:
+       shadows: stitched shadows flattened on the cloth (one draw with the ground) instead of a shadow map (a second pass over the
+                scene and a shadow lookup in every pixel of the cloth, frame and table);
+       samples: 2x MSAA on High only (as before): the cross-stitch charts are thin crossed legs, and without it they read
+                lacier and shimmer as they move; the frame test measures High without it (a phone that needs the time can drop it);
+       bloomDiv: the glow is worked out at an eighth of the screen's size instead of a quarter, with a wider downsample, so it
+                looks the same for a quarter of the work. */
+  const PHONE = {
+    high:   Object.assign({}, QUALITY.high, { samples: 2, shadowMap: 1024, shadowMode: 'stitch', bloomDiv: 8 }),
+    medium: Object.assign({}, QUALITY.medium, { shadowMode: 'stitch', bloomDiv: 8 }),
+    lite:   Object.assign({}, QUALITY.lite, { bloomDiv: 8 }),
+    low:    QUALITY.low
+  };
   /* The automatic ladder: each step is cheaper than the last. */
   const LADDER = [['high', 2], ['high', 1.5], ['medium', 1.5], ['lite', 1.5], ['lite', 1.25], ['low', 1], ['low', 0.75]];
 
@@ -207,6 +221,126 @@
     }
   }
 
+  // ---------- the stitch batch: every counted chart on screen in one draw (and its shadow in one more) ----------
+  /* The atlas: every chart in C.SPRITES, cut once at load into the parts the renderer draws (body, left wing, right wing, or the
+     whole chart in one piece), every stitch two texels of a float texture: where it sits (one cell = one unit) and the colours of
+     its two legs, worked out exactly as the per-chart geometry used to be (same jitter, same lift on the upper leg).
+     A frame is a list of placed parts (a slot: a matrix that includes the cell size, a tint and the three yarn effects) and one
+     instance per stitch naming its slot and its texel. So the draw count does not change when a stage brings new moths, and a
+     moth seen for the first time costs nothing to build. */
+  const ATLAS_W = 256;
+  function stitchAtlas(T, sprites) {
+    const parts = {}, data = []; let n = 0; const c = new T.Color();
+    const add = (sp, part, noSplit) => {
+      const off = n, cmid = (sp.w - 1) / 2, pivot = part === 'left' ? -1.5 : part === 'right' ? 1.5 : 0;
+      for (let ry = 0; ry < sp.h; ry++) for (let cx = 0; cx < sp.w; cx++) {
+        const ch = sp.rows[ry][cx]; if (ch === '.') continue;
+        const o = cx - cmid, which = noSplit ? 'body' : (o < -1.2 ? 'left' : o > 1.2 ? 'right' : 'body'); if (which !== part) continue;
+        const rmid = (sp.h - 1) / 2, x = o - pivot, y = rmid - ry, col = [];
+        for (let leg = 0; leg < 2; leg++) { c.set(sp.pal[ch]); const j = ((cx * 7 + ry * 13 + leg * 5) % 9) / 9 - 0.5; c.offsetHSL(0, 0, j * 0.06 + (leg ? 0.05 : -0.02)); col.push(c.r, c.g, c.b); }
+        data.push(x, y, col[0], col[1], col[2], col[3], col[4], col[5]); n++;
+      }
+      return { off, n: n - off };
+    };
+    for (const name in sprites) { const sp = sprites[name]; parts[name] = { body: add(sp, 'body', false), left: add(sp, 'left', false), right: add(sp, 'right', false), solo: add(sp, 'body', true) }; }
+    const texels = n * 2, h = Math.max(1, Math.ceil(texels / ATLAS_W)), arr = new Float32Array(ATLAS_W * h * 4);
+    arr.set(data);
+    const tex = new T.DataTexture(arr, ATLAS_W, h, T.RGBAFormat, T.FloatType); tex.needsUpdate = true;
+    return { tex, parts, n, w: ATLAS_W };
+  }
+  /* One X-stitch at cell size 1, built the way stitchGeometry builds every stitch of a chart (two open five-sided cylinders,
+     crossed, the second lifted; flat normals). */
+  function stitchMesh(T) {
+    const tpl = new T.CylinderGeometry(1, 1, 1, 5, 1, true).toNonIndexed(), tp = tpl.attributes.position.array, k = tp.length / 3;
+    const pos = [], leg = [], m = new T.Matrix4(), q = new T.Quaternion(), v = new T.Vector3(), s = new T.Vector3(0.16, 1.28, 0.16), p = new T.Vector3(), z = new T.Vector3(0, 0, 1);
+    for (let l = 0; l < 2; l++) {
+      q.setFromAxisAngle(z, l ? Math.PI / 4 : -Math.PI / 4); p.set(0, 0, 0.22 + l * 0.2); m.compose(p, q, s);
+      for (let i = 0; i < k; i++) { v.set(tp[i * 3], tp[i * 3 + 1], tp[i * 3 + 2]).applyMatrix4(m); pos.push(v.x, v.y, v.z); leg.push(l); }
+    }
+    const g = new T.BufferGeometry(); g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('aLeg', new T.Float32BufferAttribute(leg, 1)); g.computeVertexNormals();
+    tpl.dispose(); return g;
+  }
+  /* What draws into the shadow mask: the strongest shadow at a pixel wins, so overlapping stitches and moths do not stack. */
+  function shadowMat(T, vs, fs, uniforms) {
+    return new T.ShaderMaterial({ uniforms, vertexShader: vs, fragmentShader: fs, depthTest: false, depthWrite: false, transparent: false,
+      blending: T.CustomBlending, blendEquation: T.MaxEquation, blendSrc: T.OneFactor, blendDst: T.OneFactor, side: T.DoubleSide });
+  }
+  class Stitches {
+    constructor(T, sprites) {
+      this.T = T; this.atlas = stitchAtlas(T, sprites);
+      this.slotCap = 0; this.cap = 0; this.nS = 0; this.n = 0; this.nH = 0; this.handles = {};
+      this.u = { tStCells: { value: this.atlas.tex }, tStSlots: { value: null }, uStW: { value: this.atlas.w } };
+      const base = this.base = stitchMesh(T);
+      this.geo = this.makeGeo(); this.shGeo = this.makeGeo();
+      this.grow(8192, 256);
+      // lit: the yarn material, with the chart's tint and effects read per stitch
+      const u = this.u, mat = this.mat = new T.MeshStandardMaterial({ roughness: 0.92, metalness: 0 });
+      mat.onBeforeCompile = sh => {
+        Object.assign(sh.uniforms, u);
+        sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + SH.stitchPars + 'varying vec3 vStCol; varying vec4 vStFx;')
+          .replace('#include <beginnormal_vertex>', SH.stitchNormal).replace('#include <begin_vertex>', 'vec3 transformed = stPos();');
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vStCol; varying vec4 vStFx;')
+          .replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb *= vStCol;')
+          .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * vStFx.y + vec3(1.0, 0.93, 0.8) * vStFx.x + vec3(0.95, 0.1, 0.08) * vStFx.z;');
+      };
+      mat.customProgramCacheKey = () => 'stitches';
+      const depth = this.depth = new T.MeshDepthMaterial({ depthPacking: T.RGBADepthPacking });
+      depth.onBeforeCompile = sh => { Object.assign(sh.uniforms, u); sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\n' + SH.stitchPars).replace('#include <begin_vertex>', 'stLoad(); vec3 transformed = stPos();'); };
+      depth.customProgramCacheKey = () => 'stitchesDepth';
+      const mesh = this.mesh = new T.Mesh(this.geo, mat); mesh.frustumCulled = false; mesh.castShadow = true; mesh.customDepthMaterial = depth; mesh.visible = false;
+      // the shadows flattened on the cloth (phones): drawn into the renderer's shadow mask only (layer 1), see SH.stitchShadowVS
+      this.uDark = { value: new T.Vector3(0.3, 0.32, 0.4) }; this.uLight = { value: new T.Vector3(-0.35, 0.3, 0.89) }; this.uStrength = { value: 1 };
+      const sm = this.shMat = shadowMat(T, SH.stitchPars + SH.stitchShadowVS, SH.shadeFlatFS, Object.assign({ uLight: this.uLight, uStrength: this.uStrength }, u));
+      const sh = this.shadow = new T.Mesh(this.shGeo, sm); sh.frustumCulled = false; sh.visible = false; sh.layers.set(1); this.shadowOn = false;
+    }
+    makeGeo() { const g = new this.T.InstancedBufferGeometry(); for (const k of ['position', 'normal', 'aLeg']) g.setAttribute(k, this.base.attributes[k]); g.instanceCount = 0; return g; }
+    grow(cap, slotCap) {
+      const T = this.T;
+      if (cap > this.cap) {
+        const old = this.refs, oldH = this.refsH; this.refs = new Float32Array(cap * 2); if (old) this.refs.set(old.subarray(0, this.n * 2));
+        this.refsH = new Float32Array(cap * 2); if (oldH) this.refsH.set(oldH.subarray(0, this.nH * 2));
+        const a = new T.InstancedBufferAttribute(this.refs, 2); a.setUsage(T.DynamicDrawUsage); this.refAttr = a;
+        this.geo.setAttribute('iRef', a); this.shGeo.setAttribute('iRef', a); this.cap = cap;
+      }
+      if (slotCap > this.slotCap) {
+        const old = this.slots; this.slots = new Float32Array(6 * 4 * slotCap); if (old) this.slots.set(old);
+        const t = new T.DataTexture(this.slots, 6, slotCap, T.RGBAFormat, T.FloatType); t.needsUpdate = true;
+        if (this.u.tStSlots.value) this.u.tStSlots.value.dispose(); this.u.tStSlots.value = t; this.slotCap = slotCap;
+      }
+    }
+    /* A drawable part: name and part as in the atlas (part 'solo' is the whole chart in one piece), cell the world size of one
+       stitch. shadow: true for something drawn elsewhere that only lends its outline to the shadows (the ship, the bobbins).
+       The handle has the old pool's push(matrix, rgb, flash, glow, warn) and end(). */
+    handle(name, part, cell, shadow) {
+      const key = name + ':' + part + ':' + cell + (shadow ? ':s' : ''); let h = this.handles[key];
+      if (!h) { const p = this.atlas.parts[name], r = p && p[part]; if (!r) return null; const b = this;
+        h = this.handles[key] = { off: r.off, n: r.n, cell, shadow: !!shadow, push(m, rgb, f0, f1, f2) { b.add(this, m, rgb, f0, f1, f2); }, end() { b.end(); }, begin() {} }; }
+      return h;
+    }
+    begin() { this.nS = 0; this.n = 0; this.nH = 0; }
+    add(h, m4, rgb, f0, f1, f2) {
+      if (h.shadow && !this.shadowOn) return;
+      if (this.nS >= this.slotCap) this.grow(this.cap, this.slotCap * 2);
+      const need = this.n + this.nH + h.n; if (need > this.cap) this.grow(Math.max(need, this.cap * 2), this.slotCap);
+      const s = this.nS++, S = this.slots, o = s * 24, e = m4.elements, k = h.cell;
+      S[o] = e[0] * k; S[o + 1] = e[1] * k; S[o + 2] = e[2] * k; S[o + 3] = e[3] * k;
+      S[o + 4] = e[4] * k; S[o + 5] = e[5] * k; S[o + 6] = e[6] * k; S[o + 7] = e[7] * k;
+      S[o + 8] = e[8] * k; S[o + 9] = e[9] * k; S[o + 10] = e[10] * k; S[o + 11] = e[11] * k;
+      S[o + 12] = e[12]; S[o + 13] = e[13]; S[o + 14] = e[14]; S[o + 15] = e[15];
+      S[o + 16] = rgb[0]; S[o + 17] = rgb[1]; S[o + 18] = rgb[2]; S[o + 19] = f0 || 0; S[o + 20] = f1 || 0; S[o + 21] = f2 || 0;
+      const R = h.shadow ? this.refsH : this.refs; let j = (h.shadow ? this.nH : this.n) * 2;
+      for (let i = 0, c = h.off; i < h.n; i++, c++) { R[j++] = s; R[j++] = c; }
+      if (h.shadow) this.nH += h.n; else this.n += h.n;
+    }
+    end() {
+      const n = this.n, nh = this.shadowOn ? this.nH : 0;
+      if (nh) this.refs.set(this.refsH.subarray(0, nh * 2), n * 2);
+      this.geo.instanceCount = n; this.mesh.visible = n > 0;
+      this.shGeo.instanceCount = n + nh; this.shadow.visible = this.shadowOn && n + nh > 0;
+      if (n + nh) { const a = this.refAttr; a.clearUpdateRanges(); a.addUpdateRange(0, (n + nh) * 2); a.needsUpdate = true; this.u.tStSlots.value.needsUpdate = true; }
+    }
+  }
+
   /* Merge geometries (each with its own matrix) into one, for the static frame. */
   function merge(T, items) {
     const pos = [], nor = [];
@@ -243,9 +377,12 @@
       if (!q.post) return;
       const type = this.hdr ? T.HalfFloatType : T.UnsignedByteType, cs = this.hdr ? T.NoColorSpace : T.SRGBColorSpace;
       const mk = (ww, hh, depth, samples) => new T.WebGLRenderTarget(Math.max(1, ww), Math.max(1, hh), { type, colorSpace: cs, depthBuffer: depth, samples: samples || 0, minFilter: T.LinearFilter, magFilter: T.LinearFilter, generateMipmaps: false });
-      this.rt = mk(w, h, true, q.samples);
-      if (q.bloom > 0) { this.b1 = mk(w >> 2, h >> 2); this.b1b = mk(w >> 2, h >> 2); }
-      if (q.bloom > 1) { this.b2 = mk(w >> 3, h >> 3); this.b2b = mk(w >> 3, h >> 3); }
+      this.rt = mk(w, h, true, q.samples); this.targetName = (this.hdr ? 'half-float' : '8-bit') + (q.samples ? ' x' + q.samples : '');
+      const div = q.bloomDiv || 4, d1 = Math.max(1, Math.round(w / div)), h1 = Math.max(1, Math.round(h / div));
+      if (q.bloom > 0) { this.b1 = mk(d1, h1); this.b1b = mk(d1, h1); }
+      if (q.bloom > 1) { this.b2 = mk(d1 >> 1, h1 >> 1); this.b2b = mk(d1 >> 1, h1 >> 1); }
+      this.spread = 4 / div;   // the blur's reach in texels of its own target: at an eighth of the size, half as many texels reach as far
+      const bd = this.bright.defines = {}; if (div >= 8) bd.DOWN8 = 1; this.bright.needsUpdate = true;
       const d = this.comp.defines = {};
       if (q.bloom > 0) d.BLOOM = 1; if (q.bloom > 1) d.BLOOM2 = 1; if (q.distort) d.DISTORT = 1; if (q.grain) d.GRAIN = 1;
       this.comp.needsUpdate = true;
@@ -253,8 +390,8 @@
     }
     pass(mat, target) { this.quad.material = mat; this.gl.setRenderTarget(target); this.gl.render(this.scene, this.cam); }
     blurPair(a, b) {
-      const u = this.blur.uniforms; u.tIn.value = a.texture; u.uDir.value.set(1 / a.width, 0); this.pass(this.blur, b);
-      u.tIn.value = b.texture; u.uDir.value.set(0, 1 / b.height); this.pass(this.blur, a);
+      const u = this.blur.uniforms, k = this.spread || 1; u.tIn.value = a.texture; u.uDir.value.set(k / a.width, 0); this.pass(this.blur, b);
+      u.tIn.value = b.texture; u.uDir.value.set(0, k / b.height); this.pass(this.blur, a);
     }
     render(scene, camera) {
       // ---- film lens (film-kit) ---- while a boss film is using its lens, src/film-kit.js draws the scene through it and calls back here with the result; `lens` is unset in play
@@ -272,5 +409,5 @@
     }
   }
 
-  ST.fx = { QUALITY, LADDER, shaderMat, Particles, Sprites, Debris, Strips, Pool, yarnMaterial, merge, Post };
+  ST.fx = { QUALITY, PHONE, LADDER, shaderMat, Particles, Sprites, Debris, Strips, Pool, yarnMaterial, merge, Post, Stitches, stitchAtlas, shadowMat };
 })(window.ST);

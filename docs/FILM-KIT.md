@@ -66,7 +66,8 @@ Things that will catch you out:
 
 - **Sprites, particles and threads are not lit.** They are drawn in their own colour, so in a dark shot they glow. Pass their colour through `k.lit(rgb, x, y, z)` first, or use lit things (the yarn pools, charts, props with a standard material).
 - **Bosses are flat.** From a low camera a chart turns edge on. Lean him toward the lens (`k.boss(..., rx)` with rx about 0.4 for a camera below him) and keep tilt under about 0.7 in shots that feature him.
-- **Point sprites stop growing at 300 pixels** (`r.spr`, `r.halo` and the particle pools). In a close-up, build big glows from several small sprites or use a prop.
+- **Point sprites stop growing at 300 pixels** (`r.spr`, `r.halo` and the particle pools: the shader's cap, and a phone's own cap can be lower). In a close-up, build big glows from several small sprites or use a prop. `r.ring` above size 3.4 is drawn as a flat hoop of thread on the cloth (`ringFlat`), not a sprite.
+- **Light goes where you do not want it.** A real light lights everything in range, the wooden frame included; from a low camera a lit top rail reads as a shelf behind your subject. Do what a lighting crew does and rig a black flag: a `k.prop` plane in black `MeshBasicMaterial` with `renderOrder = -3` (drawn just after the ground, so everything of yours is in front of it). "Strike" flags off the rail and the dark above it.
 - **The game's own lint and motes keep drifting** round the boss during a film. In a dark shot call `k.quiet()`.
 - A phone's picture sits between the status row and the item row. Both are hidden during a film: `cam.full(1)` centres your picture on the whole screen; be back at `full(0)` before the end (behind a cut or a white-out is easiest).
 
@@ -109,9 +110,9 @@ A cut is just a different pose on the next frame. A top-down-to-low-angle crane 
 
 ```js
 // a wide lens low under the boss, pushing in while the lens opens: the reveal in "Strike"
-cam.fov = 56; cam.orbit(0, 14.9, 1, cam.fit(8.4, 8.4), 0.6, 0).mark();
-cam.orbit(bx, by - 0.3, 1, cam.fit(6, 6), 0.52, 0).mix(k.ease.io(k.span(4.15, 5.1)));
-cam.dollyZoom(lerp(cam.fov, 78, k.ease.in2(k.span(4.35, 5.1))));
+cam.fov = 44; cam.orbit(0, 15.5, 1.2, cam.fit(9.2, 9.2), 0.32, 0).mark();
+cam.orbit(bx, ly + 0.6, 1.2, cam.fit(5.2, 5.2), 0.3, 0).mix(k.ease.io(k.span(4.15, 5.1)));
+cam.dollyZoom(lerp(cam.fov, 70, k.ease.in2(k.span(4.35, 5.1))));
 ```
 
 ## 6. The lens: `k.lens`
@@ -122,7 +123,7 @@ Off unless you ask this frame; when no film asks, the game pays nothing for it.
 |---|---|
 | `lens.focus(x, y, z, aperture, blur)` | depth of field, sharp at that point. aperture 0.6 gentle, 1.5 strong, 3 macro. blur: widest disc as a fraction of screen height (0.014). Rack focus: lerp the point between two subjects |
 | `lens.focusAt(dist, aperture, blur)` | the same by distance |
-| `lens.streak(gain, rgb, threshold, width)` | anamorphic streaks from highlights brighter than `threshold` (use 2 to 3 so only flames and flares streak) |
+| `lens.streak(gain, rgb, threshold, width)` | anamorphic streaks from highlights brighter than `threshold` (use 2 to 3 so only flames and flares streak). A streak runs the whole width of the picture at the height of its source: use it to punctuate (a strike, a catch, a flash) and let it die in a few tenths of a second; left on, it reads as a lit shelf across the shot |
 | `lens.rays(x, y, z, gain, rgb, reach, threshold)` | light bursting outward from a point. Best for a source seen through something (a cage, a web, a body) |
 | `lens.fringe(k)` | colour fringing, 0 to 3: an impact |
 | `lens.exposure(k)` | 1 as shot, 0 black, 4 burnt out |
@@ -152,7 +153,7 @@ Real shadows from real lights are not on offer (too dear on a phone). `shade` is
 
 ## 8. Cloth: `k.cloth`
 
-While you call any of these, the flat play cloth is swapped for a real grid with the same weave; the frame you stop, it is swapped back (do that behind a cut or with everything eased to zero).
+While you call any of these, the flat play cloth is swapped for a real grid with the same weave; the frame you stop, it is swapped back (do that behind a cut or with everything eased to zero). Moving the grid is the dearest thing in the kit (most of a film's script time on high); a frame that asks for exactly what the last did (a held crumple or sag) costs nothing, so hold shapes still where the shot allows, and animate them only when the movement is the point.
 
 | call | does |
 |---|---|
@@ -242,7 +243,7 @@ An entrance must show the name and the weak spot long enough to read: all letter
 You do not play files. You declare what you need and when; the lead makes the sounds and the game's audio plays them by name. A name the game does not have yet is silent, so the film is safe before the sounds exist. Until they exist the old single track for that film keeps playing over yours (out of step: ignore it).
 
 ```js
-music:  { name: 'wick_in_sting', len: 7.8, gain: 0.9, desc: 'One low held cello note for 1 second; ... three rising hits at 2.9, 3.6 and 4.1 s; ...' },
+music:  { name: 'wick_in_sting', len: 8.8, gain: 0.9, desc: 'One low held cello note for 1 second; ... three rising hits at 3.36, 4.06 and 4.56 s; ...' },
 sounds: {
   wick_scratch: { at: 0.5, len: 1.9, gain: 0.9, desc: 'A dry gritty scrape for half a second, then at 0.5 s the head bursts alight...' },
   wick_catch:   { at: [2.5, 3.2, 3.7], len: 1.1, desc: '...' }      // at: film seconds, a beat's name, or a list
@@ -250,9 +251,9 @@ sounds: {
 buzz: [[1.0, 22], ['white', [50, 30, 140]]],                        // vibration: milliseconds, or [on, off, on]
 ```
 
-Name sounds `<boss>_<what>`. Aim for 5 to 8 per film that exist nowhere else in the game, plus one `music` sting. Write each `desc` for someone who cannot see the film: what it is, how it changes over its length, and the times of anything inside it. Remember the slow motion: a sound's `at` is a film second, so it starts in step, but the sound itself is not slowed.
+Name sounds `<boss>_<what>`. Aim for 5 to 8 per film that exist nowhere else in the game, plus one `music` sting. Write each `desc` for someone who cannot see the film: what it is, how it changes over its length, and the times of anything inside it, in real seconds from the sound's own start. Remember the slow motion: a sound's `at` is a film second, so it starts in step, but the sound itself is not slowed, so anything inside it that must land on a later beat has to allow for the slow motion between. A sting runs the whole film: work out its hits in real time (the catches in "Strike" are film 2.5, 3.2, 3.7 but real 3.36, 4.06, 4.56, after 0.86 s of slow motion; see the note above its `music` line).
 
-By hand: `k.cue(t, name, { gain, pan, rate })` and `k.buzz(t, pattern)` (in `setup`, or in `frame` with `t <= k.t` to fire now). Everything stops on a skip.
+By hand: `k.cue(t, name, { gain, rate })` and `k.buzz(t, pattern)` (in `setup`, or in `frame` with `t <= k.t` to fire now). Everything stops on a skip. (`pan` is accepted and ignored: the game's audio is not panned.) `ST.Cine.sounds()` lists every declared sound in the game's audio-table shape, for the lead.
 
 ## 13. Rules
 
@@ -305,7 +306,9 @@ What your film may spend (the meter prints OVER beside anything past it):
 | draw calls in a frame | 140 | 130 | 110 | 100 |
 | script, middle frame (ms on the machine you test on) | 2.0 | 2.0 | 2.5 | 2.5 |
 
-Always size your bursts with `r.n(count)` and your trickles with `k.q()`; then the tiers look after themselves. The script figure is for a phone; a desktop runs about three times faster, so on a desktop stay under a third of it. "Strike" spends 37 particles a second, 24 sprites, 256 thread vertices, 47 draw calls and about 0.3 ms of script on lite.
+Always size your bursts with `r.n(count)` and your trickles with `k.q()`; then the tiers look after themselves. The script figure is for a phone; a desktop runs about three times faster, so on a desktop stay under a third of it. "Strike" on lite spends 33 particles a second (29 in its busiest tenth), 37 sprites, 256 thread vertices, 45 draw calls, 3 lights, a 40 x 60 cloth, 5 ropes, 1 layer and 0.25 ms of script in the middle frame (headless desktop Chrome); on high 57 particles a second, 50 sprites, 56 draw calls, 0.25 ms; on low 24 a second, 36 draw calls, 0.15 ms.
+
+With no post pass (the low tier) nothing tones light down: real lights that look right on lite burn the cloth yellow there, and flames get no bloom. Check `k.has.post` and scale your light intensities down (about half) and your flare sprites up; "Strike" does both in two lines.
 
 The lens costs most. Depth of field is worth it in close-ups and wasted on wides; do not run focus, shafts and streaks together for a whole film: bring each in for the shots that need it.
 
@@ -321,6 +324,7 @@ Serve the folder (`python3 -m http.server 8830` in the repo; use a port in the r
 | `&still=1` | the reduced-motion still |
 | `&quality=low` | a tier: `high`, `medium`, `lite`, `low` |
 | `&filmstats=1` | the budget meter, printed in the console and on screen when the film ends (also `ST.filmStats`) |
+| `&filmstep=60` | exactly a sixtieth of a second of film per drawn frame, however slow the machine (what the contact sheet uses) |
 
 From the console: `ST.FilmKit.preview('tinea', 'death')`, `ST.Cine.play('title')`, `ST.Cine.skip()`.
 
@@ -331,7 +335,11 @@ python3 test/cine.py --film tinea --kind death              ->  /tmp/cine/tinea-
 python3 test/cine.py --film tinea --kind death --tier low    ->  /tmp/cine/tinea-death-low-sheet.png
 python3 test/cine.py --film tinea --still                    ->  /tmp/cine/tinea-entrance-still.png
 python3 test/cine.py --film tinea --times 1.0,1.1,1.2,...    any moments you like, to check a move frame by frame
+python3 test/cine.py --film tinea --eval old.js --tag before   run old.js in the page first (say, an earlier cut that registers itself), name the files ...-before-...
+python3 test/cine.py --kit                                    the kit alone: every documented call once, the warm-up, a directed entrance and death, all four tiers
 ```
+
+Set `CINE_PORT` (8830 to 8839) to run two at once. The sheet for "Strike" next to the film it replaced: `/tmp/cine/greatwick-entrance-compare.png`.
 
 It also fails if your film left anything behind (camera, lens, lights, cloth, props, DOM). Look at the sheet as a stranger would. Then look at the low tier and the still.
 
@@ -344,5 +352,29 @@ Before you hand in: `python3 test/cine.py <your boss id>` (the whole suite for y
 - A tear is cut along the cloth grid: on the low tier its edge is coarse. Keep the lips in motion or half in shadow.
 - The lens reads depth only from solid things. Sprites and threads take the focus of whatever is behind them.
 - The renderer draws the ground (table, cloth, frame) first and then forgets its depth, so that effects are never cut by it. Two consequences: nothing you draw can be hidden behind the cloth or under a rail (keep things that should be behind it out of shot, or use `cloth.tear` and `cloth.backing`), and the lens focuses on the ground as the flat plane z = 0, so a tall `cloth.bulge` is focused as if it were flat.
-- The first directed film of a session compiles its shaders on its first frame. Start in the dark or on a held frame, as "Strike" does.
+- The game's warm-up at load calls `ST.FilmKit.warm(renderer)`, which compiles the lens, the kit's own materials, each directed film's props (by a dry run of its `setup`, put away at once) and the lit materials for each number of lights a film uses on this tier. So `setup` must not depend on the boss being on the cloth (read `k.c.def`, not `k.c.g`), and must only make things. A film whose setup throws there is compiled on its first frame instead: start in the dark or on a held frame anyway, as "Strike" does.
 - The sound of a film is not slowed by slow motion and cannot be scrubbed.
+
+## 17. How a film ends, and what comes after it
+
+- **An entrance** hands over to the fight in the frame it ends: rule 3. The player has control at once.
+- **A death** is followed straight away by the game's own celebration: the sim holds the cleared cloth (2.8 s after a boss, 3.9 s after the last) for a fireworks show in the boss's colours from where it fell, then the results sheet rises. So end a death on a calm, lit, whole cloth with the house lights fully up (`k.dark(0)` by the last frame, no flash, no iris, no shake), the body gone, and nothing of your own still moving. Do not end on fireworks or a big burst of your own: the show is next. `test/cine.py` checks the state at rest after the film and after a skip.
+
+## 18. What the kit touches in the renderer
+
+The renderer is being reworked for speed while the films are written, so the kit's contact with it is kept to this list. Anyone changing the renderer: keep these working, or tell the film kit's owner.
+
+| where | what the kit uses |
+|---|---|
+| `src/render.js` | `r.scene`, `r.camera` (position, `up`, `fov`, `view.offsetY` for `cam.full`), `r.dist`, `r.ndT` / `r.ndB` (the open part of the screen), `r.canvas`, `r.q` (`post`, `particles`, `shadows`), `r.quality`, `r.userShadows`, `r.T`, `r.gl` (`compile`), `r.stats.calls`, `r.ft`, `r.shake`, `r.lc`, `r.n`, `r.shared`, `r.coneMaterial`, `r.chart` / `r.cells` / `r.bossMaterial` (stitched things and shadows), the sprite sets `r.spr` / `r.halo` and the pools `r.glow` / `r.lint` / `r.xs` / `r.curls` (their `uScale` uniform follows the film's lens; the meter counts their `emit`), the strip batches `r.trN` / `r.trA` (counted only). |
+| the cloth | `r.cloth`: hidden while the film cloth shows; its **material and renderOrder are borrowed** for the film's grid, which spans the same rectangle (x -7 to 7, y hem to top) with uv (0,0) to (1,1). If the cloth becomes a baked texture or a different material, keep it a mesh over that rectangle with that uv mapping and the grid follows. |
+| the ground | Ground things are drawn at renderOrder below `groundDone` (-4), then depth is cleared. The film grid takes the cloth's renderOrder, its backing -8.5; a film's black flag uses -3. |
+| `src/fx.js` | `FX.shaderMat`, `FX.merge`, and in `Post`: one marked hook at the top of `render` (`if (this.lens && this.lens.active) return this.lens.render(this, scene, camera)`), plus `post.rt` (size), `post.hdr`, `post.q.samples`, `post.gl`, `post.comp.uniforms.uVig`, and `post.render(scene, camera)` called back with the lens's picture as the scene (bloom, half size or not, and the composite then run as usual). |
+| `src/shaders.js` | `SH.fsVS`, `SH.stripVS` / `SH.stripFS` (threads), `SH.common` (`hash12`, `vnoise`), and its one marked block of lens shaders. |
+| `src/render-boss.js` | `bfEnsure().K` (colours), `bfLampMesh`, `bfOrders` / `bfOrderSprite` / `bfOrderApply` / `bfOrdered` / `bfUnorder` (sewing and unpicking), and through `src/cine.js` `bfSetDark`, `flapWings`, `syncBoss`, `placeCamera`, `clothU.uRip`, `flash`, `aberr`, `hs`, `shocks`, `bossGroup`, `corpse`, `mothPool`, `bfP` / `bfM`. |
+| `src/main.js` | `ST.game.sfx(name, gain, rate)`, `ST.game.buzz(pattern)`, `ST.game.hush()`, `ST.audioState` (`ok`, `buf`). |
+
+What it costs when no film plays: one property test in `Post.render` (`this.lens && this.lens.active`, false) and the renderer's existing `cine.active` test. The lens shaders are strings until a film asks for the lens; its render targets are made on a film's first lens frame and freed when the film ends. No kit object is in the scene outside a film. The dev switches (`?film=`, `?filmstep=`, `?filmstats=`) wrap nothing unless they are in the address bar.
+
+`ST.FilmKit.warm(renderer)` compiles everything the directed films will draw on the current tier (call it from the warm-up at load, and again after a change of tier; never while a film plays). It returns the number of compile passes it ran and leaves nothing in the scene.
+

@@ -1,0 +1,159 @@
+/* String Theory: interface.
+   Order: 1 fonts · 2 design tokens · 3 base · 4 parts · 5 flight HUD · 6 sheets and menus · 7 hideout · 8 route and records ·
+   9 results, game over, victory · 10 ambience and motion.
+   Every colour, size, space, radius, layer and duration below section 2 is a token from section 2. Lines that define a token,
+   a font file, a breakpoint or a piece of drawn artwork carry an "atelier-ignore" note so the owner's atelier design_review
+   (which flags raw values) stays meaningful for everything else. tools/audit.py --atelier runs that check. */
+
+/* ============ 1 · fonts (in the repo, so the game needs no network and looks the same everywhere) ============ */
+@font-face { font-family: 'Jacquard 24'; font-weight: 400; font-display: swap; src: url(fonts/jacquard-24-400.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 400; font-display: swap; src: url(fonts/atkinson-next-400.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 500; font-display: swap; src: url(fonts/atkinson-next-500.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 700; font-display: swap; src: url(fonts/atkinson-next-700.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Next'; font-weight: 800; font-display: swap; src: url(fonts/atkinson-next-800.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Mono'; font-weight: 400; font-display: swap; src: url(fonts/atkinson-mono-400.woff2) format('woff2'); } /* atelier-ignore: font file */
+@font-face { font-family: 'Atkinson Hyperlegible Mono'; font-weight: 600; font-display: swap; src: url(fonts/atkinson-mono-600.woff2) format('woff2'); } /* atelier-ignore: font file */
+
+/* ============ 2 · design tokens ============ */
+:root {
+  /* ---- colour: the Mendnight thread card. Fills and lines. ---- */
+  --night: #0F1428;        /* atelier-ignore: token. The table under the cloth; page ground */
+  --coverlet: #18203D;     /* atelier-ignore: token. The cloth; dark panels (status row, stats strip, picture wells) */
+  --patch: #24305A;        /* atelier-ignore: token. A lighter patch on the cloth */
+  --dot: #3D4F86;          /* atelier-ignore: token. Needle holes and dotted guides on dark */
+  --mist: #8C9AC6;         /* atelier-ignore: token. Lines and marks on dark. Not for small text (see --mist-hi) */
+  --linen: #E6DFD0;        /* atelier-ignore: token. Sheets; main text on dark */
+  --paper: #F3EEE3;        /* atelier-ignore: token. Cards, tags and panels on a sheet */
+  --cream: #FFF8E6;        /* atelier-ignore: token. A chosen card */
+  --rule: #B9AE96;         /* atelier-ignore: token. Dotted rules on a sheet */
+  --ink: #1C2238;          /* atelier-ignore: token. Main text on a sheet; solid lines */
+  --umber: #3A2C20;        /* atelier-ignore: token. The wooden frame round every sheet */
+  --brass: #9C7A3A;        /* atelier-ignore: token. Brass edge of dark panels; bobbin flanges */
+  --madder: #A82A33;       /* atelier-ignore: token. Red thread: the main button, health, cleared stages */
+  --madder-deep: #7A1D27;  /* atelier-ignore: token. Shade of the red thread */
+  --madder-lit: #CF4A4E;   /* atelier-ignore: token. Highlight of the red thread */
+  --saffron: #E3A93C;      /* atelier-ignore: token. Gold thread: choice, focus, reward. Fills, lines and display type on dark */
+  --ochre: #B5832F;        /* atelier-ignore: token. Shade of the gold thread */
+  --leaf: #2F7A43;         /* atelier-ignore: token. Green thread: a number going up (lines and marks) */
+  /* ---- colour: text. Each clears APCA Lc 75 on the ground named (measured with atelier's contrast_check). ---- */
+  --ink-2: #353C5C;        /* atelier-ignore: token. Second-rank text on linen, paper and cream */
+  --madder-ink: #6E1822;   /* atelier-ignore: token. Red text on linen and paper */
+  --saffron-ink: #553503;  /* atelier-ignore: token. Gold text on linen and paper */
+  --leaf-ink: #144522;     /* atelier-ignore: token. Green text on linen and paper */
+  --mist-hi: #C9D0E8;      /* atelier-ignore: token. Second-rank text on night and coverlet */
+  --saffron-hi: #F5D58C;   /* atelier-ignore: token. Gold text under 24px on night, coverlet and patch */
+  --saffron-lit: #EAB452;  /* atelier-ignore: token. Gold display type (24px and up) on night, coverlet and patch: Lc 60 or more */
+  --leaf-hi: #A9E8B6;      /* atelier-ignore: token. Green text on dark */
+  --madder-hi: #F9C9C4;    /* atelier-ignore: token. Red text on dark */
+  /* ---- colour: washes (one colour let down with clear) ---- */
+  --veil: color-mix(in srgb, var(--night) 86%, transparent);       /* flat dim behind full-screen menus */
+  --veil-soft: color-mix(in srgb, var(--night) 62%, transparent);  /* heart of the vignette behind a results sheet */
+  --line-dark: color-mix(in srgb, var(--linen) 45%, transparent);  /* running stitch on dark */
+  --grid-ink: color-mix(in srgb, var(--ink) 6%, transparent);      /* chart grid on a sheet */
+  --grid-mist: color-mix(in srgb, var(--mist) 7%, transparent);    /* chart grid on the cloth */
+  --shade: rgb(0 0 0 / .45);                                       /* atelier-ignore: token. Neutral drop shadow */
+
+  /* ---- type ---- */
+  --display: 'Jacquard 24', 'Courier New', monospace;                                   /* names, titles, the score */
+  --text: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', Verdana, sans-serif;   /* everything read */
+  --mono: 'Atkinson Hyperlegible Mono', 'Courier New', monospace;                       /* numbers that change */
+  --ts: 1;                 /* text scale. Settings > Text size "Large" sets 1.15 (html.text-large) */
+  --t-cap: calc(12px * var(--ts));   /* atelier-ignore: token. Labels, captions, prices. The floor: nothing is smaller */
+  --t-sm: calc(13px * var(--ts));    /* atelier-ignore: token. Second lines, compact lists */
+  --t-body: calc(14px * var(--ts));  /* atelier-ignore: token. Reading text in panels */
+  --t-md: calc(16px * var(--ts));    /* atelier-ignore: token. Reading text on sheets; buttons; names in lists */
+  --t-lg: calc(18px * var(--ts));    /* atelier-ignore: token. Ledes */
+  --t-floor: 12px;         /* atelier-ignore: token. What a fixed slot may fit its text down to, whatever the text scale */
+  --d-xs: 20px;            /* atelier-ignore: token. Display type steps */
+  --d-sm: 24px;            /* atelier-ignore: token */
+  --d-md: 28px;            /* atelier-ignore: token */
+  --d-lg: 36px;            /* atelier-ignore: token */
+  --d-xl: 48px;            /* atelier-ignore: token */
+  --d-2xl: 64px;           /* atelier-ignore: token */
+  --d-3xl: 96px;           /* atelier-ignore: token */
+  --lh-tight: 1.15;        /* one-line labels and names */
+  --lh-snug: 1.32;         /* two or three short lines in a fixed slot */
+  --lh-read: 1.45;         /* paragraphs */
+  --track: .08em;          /* short uppercase labels only */
+
+  /* ---- space and size: one 4-point scale (2 and 6 are the half steps a phone needs) ---- */
+  --sp-2: 2px;             /* atelier-ignore: token */
+  --sp-4: 4px;             /* atelier-ignore: token. Inside a control */
+  --sp-6: 6px;             /* atelier-ignore: token. The frame; between tight neighbours */
+  --sp-8: 8px;             /* atelier-ignore: token. Inside a group */
+  --sp-12: 12px;           /* atelier-ignore: token. Panel padding on a phone; between groups */
+  --sp-16: 16px;           /* atelier-ignore: token. Panel padding */
+  --sp-20: 20px;           /* atelier-ignore: token */
+  --sp-24: 24px;           /* atelier-ignore: token. Sheet padding; between sections */
+  --sp-32: 32px;           /* atelier-ignore: token */
+  --sp-40: 40px;           /* atelier-ignore: token */
+  --sp-48: 48px;           /* atelier-ignore: token */
+  --sp-64: 64px;           /* atelier-ignore: token */
+  --tap: 44px;             /* atelier-ignore: token. The smallest thing a finger presses */
+  --ctl: 48px;             /* atelier-ignore: token. Buttons */
+  --ln: 1.5px;             /* atelier-ignore: token. Running stitch (dashed) and needle-hole (dotted) lines */
+  --ln-2: 2px;             /* atelier-ignore: token. Solid lines and section rules */
+  --ln-3: 3px;             /* atelier-ignore: token. Thread */
+  --r-1: 2px;              /* atelier-ignore: token. Radius: stitched things are square; this only softens a corner */
+  --r-2: 4px;              /* atelier-ignore: token. Keys */
+  --r-3: 24px;             /* atelier-ignore: token. The bottom of a pocket (save slots) */
+  --r-round: 999px;        /* atelier-ignore: token. Buttons that are buttons: the slider thumb, pin heads */
+
+  /* ---- layers ---- */
+  --z-0: 0; --z-1: 1; --z-2: 2;   /* stacking inside one part (the score's thread: behind, the digits, in front) */
+  --z-status: 4; --z-side: 5; --z-prompt: 6; --z-readout: 7; --z-overlay: 20; --z-toast: 30; --z-wipe: 50; --z-fly: 55;
+  /* not ours, kept in order with these: #fxtop, the falling stitches over a results sheet, is 30 (src/render.js); film cards and bars (src/cine.js) and "Test this phone" (src/perf.js, 60) sit over everything */
+
+  /* ---- motion: fast, eased out, never bouncing in menus ---- */
+  --dur-1: 120ms; --dur-2: 200ms; --dur-3: 320ms; --dur-4: 480ms;
+  --ease: cubic-bezier(.2, .8, .2, 1);        /* arrivals */
+  --ease-io: cubic-bezier(.6, 0, .3, 1);      /* moves across the screen */
+  --ease-pop: cubic-bezier(.2, 1.5, .4, 1);   /* atelier-ignore bounce-easing: in flight only, for a combo or a pickup landing */
+
+  /* ---- screen edges: cutouts and the gesture bar. The Android shell may set these four itself if its WebView reports no insets. ---- */
+  --safe-t: env(safe-area-inset-top, 0px); --safe-r: env(safe-area-inset-right, 0px); --safe-b: env(safe-area-inset-bottom, 0px); --safe-l: env(safe-area-inset-left, 0px);
+
+  /* ---- patterns: drawn once, used everywhere ---- */
+  --pat-chart: linear-gradient(var(--grid-ink) 1px, transparent 1px) 0 0 / 12px 12px, linear-gradient(90deg, var(--grid-ink) 1px, transparent 1px) 0 0 / 12px 12px;   /* atelier-ignore: artwork. Counted-thread chart paper */
+  --pat-cloth: linear-gradient(var(--grid-mist) 1px, transparent 1px) 0 0 / 6px 6px, linear-gradient(90deg, var(--grid-mist) 1px, transparent 1px) 0 0 / 6px 6px;      /* atelier-ignore: artwork. The weave on dark panels */
+  --pat-thread: repeating-linear-gradient(90deg, var(--madder) 0 9px, transparent 9px 13px);        /* atelier-ignore: artwork. Red running stitch */
+  --pat-thread-fine: repeating-linear-gradient(60deg, var(--madder) 0 3px, var(--madder-deep) 3px 5px);   /* atelier-ignore: artwork. Wound red thread */
+  --pat-gold-fine: repeating-linear-gradient(60deg, var(--saffron) 0 3px, var(--ochre) 3px 5px);    /* atelier-ignore: artwork. Wound gold thread */
+  --pat-mist-fine: repeating-linear-gradient(60deg, var(--mist) 0 3px, var(--dot) 3px 5px);         /* atelier-ignore: artwork. Wound grey thread */
+  --pat-holes: repeating-linear-gradient(90deg, var(--dot) 0 3px, transparent 3px 8px);             /* atelier-ignore: artwork. Needle holes where thread has gone */
+  --pat-holes-ink: repeating-linear-gradient(90deg, var(--ink-2) 0 6px, transparent 6px 10px);      /* atelier-ignore: artwork. The same, on a sheet */
+  --pat-button: radial-gradient(circle at 39% 39%, var(--saffron-ink) 0 1.8px, transparent 2.3px), radial-gradient(circle at 61% 39%, var(--saffron-ink) 0 1.8px, transparent 2.3px), radial-gradient(circle at 39% 61%, var(--saffron-ink) 0 1.8px, transparent 2.3px), radial-gradient(circle at 61% 61%, var(--saffron-ink) 0 1.8px, transparent 2.3px), radial-gradient(circle, var(--saffron) 0 10px, var(--ochre) 10.5px 12px, var(--saffron) 12.5px);   /* atelier-ignore: artwork. A four-hole button */
+  --pat-cross: linear-gradient(45deg, transparent 40%, var(--madder) 40% 60%, transparent 60%), linear-gradient(135deg, transparent 40%, var(--madder-lit) 40% 60%, transparent 60%);   /* one cross stitch */
+
+  /* ---- layout: wide screens (desktop, tablets on their side). Phones override these further down. ---- */
+  --ov-pad: var(--sp-16);          /* screen edge to a sheet */
+  --sheet-pad: var(--sp-24);
+  --frame: var(--sp-6);            /* the wooden frame */
+  --hud-side: 200px;               /* atelier-ignore: token. Least width of a side panel beside the cloth */
+  --hud-top: 0px;                  /* room the status row takes above the cloth (phones) */
+  --hud-bot: 0px;                  /* room the item row takes below it (phones) */
+  --status-h: 52px;                /* atelier-ignore: token. Phone status row */
+  --slot-w: 60px;                  /* atelier-ignore: token. Item slot */
+  --slot-h: 60px;                  /* atelier-ignore: token */
+  --badge-h: 36px;                 /* atelier-ignore: token. Power-up badge */
+  --hem-w: 1040px;                 /* atelier-ignore: token. Hideout, route map and records: widest */
+  --hem-h: 740px;                  /* atelier-ignore: token. ... and tallest */
+  --hem-pad: var(--sp-20);
+  --hem-gap: var(--sp-12);
+  --hem-head: 56px;                /* atelier-ignore: token. Fixed rows of the hideout frame */
+  --hem-tabs: 56px;                /* atelier-ignore: token */
+  --hem-strip: 52px;               /* atelier-ignore: token */
+  --hem-foot: 60px;                /* atelier-ignore: token */
+  --hem-detail: 1fr;               /* the details panel: a column beside the list here, a fixed height under it on phones */
+  --list-gap: var(--sp-8);
+  --d-pad: var(--sp-16);           /* details panel padding */
+  --d-gap: var(--sp-12);
+  --d-pic: 72px;                   /* atelier-ignore: token. Picture slot */
+  --d-name: 36px;                  /* atelier-ignore: token. Line box of the name in the details: the largest size it is set at */
+  --buy-w: 196px;                  /* atelier-ignore: token. Buy slot */
+  --card-ic: var(--sp-40);         /* picture column in a list card */
+  --tile-ic: var(--sp-32);         /* picture in a collection or power-up tile (scales the stitched icon) */
+  --rail: 128px;                   /* atelier-ignore: token. Side column of a phone held sideways */
+}
+/* Text size "Large": every reading size up 15%. Fixed slots fit their text back down, never under --t-cap at scale 1. */
+html.text-large { --ts: 1.15; }

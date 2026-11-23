@@ -1,0 +1,28 @@
+
+/* ============ 10 · hideout ambience, and motion people can turn off ============ */
+/* Quiet life behind the hideout's fixed frame: lamplight that wavers, lint drifting through it, and the header's thread being
+   drawn slowly along. Three kinds of thing, eight elements, moved only by transform and opacity (the compositor's work, no
+   layout and no repaint), and gone altogether when the player asks for less motion. */
+.amb { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.amb .lamp { position: absolute; right: -20%; top: -30%; width: 90%; aspect-ratio: 1; background: radial-gradient(circle, color-mix(in srgb, var(--cream) 85%, transparent) 0%, color-mix(in srgb, var(--saffron) 12%, transparent) 38%, transparent 68%); opacity: .5; will-change: opacity; animation: lamp 7.3s linear infinite; }
+@keyframes lamp { 0%, 100% { opacity: .5; } 9% { opacity: .42; } 13% { opacity: .52; } 31% { opacity: .46; } 34% { opacity: .38; } 37% { opacity: .5; } 58% { opacity: .44; } 77% { opacity: .53; } 81% { opacity: .4; } 86% { opacity: .5; } }
+.amb .lint { position: absolute; left: var(--x); top: -4%; width: var(--sp-2); height: var(--sp-2); background: var(--ink-2); opacity: 0; will-change: transform, opacity; animation: lint var(--t) linear var(--d) infinite; }
+@keyframes lint { 0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; } 8% { opacity: .22; } 50% { transform: translate3d(var(--sp-40), 52vh, 0) rotate(160deg); opacity: .16; } 92% { opacity: .2; } 100% { transform: translate3d(calc(var(--sp-16) * -1), 104vh, 0) rotate(340deg); opacity: 0; } }
+/* the header rule is a running stitch; over it, one red thread is being pulled through, a stitch every few seconds */
+.amb .strand { position: absolute; left: var(--hem-pad); right: var(--hem-pad); top: calc(var(--hem-pad) + var(--hem-head) - var(--ln-2)); height: var(--ln-2); overflow: hidden; opacity: .55; }
+.amb .strand i { display: block; width: calc(100% + var(--sp-48)); height: 100%; background: repeating-linear-gradient(90deg, var(--madder) 0 9px, transparent 9px 48px); will-change: transform; animation: draw 9s linear infinite; } /* atelier-ignore: artwork. One stitch in every 48 */
+@keyframes draw { from { transform: translate3d(calc(var(--sp-48) * -1), 0, 0); } to { transform: translate3d(0, 0, 0); } }
+
+/* a tab changed: what is inside the list and the details is stitched in; the frame holds still (ui.js adds .swapin) */
+.swapin { animation: swapin var(--dur-2) steps(6) both; }
+@keyframes swapin { from { clip-path: inset(0 100% 0 0); opacity: .4; } to { clip-path: inset(0); opacity: 1; } }
+.fadein { animation: fadein var(--dur-1) var(--ease) both; }
+@keyframes fadein { from { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .fl, .toast, .bobbin i.fray, #banner.on .rib, #banner.on .rib::after, #banner.on .rib::before, .rise, .stitchin > div, .stitchin > div::after, .snap .l, .snap .r, .trophies span::after, .swapin, .fadein { animation: none; }
+  .stitchin > div::after { opacity: 0; }
+  #banner, .btn, .card, .tabb, .node, .utile, .tile, .chip, .eq, .rcard, .pcard, .ptile { transition: none; }
+  #wipe, .amb { display: none; }
+  .meters .sp .fill, .fo .bar i, .pw .pt i, .seam i, .ctag .cdr i { transition: none; }
+}

@@ -146,9 +146,13 @@
   P.bfMarks = function (sprites, x, y, r, n, size, rgb, a, kind, rot0, z) {
     for (let k = 0; k < n; k++) { const an = rot0 + k / n * TAU; sprites.add(x + Math.cos(an) * r, y + Math.sin(an) * r, z, size, rgb, a, kind, an + PI / 4); }
   };
-  P.bfBlink = function (p) {   // basting blinks faster as the warning runs out; 0..1 progress through the warning (one shared result: read it before the next call)
-    const o = this.bf.bl, wk = p.warn0 > 0 ? clamp(1 - p.warn / p.warn0, 0, 1) : 1;
-    o.wk = wk; o.on = Math.sin(this.time * (7 + wk * 24)) > -0.3 ? 1 : 0.45; return o;
+  /* How far a warning has run (wk 0..1), how bright its basting is now (on 0.45..1) and how far into its last quarter it is
+     (hot 0..1: the commit, when it no longer pulses and burns steady). It pulses, never strobes: 3 to 8 times a second,
+     smooth, so a large warning is safe to look at. One shared result: read it before the next call. */
+  P.bfBlink = function (p) {
+    const o = this.bf.bl, wk = p.warn0 > 0 ? clamp(1 - p.warn / p.warn0, 0, 1) : 1, hot = clamp((wk - 0.72) / 0.2, 0, 1);
+    o.wk = wk; o.hot = hot; o.ph = (o.ph || 0); const f = 3 + 5 * wk; o.ph = this.time * f * TAU;
+    o.on = hot > 0 ? 0.72 + 0.28 * hot : 0.72 + 0.28 * Math.sin(o.ph); return o;
   };
   /* Remaining hp as a ring of X-stitches: one is unpicked for every share of damage taken. */
   P.bfHp = function (p, x, y, r, z) {
@@ -163,28 +167,48 @@
   P.bfFlash = function (p) { return p.flash > 0 ? Math.min(1, p.flash * 10) : 0; };
 
   // ---------- warnings: basting tacked onto the cloth ----------
+  /* Every boss warning says three things at a glance: where (the shape, tacked out in basting), when (a front that fills
+     the shape as the warning runs, and in its last quarter the basting stops pulsing and burns steady and hot: it is about
+     to land) and, for lanes and cones, which way (chevrons marching along it). Bright cream instead of red with the
+     colour-blind-safe setting. */
   P.bfWarn = function (p, v) {
-    const K = this.bf.K, bl = this.bfBlink(p), t = this.time;
+    const K = this.bf.K, bl = this.bfBlink(p), t = this.time, wk = bl.wk, hot = bl.hot, cb = this.cb;
+    const line = cb ? K.tack : hot > 0 ? K.bastHot : K.bast, dim = cb ? K.linen : K.bastDim, fill = (0.08 + 0.16 * wk + 0.22 * hot) * bl.on;
     if (p.shape === 'seg') {
-      const w = Math.max(0.08, (p.w || 0.25) * 0.5);
-      this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, 0.085, K.bast, 0.95 * bl.on, 2);
-      this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.06, w * 3, K.bastDim, (0.12 + 0.2 * bl.wk) * bl.on, 0);
-      this.spr.add(p.x, p.y, 0.3, 0.5, K.tack, 0.8 * bl.on, 5, 0); this.spr.add(p.x2, p.y2, 0.3, 0.5, K.tack, 0.8 * bl.on, 5, 0);
+      const dx = p.x2 - p.x, dy = p.y2 - p.y, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len, w = Math.max(0.08, (p.w || 0.25) * 0.5), th = Math.atan2(ux, -uy);
+      if (w > 0.22) { const nx = -uy * w, ny = ux * w;   // a lane: both edges basted
+        this.bfLine(this.trN, p.x + nx, p.y + ny, p.x2 + nx, p.y2 + ny, 0.05, 0.075, line, 0.95 * bl.on, 2);
+        this.bfLine(this.trN, p.x - nx, p.y - ny, p.x2 - nx, p.y2 - ny, 0.05, 0.075, line, 0.95 * bl.on, 2);
+      } else this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, 0.085, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.06, w * 2.4, dim, fill, 0);
+      const fx = p.x + dx * wk, fy = p.y + dy * wk;   // the front: how much of the warning has run
+      this.bfLine(this.trA, p.x, p.y, fx, fy, 0.07, Math.min(0.22, w * 0.7), line, 0.35 + 0.4 * hot, 0); this.spr.add(fx, fy, 0.32, 0.55 + 0.3 * hot, line, 0.85, 0);
+      const n = Math.max(1, Math.min(6, Math.floor(len / 1.6)));
+      for (let k = 0; k < n; k++) { const u = ((k + 0.5) / n + t * 0.55) % 1, a = Math.sin(u * PI); this.spr.add(p.x + dx * u, p.y + dy * u, 0.3, Math.min(0.8, 0.45 + w), line, (0.3 + 0.5 * wk) * a, 13, th); }
+      this.spr.add(p.x, p.y, 0.3, 0.5, K.tack, 0.85, 5, 0); this.spr.add(p.x2, p.y2, 0.3, 0.5 + 0.25 * hot, K.tack, 0.85, 5, 0);
     } else if (p.shape === 'row') {
-      const h = p.h || 0.6, x1 = p.x1 === undefined ? -HW : p.x1, x2 = p.x2 === undefined ? HW : p.x2;
-      this.bfLine(this.trN, x1, p.y + h / 2, x2, p.y + h / 2, 0.05, 0.08, K.bast, 0.9 * bl.on, 2);
-      this.bfLine(this.trN, x1, p.y - h / 2, x2, p.y - h / 2, 0.05, 0.08, K.bast, 0.9 * bl.on, 2);
-      this.bfLine(this.trA, x1, p.y, x2, p.y, 0.05, h, K.bastDim, (0.06 + 0.22 * bl.wk) * bl.on, 0);
-      for (let x = x1 + 0.55; x < x2; x += 1.1) this.spr.add(x, p.y, 0.25, Math.min(0.55, h * 0.8), K.tack, 0.55 * bl.on, 5, 0);
+      const h = p.h || 0.6, x1 = p.x1 === undefined ? -HW : p.x1, x2 = p.x2 === undefined ? HW : p.x2, xf = x1 + (x2 - x1) * wk;
+      this.bfLine(this.trN, x1, p.y + h / 2, x2, p.y + h / 2, 0.05, 0.08, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trN, x1, p.y - h / 2, x2, p.y - h / 2, 0.05, 0.08, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trA, x1, p.y, x2, p.y, 0.05, h, dim, fill, 0);
+      this.bfLine(this.trA, x1, p.y, xf, p.y, 0.06, h * 0.55, line, 0.12 + 0.3 * hot, 0);   // the front sweeps along the row
+      this.spr.add(xf, p.y, 0.3, Math.min(0.9, h * 1.1), line, 0.7, 0);
+      for (let x = x1 + 0.55; x < x2; x += 1.1) this.spr.add(x, p.y, 0.25, Math.min(0.55, h * 0.8), K.tack, (0.4 + 0.35 * wk) * bl.on, 5, 0);
     } else if (p.shape === 'cone') {
-      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L0, p.y + Math.sin(a0) * L0, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L1, p.y + Math.sin(a1) * L1, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
+      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L), Lm = clipRay(p.x, p.y, p.a, L), th = Math.atan2(Math.cos(p.a), -Math.sin(p.a));
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L0, p.y + Math.sin(a0) * L0, 0.06, 0.08, line, 0.9 * bl.on, 2);
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L1, p.y + Math.sin(a1) * L1, 0.06, 0.08, line, 0.9 * bl.on, 2);
+      for (let k = 1; k < 4; k++) { const a = a0 + (a1 - a0) * k / 4, Lk = clipRay(p.x, p.y, a, L); this.bfLine(this.trA, p.x, p.y, p.x + Math.cos(a) * Lk, p.y + Math.sin(a) * Lk, 0.06, 0.05 + 0.06 * hot, dim, fill * 1.4, 0); }
+      const R = Math.min(L0, L1, Lm) * wk;   // the front: an arc of basting travelling out from the source
+      if (R > 0.3) { const n = 6; for (let k = 0; k < n; k++) { const b0 = a0 + (a1 - a0) * k / n, b1 = a0 + (a1 - a0) * (k + 1) / n; this.bfLine(this.trN, p.x + Math.cos(b0) * R, p.y + Math.sin(b0) * R, p.x + Math.cos(b1) * R, p.y + Math.sin(b1) * R, 0.07, 0.07, line, 0.8, 2); } }
+      for (let k = 0; k < 3; k++) { const u = ((k + 0.5) / 3 + t * 0.5) % 1, d = Lm * (0.15 + 0.75 * u); this.spr.add(p.x + Math.cos(p.a) * d, p.y + Math.sin(p.a) * d, 0.3, 0.7, line, (0.3 + 0.5 * wk) * Math.sin(u * PI), 13, th); }
+      this.spr.add(p.x, p.y, 0.32, 0.7 + 0.4 * hot, line, 0.9, 0);
     } else {
       const r = p.r || 0.5;
-      this.spr.add(p.x, p.y, 0.3, r * 2.5, K.bast, 0.85 * bl.on, 7, t * 0.8 + v.seed * 6);
-      this.spr.add(p.x, p.y, 0.3, r * 2 * (1 + (1 - bl.wk) * 1.3), K.bastDim, 0.55 * bl.wk, 3);
-      this.spr.add(p.x, p.y, 0.3, Math.min(0.7, r), K.tack, 0.7 * bl.on, 5, 0);
+      this.spr.add(p.x, p.y, 0.3, r * 2.5, line, 0.85 * bl.on, 7, t * 0.8 + v.seed * 6);
+      this.spr.add(p.x, p.y, 0.3, r * 2 * (1 + (1 - wk) * 1.3), line, 0.4 + 0.5 * wk, 10, t * 2);   // a danger rim drawing tight
+      this.spr.add(p.x, p.y, 0.28, r * 2 * Math.max(0.15, wk), dim, fill * 1.6, 9);                 // and the ground it will take filling in
+      this.spr.add(p.x, p.y, 0.3, Math.min(0.7, r), K.tack, 0.8 * bl.on, 5, 0);
     }
   };
 

@@ -1,7 +1,7 @@
 /* String Theory — boot, input, the frame loop and the Night's flow between screens. */
 (function (ST) {
   'use strict';
-  const C = ST.content, STEP = 1 / 60;
+  const C = ST.content, STEP = 1 / 60, PACE = 0.0025;   // PACE: see loop() (perf B2)
 
   // ---------- a very small synth: plucks, like a string ----------
   let ac = null;
@@ -238,6 +238,7 @@
       this.bind();
       this.ui.title();
       requestAnimationFrame(t => this.loop(t));
+      if (ST.Perf) ST.Perf.attach(this);   // ---- perf (B2) ---- warm-up behind the title, first-launch calibration, ?perf=1
     }
     /* Play a sound by name. gain scales it, rate re-pitches it. A sound whose file is missing plays its stand-in; unknown names are silent. */
     /* Android's back button or gesture (called from MainActivity). True = handled here; false = nothing left to go back from,
@@ -296,7 +297,7 @@
       mixMusic(dt, st.sound ? vol * 0.7 * (this.state === 'paused' ? 0.35 : 1) * (filming ? 0.15 : audio.duck > 0 ? 0.45 : 1) : 0);
     }
     saved() { if (this.slot >= 0) this.store.save(this.slot, this.profile); }
-    applySettings() { const st = this.profile.settings; this.renderer.setShadows(st.shadows); const g = st.graphics || 'auto'; if (g !== this.gfx) { this.gfx = g; this.renderer.setQuality(g); } }
+    applySettings() { const st = this.profile.settings; if (ST.Perf) ST.Perf.adopt(this.profile); /* ---- perf (B2): a save without a tier pick takes this phone's ---- */ this.renderer.setShadows(st.shadows); const g = st.graphics || 'auto'; if (g !== this.gfx) { this.gfx = g; this.renderer.setQuality(g); } }
     openPocket(i, name) {
       let p = this.store.load(i); if (!p) p = this.store.create(i, name);
       this.slot = i; this.profile = p; this.saved(); this.applySettings(); this.toTitle();
@@ -433,6 +434,7 @@
     loop(ts) {
       if (this.asleep) return;   // nothing is drawn or stepped while the screen is off; wake() starts the loop again
       requestAnimationFrame(t => this.loop(t));
+      if (ST.Perf && ST.Perf.busy) { this.last = 0; return; }   // ---- perf (B2) ---- the frame test owns the screen while it runs
       const dt = this.last ? Math.min(0.1, (ts - this.last) / 1000) : STEP; this.last = ts; this.frame++;
       if (this.frame % 20 === 0) this.music();
       this.mix(dt);
@@ -447,14 +449,17 @@
           this.acc += dt;
           const t0 = now();
           // at most three steps a frame (covers 20 frames a second): a long frame must not make the next one longer
-          while (this.acc >= STEP && stepped < 3) {
+          // ---- perf (B2) ---- frame times jitter by a millisecond or two around the display's period. A frame that is a hair short
+          // of one step still takes one (the clock may run up to PACE behind and catches up on its own), so a 60Hz screen gets exactly
+          // one step per frame instead of an occasional none-then-two (a visible hitch), and 120Hz alternates cleanly.
+          while (this.acc >= STEP - PACE && stepped < 3) {
             this.acc -= STEP; stepped++;
             this.sim.update(STEP, this.input());
             this.one.notion = -1; this.one.special = false; this.one.dash = 0;
             for (const e of this.sim.events) events.push(e);
             if (this.sim.phase === 'done') { this.acc = 0; break; }
           }
-          if (this.acc > STEP) this.acc = 0;
+          if (this.acc > STEP) this.acc = 0; else if (this.acc < -PACE) this.acc = -PACE;
           P.sim += now() - t0;
         }
         this.drawDt += dt;

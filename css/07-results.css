@@ -1,0 +1,99 @@
+
+/* ============ 9 · results, game over, victory ============ */
+/* a results sheet rises into place, then its lines are stitched on one at a time (ui.js counts the numbers up) */
+.result { gap: var(--sp-12); }
+/* a results sheet that would not fit its screen (large text, a long list) closes itself up in three steps instead of spilling: ui.js fit() */
+.result.fit-1 .tally > div, .result.fit-2 .tally > div, .result.fit-3 .tally > div, .finale.fit-1 .tally > div, .finale.fit-2 .tally > div, .finale.fit-3 .tally > div { min-height: var(--sp-24); padding: 0; }
+.result.fit-1, .result.fit-2, .result.fit-3, .sheet.finale.fit-1, .sheet.finale.fit-2, .sheet.finale.fit-3 { gap: var(--sp-6); }
+.result.fit-2 .pk .cmeta, .result.fit-3 .pk .cmeta, .finale.fit-2 .fnote, .finale.fit-3 .fnote { display: none; }
+.result.fit-2 .pk .card, .result.fit-3 .pk .card { grid-template-areas: "i n p" "i n p"; min-height: var(--tap); padding: var(--sp-2) var(--sp-12); } .result.fit-2 .pk .cname, .result.fit-3 .pk .cname { align-self: center; }
+.result.fit-3 .tally dt, .result.fit-3 .tally dd, .finale.fit-3 .tally dt, .finale.fit-3 .tally dd { font-size: var(--t-floor); } .result.fit-3 .tally .tag, .finale.fit-3 .tally .tag { height: var(--sp-20); font-size: var(--t-floor); }
+.finale.fit-3 .snap, .finale.fit-3 .trophies { display: none; }
+.rhead { display: flex; flex-direction: column; gap: var(--sp-4); }
+.rise { animation: rise var(--dur-4) var(--ease) both; }
+@keyframes rise { from { transform: translateY(var(--sp-48)); opacity: 0; } }
+.stitchin > div { animation: rowin var(--dur-3) var(--ease) both; animation-delay: calc(var(--i, 0) * 90ms + 260ms); } /* atelier-ignore: timing of one stitched line after another */
+.stitchin > div::after { content: ''; position: absolute; left: 0; right: 0; bottom: calc(var(--ln) * -1); height: var(--ln-2); background: var(--pat-thread) left center / 100% var(--ln-2) no-repeat; animation: sew var(--dur-4) steps(12) both; animation-delay: calc(var(--i, 0) * 90ms + 260ms); pointer-events: none; } /* atelier-ignore: timing of one stitched line after another */
+@keyframes rowin { from { opacity: 0; transform: translateY(var(--sp-4)); } }
+@keyframes sew { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 70% { clip-path: inset(0); opacity: 1; } 100% { clip-path: inset(0); opacity: 0; } }
+.done-now .rise, .done-now.stitchin > div, .done-now.stitchin > div::after, .done-now .stitchin > div, .done-now .stitchin > div::after { animation: none; }
+.done-now .stitchin > div::after, .done-now.stitchin > div::after { opacity: 0; }
+/* while a celebration (fireworks, a boss's death) still has the screen, the sheet waits out of sight and the scrim stays clear */
+body.celebrating #toasts { display: none; }   /* notices would sit on top of the fireworks; the results sheet says the same things */
+/* afterglow: a lighter celebration plays on under and round the sheet. The scrim thins to about half at its heart so the show reads,
+   and on a phone the sheet stands a little clear of the screen edge so there is room to see it. */
+body.afterglow .overlay.res { background: radial-gradient(ellipse 85% 70% at 50% 50%, color-mix(in srgb, var(--night) 50%, transparent) 0%, color-mix(in srgb, var(--night) 34%, transparent) 55%, color-mix(in srgb, var(--night) 10%, transparent) 82%, transparent 100%); }
+body.celebrating .overlay.res, body.celebrating.afterglow .overlay.res { background: transparent; pointer-events: none; }   /* after the afterglow rule: a celebration still holding the sheet back wins */
+body.celebrating .overlay.res > * { visibility: hidden; animation-play-state: paused; }
+body.celebrating .overlay.res .stitchin > div, body.celebrating .overlay.res .stitchin > div::after { animation-play-state: paused; }
+/* the quick shop after a wave: a pocket sewn to the sheet, one row per item */
+.pocket { background: var(--umber); padding: var(--sp-12); display: flex; flex-direction: column; gap: var(--sp-8); }
+.pocket .phead { font: 700 var(--t-sm)/var(--lh-tight) var(--text); color: var(--linen); }
+.pk { display: grid; grid-template-columns: 1fr; gap: var(--sp-6); }
+.pk .card { grid-template-columns: var(--sp-40) minmax(0, 1fr) auto; grid-template-rows: auto auto; grid-template-areas: "i n p" "i d p"; align-items: center; gap: 0 var(--sp-12); min-height: var(--ctl); padding: var(--sp-6) var(--sp-12); border: 0; }
+.pk .card .cic { grid-area: i; } .pk .card .cname { grid-area: n; align-self: end; } .pk .cmeta { grid-area: d; white-space: normal; display: block; font-size: var(--t-sm); padding: 0; }
+.pk .card > span:last-child { grid-area: p; display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-2); }
+.pk .why { font: 700 var(--t-floor)/var(--lh-tight) var(--text); color: var(--madder-ink); }
+
+/* ---- game over and victory: not a sheet of paper but the cloth itself, framed ---- */
+/* (it carries .sheet too, so the effects layer finds it the same way it finds a results sheet) */
+.sheet.finale { position: relative; width: min(100%, 560px); max-height: 100%; overflow: hidden; margin: auto; padding: var(--sp-32) var(--sp-24) var(--sp-24); background: var(--pat-cloth), var(--coverlet); color: var(--linen); border: var(--frame) solid var(--umber); outline: var(--ln-2) solid var(--brass); outline-offset: calc(var(--frame) * -1 - var(--ln-2)); box-shadow: 0 var(--sp-16) var(--sp-48) var(--shade); display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--sp-12); } /* atelier-ignore: component width */
+.finale h1 { font: 400 var(--d-2xl)/.9 var(--display); color: var(--linen); text-shadow: 0 var(--sp-4) 0 var(--madder); }
+.finale.won h1 { color: var(--saffron-lit); text-shadow: 0 var(--sp-4) 0 var(--madder-deep); }
+.finale .fsub { font: 700 var(--t-md)/var(--lh-tight) var(--text); color: var(--saffron-hi); }
+.finale .fnote { font: 400 var(--t-body)/var(--lh-read) var(--text); color: var(--mist-hi); max-width: 30em; }
+/* game over: the thread that held the ship, snapped. Two ends hang, a few needle holes between them. */
+.snap { width: min(100%, 320px); height: var(--sp-24); } /* atelier-ignore: component width */
+.snap path { fill: none; stroke: var(--madder-lit); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 9 4; }
+.snap .holes { stroke: var(--dot); stroke-dasharray: 2 7; stroke-width: 2; }
+.snap .l { transform-origin: 0 50%; animation: droopl var(--dur-4) var(--ease) .3s both; } .snap .r { transform-origin: 100% 50%; animation: droopr var(--dur-4) var(--ease) .3s both; }
+@keyframes droopl { from { transform: rotate(-9deg); } } @keyframes droopr { from { transform: rotate(9deg); } }
+/* victory: the eight bosses, each crossed off in red thread */
+.trophies { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--sp-4); width: 100%; }
+.trophies span { position: relative; aspect-ratio: 1; display: grid; place-items: center; background: var(--night); border: var(--ln) solid var(--brass); }
+.trophies .ic { width: 78%; height: auto; max-height: 78%; }
+.trophies span::after { content: ''; position: absolute; inset: 6%; background: linear-gradient(45deg, transparent 46%, var(--madder-lit) 46% 54%, transparent 54%), linear-gradient(135deg, transparent 46%, var(--madder) 46% 54%, transparent 54%); opacity: .95; animation: crossoff var(--dur-2) var(--ease) both; animation-delay: calc(var(--i, 0) * 110ms + 500ms); } /* atelier-ignore: timing of one cross after another */
+@keyframes crossoff { from { opacity: 0; transform: scale(1.6); } }
+.fscore { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); }
+.fscore .score { font-size: var(--d-xl); }
+.fscore em { font: 700 var(--t-sm)/var(--lh-tight) var(--text); font-style: normal; color: var(--saffron-hi); }
+.finale .tally { width: 100%; border-top: var(--ln-2) dashed var(--line-dark); text-align: left; }
+.finale .tally > div { border-bottom: var(--ln) dotted var(--dot); min-height: var(--sp-32); padding: var(--sp-2) 0; }
+.finale .tally dt { color: var(--mist-hi); } .finale .tally dd { color: var(--linen); }
+.credits { width: 100%; display: grid; gap: var(--sp-2); padding-top: var(--sp-8); border-top: var(--ln) dashed var(--line-dark); }
+.credits div { display: flex; justify-content: center; align-items: baseline; gap: var(--sp-8); }
+.credits dt { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--mist-hi); }
+.credits dd { font: 700 var(--t-sm)/var(--lh-snug) var(--text); color: var(--linen); }
+
+/* wide and sideways screens: a wave tally with its quick shop sits in two columns */
+@media (min-aspect-ratio: 1/1) and (min-height: 501px) { /* atelier-ignore: breakpoint wide */
+  .sheet.result.withpk { width: min(100%, 960px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "h t" "k t" "b t"; grid-template-rows: auto 1fr auto; gap: var(--sp-12) var(--sp-24); } /* atelier-ignore: component width */
+  .result.withpk .rhead { grid-area: h; } .result.withpk .tally { grid-area: t; align-self: start; } .result.withpk .pocket { grid-area: k; align-self: start; } .result.withpk > .row { grid-area: b; justify-content: flex-start; }
+}
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .overlay.res { padding: max(var(--sp-24), var(--safe-t)) max(var(--sp-16), var(--safe-r)) max(var(--sp-24), var(--safe-b)) max(var(--sp-16), var(--safe-l)); }
+  .sheet.finale { padding: var(--sp-24) var(--sp-16) var(--sp-16); }
+  .finale h1 { font-size: var(--d-xl); }
+}
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint SHORT */
+  .result { gap: var(--sp-8); }
+  .result.withpk .tally > div { min-height: var(--sp-24); padding: 0; gap: var(--sp-8); }
+  .result.withpk .tally dt { font-size: var(--t-sm); } .result.withpk .tally dd { font-size: var(--t-body); } .result.withpk .tally .tag { height: var(--sp-20); font-size: var(--t-sm); }
+  .result.withpk .pocket { padding: var(--sp-8); gap: var(--sp-6); }
+  .result.withpk .pk .card { grid-template-areas: "i n p" "i n p"; min-height: var(--tap); padding: var(--sp-2) var(--sp-12); } .result.withpk .pk .cmeta { display: none; } .result.withpk .pk .cname { align-self: center; }
+  .sheet.finale { padding: var(--sp-16) var(--sp-12) var(--sp-12); gap: var(--sp-8); }
+  .finale .fscore .score { font-size: var(--d-lg); }
+  .finale .tally > div { min-height: var(--sp-24); padding: 0; }
+  .finale .fnote { font-size: var(--t-sm); line-height: var(--lh-snug); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .sheet.result { width: min(100%, 820px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "h t" "k t" "b t"; grid-template-rows: auto 1fr auto; gap: var(--sp-8) var(--sp-24); } /* atelier-ignore: component width */
+  .result .rhead { grid-area: h; } .result .tally { grid-area: t; align-self: start; } .result .pocket { grid-area: k; align-self: start; padding: var(--sp-6); gap: var(--sp-4); } .result > .row { grid-area: b; justify-content: flex-start; }
+  .result .pk { gap: var(--sp-4); } .result .pk .card { grid-template-areas: "i n p" "i n p"; min-height: var(--tap); padding: var(--sp-2) var(--sp-8); } .result .pk .cmeta { display: none; } .result .pk .cname { align-self: center; }
+  /* game over and victory: the name and score on one side, the lines on the other */
+  .sheet.finale { width: min(100%, 820px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-areas: "art list" "title list" "sub list" "score list" "note cred" "row row"; align-items: center; justify-items: center; gap: var(--sp-4) var(--sp-24); padding: var(--sp-12) var(--sp-20); } /* atelier-ignore: component width */
+  .finale h1 { grid-area: title; font-size: var(--d-xl); } .finale .fsub { grid-area: sub; } .finale .snap, .finale .trophies { grid-area: art; } .finale .fscore { grid-area: score; } .finale .tally { grid-area: list; align-self: center; }
+  .finale .fnote { grid-area: note; font-size: var(--t-sm); line-height: var(--lh-snug); } .finale .credits { grid-area: cred; border: 0; padding: 0; } .finale > .row { grid-area: row; }
+  .finale .tally > div { min-height: var(--sp-24); padding: 0; } .finale .fscore .score { font-size: var(--d-lg); }
+  .finale .btn { min-height: var(--tap); }
+}

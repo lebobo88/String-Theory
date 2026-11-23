@@ -93,7 +93,8 @@ def run_case(b, base, case, size, quality, fails, notes, reduced=False):
         pg.evaluate('window.__skipDraw = true'); pg.clock.run_for(max(0, ms - 17)); pg.evaluate('window.__skipDraw = false'); pg.clock.run_for(min(ms, 17))
     def blind(ms):  # advance without drawing at all (the game still runs every frame)
         pg.evaluate('window.__skipDraw = true'); pg.clock.run_for(ms); pg.evaluate('window.__skipDraw = false')
-    tick(100); pg.click('text=Play'); tick(200); pg.click('.btn:has-text("Start a new game")'); tick(200); pg.wait_for_selector('text=Start run')
+    tick(100); pg.evaluate("() => { try { if (ST.Cine && ST.Cine.active) ST.Cine.skip(); } catch (e) { /* no film */ } }"); tick(100)   # the title film (src/films/title.js) plays at launch; a tap would skip it
+    pg.click('text=Play'); tick(200); pg.click('.btn:has-text("Start a new game")'); tick(200); pg.wait_for_selector('text=Start run')
     pg.evaluate("() => { const g = ST.game; g.profile.codex.taught = true; g.profile.settings.sound = true; g.openHem(false); }"); tick(200)
     pg.click('.btn:has-text("Start run")'); tick(400); pg.wait_for_selector('.route'); pg.locator('[data-act=fly]:visible').first.click(); tick(300)
     pg.wait_for_function('ST.game.state === "flight"'); tick(600)

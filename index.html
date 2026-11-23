@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0F1428">
 <title>String Theory</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;600&amp;family=Atkinson+Hyperlegible+Next:wght@400;500;700;800&amp;family=Jacquard+24&amp;display=swap">
+<!-- the game's typefaces ship in fonts/ (OFL, licences beside them) and are declared in style.css; nothing is fetched from the network.
+     The two seen first are fetched early: the bold that every button and label uses, and the display face of the name. -->
+<link rel="preload" href="fonts/atkinson-next-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/jacquard-24-400.woff2" as="font" type="font/woff2" crossorigin>
 <!-- build:css -->
 <link rel="stylesheet" href="style.css">
 <!-- /build:css -->
@@ -57,19 +59,18 @@
 <script src="src/films/king.js"></script>
 <script src="src/films/title.js"></script>
 <script src="src/films/ending.js"></script>
+<script src="src/perf.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>
 <!-- /build:js -->
 <script type="module">
-  // Three.js r170: a local copy first (offline / packaged builds), then the CDNs.
-  const urls = ['./vendor/three.module.min.js', 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js', 'https://unpkg.com/three@0.170.0/build/three.module.min.js'];
+  // Three.js r170 from the game's own copy in vendor/: the game runs offline and fetches nothing from the network.
   let THREE = window.__THREE_STUB__ || null;
-  try { if (!THREE) THREE = await import(urls[0]); } catch (e) { THREE = null; }
+  try { if (!THREE) THREE = await import('./vendor/three.module.min.js'); } catch (e) { THREE = null; }
   if (!THREE) {   // opened straight from disk: module imports of local files are blocked, a plain script is not
     await new Promise(done => { const s = document.createElement('script'); s.src = './vendor/three.global.js'; s.onload = s.onerror = done; document.head.appendChild(s); });
     THREE = window.THREE || null;
   }
-  for (const u of urls.slice(1)) { if (THREE) break; try { THREE = await import(u); } catch (e) { THREE = null; } }
   window.ST.boot(THREE);
 </script>
 </body>

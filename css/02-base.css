@@ -1,0 +1,67 @@
+
+/* ============ 3 · base ============ */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--night); color: var(--linen); font: 400 var(--t-md)/var(--lh-read) var(--text); overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button { font: inherit; color: inherit; cursor: pointer; margin: 0; }
+h1, h2, h3, p, dl, dd, ol, ul { margin: 0; padding: 0; }
+ol, ul { list-style: none; }
+kbd { display: inline-flex; align-items: center; justify-content: center; min-width: var(--sp-24); height: var(--sp-24); padding: 0 var(--sp-6); background: var(--linen); color: var(--ink); font: 600 var(--t-cap)/1 var(--mono); border-radius: var(--r-2); box-shadow: 0 var(--sp-2) 0 var(--rule); }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; } /* atelier-ignore: the one place a family is set on its own, so a number keeps the size of the text round it */
+.big { font-size: var(--d-sm); line-height: var(--lh-tight); }
+.dim { color: var(--mist-hi); }
+.paper .dim, .sheet .dim, .hem .dim { color: var(--ink-2); }
+.small { font-size: var(--t-sm); }
+.ic { display: inline-block; vertical-align: middle; overflow: visible; flex: none; }
+.arr { display: inline-block; width: .9em; height: .7em; vertical-align: baseline; flex: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* a short uppercase label. Never used for a sentence. */
+.lab, .eyebrow { font: 700 var(--t-cap)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; }
+.lab { color: var(--saffron-hi); }
+.eyebrow { color: var(--ink-2); }
+.night .eyebrow { color: var(--mist-hi); }
+
+/* ============ 4 · parts ============ */
+/* ---- buttons: a running-stitch outline; the main one is a patch of red felt with a line of stitching inside its edge ---- */
+.btn { position: relative; min-height: var(--ctl); padding: 0 var(--sp-20); display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-8); font: 700 var(--t-md)/var(--lh-tight) var(--text); background: transparent; border: var(--ln-2) dashed currentColor; color: inherit; text-align: center; transition: transform var(--dur-1) var(--ease); }
+.btn.primary { background: var(--madder); color: var(--paper); border: var(--ln-2) solid var(--madder); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--madder) inset; }
+.btn.danger { color: var(--madder-ink); }
+.night .btn.danger { color: var(--madder-hi); }
+.btn:active:not(:disabled), .card:active:not(:disabled), .tabb:active, .node:active, .utile:active, .tile:active, .chip:active, .rcard:active, .pcard:active, .eq:active:not(:disabled) { transform: scale(.975); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.nope { border: var(--ln-2) dashed var(--madder-ink); color: var(--madder-ink); background: transparent; box-shadow: none; }
+:is(.btn, .card, .tabb, .node, .chip, .tile, .utile, .setrow, .eq, .rcard, .pcard, .ptile, .slot, .mpause, .sp):focus-visible { outline: var(--ln-3) solid var(--saffron); outline-offset: var(--sp-2); }
+.chip { min-height: var(--ctl); padding: 0 var(--sp-16); font: 700 var(--t-body)/var(--lh-tight) var(--text); background: transparent; border: var(--ln) dashed var(--mist); color: var(--mist-hi); transition: transform var(--dur-1) var(--ease); }
+.paper .chip { border-color: var(--ink-2); color: var(--ink-2); }
+/* ---- a price tag off a thread card: coin or gem, then the number ---- */
+.tag { display: inline-flex; align-items: center; gap: var(--sp-6); height: var(--sp-32); padding: 0 var(--sp-12) 0 var(--sp-20); background: var(--paper); color: var(--ink); clip-path: polygon(var(--sp-12) 0, 100% 0, 100% 100%, var(--sp-12) 100%, 0 50%); font: 600 var(--t-md)/1 var(--mono); font-variant-numeric: tabular-nums; vertical-align: middle; white-space: nowrap; flex: none; }
+.tag b { font-weight: 600; white-space: nowrap; }
+.tag.sm { height: var(--sp-20); padding: 0 var(--sp-6) 0 var(--sp-12); clip-path: polygon(var(--sp-8) 0, 100% 0, 100% 100%, var(--sp-8) 100%, 0 50%); font-size: var(--t-sm); gap: var(--sp-4); }
+.tag.sm .ic { width: var(--sp-16); height: auto; }
+.btn .tag { background: var(--paper); color: var(--ink); }
+/* ---- tabs: plain labels on a ruled band; the open one is inked in ---- */
+.tabs { display: flex; gap: var(--sp-4); }
+.tabb { flex: 1 1 auto; min-width: var(--tap); min-height: var(--tap); padding: var(--sp-4) var(--sp-12); background: transparent; border: var(--ln) dashed var(--rule); color: var(--ink); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; transition: transform var(--dur-1) var(--ease); }
+.tabb b { font: 700 var(--t-md)/var(--lh-tight) var(--text); }
+.tabb span { font: 400 var(--t-cap)/var(--lh-tight) var(--text); color: var(--ink-2); }
+.tabb.on { background: var(--ink); color: var(--paper); border: var(--ln) solid var(--ink); }
+.tabb.on span { color: var(--linen); }
+/* ---- stitched level marks ---- */
+.pips { display: inline-flex; gap: var(--sp-2); vertical-align: middle; }
+.pips i { width: var(--sp-12); height: var(--sp-12); border: var(--ln) dashed var(--rule); }
+.pips i.on { border: 0; background: var(--pat-cross); }
+.pips i.next { border: var(--ln) solid var(--leaf); }
+/* ---- a spool of thread in its weapon's colour ---- */
+.spool { position: relative; display: inline-block; width: var(--sp-20); height: var(--sp-24); border-radius: var(--r-1); background: repeating-linear-gradient(0deg, var(--c) 0 3px, color-mix(in srgb, black 25%, transparent) 3px 4px); border-top: var(--sp-4) solid var(--brass); border-bottom: var(--sp-4) solid var(--brass); flex: none; } /* atelier-ignore: artwork. Wound thread */
+/* ---- the shield, drawn as thread wound on a bobbin between two brass flanges ---- */
+.bobbin { position: relative; display: inline-flex; gap: var(--sp-2); padding: 0 var(--sp-8); height: var(--sp-24); align-items: stretch; vertical-align: middle; }
+.bobbin::before, .bobbin::after { content: ''; position: absolute; top: 0; bottom: 0; width: var(--sp-4); background: var(--brass); }
+.bobbin::before { left: 0; } .bobbin::after { right: 0; }
+.bobbin i { width: var(--sp-16); border: var(--ln) dashed var(--mist); }
+.bobbin i.on { border: 0; background: var(--pat-thread-fine); }
+.bobbin i.fray { border: 0; background: repeating-linear-gradient(60deg, var(--madder-hi) 0 4px, var(--madder) 4px 6px); animation: fray .5s steps(2) infinite; } /* atelier-ignore: artwork. The last shield, fraying */
+@keyframes fray { 50% { transform: skewX(-8deg); } }
+/* ---- a pin cushion of lives (wide screens) ---- */
+.cushion { display: flex; gap: var(--sp-6); min-height: var(--sp-32); align-items: flex-end; padding: 0 var(--sp-8); border-bottom: var(--sp-12) solid var(--madder); width: max-content; min-width: var(--sp-64); }
+.cushion i { width: var(--ln-3); height: var(--sp-24); background: var(--linen); position: relative; transform: rotate(8deg); }
+.cushion i::before { content: ''; position: absolute; top: calc(var(--sp-6) * -1); left: calc(var(--sp-4) * -1 + var(--ln)); width: var(--sp-8); height: var(--sp-8); border-radius: var(--r-round); background: var(--saffron); }
+.cushion i:nth-child(2n) { transform: rotate(-10deg); } .cushion i:nth-child(2n)::before { background: var(--madder-lit); }

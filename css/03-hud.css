@@ -1,0 +1,155 @@
+
+/* ============ 5 · flight: the cloth and its HUD ============ */
+#stage { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(var(--hud-side), 1fr) minmax(0, calc(100vh * .78)) minmax(var(--hud-side), 1fr); }
+#field { position: relative; min-width: 0; min-height: 0; --top: var(--hud-top); --bot: var(--hud-bot); }
+#cloth { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+/* the renderer fits the cloth to this box: the open space between the status row and the item row */
+.clothbox { position: absolute; left: 0; right: 0; top: var(--top); bottom: var(--bot); visibility: hidden; pointer-events: none; }
+.hud { padding: max(var(--sp-20), var(--safe-t)) max(var(--sp-24), var(--safe-r)) max(var(--sp-20), calc(var(--safe-b) + var(--sp-12))) max(var(--sp-24), var(--safe-l)); overflow: hidden; visibility: hidden; display: flex; flex-direction: column; }
+body.flying .hud { visibility: visible; }
+#hudL { align-items: flex-end; text-align: right; gap: var(--sp-4); }
+#hudR { display: flex; flex-direction: column; gap: var(--sp-4); }
+.hud .lab { margin-top: var(--sp-8); }
+.wm { font: 400 var(--d-md)/1 var(--display); color: var(--linen); }
+.score { font: 400 var(--d-xl)/.95 var(--display); color: var(--linen); white-space: nowrap; }
+.nchart { border-collapse: separate; border-spacing: var(--ln-3); margin-left: auto; }
+.nchart th { font: 600 var(--t-cap)/1 var(--mono); color: var(--mist-hi); padding: 0 var(--sp-2); }
+.nchart td { width: var(--sp-16); height: var(--sp-16); padding: 0; border: var(--ln) dotted var(--dot); }
+.nchart td.done { border: 0; background: var(--patch) var(--pat-cross); }
+.nchart td.cur { border: var(--ln) dashed var(--saffron); background: color-mix(in srgb, var(--saffron) 12%, transparent); }
+.hud hr { width: 100%; border: 0; border-top: var(--ln) dashed var(--dot); margin: var(--sp-12) 0 var(--sp-8); }
+.thread { display: flex; align-items: center; gap: var(--sp-8); }
+.thread div { display: flex; flex-direction: column; text-align: left; }
+.thread b { font: 700 var(--t-md)/var(--lh-tight) var(--text); }
+.thread span { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--mist-hi); }
+#hudL .thread { flex-direction: row-reverse; } #hudL .thread div { text-align: right; }
+.cur { display: flex; align-items: center; gap: var(--sp-8); }
+.hbest, .rspares { color: var(--linen); }
+.hstage, .cn { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--mist-hi); }
+#hudL .dscore { margin: var(--sp-8) var(--sp-16) var(--sp-4) 0; }
+#hudL .crow { display: flex; align-items: center; justify-content: flex-end; gap: var(--sp-12); margin: var(--sp-12) 0 var(--sp-2); }
+#mtop { display: none; }
+.mpause { display: none; }
+
+/* ---- the combo: thread wound round the score, and a paper label with the multiplier ---- */
+.wound { position: relative; display: inline-block; line-height: 1; padding: 0 var(--sp-2); }
+.wound .score { position: relative; z-index: var(--z-1); display: block; }
+.wound svg { position: absolute; left: -14%; top: -22%; width: 128%; height: 144%; overflow: visible; pointer-events: none; }
+.wound .wb { z-index: var(--z-0); } .wound .wf { z-index: var(--z-2); }
+.wound path { fill: none; stroke-width: 1.8; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.wound .wb path { stroke: var(--ochre); stroke-width: 1.5; } .wound .wf path { stroke: var(--saffron); stroke-dasharray: 5 1.2; }
+.wound .t { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; } .wound .t.on { opacity: 1; }
+.ctag { position: relative; display: inline-flex; align-items: center; height: var(--sp-24); padding: 0 var(--sp-8) var(--sp-2) var(--sp-16); background: radial-gradient(circle at var(--sp-8) 50%, var(--coverlet) 0 var(--sp-2), transparent calc(var(--sp-2) + .6px)), var(--paper); color: var(--ink);
+  clip-path: polygon(var(--sp-6) 0, 100% 0, 100% 100%, var(--sp-6) 100%, 0 50%); opacity: .38; transform-origin: 0 50%; flex: none; }
+.ctag.on { opacity: 1; }
+.ctag b { font: 600 var(--t-sm)/1 var(--mono); font-variant-numeric: tabular-nums; }
+.ctag .cdr { position: absolute; left: var(--sp-12); right: var(--sp-6); bottom: var(--sp-2); height: var(--sp-2); background: color-mix(in srgb, var(--ink) 14%, transparent); }
+.ctag .cdr i { display: block; height: 100%; background: var(--madder); }
+#hudL .ctag { height: var(--tap); padding: 0 var(--sp-16) var(--sp-4) var(--sp-24); clip-path: polygon(var(--sp-12) 0, 100% 0, 100% 100%, var(--sp-12) 100%, 0 50%); background: radial-gradient(circle at var(--sp-12) 50%, var(--night) 0 var(--ln-3), transparent calc(var(--ln-3) + .6px)), var(--paper); }
+#hudL .ctag b { font: 400 var(--d-md)/1 var(--display); color: var(--saffron-ink); }
+#hudL .ctag .cdr { left: var(--sp-20); right: var(--sp-8); bottom: var(--sp-6); height: var(--ln-3); }
+/* bars move by transform, never by width, so the ten-a-second HUD never lays out */
+.meters .sp .fill, .fo .bar i, .pw .pt i, .seam i, .ctag .cdr i { transform-origin: 0 50%; transform: scaleX(0); transition: transform .1s linear; will-change: transform; }
+
+/* ---- power-ups: a stitched badge each; the thread under it shortens as it runs out ---- */
+#mfx { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-6); margin: var(--sp-12) 0; align-content: start; }
+.pw { position: relative; display: grid; grid-template-columns: var(--sp-24) minmax(0, 1fr) auto; align-items: center; gap: var(--sp-6); height: var(--badge-h); padding: 0 var(--sp-8) var(--sp-4); background: var(--coverlet); border: var(--ln) dashed var(--c); color: var(--linen); }
+.pw .ic { justify-self: center; }
+.pw .pn { font: 700 var(--t-cap)/1.1 var(--text); max-height: 2.2em; overflow: hidden; }
+.pw .ps { font: 600 var(--t-cap)/1 var(--mono); color: var(--mist-hi); white-space: nowrap; }
+.pw em { position: absolute; top: var(--sp-2); left: var(--sp-20); font: 600 var(--t-floor)/1 var(--mono); font-style: normal; color: var(--paper); text-shadow: 0 1px 0 var(--night); }
+.pw em:empty { display: none; }
+.pw .pt { position: absolute; left: var(--sp-4); right: var(--sp-4); bottom: var(--sp-2); height: var(--ln-3); background: color-mix(in srgb, var(--linen) 12%, transparent); }
+.pw .pt i { display: block; height: 100%; background: var(--c); }
+.pw.up { border: var(--ln-3) double var(--saffron); } .pw.up .pn { color: var(--saffron-hi); }
+
+/* ---- meters: the special is a button; slow and dash are threads ---- */
+#tray { margin-top: auto; }
+.meters { display: flex; flex-direction: column; gap: var(--sp-6); margin-bottom: var(--sp-12); }
+.meters .sp { position: relative; height: var(--tap); display: flex; align-items: center; padding: 0 var(--sp-12); background: var(--coverlet); border: var(--ln) solid var(--line-dark); color: var(--linen); font: 700 var(--t-sm)/1 var(--text); overflow: hidden; white-space: nowrap; pointer-events: auto; text-align: left; }
+.meters .sp .fill { position: absolute; inset: 0; background: var(--pat-thread-fine); opacity: .85; }
+.meters .sp span { position: relative; z-index: var(--z-1); overflow: hidden; text-overflow: ellipsis; text-shadow: 0 1px 0 var(--night), 0 0 var(--sp-4) var(--night); }
+/* ready: the frame turns to gold thread and the label says so. No glow. */
+.meters .sp.ready { border: var(--ln-3) double var(--saffron); color: var(--saffron-hi); }
+.meters .sp.ready .fill { background: var(--pat-gold-fine); opacity: .3; }
+.meters .mm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-6); }
+.meters .mm .fo, .meters .mm .da { position: relative; display: flex; align-items: center; gap: var(--sp-8); height: var(--sp-32); padding: 0 var(--sp-8); background: var(--coverlet); border: var(--ln) solid var(--line-dark); color: var(--linen); font: 700 var(--t-cap)/1 var(--text); white-space: nowrap; }
+.meters .mm .fo.on { border-color: var(--mist-hi); }
+.fo .bar { position: relative; flex: 1; min-width: var(--sp-32); height: var(--sp-6); background: var(--pat-holes) center / 100% var(--ln-2) no-repeat; }
+.meters .fo .bar i { position: absolute; inset: 0; background: var(--pat-mist-fine); }
+.meters .fo.on .bar i { background: var(--paper); }
+.dp { display: inline-flex; gap: var(--sp-4); }
+.meters .dp i { width: var(--sp-12); height: var(--sp-8); border: var(--ln) dashed var(--mist); }
+.meters .dp i.on { border: 0; background: var(--saffron); }
+.slots { display: flex; gap: var(--sp-8); flex-wrap: wrap; }
+.slot { position: relative; width: var(--slot-w); height: var(--slot-h); border: var(--ln) dashed var(--dot); background: var(--coverlet); display: inline-flex; align-items: center; justify-content: center; padding: 0; color: var(--linen); }
+.slot kbd { position: absolute; bottom: calc(var(--sp-8) * -1); left: 50%; transform: translateX(-50%); height: var(--sp-16); min-width: var(--sp-16); }
+.slot em { position: absolute; top: var(--sp-2); right: var(--sp-4); font: 600 var(--t-floor)/1 var(--mono); font-style: normal; color: var(--saffron-hi); }
+.slot.txt { font: 700 var(--t-cap)/1 var(--text); color: var(--mist-hi); }
+.slot.pz { flex-direction: column; gap: var(--sp-2); } .slot.pz .pzi { display: none; gap: var(--sp-4); } .slot.pz .pzi i { width: var(--sp-4); height: var(--sp-16); background: var(--linen); }
+button.slot:active { border-color: var(--saffron); }
+
+/* ---- boss health and the bonus count: lettering and a line of thread set straight on the cloth. Nothing solid behind them:
+   a shadow under the letters and a wash that fades to nothing keep them readable over a busy scene. ---- */
+#bossbar { position: absolute; left: 6%; right: 6%; top: var(--sp-12); z-index: var(--z-status); pointer-events: none; }
+#bossbar:not(.on) { visibility: hidden; }
+.bb { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name tag" "seam seam"; align-items: baseline; gap: var(--sp-2) var(--sp-12); isolation: isolate; }
+.bb::before { content: ''; position: absolute; z-index: -1; inset: calc(var(--sp-16) * -1) calc(var(--sp-32) * -1) calc(var(--sp-20) * -1); background: radial-gradient(ellipse 50% 50% at 50% 46%, color-mix(in srgb, var(--night) 62%, transparent), color-mix(in srgb, var(--night) 34%, transparent) 55%, transparent 100%); }
+.bb b { grid-area: name; font: 400 var(--d-md)/1 var(--display); color: var(--linen); text-shadow: 0 var(--sp-2) 0 var(--night), 0 0 var(--sp-8) var(--night), 0 0 var(--sp-2) var(--night); white-space: nowrap; overflow: hidden; text-overflow: clip; min-width: 0; }
+.bb span { grid-area: tag; font: 700 var(--t-cap)/var(--lh-tight) var(--text); color: var(--saffron-hi); text-align: right; text-shadow: 0 1px 0 var(--night), 0 0 var(--sp-6) var(--night), 0 0 var(--sp-2) var(--night); }
+/* the thread: needle holes along the whole seam, red stitches as far as the health reaches, a knot at the far end */
+.seam { grid-area: seam; position: relative; height: var(--sp-12); background: var(--pat-holes) center / 100% var(--ln-2) no-repeat; filter: drop-shadow(0 1px 0 var(--night)) drop-shadow(0 0 var(--sp-2) var(--night)); }
+.seam i { display: block; width: 100%; height: 100%; background: var(--pat-thread) center / 100% var(--sp-6) no-repeat; transition-duration: .15s; }
+.seam::after { content: ''; position: absolute; right: calc(var(--sp-4) * -1); top: 50%; width: var(--sp-8); height: var(--sp-8); margin-top: calc(var(--sp-4) * -1); background: var(--pat-cross); }
+.bb.bonus b { color: var(--saffron-lit); }
+.bb.bonus .seam i { background-image: repeating-linear-gradient(90deg, var(--saffron) 0 9px, transparent 9px 13px); } /* atelier-ignore: artwork. Gold running stitch */
+
+/* ---- ribbon banner, floating numbers, notices ---- */
+#banner { position: absolute; left: 0; right: 0; top: 36%; display: flex; justify-content: center; pointer-events: none; opacity: 0; transform: translateY(var(--sp-8)); transition: opacity var(--dur-2), transform var(--dur-2); }
+#banner.on { opacity: 1; transform: none; }
+.rib { position: relative; overflow: hidden; background: var(--paper); color: var(--ink); padding: var(--sp-8) var(--sp-32); text-align: center; display: flex; flex-direction: column; clip-path: polygon(0 0, 100% 0, calc(100% - var(--sp-12)) 50%, 100% 100%, 0 100%, var(--sp-12) 50%); box-shadow: 0 0 0 var(--ln-2) var(--ink) inset; }
+.rib span { font: 700 var(--t-cap)/var(--lh-tight) var(--text); color: var(--ink-2); }
+.rib b { font: 400 var(--d-lg)/1 var(--display); }
+#banner.on .rib { animation: ribin var(--dur-4) var(--ease) both; }
+#banner.on .rib::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, color-mix(in srgb, var(--cream) 90%, transparent) 50%, transparent 65%); animation: ribshine .9s .15s ease-out both; pointer-events: none; }
+#banner.on .rib::before { content: ''; position: absolute; left: var(--sp-16); right: var(--sp-16); top: var(--sp-4); border-top: var(--ln-2) dashed var(--madder); animation: ribsew var(--dur-4) .1s steps(14) both; }
+@keyframes ribin { 0% { transform: scaleX(.15) scaleY(.6); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
+@keyframes ribshine { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes ribsew { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+#floaters { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.fl { position: absolute; font: 600 var(--t-body)/1 var(--mono); color: var(--linen); transform: translate(-50%, -50%); animation: fl .8s ease-out forwards; text-shadow: 0 1px 0 var(--night); }
+.fl.hot { color: var(--saffron-lit); font-size: var(--t-lg); } .fl.silk { color: var(--paper); }
+@keyframes fl { 0% { transform: translate(-50%, -50%) scale(.5); opacity: 0; } 14% { transform: translate(-50%, -85%) scale(1.3); opacity: 1; } 30% { transform: translate(-50%, -100%) scale(1); } 100% { transform: translate(-50%, -200%) scale(.95); opacity: 0; } }
+#toasts { position: fixed; left: calc(var(--sp-12) + var(--safe-l)); bottom: calc(var(--sp-16) + var(--safe-b)); display: flex; flex-direction: column; gap: var(--sp-6); align-items: flex-start; pointer-events: none; z-index: var(--z-toast); width: min(240px, 30vw); } /* atelier-ignore: component width */
+body.sheeted #toasts { display: none; }
+.toast { background: var(--paper); color: var(--ink); padding: var(--sp-8) var(--sp-12); border: var(--ln) dashed var(--ink); display: flex; flex-direction: column; align-items: flex-start; text-align: left; animation: tin var(--dur-2) var(--ease); transition: opacity .4s; }
+.toast b { font: 700 var(--t-body)/var(--lh-snug) var(--text); } .toast span { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--ink-2); } .toast.out { opacity: 0; }
+@keyframes tin { from { transform: translateY(var(--sp-8)); opacity: 0; } }
+
+/* ---- the lesson prompt (first flight): two lines set on the cloth just under the status row, where the boss's name will sit later.
+   No box. It lets touches through and steps aside for a banner. ---- */
+#coach { position: absolute; left: 50%; top: var(--sp-12); z-index: var(--z-prompt); transform: translateX(-50%); width: max-content; max-width: min(88%, 420px); display: none; flex-direction: column; align-items: center; text-align: center; gap: var(--sp-2); padding: var(--sp-4) var(--sp-12); pointer-events: none; transition: opacity var(--dur-1); isolation: isolate; } /* atelier-ignore: component width */
+#coach::before { content: ''; position: absolute; z-index: -1; inset: calc(var(--sp-12) * -1) calc(var(--sp-32) * -1) calc(var(--sp-16) * -1); background: radial-gradient(ellipse 50% 50% at 50% 50%, color-mix(in srgb, var(--night) 66%, transparent), color-mix(in srgb, var(--night) 36%, transparent) 55%, transparent 100%); }
+#coach::after { content: ''; width: var(--sp-48); height: var(--ln-2); margin-top: var(--sp-2); background: var(--pat-gold-fine); }
+#coach.on { display: flex; } body:not(.flying) #coach { display: none; }
+#coach b { font: 700 var(--t-md)/var(--lh-tight) var(--text); color: var(--linen); text-shadow: 0 1px 0 var(--night), 0 0 var(--sp-6) var(--night); }
+#coach span { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--mist-hi); text-shadow: 0 1px 0 var(--night), 0 0 var(--sp-6) var(--night); }
+#banner.on ~ #coach { opacity: 0; }
+body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a menu or a results sheet it waits */
+#bossbar.on ~ #coach { transform: translate(-50%, var(--sp-64)); }   /* a boss or a bonus wave has the top line: the prompt sits under it */
+#fps { position: absolute; left: var(--sp-6); bottom: calc(max(var(--bot, 0px), var(--safe-b)) + var(--sp-6)); z-index: var(--z-readout); font: 600 var(--t-floor)/1.35 var(--mono); white-space: pre; color: var(--paper); background: var(--night); padding: var(--sp-2) var(--sp-6); pointer-events: none; display: none; }
+#flyers { position: fixed; inset: 0; z-index: var(--z-fly); pointer-events: none; overflow: hidden; }
+.coinfly { position: absolute; left: 0; top: 0; display: block; line-height: 0; filter: drop-shadow(0 var(--sp-2) 0 var(--shade)); }
+/* between screens a length of linen is drawn off to the side, its hem stitched */
+#wipe { position: fixed; inset: 0 calc(var(--sp-40) * -1) 0 0; z-index: var(--z-wipe); pointer-events: none; transform: translateX(104%); background: var(--pat-chart), var(--linen); box-shadow: calc(var(--sp-16) * -1) 0 var(--sp-32) var(--shade); }
+#wipe::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--sp-8); background: var(--umber); }
+#wipe::after { content: ''; position: absolute; left: var(--sp-16); top: 0; bottom: 0; border-left: var(--ln-3) dashed var(--madder); }
+
+/* wide screens: more than eight power-ups at once fold into picture-only badges; names drop under 1240 wide */
+@media (max-width: 1240px) { .pw .ps { display: none; } .pw { grid-template-columns: var(--sp-24) minmax(0, 1fr); } } /* atelier-ignore: breakpoint */
+@media (min-width: 1241px) and (min-height: 501px) { #mfx .pw em { display: none; } } /* atelier-ignore: breakpoint */
+@media (min-aspect-ratio: 1/1) and (min-height: 501px) { /* atelier-ignore: breakpoint */
+  #mfx.many { grid-template-columns: repeat(auto-fill, minmax(var(--tap), 1fr)); }
+  #mfx.many .pw { display: flex; justify-content: center; padding: 0 0 var(--sp-4); } #mfx.many .pw .pn, #mfx.many .pw .ps { display: none; }
+}
+@media (pointer: coarse) { .slot kbd { display: none; } }

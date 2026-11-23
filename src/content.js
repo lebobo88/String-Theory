@@ -209,6 +209,30 @@
     { name: 'Stage 8', keeper: 'king', patches: ['heart'], sampler: 'rosette', rows: [
       W({ guardEvery: 4, lappetEvery: 2, wickEvery: 3, weevilEvery: 2, flyEvery: 3, wormEvery: 3, hawks: 9, loopers: 7, diveEvery: 1.2, fireEvery: 1.2 }), W({ guardEvery: 4, lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 3, wormEvery: 2, hawks: 10, loopers: 7, diveEvery: 1.1, fireEvery: 1.2 }), W({ guardEvery: 4, lappetEvery: 2, wickEvery: 2, weevilEvery: 2, flyEvery: 2, wormEvery: 2, hawks: 10, loopers: 8, diveEvery: 1.1, fireEvery: 1.1 }) ] }
   ];
+  // ---- fabrics (performance workstream B2): every stage's cloth, its weave, its light, its frame and table. Drawn by bakeCloth in
+  // src/render.js. Colours are sRGB. weave: plain, linen, twill, tartan, velvet, knit, felt, damask, royal. Each stays dark enough
+  // that every moth and every enemy shot reads on it (docs/PERF.md, "Fabrics"). light: sky, ground (hemisphere), sun (lamp),
+  // back (the light behind the cloth), glare (the star-holes). sheen: [colour, strength, sharpness] for velvet and silk.
+  const FABRICS = [
+    { name: 'Coverlet', weave: 'plain', dens: 6, warp: '#18203D', weft: '#18203D', patchA: '#1D2749', patchB: '#24305A', stitch: '#E6DFD0', mottle: '#8C9AC6', stars: 0.22, seed: 0,
+      light: { sky: '#DFE6FF', ground: '#221A2E', sun: '#FFF0D8', back: '#6E5A8A', glare: '#FFF4D6' }, frame: '#3A2C20', lace: '#B9AE96', table: '#0F1428' },
+    { name: 'Linen', weave: 'linen', dens: 6.5, warp: '#272923', weft: '#252620', patchA: '#34362D', patchB: '#23241F', stitch: '#C9B38C', mottle: '#A9C08A', stars: 0.2, seed: 11,
+      light: { sky: '#D9E6DC', ground: '#1A1E18', sun: '#E9F0E2', back: '#4E6E58', glare: '#F2F8E4' }, frame: '#4B3A2B', lace: '#C9B38C', table: '#0E120E' },
+    { name: 'Tartan', weave: 'tartan', dens: 7, warp: '#16261B', weft: '#131A33', alt: '#4A463C', alt2: '#0B0D12', patchA: '#1C2A1F', patchB: '#121729', stitch: '#E3A93C', mottle: '#7A6A4A', stars: 0.16, seed: 23,
+      light: { sky: '#F2DCC8', ground: '#24160E', sun: '#FFD9A6', back: '#8A5A36', glare: '#FFE6BC' }, frame: '#3A2C20', lace: '#B5832F', table: '#130D09' },
+    { name: 'Velvet', weave: 'velvet', dens: 6, warp: '#24122C', weft: '#341C3C', patchA: '#2C1734', patchB: '#1E0F24', stitch: '#CBD3E4', mottle: '#7A5A9A', stars: 0.24, seed: 37, sheen: ['#8A6AB4', 0.55, 2.2],
+      light: { sky: '#DAD4FF', ground: '#1A1226', sun: '#E8E2FF', back: '#5E4A92', glare: '#F2EEFF' }, frame: '#2A1E18', lace: '#A3AEC6', table: '#0B0912' },
+    { name: 'Knit', weave: 'knit', dens: 3.2, warp: '#262629', weft: '#4A4234', patchA: '#2E2D30', patchB: '#1C1C1F', stitch: '#E3A93C', mottle: '#C9B38C', stars: 0.2, seed: 41,
+      light: { sky: '#EBE2D2', ground: '#1E1812', sun: '#FFE6C4', back: '#7A5A30', glare: '#FFF0D2' }, frame: '#4B3A2B', lace: '#C9B38C', table: '#110E0B' },
+    { name: 'Felt', weave: 'felt', dens: 6, warp: '#1A2617', weft: '#24321E', patchA: '#202E1C', patchB: '#141C12', stitch: '#A9C08A', mottle: '#6E8B4E', stars: 0.18, seed: 53,
+      light: { sky: '#DFE8D2', ground: '#141A10', sun: '#F4EED8', back: '#5E7A46', glare: '#F4F8E0' }, frame: '#3A2C20', lace: '#B9AE96', table: '#0D110B' },
+    { name: 'Silk damask', weave: 'damask', dens: 12, warp: '#0E2127', weft: '#16333A', patchA: '#143036', patchB: '#0C1C21', stitch: '#CBD3E4', mottle: '#6FA3B0', stars: 0.2, seed: 61, sheen: ['#6FA8B8', 0.45, 3],
+      light: { sky: '#D6ECF2', ground: '#0E1A1E', sun: '#EEF6FF', back: '#3F7A88', glare: '#E8FAFF' }, frame: '#262A33', lace: '#CBD3E4', table: '#091013' },
+    { name: 'Royal weave', weave: 'royal', dens: 7.5, warp: '#1E1036', weft: '#2A1744', alt: '#7A5A24', patchA: '#25143F', patchB: '#170B29', stitch: '#E3A93C', mottle: '#9C7A3A', stars: 0.26, seed: 71, sheen: ['#E3A93C', 0.18, 4],
+      light: { sky: '#E4DAFF', ground: '#1C1028', sun: '#FFE6BA', back: '#8A6A3A', glare: '#FFF4D6' }, frame: '#5A4322', lace: '#E3A93C', table: '#0D0914' }
+  ];
+  PANELS.forEach((p, i) => { p.fabric = FABRICS[i]; });
+  // ---- /fabrics ----
 
   // ---- The Night's route: one patch per Panel; Panels II to IV offer two. Only Old Darn's text and Mark are the bible's. ----
   const PATCHES = {

@@ -27,7 +27,8 @@
      Reduced motion. An entrance is one still of the film (its `key` time) under its title; a death plays with the camera held.
      No tool flashes, shakes, smears or ramps time when k.reduce is set.
 
-   Contact with the renderer is kept narrow, because the cloth and the enemies will be redrawn by others:
+   Contact with the renderer is kept narrow, because the cloth and the enemies will be redrawn by others (the full list, kept
+   up to date for whoever changes the renderer: docs/FILM-KIT.md section 18). ST.FilmKit.warm(renderer) compiles it all at load:
      render.js   r.scene, r.camera, r.dist, r.ndT/r.ndB, r.canvas, r.q, r.quality, r.cloth (hidden while the film cloth
                  is shown; its material and renderOrder are borrowed, so the film cloth is drawn with the ground), r.sun, r.spr/r.halo (sprites), r.lc, r.chart/r.cells/r.bossMaterial,
                  r.shared, r.gl.compile, r.stats.
@@ -475,13 +476,15 @@
   // =====================================================================================================================
   /* The play cloth is one flat quad with the weave in its shader. While a film uses any call below, the kit swaps in a grid
      over the same rectangle with the same material, moves its vertices on the CPU, and swaps back the frame nothing is asked
-     for. Everything is immediate: call what you want every frame. Costs about 0.3 ms a frame on the lite grid. */
+     for. Everything is immediate: call what you want every frame. Moving it costs about 0.3 ms a frame on the lite grid (0.8 on
+     high); a frame that asks for exactly what the last one did is skipped (same()). */
   class Cloth {
     constructor(k) {
       this.k = k; this.mesh = null; this.back = null; this.shown = false; this.used = false; this.fullIdx = false;
       this.bul = new Float32Array(12 * 4); this.nBul = 0; this.wav = new Float32Array(6 * 6); this.nWav = 0; this.tr = new Float32Array(4 * 7); this.nTr = 0; this.pl = new Float32Array(6 * 5); this.nPl = 0;
       this.sagK = 0; this.windA = 0; this.windX = 1; this.windY = 0; this.windL = 4; this.windP = 0; this.crA = 0; this.crS = 1; this.crT = 0; this.r0 = 0; this.r1 = 1; this.rowsOn = false;
       this.bkR = 0.004; this.bkG = 0.005; this.bkB = 0.012;
+      this.sig = new Float32Array(160); this.sigN = -1;   // what the cloth was asked for last frame: the same again costs nothing
     }
     begin() { this.nBul = 0; this.nWav = 0; this.nTr = 0; this.nPl = 0; this.sagK = 0; this.windA = 0; this.crA = 0; this.rowsOn = false; this.r0 = 0; this.r1 = 1; this.used = false; }
     /* A swelling (height > 0, toward the lens) or a dent, radius r, centred on (x, y). Up to 12. */
@@ -524,14 +527,15 @@
     show(on) {
       const r = this.k.r; if (on === this.shown) return; this.shown = on;
       if (on) { if (!this.mesh.parent) { r.scene.add(this.mesh); r.scene.add(this.back); } if (this.mesh.material !== r.cloth.material) this.mesh.material = r.cloth.material; }
-      this.mesh.visible = on; this.back.visible = on; r.cloth.visible = !on;
+      this.mesh.visible = on; this.back.visible = on; r.cloth.visible = !on; this.sigN = -1;
     }
     update() {
       if (!this.used) { if (this.shown) this.show(false); return; }
       if (!this.mesh) this.build();
       this.show(true);
-      const nx = this.nx, ny = this.ny, n = this.nv, s = nx + 1, P = this.P, N = this.N, bx = this.bx, by = this.by, side = this.side, cw = this.cw, ch = this.ch;
       this.back.material.color.setRGB(this.bkR, this.bkG, this.bkB);
+      if (this.same()) return;
+      const nx = this.nx, ny = this.ny, n = this.nv, s = nx + 1, P = this.P, N = this.N, bx = this.bx, by = this.by, side = this.side, cw = this.cw, ch = this.ch;
       // the whole-cloth fields
       const sg = this.sagK, wa = this.windA, ca = this.crA;
       if (sg || wa || ca) { const wk = TAU / this.windL, cs = this.crS, ct = this.crT;
@@ -577,6 +581,16 @@
         const ax = P[rr] - P[l], ay = P[rr + 1] - P[l + 1], az = P[rr + 2] - P[l + 2], cx = P[u] - P[d], cy = P[u + 1] - P[d + 1], cz = P[u + 2] - P[d + 2];
         let nx_ = ay * cz - az * cy, ny_ = az * cx - ax * cz, nz_ = ax * cy - ay * cx; const il = 1 / (Math.sqrt(nx_ * nx_ + ny_ * ny_ + nz_ * nz_) || 1); N[q * 3] = nx_ * il; N[q * 3 + 1] = ny_ * il; N[q * 3 + 2] = nz_ * il; }
       this.aP.needsUpdate = true; this.aN.needsUpdate = true;
+    }
+    /* True when this frame asks for exactly what the last did (a held crumple, a still sag): the grid is left as it is. Tears
+       redraw their frayed threads every frame, so a frame with a tear always rebuilds. */
+    same() {
+      const g = this.sig; let n = 0; const put = v => { if (n < 160) g[n] = v; n++; };
+      if (this.nTr) { this.sigN = -1; return false; }
+      put(this.sagK); put(this.windA); put(this.windX); put(this.windY); put(this.windL); put(this.windP); put(this.crA); put(this.crS); put(this.crT); put(this.rowsOn ? 1 : 0); put(this.r0); put(this.r1);
+      put(this.nBul); for (let i = 0; i < this.nBul * 4; i++) put(this.bul[i]); put(this.nWav); for (let i = 0; i < this.nWav * 6; i++) put(this.wav[i]); put(this.nPl); for (let i = 0; i < this.nPl * 5; i++) put(this.pl[i]);
+      if (n === this.sigN) { let k = 0; const o = this.sigO || (this.sigO = new Float32Array(160)); for (; k < n; k++) if (o[k] !== g[k]) break; if (k === n) return true; }
+      const o = this.sigO || (this.sigO = new Float32Array(160)); o.set(g); this.sigN = n; return false;
     }
     fray(x1, y1, ux, uy, px, py, len, open, curl) {   // loose warp threads along both lips of a tear
       if (open < 0.02) return; const k = this.k, X = k.sx_, Y = k.sy_, Z = k.sz_, S = k.ss_, m = 14, rig = k.cam, col = k.K.linen;
@@ -1020,11 +1034,16 @@ void main(){
     }
 
     // ---------- the frame ----------
-    start(film, key) {
-      const c = this.c, r = this.r, tn = r.quality in TIER ? r.quality : 'lite';
-      this.film = film; this.F = compile(film); this.filmKey = key; this.artDir = 'art/films/' + c.id + '/'; this.on = true;
-      this.tier = TIER[tn]; this.reduce = c.reduce; this.still = c.lite || DEV.still;
+    /* The tier's budget and what is on (k.tier, k.has), from the renderer's quality now. Returns the tier's name. */
+    setTier() {
+      const r = this.r, tn = r.quality in TIER ? r.quality : 'lite'; this.tier = TIER[tn];
       const post = !!(r.q.post && r.post.rt), h = this.has; h.post = post; h.lens = post && this.tier.lens; h.dof = h.lens && this.tier.dof > 0; h.rays = h.lens && this.tier.rays > 0; h.streak = h.lens && this.tier.streak > 0; h.shadows = !!(r.q.shadows && r.userShadows);
+      return tn;
+    }
+    start(film, key) {
+      const c = this.c, r = this.r, tn = this.setTier(), h = this.has;
+      this.film = film; this.F = compile(film); this.filmKey = key; this.artDir = 'art/films/' + c.id + '/'; this.on = true;
+      this.reduce = c.reduce; this.still = c.lite || DEV.still;
       this.openFrac = ((r.ndT === undefined ? 1 : r.ndT) - (r.ndB === undefined ? -1 : r.ndB)) / 2;
       this.t = 0; this.dt = 0; this.rt = 0; this.rdt = 0; this.speed = 1; this.scale = 1; this.holdT = 0; this.frameNo = 0; this.evI = 0;
       this.cueN = 0; this.cueI = 0; this.buzzN = 0; this.buzzI = 0; this.handles.length = 0; this.buzzed = false; this.cueName.length = 0; this.buzzP.length = 0;
@@ -1047,8 +1066,24 @@ void main(){
       if (this.stats) this.stats.start();
       // compile what the film will need now, while the first frame is still black
       const wk = tn + ':' + want;
-      if (!this.warmed[wk]) { this.warmed[wk] = true; try { r.gl.compile(r.scene, r.camera); } catch (e) { /* compiled as drawn instead */ } if (film.lens !== false) this.lens.warm(r.post); }
+      if (!this.warmed[wk] || this.unwarmed(film)) { this.warmed[wk] = true; this.compileNow(); if (film.lens !== false) this.lens.warm(r.post); }
     }
+    /* Compile what is in the scene now, with the film's own things (layers, stitched charts, shadows, props) shown for it, so
+       a layer first seen at a white-out does not stall that frame. Puts them back as they were. */
+    compileNow() {
+      const r = this.r, L = this.compL || (this.compL = []); L.length = 0;
+      const add = o => { L.push(o, o.parent ? 1 : 0, o.visible ? 1 : 0); if (!o.parent) r.scene.add(o); o.visible = true; };
+      add(this.ribN.obj); add(this.ribA.obj);
+      for (let i = 0; i < this.layerList.length; i++) add(this.layerList[i].m);
+      for (let i = 0; i < this.spriteList.length; i++) add(this.spriteList[i].g);
+      for (let i = 0; i < this.shadeList.length; i++) add(this.shadeList[i].m);
+      for (let i = 0; i < this.propList.length; i++) add(this.propList[i]);
+      try { r.gl.compile(r.scene, r.camera); } catch (e) { /* compiled as drawn instead */ }
+      for (let i = 0; i < L.length; i += 3) { const o = L[i]; o.visible = !!L[i + 2]; if (!L[i + 1] && o.parent) o.parent.remove(o); }
+      L.length = 0;
+    }
+    /* True when this film made things in its setup that no compile has seen yet (it was not warmed at load). */
+    unwarmed(film) { return !!film.setup && film.__fkWarm !== this.tier.name && !film.__fkSeen && (film.__fkSeen = true); }
     /* One frame. Returns false when the film is over. */
     frame(dt) {
       const c = this.c, film = this.film, F = this.F, st = this.stats; if (st) st.begin();
@@ -1119,6 +1154,47 @@ void main(){
     if (film.music && (a.ok[film.music.name] || a.buf[film.music.name])) return true;
     for (const name in film.sounds || {}) if (a.ok[name] || a.buf[name]) return true;
     return false;
+  };
+  /* ST.FilmKit.warm(renderer): compile now every program the directed films will need on this tier, so no film stalls on its
+     first frame: the kit's ribbons, layers and shadows, each directed film's own props and materials (by a dry run of its
+     setup, put away at once), the lit materials with each number of real lights a film will light on this tier, and the
+     lens passes. For the renderer's warm-up at load; safe to call again (after a change of tier it compiles what is new),
+     never while a film plays. Returns the number of compile passes it ran. */
+  FilmKit.warm = function (r) {
+    if (!r || !r.gl || !r.scene || !ST.Cine || !ST.Cine.REG) return 0;
+    const c = r.cine || (r.cine = new ST.Cine(r)); if (!c || c.active) return 0;
+    const k = c.kit || (c.kit = new FilmKit(c));
+    try { return k.warmAll(); } catch (e) { try { console.warn('film kit warm-up:', e); } catch (e2) { /* no console */ } return 0; }
+  };
+  FilmKit.prototype.warmAll = function () {
+    const r = this.r, c = this.c, tn = this.setTier(), REG = ST.Cine.REG, counts = {}, keep = { id: c.id, def: c.def, kind: c.kind, hx: c.hx, hy: c.hy, solo: c.solo };
+    let passes = 0;
+    const comp = () => { try { r.gl.compile(r.scene, r.camera); passes++; } catch (e) { /* compiled as drawn instead */ } };
+    // the films' own things: a dry run of each directed film's setup, with its boss's entry in place, put away straight after
+    for (const id in REG) for (const part of ['entrance', 'sig', 'death']) {
+      const f = REG[id][part]; if (!f || !f.kit) continue; counts[Math.min(f.lights || 0, this.tier.lights)] = true;
+      if (!f.setup || f.__fkWarm === tn) continue; f.__fkWarm = tn;
+      c.id = id; c.solo = !!REG[id].solo; c.def = c.solo ? null : C.KEEPERS[id] || null; c.kind = part === 'death' ? 'death' : 'entrance'; c.home(null);
+      this.film = f; this.F = compile(f); this.filmKey = id + '/' + part; this.artDir = 'art/films/' + id + '/';
+      try { f.setup(this); } catch (e) { /* a setup that needs the boss on the cloth compiles on its first frame instead */ }
+    }
+    this.cueN = 0; this.cueI = 0; this.buzzN = 0; this.buzzI = 0; this.cueName.length = 0; this.buzzP.length = 0;
+    for (let i = 0; i < this.ropes.length; i++) this.ropes[i].live = false;
+    // the kit's own materials, shown for the compile
+    const shown = [this.ribN.obj, this.ribA.obj].concat(this.propList, this.spriteList.map(s => s.g), this.shadeList.map(s => s.m), this.layerList.map(l => l.m));
+    for (const o of shown) { if (!o.parent) r.scene.add(o); o.visible = true; o.traverse(q => { q.visible = true; }); }
+    // lit materials, with each number of real lights a film will light on this tier (point lights change every lit program)
+    if (!counts[0]) counts[0] = true;
+    for (const key in counts) { const n = +key, wk = tn + ':' + n; if (this.warmed[wk] && n !== 0) continue;
+      while (this.lights.length < n) this.lights.push(new this.T.PointLight(0xffffff, 0, 8, 2));
+      for (let i = 0; i < this.lights.length; i++) { const L = this.lights[i]; L.intensity = 0; if (i < n) { if (!L.parent) r.scene.add(L); } else if (L.parent) L.parent.remove(L); }
+      comp(); this.warmed[wk] = true; }
+    for (let i = 0; i < this.lights.length; i++) { const L = this.lights[i]; if (L.parent) L.parent.remove(L); }
+    for (const o of shown) { o.visible = false; if (o.parent) o.parent.remove(o); }
+    // the lens passes, at the size the game draws now
+    if (this.has.lens && r.post && r.post.rt) { this.lens.warm(r.post); passes++; this.lens.free(); }
+    c.id = keep.id; c.def = keep.def; c.kind = keep.kind; c.hx = keep.hx; c.hy = keep.hy; c.solo = keep.solo; this.film = null; this.F = null; this.filmKey = '';
+    return passes;
   };
   FilmKit.TIER = TIER; FilmKit.BUDGET = BUDGET; FilmKit.EASE = EASE; FilmKit.dev = DEV; FilmKit.compile = compile;
 
