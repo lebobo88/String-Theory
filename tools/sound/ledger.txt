@@ -160,3 +160,22 @@ title_sting U6tfWUluYS7T4l4n0aeA 7.4 stereo   # take A
 title_sting_b cSSROloxsXj3nNqxpsNn 7.4 stereo # take B
 title_sting_short MYoQKvDxEfnVyRnXqVYS 3.2 stereo   # take A
 title_sting_short_b DkRLqJhKV96WPUBIkQtZ 3.2 stereo # take B
+# sting picks (imported 2026-11-23; judged from 0.1 s loudness shapes after unpack.py trim against music.desc hit times)
+# wick_in_sting: take A - swells from 1.5 s, first big onset 3.5 s (written 3.36) and loud through the 6.05 chord; B is quiet until 5.0 s and misses the 3.36/4.06/4.56 hits
+# wick_down_sting: take A (weak) - opening swell then dies away near 3.4 s (written stop 3.8); neither take has the four late chords at 6.33-7.28; B is loud straight through to 4.4 s
+# tinea_in_sting: take A - hard hit lands at 6.0-6.2 s (written 6.23) with thumps near 2.0 s; B is one swell peaking 4.8-5.2 s with no 6.23 hit
+# tinea_out_sting: take A - chord at 0, change near 3.4 s (written 3.7), new onset 5.6-6.0 s for the 5.8 chord; B fades out before 5.8
+# lappet_in_sting: take B (weak) - hit onset at 6.0 s (written 5.45) and a natural fade by 9.6 s; A is loud continuously from 0.6 s with no silence, no hit and is cut off mid-music; neither has the 4.7 s silence
+# lappet_down_sting: take A (weak) - pluck at 0 then a late warm chord rising from about 6 s (written 5.41); B is a steady 1 s pulse that matches none of the written beats; neither has the 1.62/2.52 surge
+# atlas_in_sting: take A - loud bloom from 2.4 s (written chord 3.3) through 5.2 s then a slow shimmering decay to 8 s; B blooms at 1.6 s and collapses at 5.3 s
+# atlas_down_sting: take B (weak) - sustains through the 5.62 resolving chord and fades by 7.4 s; A goes silent from 3.7 s so the final chord is missing; neither has the hit at 0.02
+# beetle_in_sting: take A - onsets at 3.5-4.0 s (written 3.86) and 5.8-6.0 s (written 6.03, the biggest), loud to the end; B has one long block from 3.3 s
+# beetle_down_sting: take A - stab at 0, big hit 3.3 s (written 2.06), silence, then chord at 6.6 s (written 7.12) fading by 9.2 s; B is one stab then nothing
+# empress_in_sting: take B - quiet middle, then onset 5.5-6.0 s and loudest at 7.0-7.5 s for the 7.78 chord, fading by 9.8 s; A is busy early and silent from 6.5 s
+# empress_down_sting: take B (weak) - loud 1.6-3.1 s then a drop at 3.2 s (written cut 3.16) and onset 3.8 s for the rising notes; A peaks right where the cut should be; both silent after 5.5 s (no 6.24 chord) and both generations had long quiet lead-ins (A 4.1 s, B 2.5 s trimmed)
+# king_in_sting: take B - loud onset 7.2-7.6 s for the 7.77 explosion, sustained to 9.2 s then fades; A peaks 4.6-6.8 s during the hush and fades during the explosion
+# king_down_sting: take A (weak) - hit at 0 and a late rise near 8.9 s for the sunrise (written 6.75) held to 12.5 s; B is one hit then nothing; neither cuts cleanly at 0.45 s
+# unraveller_in_sting: take A - ostinato pulses from about 1.3-1.7 s (written 1.55), building, loudest 6.5 s (written 6.2); B is silent 0.8-3.2 s then one block
+# unraveller_down_sting: take A - blare 0-1.6 s (written cut 1.3), quiet, then loud 3.9-4.8 s across the 4.02/4.52 hits; B starts late (2.95 s trimmed) and is loud at 1.7-3.2 s
+# title_sting: take B - pluck run starts 1.8 s (written 1.86) and builds to its densest hits at 4.8-5.2 s (written HIT 5.05); A is loudest at 0.5-2.0 s, wrong for the soft opening, and its hit is late (5.2-5.4 s)
+# title_sting_short: take A - onset at 0.9 s (written HIT 1.02) and holds; B fades away by 1.6 s with nothing at 1.02
