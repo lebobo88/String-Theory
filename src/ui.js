@@ -269,7 +269,7 @@
       if (this.titleFilmed || calm() || !(ST.Cine && ST.Cine.has && ST.Cine.has('title'))) return;
       this.titleFilmed = true;   // once a launch: coming back to this screen later shows it at once
       // the controller may still be being built (the first title is drawn from its constructor): start on the next frame
-      const go = () => { if (this.shown !== 'title') return; try { ST.Cine.play('title'); } catch (e) { try { ST.Cine.stop(); } catch (e2) { /* nothing to stop */ } document.body.classList.remove('stc-on', 'stc-solo'); } };   // a film that fails leaves the page standing
+      const go = () => { if (this.shown !== 'title') return; try { let seen = false; try { seen = localStorage.getItem('st.titleSeen') === '1'; localStorage.setItem('st.titleSeen', '1'); } catch (e) { /* no storage: always the full film */ } ST.Cine.play('title', { short: seen }); } catch (e) { try { ST.Cine.stop(); } catch (e2) { /* nothing to stop */ } document.body.classList.remove('stc-on', 'stc-solo'); } };   // a film that fails leaves the page standing
       if (window.requestAnimationFrame) requestAnimationFrame(go); else go();
     }
     pockets() {

@@ -110,3 +110,53 @@ empress_in_sting MBdJZ5YZzDBd35fRemgS 9.8 stereo   # take A
 empress_in_sting_b ATqP6AqzE3kCpRYj0yVV 9.8 stereo # take B
 empress_down_sting r2IAETAojyk5MnNCRZyM 8.2 stereo   # take A
 empress_down_sting_b DiMaQXFnQisZbduYFomg 8.2 stereo # take B
+king_sun z4toLpJ8OlwxZvByCzJ9 2.0
+king_gather hppMGaQHJ1WXIrzbnZDJ 2.0 level
+king_diamond AuB6cxo0RD3QBItDDWU3 1.2
+king_corona NC8NK72vGTCBav1pWWKg 2.8
+king_setjewel VEYj6ofRb7yTtaxE1P1E 0.9
+king_eyes z5PuOk6FehoTJ9Zydz7y 0.8
+king_unveil Ag6UNJV6ezgKVoZOw1la 2.2 level
+king_iris CrwijuahtFoG98LjIUkr 1.2
+king_crack RITpIq9F3GoPg3Uadrpa 0.6
+king_fall M6qgu3vJrP9a7kWaURDM 3.2
+king_ring icBzXJSkvJxz9Eer30IN 3.0
+king_burst dvdAKHRn4hkc3ESxCJJj 1.0
+king_rush L1ODg8tV2v8fiNj9etyE 2.4 level stereo
+king_dawn I07bwmSvu4kzItoir2zT 3.0
+king_mend QABY1FaUtj4kNdMWZ4jY 1.6
+king_in_sting QCUh4BPyQkZTEinU691P 11.5 stereo   # take A
+king_in_sting_b DPCG2JKkbvHVKzMMr3Hz 11.5 stereo # take B
+king_down_sting mkUatk5f0AcFcWlFroKX 12.5 stereo   # take A
+king_down_sting_b aLkNalJOz6OJEhm3RNi1 12.5 stereo # take B
+unraveller_tug JsycPXgqSBG9S4N3bF9n 0.6
+unraveller_rip BEJgIALkQsT2xSbzZBdj 1.0
+unraveller_run GHbNdWwnF3imB5KRCNMb 3.3
+unraveller_knot nqd4iL4SU7zEWkrXmmSs 1.1
+unraveller_whip x5DHiDaDAE8jFHPnG9W4 0.6
+unraveller_jaws C5GVP0oAaB8safN4DBR1 1.2
+unraveller_gulp OE2tMDeSwUnjkns775OF 0.7
+unraveller_snap fqWQrNDGtTXn4CVl8tx6 1.6
+unraveller_choke X2eCvlWvlHI74rz9toc6 1.6
+unraveller_spill YEXjL8Wi8fuXsEntms4a 1.5 level
+unraveller_shuttle 4b05ZmnWxuoFO5MlWYku 0.7 stereo
+unraveller_beat qJhfivogliQF7GFfRTdc 0.8
+unraveller_bind Y6QBuCK70cy4VmUFGfT2 3.0
+unraveller_loom vs92q3mQFT47ap0dY9K4 1.6
+unraveller_tie 1C45AqWbfExnGz4uhMM1 1.2
+unraveller_rest fKQDuRGegaEKmjVeHpwk 1.8
+unraveller_in_sting 3v3d0TQlOnARkra2GvW0 9.2 stereo   # take A
+unraveller_in_sting_b 9OxqQOZEcBiLR4J3pk7w 9.2 stereo # take B
+unraveller_down_sting rGegnAtrEHdtzkxl7tKa 9.0 stereo   # take A
+unraveller_down_sting_b rex7ub8Yi9Qbskv4EhbF 9.0 stereo # take B
+title_glint 9fGvtTFNTkt8zkrsD2c5 1.4
+title_thread qMp8unNUs6epENoBUMqw 0.9
+title_pierce Oezl3cDohEPVeOu6aP8S 0.7
+title_sew SOkwTJC6xBYBQ2gNc5Zr 2.3
+title_pull SdZFatB0a9xJXM9bPH55 1.0
+title_snap Ze2tkz8tshbIeeIjL6Ju 1.3
+title_settle KafV6Wc1Hz8adl3t2tuv 2.0
+title_sting U6tfWUluYS7T4l4n0aeA 7.4 stereo   # take A
+title_sting_b cSSROloxsXj3nNqxpsNn 7.4 stereo # take B
+title_sting_short MYoQKvDxEfnVyRnXqVYS 3.2 stereo   # take A
+title_sting_short_b DkRLqJhKV96WPUBIkQtZ 3.2 stereo # take B
