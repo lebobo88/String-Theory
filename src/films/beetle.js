@@ -44,7 +44,7 @@
   function buildBall(T) {
     const tex = shellTex(T, 4, 16, 32, 1), items = [], seams = [], I = new T.Matrix4();
     for (let i = 0; i < NPL; i++) items.push([new T.SphereGeometry(BR * (i % 2 ? 1.035 : 1), 5, 22, i * TAU / NPL - 0.03, TAU / NPL + 0.06), I]);
-    for (let i = 0; i < NPL; i++) seams.push([new T.TorusGeometry(BR * 1.04, 0.028, 4, 40), new T.Matrix4().makeRotationY(i * TAU / NPL + 0.0)]);
+    for (let i = 0; i < NPL; i++) seams.push([new T.TorusGeometry(BR * 1.032, 0.024, 4, 40), new T.Matrix4().makeRotationY(i * TAU / NPL + 0.0)]);
     const g = new T.Group();
     const shell = new T.Mesh(mergeUV(T, items), new T.MeshStandardMaterial({ map: tex, roughness: 0.58, metalness: 0.12 }));
     const seam = new T.Mesh(FX.merge(T, seams), new T.MeshStandardMaterial({ color: new T.Color(PAL.brass), roughness: 0.3, metalness: 0.75 }));
@@ -109,9 +109,9 @@
 
      beat      film s       shot (camera, lens)                          what we see                                   light                         sound / buzz
      dark      0.0-0.45     black, gate shut                              nothing                                       none                          sting; beetle_rumble 0.05
-     floor     0.45-1.12    CUT IN: on the felt, a low lens looking up    the felt like a field; lint and loose          brass key raking from far     (rumble: thumps 0.55,
-                            the cloth; focus on the near felt; handheld   fibres jump at each thump; a ripple runs       up the cloth; umber rim       0.82, 1.02) buzz x3
-                                                                          under the lens; dust lifts into the key
+     floor     0.45-1.12    CUT IN: on the felt, a macro on a brass       a brass button lying on the felt jumps at      brass key behind it, low;     (rumble: thumps 0.55,
+                            button; focus on it, the felt and the far     each thump, higher each time, and walks; a     umber fill from the lens      0.82, 1.02) buzz x3
+                            rail's pegs soft behind; handheld             ripple runs under it; dust lifts into the key  side
      pass      1.12-1.52    low lens panning with it; motion smear       the rolled shell thunders past the lens,       the key catches its plates    beetle_pass 1.16, buzz
                                                                           huge, plates and brass seams turning; dust
      hit 1     1.52-2.02    CUT: low wide up the cloth at the right       it smashes the rail: crash zoom; FREEZE 0.3 s  impact flash (light 1),       beetle_rail 1.70, buzz
@@ -119,9 +119,8 @@
      hit 2     2.02-2.56    CUT: tight, along the left rail; crash       the same, closer: FREEZE 0.3 s                 impact flash                  beetle_rail 2.25, buzz
      hit 3     2.56-3.08    CUT: flat on the felt; speed ramp to 0.25x    it comes in slow, hits: the biggest burst,     impact flash, streak          beetle_rail_big 2.80, buzz
                             into the hit; FREEZE 0.42 s                   FREEZE on the splinters (the still is 2.86)                                   (sting hit 3)
-     home      3.08-4.18    CUT: low hero angle at his spot               it rolls in, slows, stops, rocks; then hops    key, rim                      beetle_skid 3.0
-                                                                          up toward the lens
-     slam      4.18-4.45    CUT: the play camera                          it drops onto his spot ...                     house still down
+     home      3.08-4.0     CUT: low hero angle at his spot               it rolls in, slows, stops, rocks               key, fill                     beetle_skid 3.0
+     slam      4.0-4.45     CUT: the play camera (0.5x into the drop)     it springs up off his spot and drops ...       house still down, a pool
                4.45         (the handover)                                ... SLAM: brass flash, shock ring, dust: he    brass flash, the pool under   beetle_slam 4.45, buzz
                                                                           lies there unrolled, his own chart             him                           (sting: the big hit)
      title     4.5-6.9      the play camera                               the name slams in letter by letter; the dust   house lights up by 5.6        beetle_stamp 4.5
@@ -205,17 +204,17 @@
     css: '.fk-t.i-bslam .fk-n span.on{animation:bt-slam .34s cubic-bezier(.5,0,.75,0) both}.i-bslam .fk-rule{border-top-color:#9C7A3A}' +
       '@keyframes bt-slam{0%{opacity:0;transform:translateY(-.25em) scale(2.6);filter:blur(5px);color:#E3A93C}62%{opacity:1;transform:scale(.9);filter:none;color:#FFF4D6;text-shadow:0 0 .4em #9C7A3A}' +
       '78%{transform:translateY(.04em) scale(1.06)}100%{transform:none}}',
-    /* The sting runs in real seconds from film 0. Film and real agree until the first freeze (film 1.70 holds 0.3 s, 2.25 holds
-       0.3 s), the slow motion into hit 3 (film 2.6 to 2.86) adds 0.47 s, its freeze 0.42 s, the drop before the slam 0.09 s.
-       So the hits at film 1.70 / 2.25 / 2.80 are real 1.70 / 2.55 / 3.53 (each freeze follows its hit); the slam at film 4.45
-       is real 5.58; the title 5.63; the end real 8.03. */
-    music: { name: 'beetle_in_sting', len: 8.4, gain: 0.95, desc: 'Entrance sting for the Carpet Beetle, a heavy armoured beetle that rolls into a ball. Action-film percussion, instrumental. A very low sub rumble and a muffled heartbeat kick from 0 s, three heavy floor-tom hits at 0.55, 0.82 and 1.02 s growing louder; a rising reversed cymbal into 1.16 s; at 1.70 s a huge taiko and low brass stab that stops dead into a held high string tone for 0.3 s (a freeze-frame), then the drums drive on; the same stab at 2.55 s, again held for 0.3 s; from 2.9 s a low brass swell slowed and stretched, landing on the biggest stab yet at 3.53 s, held 0.42 s; then a rolling, tumbling snare and toms that slow to a stop by 4.6 s, two soft knocks, a breath of silence from 5.0 s, a sucked-in reverse swell, and at 5.58 s one enormous hit of full brass, timpani and a sub drop that rings out under a fast run of short brass stabs until 6.3 s and decays by 8.4 s' },
+    /* The sting runs in real seconds from film 0. Film and real agree until the first freeze (0.045 film s after the hit at
+       1.70, it holds 0.3 s; the same at 2.25); the slow motion into hit 3 (film 2.6 to 2.86) adds 0.47 s, its freeze 0.42 s,
+       the drop before the slam 0.09 s. So the hits at film 1.70 / 2.25 / 2.80 are real 1.70 / 2.55 / 3.86, the skid (film
+       3.0) real 4.52, the hop (3.95) 5.47, the slam (4.45) real 6.03, the title 6.08, the end real 8.48. */
+    music: { name: 'beetle_in_sting', len: 8.9, gain: 0.95, desc: 'Entrance sting for the Carpet Beetle, a heavy armoured beetle that rolls into a ball. Action-film percussion and brass, instrumental. A very low sub rumble and a muffled heartbeat kick from 0 s; three heavy floor-tom hits at 0.55, 0.82 and 1.02 s, each louder; a rising reversed cymbal into 1.16 s; at 1.70 s a huge taiko and low brass stab that cuts to a held high string tone for 0.3 s (a freeze-frame), then the drums drive on; the same stab at 2.55 s, again held 0.3 s; from 2.9 s a low brass swell, slowed and stretched, landing on the biggest stab yet at 3.86 s, held 0.45 s; then rolling, tumbling snare and toms that slow to a stop by 5.1 s; two soft knocks; at 5.47 s a sucked-in reverse swell, and at 6.03 s one enormous hit of full brass, timpani and a sub drop that rings under a fast run of short brass stabs until 6.7 s and decays by 8.9 s' },
     sounds: {
-      beetle_rumble:   { at: 0.05, len: 1.3, gain: 0.85, desc: 'Something very heavy rolling toward you across a wooden floor in the dark: a low rumble growing louder over 1.1 s, with three heavy wooden thuds as it tumbles over seams at 0.5, 0.77 and 0.97 s, each nearer and louder; loose grit rattles after each thud' },
+      beetle_rumble:   { at: 0.05, len: 1.3, gain: 0.85, desc: 'Something very heavy rolling toward you across a wooden floor in the dark: a low rumble growing louder over 1.1 s, with three heavy wooden thuds as it tumbles over seams at 0.5, 0.77 and 0.97 s, each nearer and louder; a small brass button rattles on the floor after each thud' },
       beetle_pass:     { at: 1.16, len: 1.0, gain: 1, desc: 'A huge armoured ball rolling past right beside the microphone: a heavy gritty roll that rushes in, peaks at 0.22 s with a deep whoosh of air and the clatter of overlapping plates, and drops away fast (a doppler fall) by 0.7 s' },
-      beetle_rail:     { at: [HIT[0], HIT[1]], len: 1.4, gain: 1, desc: 'A heavy ball smashing into a hardwood rail with a brass peg in it: an enormous crack of splintering wood with a bright metallic ring at 0 s; then, as if time stopped, only a high suspended ringing for 0.3 s; at 0.3 s the splinters rain down and clatter on felt and the ball rolls away heavily, fading by 1.4 s' },
-      beetle_rail_big: { at: HIT[2], len: 2.0, gain: 1, desc: 'The biggest hit: a slowed, deeper version of a heavy ball smashing a hardwood rail, the crack and the brass ring stretched and low at 0 s; a suspended high ringing for 0.42 s as time stands still; at 0.42 s a burst of splinters clattering down on felt and a heavy rolling rumble that fades by 2.0 s' },
-      beetle_skid:     { at: 3.0, len: 1.6, gain: 0.7, desc: 'A heavy ball slowing to a stop on felt: a deep rolling rumble that slows over 0.8 s, a short gritty skid, then two soft rocking knocks at 0.95 and 1.2 s as it settles, and silence' },
+      beetle_rail:     { at: [HIT[0], HIT[1]], len: 1.4, gain: 1, desc: 'A heavy ball smashing into a hardwood rail with a brass peg in it: an enormous crack of splintering wood with a bright metallic ring at 0 s; from 0.05 s, as if time stopped, only a high suspended ringing for 0.3 s; at 0.35 s the splinters rain down and clatter on felt and the ball rolls away heavily, fading by 1.4 s' },
+      beetle_rail_big: { at: HIT[2], len: 2.0, gain: 1, desc: 'The biggest hit: a slowed, deeper version of a heavy ball smashing a hardwood rail, the crack and the brass ring stretched and low at 0 s; from 0.09 s a suspended high ringing for 0.42 s as time stands still; at 0.51 s a burst of splinters clattering down on felt and a heavy rolling rumble that fades by 2.0 s' },
+      beetle_skid:     { at: 3.0, len: 1.2, gain: 0.7, desc: 'A heavy ball slowing to a stop on felt: a deep rolling rumble that slows over 0.5 s, a short gritty skid, two soft rocking knocks at 0.6 and 0.75 s, then at 0.95 s a quick creak of plates as it springs up off the felt' },
       beetle_slam:     { at: SLAM, len: 2.2, gain: 1, desc: 'A great armoured beetle unrolling and slamming flat onto a felt table: a quick leathery snap of plates opening, then at 0.05 s a deep body slam, a boom that shakes the whole wooden table frame, a puff of dust, and a long low rumble with the frame creaking that settles by 2.2 s' },
       beetle_stamp:    { at: 4.5, len: 1.0, gain: 0.7, desc: 'Letters stamped hard one after another: seventeen quick heavy stamps like a press punching metal type, all within 0.5 s, the last landing heavier with a short ring' }
     },
@@ -245,7 +244,7 @@
         cam.home(); if (!slam) cam.crash(k.span(CUTP, SLAM), -0.06);
       } else if (t < 1.12) {   // floor: the felt, from the felt
         const u = k.span(0.45, 1.12);
-        cam.at(BTX + 0.62 - 0.1 * u, BTY - 2.0 + 0.15 * u, 0.46, BTX + 0.02, BTY + 0.55, 0.06, -0.025, 34).handheld(0.008, 1.2);
+        cam.fov = 34; cam.orbit(BTX - 0.03, BTY + 0.12, 0.08, cam.fit(1.45 - 0.12 * u, 1.45 - 0.12 * u), 1.36, 0.22, -0.025).handheld(0.008, 1.2);
         fx = BTX; fy = BTY; fzc = 0.06; fa = 2.6;
       } else if (t < 1.52) {   // pass: panning with the blur
         const u = k.ease.io(k.span(1.12, 1.6));
@@ -261,7 +260,7 @@
         fx = -6.3; fy = 7.1; fzc = 0.6; fa = 1.4;
       } else if (t < 3.08) {   // hit 3: flat on the felt, in slow motion
         const u = k.span(2.56, 2.8);
-        cam.at(2.6 - 0.25 * u, 5.6 + 0.2 * u, 0.36, 5.1, 10.3, 0.7, 0.05, 46).crash(k.span(2.72, 2.85), 0.22);
+        cam.fov = 40; const d = cam.fit(4.6 - 0.4 * u, 4.6 - 0.4 * u); cam.at(5.3 - 0.53 * d, 10.3 - 0.85 * d, 1.25, 5.4, 10.9, 1.35, 0.05).crash(k.span(2.72, 2.85), 0.2);
         if (!fz) cam.handheld(0.02, 1.2);
         fx = 6.3; fy = 10.5; fzc = 0.6; fa = 1.0;
       } else {                 // home: the hero angle, low, as it rolls in, stops, rocks and hops toward the lens
@@ -280,9 +279,10 @@
         k.light(0, kx, ky, floor ? 1.3 : 3.4, BRASS, (t < 0.45 ? 0 : (floor ? 30 : 40) * k.ease.out(k.span(0.45, 0.8))) * lo, floor ? 9 : 11);
         k.pool(kx - kdx / kdl * 1.6, ky - kdy / kdl * 1.6, floor ? 5 : 5.5, K.saff, (floor ? 0.08 : 0.05) * lo);
         // the fill: umber, low, from the lens side, so the stitched plates read
-        if (!floor) k.light(2, bx - kdx / kdl * 2.4 + kdy / kdl * 1.2, by - kdy / kdl * 2.4 - kdx / kdl * 1.2, 1.6, UMBR, 13 * lo, 5.5);
-        else k.light(2, BTX + 0.9, BTY - 1.4, 0.9, UMBR, 6 * lo, 4);
-        if (hit > 0.004) { const i = t < 2.1 ? 0 : t < 2.6 ? 1 : 2; k.light(1, HITX[i] * 0.84, HITY[i], 1.7, HOTB, 16 * hit * lo, 5.5); k.pool(HITX[i] * 0.9, HITY[i], 2.4, K.saff, 0.1 * hit * lo); }
+        const fi = k.has.lights >= 3 || hit > 0.05 ? 2 : 1;   // on a two-light tier the fill borrows the impact light between hits
+        if (!floor) k.light(fi, bx - kdx / kdl * 2.4 + kdy / kdl * 1.2, by - kdy / kdl * 2.4 - kdx / kdl * 1.2, 1.6, UMBR, 13 * lo, 5.5);
+        else k.light(fi, BTX + 0.9, BTY - 1.4, 0.9, UMBR, 6 * lo, 4);
+        if (hit > 0.004 && (k.has.lights >= 3 || hit > 0.05)) { const i = t < 2.1 ? 0 : t < 2.6 ? 1 : 2; k.light(1, HITX[i] * 0.84, HITY[i], 1.7, HOTB, 16 * hit * lo, 5.5); k.pool(HITX[i] * 0.9, HITY[i], 2.4, K.saff, 0.1 * hit * lo); }
       } else {
         const up = k.ease.io(k.span(SLAM + 0.15, 5.6)), fl = 1 - k.span(SLAM, SLAM + 0.5);
         k.dark(0.75 * (1 - up), 0); k.vig(0.3 * (1 - up));
@@ -290,7 +290,7 @@
         if (fl > 0.01) k.light(1, c.hx, c.hy - 0.5, 2.2, HOTB, 14 * fl * fl * lo, 7);
       }
 
-      // ---- the felt: lint and fibres jump at every thump, a ripple runs under the lens (only in the floor shot)
+      // ---- the felt: a brass button jumps at every thump, a ripple runs under it (only in the floor shot)
       if (t >= 0.45 && t < 1.12) {
         let jump = 0; for (let i = 0; i < 3; i++) jump = Math.max(jump, k.pulse(THUMP[i], 0.05, 0.16) * (0.6 + 0.2 * i));
         let hz = 0, tilt = 0, walk = 0;
@@ -325,7 +325,7 @@
       // ---- the lens
       if (!play) {
         lens.focus(fx, fy, fzc, fa, 0.016);
-        lens.streak(1.1 * hit, K.saff, 2.6, 1); lens.fringe(2.0 * hit + 0.6 * k.pulse(1.34, 0.05, 0.25)); lens.flash(HOTB, 0.04 * hit);
+        lens.streak(1.1 * hit, K.saff, 2.6, 1); lens.fringe(2.0 * hit + 0.6 * k.pulse(1.34, 0.05, 0.25)); 
         lens.exposure((t < 0.45 ? 0 : 1) + 0.12 * hit);
         if (fz) lens.fringe(2.4);
         k.gate(lerp(0.5, 0.13, k.ease.out(k.span(0.4, 0.62))));
@@ -337,37 +337,38 @@
   };
 
   /* ================================================================================================================
-     DEATH "Last Plate"   len 6.6 s   key 2.62 (reduced motion keeps the play camera)   lights 3
-     idea:     the killing shot throws him; in slow motion he turns over and bounces on his back, lower and sooner each time,
-               and every landing cracks one armour plate off him in a spray of stitches until nothing is left; the first plate
-               to go comes down last, spins on its rim like a dropped coin, faster and lower, and lies still.
+     DEATH "Last Plate"   len 5.8 s (8.7 s real)   key 2.05 (reduced motion keeps the play camera)   lights 3
+     idea:     the killing shot throws him; in slow motion he turns head over tail onto his back and bounces, lower and sooner
+               each time, and every landing cracks one armour plate off him in a spray of stitches until nothing is left; the
+               first plate to go comes down last, spins on its rim like a dropped coin, faster and lower, and lies still.
      camera:   the same ground-level language as his entrance, now slowed: a low three-quarter angle for the throw, then a hard
-               cut on every landing to a new angle (low, overhead, flat on the felt, three-quarter, a crash in on the last);
-               a macro on the felt for the spinning plate; one long crane back to the play camera.
+               cut on every landing to a new angle (low from the other side, overhead, flat on the felt, three-quarter, a crash
+               in on the last); a macro on the felt for the spinning plate; one long crane back to the play camera.
      colour:   umber and brass: the dark room, the brass key, brass rims flashing as the plate turns.
      rhythm:   CRACK (held), a long slow fall, BANG ... bang .. bang . bang, silence, the plate: ring-ring-ring-rrrr-click. Still.
      ends on:  the whole felt, calm and lit, the body and every plate and stitch gone: the fireworks follow.
 
      beat      film s       shot (camera, lens)                          what we see                                   light                         sound / buzz
-     hit       0.0-0.22     the play camera, a small push; held 0.12 s   the killing shot lands; he jolts               house going down              beetle_crack 0.0, buzz
-     throw     0.22-1.25    CUT: low three-quarter; slow motion 0.3x;    thrown up off the felt, he turns over onto     brass key from high up the    beetle_throw 0.22
-                            focus on him                                  his back, legs kicking slowly                  cloth; umber rim
-     land 1    1.25-1.85    CUT: low, the other side; crash zoom         he lands: a plate cracks off and flies up      flash under him (light 1)     beetle_plate 1.25, buzz
-                                                                          past the lens, a spray of stitches
-     land 2    1.85-2.3     CUT: overhead, tight                         the next, lower: a plate and a spray           flash                         beetle_plate 1.85, buzz
-     land 3    2.3-2.62     CUT: flat on the felt                        lower still                                    flash                         beetle_plate 2.3, buzz
-     land 4    2.62-2.85    CUT: three-quarter                           lower, sooner                                  flash                         beetle_plate 2.62, buzz
-     last      2.85-3.12    CUT: crash in on the head                    the head cracks; he is gone in a spray          flash                         beetle_last 2.85, buzz
-     fall      3.12-3.45    CUT: low on the felt, wide; back toward       stitches lying everywhere; from above, the     the key                       (silence)
+     hit       0.0-0.22     the play camera, a small push; held 0.12 s   the killing shot lands; he jolts               house going down              beetle_crack 0, buzz
+     throw     0.22-1.0     CUT: low three-quarter; slow motion 0.45x;   thrown up off the felt he turns head over      brass key from high up the    beetle_throw 0.22
+                            focus on him                                  tail, face-on to the lens, onto his back,      cloth; umber fill from the
+                                                                          legs kicking slowly                            lens side
+     land 1    1.0-1.45     CUT: low, the other side; crash zoom;        he lands: a plate cracks off and flies up      flash under him (light 1)     beetle_plate 1.0, buzz
+                            0.2x at the impact, then 0.5x                 past the lens, a spray of stitches
+     land 2    1.45-1.8     CUT: overhead, tight; crash                  lower: a plate and a spray                     flash                         beetle_plate 1.45, buzz
+     land 3    1.8-2.05     CUT: flat on the felt; crash                 lower still; the rail behind                   flash                         beetle_plate 1.8, buzz
+     land 4    2.05-2.25    CUT: three-quarter; crash (the still)         lower, sooner; his head left                   flash                         beetle_plate 2.05, buzz
+     last      2.25-2.5     CUT: crash in                                 the head cracks; he is gone in a spray          flash                         beetle_last 2.25, buzz
+     fall      2.5-2.85     CUT: low on the felt, wide; back toward       stitches lying everywhere; from above, the     the key, low                  (silence)
                             real time                                     first plate falls into shot, turning
-     spin      3.45-4.75    macro on the felt; focus racks from the      it lands on its rim and spins like a coin,     the key raking low: the rim   beetle_coin 3.45, buzz
+     spin      2.85-4.1     macro on the felt; focus racks from the      it lands on its rim and spins like a coin,     the key raking low: the rim   beetle_coin 2.85, buzz
                             stitches to the plate; a slow drift round     wobbling lower and faster, and lies still      flashes brass every turn
-     rest      4.75-5.4     held                                          the plate at rest among the stitches           the key                       beetle_settle 4.8 (title 4.95)
-     out       5.4-6.6      one long crane back to the play camera       the plate and the stitches fade into the felt; house lights up by 6.3
+     rest      4.1-4.65     held                                          the plate at rest among the stitches           the key                       beetle_settle 4.15 (title 4.2)
+     out       4.65-5.8     one long crane back to the play camera       the plate and the stitches fade into the felt; house lights up by 5.45
                                                                           the cloth calm, lit and whole
      reduced motion: the camera holds at the play camera; he turns over, bounces and loses his plates where he died, and the
      plate spins to rest beside him. */
-  const LAND = [1.25, 1.85, 2.3, 2.62, 2.85], HGT = [2.3, 1.25, 0.75, 0.42, 0.22], LAUNCH = 0.22, ZB = 0.8, DROP = 3.45, REST = 4.75;
+  const LAND = [1.0, 1.45, 1.8, 2.05, 2.25], HGT = [2.1, 1.15, 0.7, 0.4, 0.22], LAUNCH = 0.22, ZB = 0.8, FALL = 2.5, DROP = 2.85, REST = 4.1, OUTA = 4.65, OUTB = 5.45, DLEN = 5.8;
   const UPICK = [1.7 / 7.4, 3.7 / 7.4, 5.7 / 7.4, 6.7 / 7.4, 1.02];   // how much of him is gone after each landing (the plates order: eight plates, the head last)
   const NX = 160, XS = new Float32Array(NX * 8);                         // stitches thrown off: x, y, z, vx, vy, vz, born, colour index
   const XC = new Float32Array(NX * 3);
@@ -379,21 +380,22 @@
     let z = 1, i = 0; while (i < LAND.length && t >= LAND[i]) i++;
     if (t >= LAUNCH && i < LAND.length) { const t0 = i ? LAND[i - 1] : LAUNCH, z0 = i ? ZB : 1, u = (t - t0) / (LAND[i] - t0); z = lerp(z0, ZB, u) + HGT[i] * 4 * u * (1 - u); }
     else if (i >= LAND.length) z = ZB;
-    const s = DS[2], d = sm(LAUNCH, 2.9, t);
+    const s = DS[2], d = sm(LAUNCH, LAND[4] + 0.05, t);
     BODY[0] = DS[0] + s * 0.7 * d; BODY[1] = DS[1] - 0.35 * d; BODY[2] = z; BODY[3] = i;
-    BODY[4] = (PI + 0.45) * eio(clamp((t - 0.3) / 0.85, 0, 1));                         // head over tail onto his back, leaning his belly toward the low lens
-    BODY[5] = 0.5 * d + 0.12 * Math.sin(t * 3.1) * (1 - sm(2.6, 2.9, t));               // turning as he goes
+    BODY[4] = (PI + 0.45) * eio(clamp((t - 0.28) / 0.62, 0, 1));                         // head over tail onto his back, leaning his belly toward the low lens
+    BODY[5] = 0.5 * d + 0.12 * Math.sin(t * 3.1) * (1 - sm(LAND[3], LAND[4] + 0.05, t));   // turning as he goes
   }
   /* A stitch cracked off him: thrown up and out from where it sat, into the instanced spray. */
   function crackStitch(k, x, y, z, rgb) {
-    const c = k.c, i = c.n1 % NX, o = i * 8, bx = BODY[0], by = BODY[1]; c.n1++;
+    const c = k.c, i = c.n1 % NX, o = i * 8, bx = BODY[0], by = BODY[1], cr = Math.cos(BODY[4]), ly = y - by; c.n1++;
+    y = by + ly * cr; z += ly * Math.sin(BODY[4]);   // (the needle's place ignores his turn onto his back: put it where the stitch really is)
     const dx = x - bx, dy = y - by, dl = hyp(dx, dy) || 1, sp = 1.6 + 3.2 * Math.random();
     XS[o] = x; XS[o + 1] = y; XS[o + 2] = z + 0.1; XS[o + 3] = dx / dl * sp + rnd(-0.6, 0.6); XS[o + 4] = dy / dl * sp + rnd(-0.6, 0.6); XS[o + 5] = rnd(2.5, 6.5); XS[o + 6] = k.t; XS[o + 7] = Math.random() * 37;
     XC[i * 3] = rgb[0]; XC[i * 3 + 1] = rgb[1]; XC[i * 3 + 2] = rgb[2];
   }
   /* The plates: 0 flies high and comes down last; 1 to 3 fly off out of shot. Returns nothing; poses each plate group. */
   function platesAt(k, g, t) {
-    const d = g.userData, q = d.q, s = DS[2], fade = 1 - k.ease.io(k.span(5.6, 6.25));
+    const d = g.userData, q = d.q, s = DS[2], fade = 1 - k.ease.io(k.span(4.75, 5.4));
     d.mat.opacity = fade; d.bm.opacity = fade;
     for (let i = 0; i < 5; i++) { const p = g.children[i]; p.visible = false; }
     // the hero plate
@@ -422,7 +424,7 @@
   }
   /* The stitches thrown off him, from the film clock: flying, landing, lying on the felt, fading at the end. */
   function stitchesAt(k, m, t) {
-    const arr = m.instanceMatrix.array, ca = m.instanceColor.array, fade = 1 - k.ease.io(k.span(5.5, 6.2)), N = Math.min(k.c.n1, NX); let n = 0;
+    const arr = m.instanceMatrix.array, ca = m.instanceColor.array, fade = 1 - k.ease.io(k.span(4.7, 5.35)), N = Math.min(k.c.n1, NX); let n = 0;
     if (fade > 0.003) for (let i = 0; i < N; i++) {
       const o = i * 8, a = t - XS[o + 6]; if (a < 0) continue;
       const vz = XS[o + 5], z0 = XS[o + 2], g = 10, ta = (vz + Math.sqrt(vz * vz + 2 * g * z0)) / g, aa = Math.min(a, ta), sl = a > ta ? 0.09 * (1 - Math.exp(-(a - ta) * 7)) : 0;
@@ -435,13 +437,13 @@
   /* Dust off the felt at a landing, from the film clock. */
   function landDust(k, x, y, a, big) {
     if (a < 0 || a > 2.2) return; const l0 = k.lit(DUSTC, x, y, 1.2, 0.03), e = 1 - Math.exp(-a * 2.6), lc = SC; SC[0] = Math.min(0.26, l0[0] * 0.3); SC[1] = Math.min(0.2, l0[1] * 0.3); SC[2] = Math.min(0.14, l0[2] * 0.3);
-    for (let j = 0; j < 10; j++) { const an = j / 10 * TAU + hash(j + big * 7) * 0.5, rr = (0.6 + 1.4 * e) * (0.7 + 0.5 * hash(j * 3.1 + big));
-      k.r.halo.add(x + Math.cos(an) * rr, y + Math.sin(an) * rr, 0.15 + 0.4 * e, (0.4 + 1.2 * e) * big, lc, 0.4 * Math.exp(-a * 1.6), 0); }
+    for (let j = 0; j < 8; j++) { const an = j / 8 * TAU + hash(j + big * 7) * 0.5, rr = (0.7 + 1.5 * e) * (0.7 + 0.5 * hash(j * 3.1 + big));
+      k.r.halo.add(x + Math.cos(an) * rr, y + Math.sin(an) * rr, 0.08 + 0.25 * e, (0.3 + 0.7 * e) * big, lc, 0.28 * Math.exp(-a * 1.8), 0); }
   }
 
   const LASTPLATE = {
-    kit: true, len: 6.6, key: 2.62, lights: 3,
-    sheet: [0.1, 0.7, 1.27, 1.6, 1.87, 2.32, 2.86, 3.3, 3.7, 4.3, 5.0, 6.4],
+    kit: true, len: DLEN, key: 2.05, lights: 3,
+    sheet: [0.1, 0.52, 1.02, 1.3, 1.47, 1.82, 2.07, 2.27, 2.7, 3.2, 4.3, 5.7],
     beats: {
       hit:   [0, LAUNCH, 'out'],
       throw: [LAUNCH, LAND[0], 'io'],
@@ -449,29 +451,29 @@
       land2: [LAND[1], LAND[2], 'lin'],
       land3: [LAND[2], LAND[3], 'lin'],
       land4: [LAND[3], LAND[4], 'lin'],
-      last:  [LAND[4], 3.12, 'lin'],
-      fall:  [3.12, DROP, 'lin'],
+      last:  [LAND[4], FALL, 'lin'],
+      fall:  [FALL, DROP, 'lin'],
       spin:  [DROP, REST, 'lin'],
-      rest:  [REST, 5.4, 'lin'],
-      out:   [5.4, 6.6, 'io']
+      rest:  [REST, OUTA, 'lin'],
+      out:   [OUTA, DLEN, 'io']
     },
-    ramp: [[0.2, 1], [0.26, 0.3], [1.24, 0.3], [1.27, 0.12], [1.36, 0.3], [1.84, 0.3], [1.87, 0.14], [1.95, 0.32], [2.29, 0.32], [2.32, 0.16], [2.39, 0.34], [2.61, 0.34], [2.64, 0.18],
-      [2.7, 0.36], [2.84, 0.36], [2.87, 0.14], [2.97, 0.3], [3.15, 0.55], [3.4, 1]],
-    title: { at: 4.95, iv: 0.035, in: 'bcrack', pos: 'top', to: 6.4 },
+    ramp: [[0.2, 1], [0.26, 0.45], [0.98, 0.45], [1.01, 0.2], [1.08, 0.5], [1.44, 0.5], [1.46, 0.22], [1.52, 0.5], [1.79, 0.5], [1.81, 0.25], [1.86, 0.52], [2.04, 0.52], [2.06, 0.28],
+      [2.1, 0.55], [2.24, 0.55], [2.26, 0.22], [2.34, 0.5], [2.6, 0.7], [2.8, 1]],
+    title: { at: 4.2, iv: 0.035, in: 'bcrack', pos: 'top', to: 5.6 },
     css: '.fk-t.i-bcrack .fk-n span.on{animation:bt-crack .42s cubic-bezier(.2,.9,.3,1) both}.i-bcrack .fk-rule{border-top-color:#9C7A3A}' +
       '@keyframes bt-crack{0%{opacity:0;transform:translateY(-.35em) rotate(-9deg) scale(1.25);color:#9C7A3A}40%{opacity:1;transform:translateY(.04em) rotate(3deg)}' +
       '65%{transform:rotate(-1.5deg);color:#E6DFD0}100%{transform:none}}',
-    /* The sting runs in real seconds from film 0. The hold at the hit adds 0.12 s; the slow motion (film 0.2 to 3.4) stretches
-       3.2 film seconds to 10.0 real. Film 0.22 / 1.25 / 1.85 / 2.3 / 2.62 / 2.85 / 3.45 / 4.75 / 4.95 are real 0.37 / 3.67 /
-       5.66 / 7.07 / 8.03 / 8.71 / 10.11 / 11.41 / 11.61; the end real 13.26 (ST.Cine.sounds() lists these). */
-    music: { name: 'beetle_down_sting', len: 13.6, gain: 0.85, desc: 'Death sting for the Carpet Beetle, a heavy armoured beetle. Instrumental, slowed action-film score. A sharp brass stab at 0 s cut off by 0.12 s; from 0.37 s a deep slowed swell of low strings and a heartbeat sub-kick, as if time has nearly stopped; at 3.67 s a huge slowed taiko hit with a metallic crunch, decaying long; smaller and higher hits at 5.66, 7.07 and 8.03 s, each quieter and shorter; at 8.71 s a final crack and a cymbal swell that stops dead at 9.2 s; near silence with one high held glassy note from 9.4 s; from 10.11 s a faint ticking pulse that quickens until 11.41 s and stops; at 11.61 s a single low warm chord of brass and strings that settles and fades by 13.6 s' },
+    /* The sting runs in real seconds from film 0. The hold at the hit adds 0.12 s; the slow motion (film 0.2 to 2.8) stretches
+       2.6 film seconds to 5.3 real. Film 0.22 / 1.0 / 1.45 / 1.8 / 2.05 / 2.25 / 2.5 / 2.85 / 4.1 / 4.2 / 4.65 are real 0.34 /
+       2.06 / 3.06 / 3.83 / 4.37 / 4.78 / 5.33 / 5.77 / 7.02 / 7.12 / 7.57; the end real 8.72. */
+    music: { name: 'beetle_down_sting', len: 9.2, gain: 0.85, desc: 'Death sting for the Carpet Beetle, a heavy armoured beetle. Instrumental, slowed action-film score. A sharp brass stab at 0 s cut off by 0.12 s; from 0.34 s a deep slowed swell of low strings and a heartbeat sub-kick, as if time has nearly stopped; at 2.06 s a huge slowed taiko hit with a metallic crunch; smaller, higher hits at 3.06, 3.83 and 4.37 s, each quieter and shorter; at 4.78 s a final crack and a cymbal swell that stops dead at 5.2 s; near silence with one high held glassy note from 5.33 s; from 5.77 s a faint ticking pulse that quickens until 7.02 s and stops; at 7.12 s a single low warm chord of brass and strings that settles and fades by 9.2 s' },
     sounds: {
       beetle_crack:  { at: 0, len: 1.2, gain: 1, desc: 'A killing blow on armour: a sharp crack of a thick shell splitting at 0 s, then everything drops in pitch and slows, as if time has stopped, into a deep falling whoom that fades by 1.2 s' },
-      beetle_throw:  { at: LAUNCH, len: 3.2, gain: 0.8, desc: 'A heavy armoured body thrown and turning over in very slow motion: a deep, stretched rush of air rising and falling over 3 s, slowed scrabbling of six legs from 1.0 s, a low creak of plates bending' },
-      beetle_plate:  { at: LAND.slice(0, 4), len: 1.8, gain: 1, desc: 'A heavy armoured body landing on its back on a felt table in slow motion and one shell plate cracking off: a deep slowed thud and a thick crack of chitin at 0 s, a plate spinning away with a low whirr, then a long slowed patter of small hard stitches raining onto felt that fades by 1.8 s' },
-      beetle_last:   { at: LAND[4], len: 1.6, gain: 1, desc: 'The last of an armoured shell giving way: a final, sharper crack at 0 s that bursts into a spray of small hard pieces, a slowed scatter of them pattering down, and then a sudden silence from 0.5 s with only a faint high ringing to 1.6 s' },
-      beetle_coin:   { at: DROP, len: 1.6, gain: 0.9, desc: 'A small curved metal-rimmed plate dropped onto a felt table, landing on its edge and spinning like a coin: a clack at 0 s, then a wobbling rattle that rises in pitch and speeds up over 1.3 s (like a spinning coin settling), stopping dead at 1.3 s with one final soft click; then silence' },
-      beetle_settle: { at: 4.8, len: 1.8, gain: 0.45, desc: 'The room after the fight: a long soft exhale of settling dust, one tiny tick of a stitch dropping onto felt at 0.4 s, and a warm quiet room tone fading by 1.8 s' }
+      beetle_throw:  { at: LAUNCH, len: 1.9, gain: 0.8, desc: 'A heavy armoured body thrown and turning over in slow motion: a deep, stretched rush of air rising and falling over 1.7 s, slowed scrabbling of six legs from 0.6 s, a low creak of plates bending; it ends as he lands at 1.7 s' },
+      beetle_plate:  { at: LAND.slice(0, 4), len: 1.6, gain: 1, desc: 'A heavy armoured body landing on its back on a felt table in slow motion and one shell plate cracking off: a deep slowed thud and a thick crack of chitin at 0 s, a plate spinning away with a low whirr, then a slowed patter of small hard stitches raining onto felt that fades by 1.6 s' },
+      beetle_last:   { at: LAND[4], len: 1.4, gain: 1, desc: 'The last of an armoured shell giving way: a final, sharper crack at 0 s that bursts into a spray of small hard pieces, a slowed scatter of them pattering down, then a sudden silence from 0.5 s with only a faint high ringing to 1.4 s' },
+      beetle_coin:   { at: DROP, len: 1.5, gain: 0.9, desc: 'A small curved plate with a metal rim dropped onto a felt table, landing on its edge and spinning like a coin: a clack at 0 s, then a wobbling rattle that rises in pitch and speeds up over 1.25 s (like a spinning coin settling), stopping dead at 1.25 s with one final soft click; then silence' },
+      beetle_settle: { at: REST + 0.05, len: 1.8, gain: 0.45, desc: 'The room after the fight: a long soft exhale of settling dust, one tiny tick of a stitch dropping onto felt at 0.4 s, and a warm quiet room tone fading by 1.8 s' }
     },
     buzz: [[0, 50], [LAND[0], 45], [LAND[1], 35], [LAND[2], 28], [LAND[3], 22], [LAND[4], [40, 30, 60]], [DROP, 14], [REST, 10]],
     steps: [
@@ -488,7 +490,7 @@
       const c = k.c, r = k.r, K = k.K, cam = k.cam, lens = k.lens, post = k.has.post, lo = post ? 1 : 0.5;
       stageOf(c); bodyAt(t);
       const sx = DS[0], sy = DS[1], s = DS[2], x = BODY[0], y = BODY[1], z = BODY[2], li = BODY[3];
-      const out = k.ease.io(k.span(5.45, 6.3)), gone = t >= LAND[4] + 0.06;
+      const out = k.ease.io(k.span(OUTA, OUTB)), gone = t >= LAND[4] + 0.06;
       let imp = 0, ii = 0; for (let i = 0; i < 5; i++) { const p = k.pulse(LAND[i], 0.01, 0.14 + 0.04 * (4 - i)) * (i === 4 ? 1.1 : 1 - 0.12 * i); if (p > imp) { imp = p; ii = i; } }
 
       // ---- the camera: a new angle on every landing
@@ -499,35 +501,36 @@
       else if (t < LAND[2]) { cam.orbit(x, y, z * 0.6, cam.fit(3.4, 3.4), 0.28, s * 0.25, 0.06, 34).crash(k.span(LAND[1] - 0.02, LAND[1] + 0.07), 0.22); fa = 0.9; }
       else if (t < LAND[3]) { cam.orbit(x, y, 0.35 + z * 0.4, cam.fit(3.0, 3.0), 1.22, s * 0.9, 0, 44).crash(k.span(LAND[2] - 0.02, LAND[2] + 0.06), 0.2); }
       else if (t < LAND[4]) { cam.orbit(x, y, 0.5 + z * 0.4, cam.fit(3.9, 3.9), 0.82, -s * 0.3, 0.04, 36).crash(k.span(LAND[3] - 0.02, LAND[3] + 0.06), 0.2); }
-      else if (t < 3.12) { cam.orbit(x, y + 0.25, 0.7, cam.fit(2.6, 2.6), 0.62, s * 0.15, 0, 34).crash(k.span(LAND[4] - 0.03, LAND[4] + 0.08), 0.34); }
+      else if (t < FALL) { cam.orbit(x, y + 0.2, 0.6, cam.fit(3.6, 3.6), 0.7, s * 0.2, 0, 36).crash(k.span(LAND[4] - 0.03, LAND[4] + 0.08), 0.26); }
       else {
         // low on the felt, looking at where the plate will land; then the macro on it as it spins; then the long crane home
-        const u = k.ease.io(k.span(3.12, 3.7)), dr = k.span(DROP, 5.4);
+        const u = k.ease.io(k.span(FALL, FALL + 0.55)), dr = k.span(DROP, OUTA);
         cam.orbit(DS[3], DS[4], lerp(0.9, 0.3, u), cam.fit(lerp(4.2, 1.9, u), lerp(4.2, 1.9, u)), lerp(1.08, 1.22, u), s * (0.35 + 0.35 * dr) - 0.2, -0.02, 38).handheld(0.012 * (1 - out), 0.8).mark();
         cam.home().mix(out);
-        fx = DS[3]; fy = DS[4]; fzc = 0.2; fa = t < 3.7 ? 1.4 : lerp(1.4, 2.6, k.ease.io(k.span(3.7, 4.2)));
-        if (t < 3.9) { const rk = k.ease.io(k.span(3.45, 3.9)); fx = lerp(DS[3] - s * 0.9, DS[3], rk); fy = lerp(DS[4] - 0.8, DS[4], rk); fzc = 0.05; }
+        fx = DS[3]; fy = DS[4]; fzc = 0.2; fa = lerp(1.4, 2.6, k.ease.io(k.span(DROP + 0.25, DROP + 0.7)));
+        if (t < DROP + 0.45) { const rk = k.ease.io(k.span(DROP, DROP + 0.45)); fx = lerp(DS[3] - s * 0.9, DS[3], rk); fy = lerp(DS[4] - 0.8, DS[4], rk); fzc = 0.05; }
       }
       cam.full(1 - out);
 
       // ---- light: the brass key from high up the cloth, an umber rim, a flash under him on every landing
-      k.dark(Math.max(c.d0 * (1 - k.span(0, 0.3)), k.ease.io(k.span(0.05, 0.45))) * (1 - out), 0.82 * (1 - out)); k.vig(0.5 * (1 - out));
+      const held = k.reduce;   // reduced motion: the camera stays at the play camera, so the house is kept a little up and the lens plain
+      k.dark(Math.max(c.d0 * (1 - k.span(0, 0.3)), (held ? 0.8 : 1) * k.ease.io(k.span(0.05, 0.45))) * (1 - out), (held ? 0.3 : 0.82) * (1 - out)); k.vig((held ? 0.25 : 0.5) * (1 - out));
       if (out < 0.98) k.quiet();
       const kk = (1 - out) * k.ease.out(k.span(0.1, 0.5));
-      if (t < 3.12) { k.light(0, sx - 2.4 * s, sy + 3.2, 4.4, BRASS, 44 * kk * lo, 12); k.pool(sx - s, sy + 1, 6, K.saff, 0.06 * kk * lo); }
+      if (t < FALL) { k.light(0, sx - 2.4 * s, sy + 3.2, 4.4, BRASS, 44 * kk * lo, 12); k.pool(sx - s, sy + 1, 6, K.saff, 0.06 * kk * lo); }
       else { k.light(0, DS[3] - 2.0 * s, DS[4] + 2.2, 1.35, BRASS, 24 * kk * lo, 7); k.pool(DS[3], DS[4] + 0.4, 3.6, K.saff, 0.07 * kk * lo); }
-      { const dx = x - cam.px, dy = y - cam.py, dl = hyp(dx, dy) || 1; if (t < 3.12) k.light(2, x - dx / dl * 2.4 + dy / dl * 1.2, y - dy / dl * 2.4 - dx / dl * 1.2, z + 1.2, UMBR, 15 * kk * lo, 5.5); else k.light(2, DS[3] - dx / dl * 1.2, DS[4] - dy / dl * 1.2, 0.9, UMBR, 5 * kk * lo, 3.5); }
-      if (imp > 0.004) { k.light(1, x, y - 0.4, 1.4, HOTB, 18 * imp * lo, 5); k.pool(x, y, 3.2, K.saff, 0.08 * imp * lo); }
+      { const dx = x - cam.px, dy = y - cam.py, dl = hyp(dx, dy) || 1, fi = k.has.lights >= 3 || imp > 0.05 ? 2 : 1; if (t < FALL) k.light(fi, x - dx / dl * 2.4 + dy / dl * 1.2, y - dy / dl * 2.4 - dx / dl * 1.2, z + 1.2, UMBR, (t < LAND[0] ? 24 : 15) * kk * lo, 5.5); else k.light(fi, DS[3] - dx / dl * 1.2, DS[4] - dy / dl * 1.2, 0.9, UMBR, 7 * kk * lo, 3.5); }
+      if (imp > 0.004 && (k.has.lights >= 3 || imp > 0.05)) { k.light(1, x, y - 0.4, 1.4, HOTB, 18 * imp * lo, 5); k.pool(x, y, 3.2, K.saff, 0.08 * imp * lo); }
 
       // ---- him: thrown, turned onto his back, a plate gone at every landing
       if (!gone) {
-        const into = k.ease.out(k.span(0, LAUNCH + 0.3)), dk = lerp(1, 0.62, sm(0.4, 1.0, t));
-        c.dboss(into, x, y, z, 1, BODY[5], 0, dk, dk * 0.9, dk * 0.82, 0.3 * k.pulse(0, 0.01, 0.2), BODY[4] + 0.12 * Math.sin(t * 2.3) * sm(1.2, 1.6, t), 0.22 * Math.sin(t * 1.7) * sm(0.3, 0.7, t));
+        const into = k.ease.out(k.span(0, LAUNCH + 0.3)), dk = lerp(1, 0.62, sm(0.35, 0.85, t));
+        c.dboss(into, x, y, z, 1, BODY[5], 0, dk, dk * 0.9, dk * 0.82, 0.3 * k.pulse(0, 0.01, 0.2), BODY[4] + 0.12 * Math.sin(t * 2.3) * sm(1.0, 1.3, t), 0.22 * Math.sin(t * 1.7) * sm(0.3, 0.7, t));
         c.edge(K.brassHi, 1.1);
         let u = 0; for (let i = 0; i < 5; i++) { const a = t - LAND[i]; if (a >= 0) u = lerp(i ? UPICK[i - 1] : 0, UPICK[i], Math.min(1, a / (i === 4 ? 0.12 : 0.07))); }
         if (u > 0) k.unpickBoss(u, 'plates', crackStitch); else c.dissolve(-1);
         // his legs, kicking slowly in the air once he is on his back
-        const lg = sm(0.75, 1.1, t) * (1 - sm(2.2, 2.85, t));
+        const lg = sm(0.6, 0.9, t) * (1 - sm(LAND[3], LAND[4], t));
         if (lg > 0.01) { const def = c.def, hw = def ? def.halfW : 1.7, hh = def ? def.halfH : 1.25, cr = Math.cos(BODY[5]), sr = Math.sin(BODY[5]), lc = k.lit(K.dbrown, x, y, z + 0.5, 0.05);
           for (let j = 0; j < 6; j++) { const sd = j < 3 ? -1 : 1, jj = j % 3, lx0 = sd * hw * (0.32 + jj * 0.1), ly0 = hh * (0.4 - jj * 0.4), kick = Math.sin(t * 11 + j * 1.7) * 0.3;
             const ax = x + lx0 * cr - ly0 * sr, ay = y + lx0 * sr + ly0 * cr, bxx = ax + sd * (0.35 + 0.15 * kick) * cr, byy = ay + sd * (0.35 + 0.15 * kick) * sr + kick * 0.2;
@@ -540,16 +543,16 @@
       for (let i = 0; i < 5; i++) { const a = t - LAND[i]; if (a >= 0 && a < 2.2) { bodyAt(LAND[i]); landDust(k, BODY[0], BODY[1], a, 1.2 - 0.12 * i); } }
       bodyAt(t);
       landDust(k, DS[3], DS[4], (t - DROP) * 1.6, 0.35);
-      if (t < 3.6) for (let i = 0; i < 5; i++) { const a = t - LAND[i]; if (a > 0 && a < 0.5) k.cloth.wave(x, y, a * 6, 0.07 * (1 - a / 0.5) * (1 - 0.15 * i), 0.6); }
-      if (t > 3.0 && out < 1) k.motes(26, DS[3] - 1.6, DS[4] - 1.2, 0.1, DS[3] + 1.6, DS[4] + 1.6, 1.4, K.saffHi, 0.3 * (1 - out) * k.span(3.0, 3.6), 0.03, 0.05, 13);
+      if (t < FALL + 0.6) for (let i = 0; i < 5; i++) { const a = t - LAND[i]; if (a > 0 && a < 0.5) k.cloth.wave(x, y, a * 6, 0.07 * (1 - a / 0.5) * (1 - 0.15 * i), 0.6); }
+      if (t > FALL && out < 1) k.motes(26, DS[3] - 1.6, DS[4] - 1.2, 0.1, DS[3] + 1.6, DS[4] + 1.6, 1.4, K.saffHi, 0.3 * (1 - out) * k.span(FALL, FALL + 0.5), 0.03, 0.05, 13);
 
       // ---- the lens
       if (t < LAUNCH) { lens.fringe(1.8 * (1 - k.span(0, LAUNCH))); lens.exposure(1 + 0.3 * k.pulse(0, 0.01, 0.2)); }
       else if (out < 1) {
-        if (fa > 0) lens.focus(fx, fy, fzc, fa * (1 - out), 0.016);
-        lens.streak(0.9 * imp, K.saff, 2.4, 1); lens.fringe(1.8 * imp); lens.flash(HOTB, 0.1 * imp); lens.exposure(1 + 0.25 * imp);
+        if (fa > 0 && !held) lens.focus(fx, fy, fzc, fa * (1 - out), 0.016);
+        if (!held) lens.streak(0.9 * imp, K.saff, 2.4, 1); lens.fringe(1.8 * imp); lens.exposure(1 + 0.1 * imp);
       }
-      k.gate(lerp(0.11, 0.13, k.ease.out(k.span(0.1, 0.4))) * (1 - k.ease.io(k.span(6.1, 6.6))));
+      k.gate(lerp(0.11, 0.13, k.ease.out(k.span(0.1, 0.4))) * (1 - k.ease.io(k.span(5.3, DLEN))));
     }
   };
 

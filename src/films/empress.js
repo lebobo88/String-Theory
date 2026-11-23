@@ -38,14 +38,14 @@
   const PX = new Float32Array(64), PY = new Float32Array(64), PZ = new Float32Array(64), PS = new Float32Array(64);   // scratch polyline
   const TX = new Float32Array(NA), TY = new Float32Array(NA), TS = new Float32Array(NA), TO = new Float32Array(NA);   // each line's tip, sag, how much of it shows
   const QX = new Float32Array(NA), QY = new Float32Array(NA);   // each line's pivot (an anchor, or the hub for the three low ones)
-  let SAVED = null; const NOPROPS = [];
+  let SAVED = null, LOWQ = false; const NOPROPS = [];   // LOWQ: this frame is on the low tier (no post pass): fewer sprites per bead
 
   /* How brightly the moon, behind the web, lights silk at (x, y): silk is lit from behind, so it glows most across the moon. */
   function moonK(x, y) { const dx = x - MX, dy = y - MY; return 0.5 + 1.6 / (1 + (dx * dx + dy * dy) / 7); }
   /* One silk line this frame: a soft glow round it (additive, the silk style, its sheen running along it) and a fine bright
      core. b is how much light it catches. */
   function silk(k, ax, ay, az, bx, by, bz, b, a, sag) {
-    if (a <= 0.01) return; const g = 0.22 * b, cc = 0.62 * b;
+    if (a <= 0.01) return; const g = 0.24 * b, cc = 0.78 * b;
     SG[0] = MOON[0] * g; SG[1] = MOON[1] * g; SG[2] = MOON[2] * g; SC[0] = PAPER[0] * cc; SC[1] = PAPER[1] * cc; SC[2] = PAPER[2] * cc;
     k.thread(ax, ay, az, bx, by, bz, 0.085, SG, a, 7, sag, true);
     k.thread(ax, ay, az, bx, by, bz, 0.03, SC, a, 3, sag, false);
@@ -61,14 +61,14 @@
   /* A dew bead on the silk: a cold point of moonlight, twinkling as the eye moves; tw adds a glint. */
   function dew(k, x, y, z, s, b, tw) {
     const r = k.r, f = Math.min(2.2, b); DC[0] = MOONHI[0] * f * 0.5; DC[1] = MOONHI[1] * f * 0.5; DC[2] = MOONHI[2] * f * 0.5;
-    r.spr.add(x, y, z, s, DC, 0.9, 0); r.spr.add(x, y, z + 0.01, s * 0.38, k.K.glare, Math.min(1, 0.45 * f), 0);
+    r.spr.add(x, y, z, s, DC, 0.9, 0); if (!LOWQ || s > 0.3) r.spr.add(x, y, z + 0.01, s * 0.38, k.K.glare, Math.min(1, 0.45 * f), 0);
     if (tw > 0.05) r.spr.add(x, y, z + 0.02, s * 4.2 * tw, DC, 0.8 * tw, 1, 0.785);
   }
   /* A pin: a brass head and a knot of silk where a line is tied to the cloth, lit as the moon leaves it. */
   function pin(k, x, y, b) {
-    const c = k.c, r = k.r, K = k.K; c.ball(x, y, 0.5, 0.17, 0.17, 0.13, 0, K.linen, 0, 0.05);
-    DC[0] = MOON[0] * 0.35 * b; DC[1] = MOON[1] * 0.35 * b; DC[2] = MOON[2] * 0.35 * b;
-    r.spr.add(x, y + 0.08, 0.95, 0.42, k.lit(K.brass, x, y, 1.2, 0.05), 0.9, 9); r.spr.add(x, y, 0.62, 0.8, DC, 0.5, 7, x * 3);
+    const c = k.c, r = k.r, K = k.K, br = K.brass, f = Math.min(1.4, 0.35 + 0.45 * b); c.ball(x, y, 0.5, 0.17, 0.17, 0.13, 0, K.linen, 0, 0.05);
+    DC[0] = MOON[0] * 0.35 * b; DC[1] = MOON[1] * 0.35 * b; DC[2] = MOON[2] * 0.35 * b; r.spr.add(x, y, 0.62, 0.8, DC, 0.5, 7, x * 3);
+    DC[0] = br[0] * f; DC[1] = br[1] * f; DC[2] = br[2] * f; r.spr.add(x, y, 0.95, 0.24, DC, 0.85, 0);
   }
 
   /* The moon: one quad turned to the lens. A disc of white silk (a faint weave, a soft limb and a few pale shadows in it, as a
@@ -97,7 +97,7 @@ void main(){
     m.frustumCulled = false; m.renderOrder = 1; return m;
   }
   function moon(k, a, hot) {
-    if (a <= 0.003) return; const m = k.prop('moon'), u = m.material.uniforms, s = MR * 4 * (1 + 0.18 * hot);
+    if (a <= 0.003) return; const m = k.prop('moon'), u = m.material.uniforms, s = MR * 4 * (1 + 0.18 * hot); if (!k.has.post) a *= 0.72;   // no tone mapping on low: it would burn
     m.position.set(MX, MY, MZ); m.lookAt(k.cam.px, k.cam.py, k.cam.pz); m.scale.set(s, s, 1); u.uA.value = a; u.uHot.value = hot; u.uTime.value = k.t;
   }
 
@@ -105,10 +105,10 @@ void main(){
      reads as a shelf across the moon. Its lower edge is soft, so the cloth under it falls off into the dark. Drawn after the
      ground and behind everything of hers (the moon included); uA fades it as the house lights come back. */
   function buildFlag(T) {
-    const m = new T.Mesh(new T.PlaneGeometry(1, 1), FX.shaderMat(T, { vs: MOON_VS, fs: 'uniform float uA; varying vec2 vUv; void main(){ gl_FragColor = vec4(0., 0., 0., uA * smoothstep(0., .05, vUv.y)); }', transparent: true, depthWrite: false, uniforms: { uA: { value: 1 } } }));
+    const m = new T.Mesh(new T.PlaneGeometry(1, 1), FX.shaderMat(T, { vs: MOON_VS, fs: 'uniform float uA; varying vec2 vUv; void main(){ gl_FragColor = vec4(0., 0., 0., uA * smoothstep(0., .13, vUv.y)); }', transparent: true, depthWrite: false, uniforms: { uA: { value: 1 } } }));
     m.renderOrder = -3; m.frustumCulled = false; return m;
   }
-  function flag(k, a) { if (a <= 0.01) return; const f = k.prop('flag'); f.position.set(0, H - 0.2 + 7.5, 0.05); f.scale.set(70, 15, 1); f.material.uniforms.uA.value = Math.min(1, a); }
+  function flag(k, a) { if (a <= 0.01) return; const f = k.prop('flag'); f.position.set(0, H - 1.5 + 7.5, 0.05); f.scale.set(70, 15, 1); f.material.uniforms.uA.value = Math.min(1, a); }
 
   /* The cocoon: a spindle of wound silk. Bands of thread wind round it on a helix that turns as it spins (uSpin); uCover winds
      them on from its waist out to its two points; lit from behind by the moon (a bright rim) and glowing through where it is thin. */
@@ -164,38 +164,43 @@ void main(){
      slowly, and the focus racks from the dew at our feet up to her. She stops. Her line snaps; she drops and turns upright on her
      rim; the moon flares to paper white. Out of the white: the fight, her rim pinned where her script pins it.
 
-     ENTRANCE "Plumb Line"  len 7.9 s  key 6.05 (the still)  lights 3
+     ENTRANCE "Plumb Line"  len 7.9 s (8.8 on the clock)  key 6.05 (the still)  lights 3
      idea:     one line, then a web in perfect symmetry, then her, upside down, into focus: all of it hanging from the moon
      camera:   vertical cranes: down the plumb line with the falling bead; down the web as it is built; boom under it and look up
-               for her descent. Symmetric framing throughout; one slow rack of focus from the dew to her
+               for her descent. Symmetric framing throughout; one slow rack of focus from the dew to her. The gate is part of the
+               language: tall for the drop, widescreen for the symmetric wides, opened to the full height again as she comes down
      colour:   paper white, moonlight blue, a near-black damask   rhythm: silence, ONE (held), two, three, four, catch catch catch,
                the rings like a run of harp notes, a long held descent, snap, white
-     handover: CUT under the moon's white-out at 6.82 to the play camera: she is already on her rim at k.c.hx, k.c.hy, upright;
-               the fight's rim (held back during the film) is put back at the cut; a paper-white veil clears; title over it
+     handover: CUT under the moon's white-out at 6.86 to the play camera: she is already on her rim at k.c.hx, k.c.hy, upright;
+               the fight's rim (held back during the film) is put back at the cut; the film's web is gone under the full white;
+               a paper-white veil clears onto the fight; the title is already up
 
      beat      film s      shot (camera, lens)                                   what we see                             light              sound / buzz
-     dark      0.0-0.45    black; the gate shut, opening to a slit                  nothing; then the moon's rim            none               sting: a high glass harmonic
-     moon      0.15-0.9    macro, low, looking straight up the plumb line           the moon rises behind the top pin       moon (light 0)     empress_moon 0.15
-     drop      0.62-1.44   crane down with the bead as it falls at us; focus        one line drops out of the moon          moon                empress_drop 0.62
-                           racks from the moon to the bead
-     taut      1.44-1.9    slow motion 0.3x as it snaps taut; a small streak,       the bead bounces on the line, glints    a ping (light 2)   empress_taut 1.44, buzz
-                           fringe; the crane settles on the bead
-     harp      1.9-2.95    CUT: face on, wide, symmetric; a slow crane down          three pairs drop, 2.0 / 2.33 / 2.62,     moon + fill         empress_pluck x3, buzz x3
-                                                                                    snap taut and hang like harp strings     (light 1)
-     catch     2.95-3.95   the crane goes on down                                   the pairs swing in and catch on the      pings at the hub   empress_catch x3 + 3.62
-                                                                                    plumb line, 3.0 / 3.22 / 3.44; three
-                                                                                    more drop from the hub, pinned at 3.9
-     rings     4.0-4.95    the crane reaches the hub and booms down under it,       the capture rings laid outside in, both  moon, fill          empress_lay 4.05,
-                           tilting up                                               halves at once; dew beads behind them                       empress_dew 4.5
-     descent   4.85-6.3    low under the web looking up at the moon; a slow push;   she comes down one line, upside down,    moon behind her,   empress_descend 4.85
-                           the focus racks from the dew at our feet up to her       turning, and stops below her top pin     fill on her        (title 5.3)
-     snap      6.36-6.62   held; slow motion 0.5x                                   her line snaps; she drops and turns      moon               empress_snap 6.38, buzz
-                                                                                    upright on her rim
-     white     6.45-6.82   rays from the moon through the web and her; the moon     the moon flares to paper white           the moon burns     empress_bloom 6.45, buzz
-                           burns the picture out
-     settle    6.82-7.45   CUT under the white to the play camera; a paper veil     the fight: her rim, her on it            house lights up    (sting: the full chord)
-                           clears; the film's web fades into it
-     out       7.45-7.9    the gate opens                                           the fight
+     dark      0.0-0.45    black; the gate shut, opening like a curtain           nothing; then the moon's rim            none               sting: a high glass harmonic
+     moon      0.15-0.9    low on the plumb line, looking up it; the moon in the  the moon rises behind the top pin       moon (light 0),    empress_moon 0.15
+                           top third; black flag over the rail                                                            a cold pool
+     drop      0.62-1.44   crane down with the bead as it falls; the focus racks  one line drops out of the moon into     moon               empress_drop 0.62
+                           from the moon to the bead                              the dark, a bead of dew at its end
+     taut      1.44-1.9    slow motion 0.3x as it snaps taut; streak, fringe;     the bead bounces on the line, glints    a ping (light 2)   empress_taut 1.44, buzz
+                           the crane settles on the bead
+     harp      1.9-2.95    CUT: face on, widescreen gate, symmetric; one slow     three pairs drop (2.0 / 2.33 / 2.62),    moon + fill        empress_pluck x3, buzz x3
+                           crane down the web begins                              snap taut and hang like harp strings     (light 1)
+     catch     2.95-4.45   the crane goes on down                                 the pairs swing in and catch on the      pings at the hub   empress_catch x4, buzz x3
+                                                                                  plumb line (clicks 3.34 / 3.56 / 3.78);
+                                                                                  three drop from the hub (3.5), the two
+                                                                                  outer swing out to their pins (4.1)
+     rings     4.2-5.05    the crane reaches the hub and booms under it, tilting  the capture rings laid outside in, both  moon, fill          empress_lay 4.2,
+                           up; the gate opens to the full height                  halves at once; dew beads behind them                       empress_dew 4.6
+     descent   4.95-6.3    low under the web looking up at the moon; a slow push; she comes down one line, upside down,    moon above and     empress_descend 4.95
+                           the focus racks from the dew at our feet up to her     turning slowly, and stops (6.25) below   behind her, fill   (title 5.3)
+                                                                                  her top pin, a silhouette on the moon    from below
+     snap      6.42-6.62   held; slow motion 0.5x                                 her line snaps and whips away; she       moon               empress_snap 6.42, buzz
+                                                                                  tumbles upright onto her rim
+     white     6.45-6.86   soft rays from the moon through the web and her; the   the moon flares to paper white           the moon burns     empress_bloom 6.45, buzz
+                           moon burns the picture out
+     settle    6.86-7.45   CUT under the white to the play camera; a paper veil   the fight: her rim, her on it            house lights up    (sting: the full chord)
+                           clears
+     out       7.45-7.9    the gate opens                                         the fight
      still (reduced motion): 6.05, under the web looking up, her upside down against the moon, the title over it. */
   const REL = new Float32Array([0.62, 2.0, 2.0, 2.33, 2.33, 2.62, 2.62, 3.5, 3.5, 3.5]);     // each line let go
   const GRAV = new Float32Array([15, 30, 30, 30, 30, 30, 30, 40, 40, 40]);
@@ -215,7 +220,8 @@ void main(){
       const g = GRAV[i], t0 = Math.sqrt(2 * Ln / g); let d, sag = 0;
       if (tau < t0) d = 0.5 * g * tau * tau;
       else { const s = tau - t0; d = Ln * (1 + 0.075 * Math.exp(-5.5 * s) * Math.sin(16 * s)); if (d < Ln) sag = (Ln - d) * 0.7; d = Math.min(d, Ln * 1.08); }
-      let ang = -PI / 2, len = d;
+      // a line hanging free sways a little, a pendulum dying away (mirror pairs sway in mirror)
+      let ang = -PI / 2 + (tau > t0 ? 0.035 * Math.sin((tau - t0) * 3.1) * Math.exp(-(tau - t0) * 0.9) * (AX[i] < 0 ? -1 : 1) : 0), len = d;
       const sw = SWING[i];
       if (sw > 0 && t > sw) {   // swung in to the hub (or, the low ones, out to their pins), with a little bounce as it is caught
         // the turn from hanging straight down to its place: an upper line swings inward (the right ones clockwise), a low one outward
@@ -247,7 +253,7 @@ void main(){
 
   const PLUMB = {
     kit: true, len: 7.9, key: 6.05, lights: 3,
-    sheet: [0.6, 1.15, 1.5, 2.3, 2.9, 3.3, 3.95, 4.6, 5.35, 6.05, 6.76, 7.4],
+    sheet: [0.6, 1.15, 1.5, 2.3, 2.9, 3.3, 3.95, 4.6, 5.45, 6.05, 6.76, 7.4],
     beats: {
       dark:    [0, 0.45, 'out'],
       moon:    [0.15, 0.9, 'io'],
@@ -270,24 +276,24 @@ void main(){
       '@keyframes es-drop{0%{opacity:0;transform:translateY(-1.5em);color:#F4F8FF;text-shadow:0 0 .5em rgba(190,212,255,.95)}45%{opacity:1;transform:translateY(.1em)}62%{transform:translateY(-.05em)}78%{transform:translateY(.02em);color:#F4F8FF;text-shadow:0 0 .3em rgba(190,212,255,.8)}100%{transform:none}}' +
       '@keyframes es-line{0%{opacity:0;transform:scaleY(.2);transform-origin:50% 100%}40%{opacity:1;transform:scaleY(1)}100%{opacity:0}}',
     /* The sting is one file from film 0 and is not slowed by the slow motion, so its times are real seconds: the plumb line's
-       slow motion (film 1.38 to 1.82) adds 0.85 s, the snap's (film 6.34 to 6.7) 0.3 s more. Film 1.44 (the plumb line taut) is
-       real 1.48; the pairs 2.62 / 2.98 / 3.29 are real 3.47 / 3.83 / 4.14; the catches 3.0 / 3.22 / 3.44 are real 3.85 / 4.07 /
-       4.29; the rings 4.02 to 4.95 are real 4.87 to 5.8; she comes down from 5.7; the snap 6.38 is real 7.25; the white-out
-       burns out at real 7.97 (film 6.82); the end 8.75. */
-    music: { name: 'empress_in_sting', len: 9.6, gain: 0.85, desc: 'Entrance sting for the Silk Empress, a great spider-moth who hangs her web from the moon. Instrumental, cold, elegant and precise. Out of silence a single very high glass harmonic fades in over the first second, like moonlight. At 1.48 s one clear harp note, plucked and left ringing. At 3.47, 3.83 and 4.14 s three more harp notes, each a step higher and a little quicker, in pairs of octaves; at 3.85, 4.07 and 4.29 s three soft muted string pizzicati answer them. From 4.87 s a fast rising run of harp and celesta notes, about fourteen, accelerating up to 5.8 s, over a cold held string chord. From 5.7 s the chord turns minor and descends very slowly in the low strings, a single sustained alto voice humming above it, patient and regal, for a second and a half. At 7.25 s everything stops dead on one plucked note; at 7.3 s a soft rising shimmer of strings and glass swells for 0.65 s into a full, bright, high major chord of strings and celesta landing at 7.97 s, held cold and clear, then dying away by 9.6 s' },
+       slow motion (film 1.38 to 1.82) adds 0.67 s, the snap's (film 6.38 to 6.7) 0.25 s more. Film 1.44 (the plumb line taut) is
+       real 1.48; the pairs taut at 2.62 / 2.98 / 3.29 are real 3.29 / 3.66 / 3.96; the catches click at 3.34 / 3.56 / 3.78 and 4.4,
+       real 4.01 / 4.23 / 4.45 and 5.07; the rings 4.2 to 5.05 are real 4.87 to 5.72; she comes down from real 5.62 and stops at
+       6.92; the snap 6.42 is real 7.11; the white-out burns out at film 6.86 (real 7.78); the end 7.9 is real 8.82. */
+    music: { name: 'empress_in_sting', len: 9.8, gain: 0.85, desc: 'Entrance sting for the Silk Empress, a great spider-moth who hangs her web from the moon. Instrumental, cold, elegant and precise. Out of silence a single very high glass harmonic fades in over the first second, like moonlight. At 1.48 s one clear low harp note, plucked and left ringing. At 3.29, 3.66 and 3.96 s three more harp notes, each a step higher and a little quicker, each doubled at the octave; at 4.01, 4.23 and 4.45 s three soft muted string pizzicati answer them, and a fourth at 5.07 s. From 4.87 s a rising run of harp and celesta notes, about fourteen, accelerating up to 5.72 s, over a cold held string chord. From 5.62 s the chord turns minor and descends very slowly in the low strings with a single sustained alto voice humming above it, patient and regal, settling at 6.92 s. At 7.11 s everything stops dead on one plucked note; a soft rising shimmer of strings and glass swells from 7.17 s into a full, bright, high major chord of strings and celesta that lands at 7.78 s, held cold and clear, then dies away by 9.8 s' },
     sounds: {
       empress_moon:    { at: 0.15, len: 1.6, gain: 0.45, desc: 'Moonlight coming up in a silent room: an almost inaudible airy hush with a thin glassy shimmer swelling in over 0.8 s, like a wet fingertip on the rim of a fine glass, then holding faintly to 1.6 s' },
       empress_drop:    { at: 0.62, len: 0.9, gain: 0.6, desc: 'A single silk line paying out fast as a bead of dew falls on it: a fine, high, falling whistle of thread running off a spool, getting quicker and lower over 0.82 s, and stopping dead at 0.82 s' },
       empress_taut:    { at: TAUT0, len: 1.6, gain: 0.9, desc: 'A silk line snapping taut under a falling dewdrop, heard slowed down and very close: one deep soft twang like a single plucked harp string at 0 s with a glassy ring that wobbles in pitch as the line bounces, three wobbles fading by 0.9 s, and a tiny water-drop tick at 0.25 s' },
       empress_pluck:   { at: PLUCK, len: 0.8, gain: 0.7, desc: 'A pair of silk lines snapping taut together: a bright, light double twang, like two harp strings plucked at once an octave apart, with a short glassy ring, gone by 0.8 s' },
       empress_catch:   { at: [3.0, 3.22, 3.44, SWING[7]], len: 0.6, gain: 0.55, desc: 'A silk line swung through the air and caught on another: a soft quick swish of 0.25 s ending in a tiny, clean, glassy click, like a fingernail on a crystal bead, and a very short ring' },
-      empress_lay:     { at: RING0, len: 1.1, gain: 0.55, desc: 'Silk being drawn round and round a web very fast: a run of tiny dry ticks and soft silky zips, about fourteen of them, starting slow and accelerating to a blur by 0.9 s, each one a little higher than the last, then stopping' },
-      empress_dew:     { at: 4.5, len: 1.4, gain: 0.4, desc: 'Dew beading on a spider web in moonlight: a scatter of the tiniest high glass chimes, like droplets touching glass, a dozen of them spread over 1.2 s, very quiet and sparkling' },
-      empress_descend: { at: DSC0, len: 1.6, gain: 0.6, desc: 'Something large and light coming down a single silk thread: a long, slow, taut creak of a stretched line paying out, rising slightly in pitch, with a soft low breath of air under it; at 1.33 s the line takes the weight with a small deep twang and the creak settles to silence by 1.6 s' },
+      empress_lay:     { at: RING0, len: 1.1, gain: 0.55, desc: 'Silk being drawn round and round a web very fast: a run of tiny dry ticks and soft silky zips, about fourteen of them, starting slow, quickest in the middle and slowing again to a stop at 0.85 s, each one a little higher than the last' },
+      empress_dew:     { at: 4.6, len: 1.4, gain: 0.4, desc: 'Dew beading on a spider web in moonlight: a scatter of the tiniest high glass chimes, like droplets touching glass, a dozen of them spread over 1.2 s, very quiet and sparkling' },
+      empress_descend: { at: DSC0, len: 1.6, gain: 0.6, desc: 'Something large and light coming down a single silk thread: a long, slow, taut creak of a stretched line paying out, rising slightly in pitch, with a soft low breath of air under it; at 1.3 s the line takes the weight with a small deep twang and the creak settles to silence by 1.6 s' },
       empress_snap:    { at: SNAP, len: 0.7, gain: 0.9, desc: 'A single taut silk line snapped: one sharp, bright, high crack like a fine wire cut under tension, the loose end whipping away through the air with a thin rising zip, gone by 0.5 s' },
       empress_bloom:   { at: 6.45, len: 1.8, gain: 0.8, desc: 'Moonlight flaring to white: a soft breathy rise of airy shimmer and high glass, swelling for 0.5 s into a bright, clean, cold bloom of sound like a struck crystal bowl heard from far away, then ringing down to silence by 1.8 s' }
     },
-    buzz: [[TAUT0, 24], [PLUCK[0], 12], [PLUCK[1], 14], [PLUCK[2], 16], [3.0, 8], [3.22, 8], [3.44, 10], [SNAP, 30], [CUT - 0.05, [40, 30, 90]]],
+    buzz: [[TAUT0, 24], [PLUCK[0], 12], [PLUCK[1], 14], [PLUCK[2], 16], [3.34, 8], [3.56, 8], [3.78, 10], [SNAP, 30], [CUT - 0.05, [40, 30, 90]]],
     steps: [
       [TAUT0, k => { const r = k.r, K = k.K; r.glints(0, HUBY, WZ + 0.1, 8, K.linenHi, 2.5, 0.2, 0.5); r.shake = Math.max(r.shake, 0.12); }],
       [PLUCK[0], k => pluckFx(k, 1)], [PLUCK[1], k => pluckFx(k, 3)], [PLUCK[2], k => pluckFx(k, 5)],
@@ -299,7 +305,7 @@ void main(){
     setup(k) { k.prop('moon', buildMoon); k.prop('flag', buildFlag); k.layer('veil', { noFile: true, cells: 8, paint(x, w, h) { x.fillStyle = '#F6F4EE'; x.fillRect(0, 0, w, h); } }); },
     frame(k, t, dt) {
       const c = k.c, r = k.r, K = k.K, cam = k.cam, lens = k.lens, def = c.def, cut = t >= CUT, time = r.time, lo = k.has.post ? 1 : 0.5;
-      const hx = c.hx, hy = c.hy, halfH = def ? def.halfH : 2.1;
+      const hx = c.hx, hy = c.hy, halfH = def ? def.halfH : 2.1; LOWQ = !k.has.post;
       holdProps(k, !cut);
       lines(t);
       const by = herY(t, hy), snapK = k.beat('snap'), wk = k.beat('white'), flip = eo(sm(SNAP + 0.02, SNAP + 0.22, t));
@@ -311,8 +317,8 @@ void main(){
       else if (t < 1.9) {
         // macro low on the plumb line, looking straight up it at the moon; craning down with the bead as it falls; settling on it
         const u = k.ease.io(k.span(0.7, 1.62)), tipY = TO[0] > 0 ? TY[0] : AY[0];
-        cam.orbit(0, 15.2, WZ, cam.fit(5.2, 5.2), 0.98, 0, 0, 34).mark();
-        cam.orbit(0, lerp(15.2, Math.max(tipY + 1.4, HUBY + 1.2), u), WZ, cam.fit(4.4, 4.4), lerp(0.98, 0.72, u), 0, 0, 34).mix(u);
+        cam.orbit(0, 14.3, WZ, cam.fit(5.4, 5.4), 0.78, 0, 0, 34).mark();
+        cam.orbit(0, lerp(14.3, Math.max(tipY + 1.0, HUBY + 0.9), u), WZ, cam.fit(4.6, 4.6), lerp(0.78, 0.6, u), 0, 0, 34).mix(u);
         cam.handheld(0.012, 0.8);
         const rack = k.ease.io(k.span(0.8, 1.42)); lens.focus(0, lerp(MY, tipY, rack), lerp(MZ, WZ, rack), lerp(1.6, 2.2, rack), 0.016);
       } else if (t < RING0 + 0.25) {
@@ -334,8 +340,8 @@ void main(){
       if (!cut) { k.dark(1, 0.94); k.quiet(true, true); k.vig(0.5); }
       else k.dark(0.6 * (1 - sm(CUT + 0.1, 7.5, t)), 0);
       if (!cut && mA > 0) {
-        k.light(0, MX, MY + 1.4, 0.75, MOON, (28 + 40 * hot) * mA * lo, 12);   // above and behind her: the cloth glows round the moon, she is rimmed
-        k.pool(MX, MY - 0.6, 9 + 3 * hot, COOL, (0.09 + 0.1 * hot) * mA * lo);
+        k.light(0, MX, MY + 1.0, 3.4, MOON, (34 + 40 * hot) * mA * lo, 14);   // the moon's light: far enough out that the cloth glows evenly behind the disc and nothing near it burns
+        k.pool(MX, MY - 0.6, (t < 1.9 ? 6 : 9) + 3 * hot, COOL, (t < 1.9 ? 0.06 : 0.09 + 0.1 * hot) * mA * lo * lo);
         if (t > 1.9) k.light(1, 0, t < 4.9 ? 10.5 : by - 2.4, 4.4, COOL, (t < 4.9 ? 9 : 13) * lo * sm(1.9, 2.4, t), 11);
         const ping = Math.max(k.pulse(TAUT0, 0.03, 0.4), k.pulse(PLUCK[0], 0.02, 0.3), k.pulse(PLUCK[1], 0.02, 0.3), k.pulse(PLUCK[2], 0.02, 0.3), k.pulse(3.34, 0.02, 0.25), k.pulse(3.56, 0.02, 0.25), k.pulse(3.78, 0.02, 0.25));
         if (ping > 0.01) { const px = 0, py = t < 1.9 ? TY[0] : t < 3.0 ? 11.5 : HUBY; k.light(2, px, py, 1.8, PAPER, 14 * ping * lo, 6); }
@@ -343,7 +349,7 @@ void main(){
       moon(k, mA, hot); if (!cut) flag(k, 1);
 
       // ---- the web
-      const fade = cut ? 1 - sm(CUT, CUT + 0.5, t) : 1;
+      const fade = cut ? 1 - sm(CUT, CUT + 0.12, t) : 1;   // gone under the full white: the veil clears onto the fight's own rim
       if (fade > 0.01 && t > 0.15) {
         const z = WZ;
         for (let i = 0; i < NA; i++) {
@@ -352,7 +358,7 @@ void main(){
           // the bead at the end of a line still falling or bouncing: it rides the tip until the line is caught
           const caught = sm(CAUGHT[i], CAUGHT[i] + 0.15, t);
           if (caught < 1) { const tw = i === 0 ? k.pulse(TAUT0, 0.02, 0.5) : 0.6 * k.pulse(REL[i] + Math.sqrt(2 * RLEN[i] / GRAV[i]), 0.02, 0.3);
-            dew(k, tx, ty, z + 0.05, (i === 0 ? 0.3 : 0.24) * (1 - caught), moonK(tx, ty) * 1.4 * fade, tw); }
+            dew(k, tx, ty, z + 0.05, (i === 0 ? 0.32 : 0.28) * (1 - caught), moonK(tx, ty) * 1.4 * fade, tw); }
           if (caught > 0.5 && i >= 7) pin(k, AX[i], AY[i], moonK(AX[i], AY[i]) * fade);
         }
         for (let i = 0; i < 7; i++) pin(k, AX[i], AY[i], moonK(AX[i], AY[i]) * mA * fade);   // her rim pins, there all along, lit as the moon comes up
@@ -379,12 +385,12 @@ void main(){
       // ---- her: down a single line, upside down, turning, into the moonlight; the snap; upright on her rim
       if (!cut && t >= DSC0) {
         const turn = Math.sin((t - DSC0) * 1.7) * 0.34 * (1 - sm(5.9, 6.3, t)), rot = PI * (1 - flip), dropY = by - 0.22 * sm(SNAP, SNAP + 0.18, t) + 0.22 * sm(SNAP + 0.18, 6.62, t);
-        const col = 0.8 + 0.2 * wk;   // moonlit: a little cold
+        const col = 0.95 + 0.05 * wk;   // moonlit: a little cold
         k.boss(hx, dropY, 1.2, 1, rot, 0.12 + 0.12 * Math.sin(t * 2.3) * (1 - flip), col * 0.88, col * 0.94, col * 1.06, 0.04 + 0.6 * hot, 0.36 * (1 - wk), turn);
         // her line: from where she hangs (her spinnerets, uppermost while she is upside down) up out of the picture
-        const ay = dropY + halfH * 0.86, top = TOPY + 2;
-        if (t < SNAP) silk(k, hx, ay, 1.15, hx, top, 1.1, 0.9, 0.85, 0);
-        else { const s = t - SNAP, rec = 3.4 * (1 - Math.exp(-s * 7)), a = 1 - sm(SNAP + 0.1, SNAP + 0.42, t);
+        const ay = dropY + halfH * 0.62, top = TOPY + 2;   // her spinnerets, uppermost while she is upside down (she leans toward the lens)
+        if (t < SNAP) silk(k, hx, ay, 1.15, hx, top, 1.1, 0.7, 0.8, 0);
+        else { const s = t - SNAP, rec = 3.4 * (1 - Math.exp(-s * 9)), a = 1 - sm(SNAP + 0.04, SNAP + 0.2, t);
           silk(k, hx, ay + 0.35 + rec, 1.15, hx, top, 1.1, 1.3, a, 0.6 * sm(0, 0.3, s));        // the upper end, recoiling and going slack
           silk(k, hx, ay, 1.15, hx + 0.1 * s, ay + 0.3 - s * 0.6, 1.15, 1.0, a * (1 - flip), 0.05); }   // the short end left on her
       } else if (cut) {
@@ -397,7 +403,7 @@ void main(){
         const taut = k.pulse(TAUT0, 0.02, 0.32), pl = Math.max(k.pulse(PLUCK[0], 0.02, 0.2), k.pulse(PLUCK[1], 0.02, 0.2), k.pulse(PLUCK[2], 0.02, 0.2)), sn = k.pulse(SNAP, 0.02, 0.3);
         lens.streak(0.9 * taut + 0.25 * pl + 0.6 * sn + 0.9 * wk, MOON, 3.2, 0.7);
         lens.fringe(1.1 * taut + 0.5 * pl + 0.9 * sn + 1.4 * hot);
-        if (wk > 0.02 && k.has.rays) lens.rays(MX, MY, MZ + 0.5, 2.2 * Math.sqrt(wk), MOON, 0.85, 1.7);
+        if (wk > 0.02 && k.has.rays) lens.rays(MX, MY, MZ + 0.5, 1.5 * Math.sqrt(wk), MOON, 0.8, 2.3);   // soft, from the moon's hot core only
         lens.flash(PAPER, 2.6 * hot * wk); lens.exposure(k.ease.out(k.span(0.05, 0.6)) + 2.6 * hot);
       } else { const w = 1 - sm(CUT, CUT + 0.2, t); lens.flash(PAPER, 2.4 * w * w); lens.exposure(1 + 0.6 * w); }
       const veil = cut ? 1 - k.ease.out(sm(CUT + 0.05, 7.4, t)) : 0;
@@ -428,20 +434,22 @@ void main(){
      the cocoon, then the wide held still while everything falls. Motif: the moon, and silk. Colour: paper white and moonlight.
      Rhythm: crack, a whirr rising to a stop dead, pull, pull, pull, whoosh, then a falling run of plucked strings, and quiet.
 
-     DEATH "Cocoon"  len 6.6 s  lights 3
+     DEATH "Cocoon"  len 6.6 s (7.5 on the clock)  lights 3
      beat      film s      shot (camera, lens)                                   what we see                             light              sound / buzz
      hit       0-0.42      the play camera, a slight push; slow motion 0.25x;     the hit; the house lights die; her web   the moon comes up  empress_crack 0.02, buzz
-                           fringe; a paper flash to cut under                     appears in the moonlight                 (light 0)          (sting: a glass crack)
+                           fringe; a paper flash to cut under                     appears in the moonlight, every strand   (light 0)          (sting: a glass crack)
      spin      0.42-2.22   CUT: close, face on, symmetric; a slow push; focus     she spins faster and faster; silk winds  moon behind, a     empress_spin 0.45
-                           on her                                                round her; she comes apart wing tips in   cool fill (light 1)
-     stop      2.22-2.4    a freeze of a frame; fringe                            the spin stops dead: a cocoon            a ping (light 2)   empress_cinch 2.22, buzz
-     hoist     2.3-3.95    one long crane UP with it; focus follows it            a line drops and catches it (2.42); it   moon               empress_line 2.28,
-                                                                                  is hauled up: pull 2.62 / 2.92 / 3.18,                      empress_haul x3, buzz x3,
-                                                                                  then fast, across the moon and out                         empress_whoosh 3.38
-     letgo     3.95-5.3    the wide, face on, held; foreground dew falls past     the web lets go a pair at a time: 4.05,   moon, fading       empress_letgo x6, buzz
-                           the lens out of focus                                  4.3, 4.52, 4.72; the plumb line 4.9;                          empress_dew 3.95
-                                                                                  the hub 5.08: it all falls; dew falls                       (title 4.35)
-     calm      5.3-6.6     the play camera; the house lights come up in 0.8 s     a calm, whole, lit cloth                 the house          empress_still 5.35
+                           on her; black flag over the rail                       round her; she comes apart wing tips in   cool fill (light 1)
+     stop      2.22-2.4    a freeze of a frame; fringe, a small streak            the spin stops dead: a cocoon            a ping (light 2)   empress_cinch 2.22, buzz
+     hoist     2.28-3.95   one long crane UP with it, looking up at it; the       a line drops and catches it (2.42); it   moon, the fill     empress_line 2.28,
+                           focus follows it                                       is hauled up (2.62 / 2.92 / 3.18), then  rising with it     empress_haul x3, buzz x3,
+                                                                                  fast, across the moon and out (3.95)                        empress_whoosh 3.38
+     letgo     3.95-5.3    the wide, face on, held; drops falling past the lens   the web lets go a pair at a time (4.05,  the moon           empress_letgo x6, buzz x5,
+                           out of focus; then easing to the play camera           4.3, 4.52, 4.72) to hang from the hub;                      empress_dew 3.95
+                                                                                  the plumb line (4.9); the hub (5.08):                       (title 4.35)
+                                                                                  it all falls; the dew falls with it
+     calm      5.3-6.6     the play camera (by 6.0); the house lights come up     a calm, whole, lit cloth                 the house          empress_still 5.35
+                           over 0.8 s
      reduced motion: the camera stays at the play camera; the same story plays on the cloth, without the flashes. */
   const DCUT = 0.42, STOP = 2.22, LINE0 = 2.28, LINE1 = 2.42, PULL = [2.62, 2.92, 3.18], LIFT = [0.8, 1.1, 1.5], RISE = 3.38, GONE = 3.95;
   const LG = [4.05, 4.3, 4.52, 4.72], LAX = 4.9, HUBREL = 5.08, UP0 = 5.3, UP1 = 6.1, NDEW = 70;
@@ -474,7 +482,7 @@ void main(){
   function wraps(k, x, y, z, n, ang, ln, rmax, b, a) {
     const cam = k.cam;
     for (let j = 0; j < n; j++) {
-      const v = (j + 0.5) / 14, cy = y + (v - 0.5) * ln, rad = rmax * Math.pow(Math.sin(PI * v), 0.75), tilt = 0.32 * Math.sin(ang * 0.9 + j * 2.3), m = 17;
+      const v = (j + 0.5) / 14, cy = y + (v - 0.5) * ln, rad = rmax * Math.pow(Math.sin(PI * v), 0.75), tilt = 0.32 * Math.sin(ang * 0.9 + j * 2.3), m = LOWQ ? 12 : 17;
       const ct = Math.cos(tilt), st = Math.sin(tilt);
       for (let q = 0; q < m; q++) { const th = q / (m - 1) * TAU + ang + j; const ex = Math.cos(th) * rad, ez = Math.sin(th) * rad * 0.7;
         PX[q] = x + ex * ct; PY[q] = cy + ex * st; PZ[q] = z + ez; }
@@ -503,11 +511,11 @@ void main(){
       '@keyframes es-dew{0%{opacity:0;transform:translateY(-.6em) scale(.3);filter:blur(4px) brightness(2.2);color:#EAF2FF;text-shadow:0 0 .5em rgba(190,212,255,1)}' +
       '35%{opacity:1;transform:translateY(.06em) scale(1.05,.95);filter:blur(.5px) brightness(1.6)}60%{transform:none;filter:none;color:#F4F8FF;text-shadow:0 0 .3em rgba(190,212,255,.7)}100%{}}',
     /* The sting is one file from film 0 and not slowed, so its times are real seconds: the hit's slow motion (film 0.02 to 0.42)
-       adds 0.9 s. Film 0.42 (the cut) is real 1.32; the stop 2.22 is real 3.12; the line catches at 2.42 (real 3.32); the pulls
-       2.62 / 2.92 / 3.18 are real 3.52 / 3.82 / 4.08; the fast rise from 3.38 (real 4.28); out of the picture at 3.95 (real 4.85);
-       the strands 4.05 / 4.3 / 4.52 / 4.72 / 4.9 / 5.08 are real 4.95 / 5.2 / 5.42 / 5.62 / 5.8 / 5.98; the lights up from 5.3
-       (real 6.2); the end 7.5. */
-    music: { name: 'empress_down_sting', len: 8.2, gain: 0.8, desc: 'Death sting for the Silk Empress. Instrumental, cold and graceful. A single high glass crack at 0 s, slowed and ringing, falling away for 1.3 s. From 1.32 s a spinning figure on harp and celesta, a fast repeating pattern of four notes that speeds up and rises in pitch over 1.8 s, with strings swelling under it, cut off dead at 3.12 s. One low pizzicato note at 3.32 s; three low, heavy, rising string notes at 3.52, 3.82 and 4.08 s, each a step higher, like a rope hauled hand over hand; a fast upward glissando of strings from 4.28 s to 4.85 s, where it stops in silence. From 4.95 s six plucked harp notes falling, at 4.95, 5.2, 5.42, 5.62, 5.8 and 5.98 s, each lower and softer, like strings let go. From 6.2 s a warm, quiet, open major chord in muted strings rises gently and fades away by 8.2 s' },
+       adds 0.94 s. Film 0.42 (the cut) is real 1.36; the stop 2.22 is real 3.16; the line catches at 2.42 (real 3.36); the pulls
+       2.62 / 2.92 / 3.18 are real 3.56 / 3.86 / 4.12; the fast rise from 3.38 (real 4.32); out of the picture at 3.95 (real 4.89);
+       the strands 4.05 / 4.3 / 4.52 / 4.72 / 4.9 / 5.08 are real 4.99 / 5.24 / 5.46 / 5.66 / 5.84 / 6.02; the lights up from 5.3
+       (real 6.24); the end 6.6 is real 7.54. */
+    music: { name: 'empress_down_sting', len: 8.2, gain: 0.8, desc: 'Death sting for the Silk Empress. Instrumental, cold and graceful. A single high glass crack at 0 s, slowed and ringing, falling away for 1.3 s. From 1.36 s a spinning figure on harp and celesta, a fast repeating pattern of four notes that speeds up and rises in pitch over 1.8 s, with strings swelling under it, cut off dead at 3.16 s. One low pizzicato note at 3.36 s; three low, heavy, rising string notes at 3.56, 3.86 and 4.12 s, each a step higher, like a rope hauled hand over hand; a fast upward glissando of strings from 4.32 s to 4.89 s, where it stops in silence. Six plucked harp notes falling, at 4.99, 5.24, 5.46, 5.66, 5.84 and 6.02 s, each lower and softer, like strings let go. From 6.24 s a warm, quiet, open major chord in muted strings rises gently and fades away by 8.2 s' },
     sounds: {
       empress_crack:  { at: 0.02, len: 1.6, gain: 1, desc: 'A killing blow to something made of silk and glass, slowed down: a deep soft thump, then a bright crack like thin crystal splitting at 0.05 s that rings and falls in pitch, with a soft tearing of silk under it, fading by 1.6 s' },
       empress_spin:   { at: DCUT + 0.03, len: 1.9, gain: 0.85, desc: 'A spinning wheel and a spindle whirring up from slow to very fast over 1.8 s, a silky rising whine of thread being wound round and round on top, getting higher and tighter, cut off dead at 1.8 s' },
@@ -555,7 +563,7 @@ void main(){
     frame(k, t, dt) {
       const c = k.c, r = k.r, K = k.K, cam = k.cam, lens = k.lens, def = c.def, time = r.time, lo = k.has.post ? 1 : 0.5;
       const cut = t >= DCUT, bx = c.hx, by0 = c.hy, halfH = def ? def.halfH : 2.1;
-      MY = 17.5;
+      MY = 17.5; LOWQ = !k.has.post;
       const up = k.ease.io(k.span(UP0, UP1)), night = cut ? 1 - up : sm(0.02, DCUT, t), mA = night * (cut ? 1 : 0.9);
       const coy = cocoonY(t, by0), cox = lerp(bx, 0, sm(2.7, 3.9, t)) + 0.3 * Math.sin((t - 2.4) * 3.1) * sm(2.45, 2.7, t) * (1 - sm(3.6, 3.95, t));
       const spin = spinAngle(t), wrap = sm(0.7, STOP - 0.04, t), stopK = k.pulse(STOP, 0.02, 0.3);
@@ -635,11 +643,11 @@ void main(){
       }
       // in front of the lens, out of focus: a few drops falling past us during the let-go
       if (t > GONE && t < UP0 + 0.4) for (let i = 0; i < 4; i++) { const a = t - (GONE + 0.15 + i * 0.32); if (a < 0) continue; const y = 17 - 0.5 * 18 * a * a, x = (i & 1 ? 1 : -1) * (1.6 + i * 0.7);
-        if (y > 2) { DC[0] = MOON[0] * 0.5; DC[1] = MOON[1] * 0.55; DC[2] = MOON[2] * 0.6; r.spr.add(x, y, 6.5, 0.9, DC, 0.14 * night, 9); r.spr.add(x, y, 6.5, 0.6, DC, 0.1 * night, 3); } }
+        if (y > 2 && k.has.dof) { DC[0] = MOON[0] * 0.5; DC[1] = MOON[1] * 0.55; DC[2] = MOON[2] * 0.6; r.spr.add(x, y, 6.5, 0.9, DC, 0.14 * night, 9); r.spr.add(x, y, 6.5, 0.6, DC, 0.1 * night, 3); } }
       if (cut && t < UP0) k.motes(22, -5, 7, 1.2, 5, 18, 5.5, MOON, 0.38 * mA, 0.035, 0.1, 9);
 
       // ---- the lens
-      if (!cut) { const w = k.ease.in(k.span(0.28, DCUT)); lens.fringe(1.4 * k.pulse(0.03, 0.03, 0.35)); lens.streak(0.8 * k.pulse(0.03, 0.03, 0.3), MOON, 2.6, 0.8); lens.flash(PAPER, 2.2 * w * w); lens.exposure(1 + 1.2 * w * w); }
+      if (!cut) { const w = k.ease.in(k.span(0.28, DCUT)); lens.fringe(0.9 * k.pulse(0.03, 0.03, 0.35)); lens.streak(0.8 * k.pulse(0.03, 0.03, 0.3), MOON, 2.6, 0.8); lens.flash(PAPER, 2.2 * w * w); lens.exposure(1 + 1.2 * w * w); }
       else if (t < UP0) {
         const w = 1 - sm(DCUT, DCUT + 0.25, t); if (w > 0) { lens.flash(PAPER, 2.2 * w * w); lens.exposure(1 + 0.8 * w); }
         if (t < 2.4) lens.focus(bx, by0, 1.2, 1.3, 0.015);
