@@ -88,3 +88,25 @@ beetle_in_sting iwUsKrGYmr8c3BVjD92M 8.9 stereo   # take A
 beetle_in_sting_b Yfgp2ji0HrU9Aqqjxn62 8.9 stereo # take B
 beetle_down_sting FOPgF2RrbMt4ZjLFQVel 9.2 stereo   # take A
 beetle_down_sting_b FIIoJVBDkjj3YsdlRCDR 9.2 stereo # take B
+empress_moon TJjJRxMl8ActnzRHIqaN 1.6
+empress_drop c9LOD3LsnYhejmlBPDDl 0.9
+empress_taut lbjoOij3vSKPfRNm7tRo 1.6
+empress_pluck 4wHLvf2o2Ghi4NnHip3s 0.8
+empress_catch Ru1KIO1De1w9HlPn73Rd 0.6
+empress_lay TWdZkyWUGUzKSReoxZvB 1.1
+empress_descend Zj9B0QtgkUflD0Jqe3Nh 1.6
+empress_snap 7AwRMie2N0mbS0uamlSA 0.7
+empress_bloom MgcdpHN2gWdYVao57rcd 1.8 level
+empress_crack XXPaPcgKvbNr1XO37rjy 1.6 level
+empress_spin jRt2b9m3Y7aZKui9SJI4 1.9
+empress_cinch wjSZYvsVrHwC8b2CA9iW 0.9
+empress_line jBzHS7Xlws1mrVCcX9HH 0.6
+empress_haul 1avrQznYm4PDXOdHZh1n 0.5
+empress_whoosh K8UmJTWdgdRi5DXGeHKQ 0.9
+empress_letgo Yx5BGm96jOcZHOIfFa04 0.9
+empress_dew CwSLVR0CeMYQYpYN3s7G 2.2   # shared by both films
+empress_still i69b8NHpT01DtpihztrA 1.4
+empress_in_sting MBdJZ5YZzDBd35fRemgS 9.8 stereo   # take A
+empress_in_sting_b ATqP6AqzE3kCpRYj0yVV 9.8 stereo # take B
+empress_down_sting r2IAETAojyk5MnNCRZyM 8.2 stereo   # take A
+empress_down_sting_b DiMaQXFnQisZbduYFomg 8.2 stereo # take B

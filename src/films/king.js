@@ -524,7 +524,7 @@ void main(){
         DD[o] = Math.floor(h1 * SWARM.length) % SWARM.length; DD[o + 1] = (h2 - 0.5) * 5.6; DD[o + 2] = (h3 - 0.5) * 3.6;   // where on him it starts
         DD[o + 3] = D_BURST + 0.05 + 0.95 * h4 * h4;                                                                     // when it leaves
         DD[o + 4] = 0.85 + 0.45 * h1;                                                                                    // how long it takes to reach us
-        DD[o + 5] = (h3 - 0.5) * 2; DD[o + 6] = (h2 - 0.5) * 2;                                                          // where it passes the lens: across, up
+        const wide = i % 2 ? 1 : 2.4; DD[o + 5] = (h3 - 0.5) * 2 * wide; DD[o + 6] = (h2 - 0.5) * 2 * (0.6 + 0.4 * wide);   // where it passes the lens: across, up (every other one wide of it)
         DD[o + 7] = h1 * TAU; DD[o + 8] = 1.0 + 0.5 * h3; DD[o + 9] = (h4 - 0.5) * 2; }
       const c = k.c; c.lx = c.hx; c.ly = c.hy; SHEEN.saved = false;
     },
@@ -566,15 +566,15 @@ void main(){
       const jA = 1 - melt;
       if (jA > 0.01 && t < D_RISE) { k.light(0, DJ[0], DJ[1] + 0.15, DJ[2] + 0.4, JGLOW, (t < D_CUT ? 10 : 5) * jg * jA * post, 2.6); k.pool(DJ[0], DJ[1], 1.0 + 0.5 * jg, K.saff, 0.045 * jg * jA * post); }
       // light 2: the dawn behind the swarm, beyond the cloth's far edge, low; light 1: the sun, raking down the cloth from there
-      const dawn = sm(D_BURST + 0.3, D_SUN + 0.3, t) * (1 - sm(D_RISE, D_WIDE, t));
+      const dawn = sm(D_BURST, D_BURST + 1.0, t) * (1 - sm(D_RISE, D_WIDE, t));
       if (dawn > 0.01) k.light(2, SUNX, H + 1.5, 0.5, DAWN, 46 * dawn * post, 22);
       const sl = sm(D_SUN, D_SUN + 0.8, t) * (1 - sm(D_RISE + 0.1, D_WIDE, t));
-      if (sl > 0.01) k.light(1, SUNX, H + 40, Math.max(0.2, sz * 4.2), GOLD, 30000 * sl * post, 80);   // far off, so it rakes the whole cloth evenly
+      if (sl > 0.01) k.light(1, SUNX, H + 40, Math.max(0.2, sz * 4.2), GOLD, 16000 * sl * post, 80);   // far off, so it rakes the whole cloth evenly
       if (t > D_RISE) {   // the morning fills the cloth from the top down, warm, and fades to plain daylight
         const fy = lerp(H + 2, CY - 2, k.ease.io(k.span(D_RISE + 0.2, D_MENDED))), w = sm(D_RISE, D_WIDE, t) * (1 - sm(7.5, 8.7, t));
         k.pool(SUNX * 0.4, fy, 17, K.saff, 0.12 * w * post); k.light(0, SUNX * 0.4, fy + 2, 6, GOLD, 70 * w * (1 - sm(D_MENDED, 8.3, t)) * post, 16); }
       sheen(k, t < D_CUT ? 1 : t < D_SUN ? 0 : 0.15 * sm(D_SUN, D_RISE, t) + 0.85 * sm(D_RISE, D_WIDE, t));
-      if (t > D_LAND && t < D_RISE + 0.6) k.cloth.crumple(0.05 * (1 - sm(D_RISE, D_RISE + 0.55, t)), 0.7, 0);
+      if (t > D_LAND && t < D_RISE + 0.6) k.cloth.crumple((t < D_SUN ? 0.05 : 0.03) * (1 - sm(D_RISE, D_RISE + 0.55, t)), 0.7, 0);
       if (t > D_LAND && t < D_LAND + 1.3) k.cloth.wave(jx, jy, 0.2 + (t - D_LAND) * 5.5, 0.08 * (1 - (t - D_LAND) / 1.3), 0.5);
 
       // ---- him: frozen by the blow, dark against the dark, until he breaks into his swarm
@@ -607,14 +607,14 @@ void main(){
 
       // ---- the sun, rising behind the rail: the holdout puts the rail back in the depth buffer and the far flag is the ground
       // beyond it, so the sun comes up from behind the edge of the world
-      if (t > D_BURST && t < D_WIDE + 0.2) { k.prop('farflag'); k.prop('holdout').position.set(0, H + 0.45, 0.2); }
+      if (t > D_BURST && t < D_WIDE + 0.2 && !k.reduce) { k.prop('farflag'); k.prop('holdout').position.set(0, H + 0.45, 0.2); }   // (with the camera held for reduced motion the sun is never in shot: leave the rail alone)
       if (t > D_SUN - 0.1 && t < D_WIDE + 0.2) {
         const u = sunM.material.uniforms, s = 2 * QS * SRD;
         sunM.visible = true; sunM.position.set(SUNX, SUNY, sz); sunM.lookAt(DCAM[0], DCAM[1], DCAM[2]); sunM.scale.set(s, s, 1);
         u.uTime.value = t; u.uSun.value = 0.85 * sm(D_SUN - 0.1, D_SUN + 0.5, t) * (1 - sm(D_RISE + 0.2, D_WIDE, t)); u.uCor.value = 0; u.uRed.value = 1 - 0.75 * k.ease.io(k.span(D_SUN + 0.3, D_RISE));
         if (!k.has.post) k.flare(SUNX, SUNY, sz, SRD * 3, K.saffDim, 0.6 * u.uSun.value, 0);
       }
-      if (dawn > 0.01 && t < D_RISE) r.spr.add(SUNX, H + 2.2, 0.62, 7, DAWN, 0.22 * dawn * post, 0);   // the sky going red over the far edge
+      if (dawn > 0.01 && t < D_RISE) for (let i = 0; i < 5; i++) { const x = SUNX + (i - 2) * 3.2, f = 1 - Math.abs(i - 2) * 0.22; r.spr.add(x, H + 2.2 + Math.abs(i - 2) * 0.6, 0.64, 7.5, DAWN, 0.3 * f * dawn * post, 0); }   // the sky going red over the far edge
 
       // ---- the mending: running gold along every edge that comes back, needles racing along it
       if (mend > 0 && mend < 1) { const a = Math.sin(mend * PI), fy = B + c.arenaO.floor, fx = HW - c.arenaO.inset;
@@ -626,7 +626,9 @@ void main(){
       // ---- the lens
       if (t >= D_CUT && t < D_RISE) {
         if (!onFloor) { const rk = k.ease.io(k.span(0.5, 0.85)); lens.focus(lerp(hx, DJ[0], rk), lerp(ey, DJ[1], rk), lerp(1.3, DJ[2], rk), 1.6, 0.016); }
-        else lens.focus(jx, jy, 0.15, t < D_SUN ? lerp(2.6, 1.2, k.span(D_BURST, D_SUN)) : lerp(1.2, 0.3, k.ease.io(k.span(D_SUN, 4.9))), 0.018);
+        else if (t < D_BURST + 0.3) lens.focus(jx, jy, 0.15, 2.6, 0.018);
+        else { const pull = k.ease.io(k.span(D_BURST + 0.3, D_BURST + 0.8)), fd = lerp(Math.sqrt((DCAM[0] - jx) * (DCAM[0] - jx) + (DCAM[1] - jy) * (DCAM[1] - jy) + DCAM[2] * DCAM[2]), 3.2, pull * (1 - k.ease.io(k.span(D_SUN - 0.2, D_SUN + 0.4))));   // the focus comes forward to meet the swarm, then back to the jewel
+          lens.focusAt(fd, t < D_SUN ? lerp(2.6, 0.9, pull) : lerp(0.9, 0.3, k.ease.io(k.span(D_SUN, 4.9))), 0.018); }
         if (t > D_SUN && k.has.rays) lens.rays(SUNX, SUNY, sz, 0.7 * sm(D_SUN + 0.1, D_SUN + 0.7, t) * (1 - sm(5.0, D_RISE, t)), DAWN, 0.85, 1.8);
         lens.streak(1.2 * k.pulse(D_SUN + 0.15, 0.06, 0.45), K.saff, 2.2, 1);
         lens.fringe(0.8 * k.pulse(D_LAND, 0.02, 0.3) + 0.6 * k.pulse(D_BURST + 1.0, 0.1, 0.4));

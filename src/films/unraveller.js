@@ -81,7 +81,7 @@
   const SY = -2, SZ = 6;
   const KP = 0.62, KH = 0.47, KD = 0.11, KRX = 0.1, KRZ = 0.085, NC = 22;   // stitch pitch across, row height, depth of the loops, the yarn's section, stitches across
   const V0 = 2.4, YEND = 24, AC = 2 * (YEND - V0 * (ARRIVE - RIP)) / ((ARRIVE - RIP) * (ARRIVE - RIP));   // the running end: faster and faster, up to its mouth
-  const VS = 5.5, F0 = 0.16, FD = 0.5;                     // the hole spreads sideways this fast; a sprung loop starts to drop this long after, over this long
+  const VS = 11, F0 = 0.12, FD = 0.45;                     // the hole spreads sideways this fast; a sprung loop starts to drop this long after, over this long
   const MX = 0, MY = YEND + 1.3, MZ = 2.7;                 // its mouth (set coordinates), facing down the knit toward us
   function endY(t) { const u = Math.max(0, t - RIP); return Math.min(YEND, V0 * u + 0.5 * AC * u * u); }
   function endX(y) { return 1.5 * Math.sin(y * 0.27 - 0.6); }
@@ -118,7 +118,7 @@ vec3 unrMove(vec3 p, inout vec3 nrm, out float shade) {
   nrm = vec3(nrm.x, nrm.y * c - nrm.z * s, nrm.y * s + nrm.z * c);
   if (ff > 0.0) {
     float hr = fract(sin(rowY * 12.9898) * 43758.5453);
-    if (hr > 0.82) { q.z += 1.6 * sin(3.14159 * ff) - ff * ff * 3.0; q.y -= ff * 0.8; }
+    if (hr > 0.82) { q.z += 0.95 * sin(3.14159 * ff) - ff * ff * 3.0; q.y -= ff * 0.6; }
     else { q.z -= ff * ff * 5.0; q.y -= ff * 0.45 + ff * ff * 0.3 * sin(p.x * 2.1 + rowY); }
     if (ff >= 0.999) { shade = 0.0; return vec3(q.x, q.y, -60.0); }
   }
@@ -304,7 +304,7 @@ vec3 tubeMove(out vec3 nrm) {
     ramp: [[2.72, 1], [2.79, 0.22], [2.99, 0.22], [3.07, 1]],
     /* cam.shot keys, authored round the running end in world units (carried to it with ox, oy, oz): [u, camera x y z, target x y z, roll, fov] */
     shots: {
-      chaseA: [[0, 0.7, -2.7, 2.7, 0.0, 1.0, 0.0, 0.03, 42], [0.45, -0.6, -2.9, 2.45, 0.1, 1.2, 0.0, -0.06, 46], [1, 0.5, -3.1, 2.25, 0.0, 1.5, 0.1, 0.05, 50]],
+      chaseA: [[0, 1.8, -3.6, 2.9, -0.2, 1.0, 0.0, 0.04, 40], [0.45, 1.5, -3.9, 2.6, -0.1, 1.2, 0.0, -0.03, 44], [1, 1.3, -4.2, 2.35, -0.1, 1.5, 0.1, 0.05, 48]],
       chaseB: [[0, 1.4, 4.2, 2.4, -0.2, -1.6, 0.0, 0.07, 44], [0.5, 1.1, 3.7, 2.1, -0.3, -1.9, 0.0, -0.03, 48], [1, 0.9, 3.2, 1.9, -0.3, -2.2, 0.0, -0.08, 50]]
     },
     title: { at: 5.62, iv: 0.05, in: 'unrpull', pos: 'low', to: 7.3 },
@@ -382,8 +382,8 @@ vec3 tubeMove(out vec3 nrm) {
     let row0 = 0;
     if (pre) {   // macro at the hem, low: the cast-on edge, the loose end, the knit raking away up into the dark
       const cr = k.ease.io(k.span(0.4, RIP));
-      cam.at(wx + 1.3 - 0.3 * cr, SY - 2.5 + 0.4 * cr, SZ + 1.65 - 0.15 * cr, wx - 0.1, SY + 2.0, SZ, 0.04, 38);
-      lens.focus(wx - 0.05, SY + 0.05, SZ + 0.15, 1.4, 0.013);
+      cam.at(wx + 0.7 - 0.2 * cr, SY - 2.0 + 0.3 * cr, SZ + 2.7 - 0.25 * cr, wx - 0.05, SY + 0.9, SZ, 0.03, 38);
+      lens.focus(wx - 0.05, SY + 0.1, SZ + 0.15, 1.0, 0.012);
       row0 = -4;
     } else if (shotA) {   // behind it, carried by it
       cam.shot('chaseA', k.span(RIP, BACK), wx, wy, SZ).handheld(0.02, 2.6);
@@ -409,13 +409,13 @@ vec3 tubeMove(out vec3 nrm) {
     // ---- light. 0: the hard steel key, low and to the side of the running end (in the mouth shot: from below, the camera's
     //      side). 1: a cold glint where the yarn leaves the knit (in the mouth shot, a steel rim from above it). 2: its throat.
     let kx, ky, kz, kI;
-    if (pre) { const up = k.ease.out(k.span(0.42, 0.95)); kx = wx - 4.2; ky = SY - 0.9; kz = SZ + 0.85; kI = 75 * up; }
-    else if (shotA) { kx = wx - 5.2; ky = wy - 0.6; kz = SZ + 1.05; kI = 70; }
-    else if (shotB) { kx = wx - 3.6; ky = wy - 4.2; kz = SZ + 1.0; kI = 80; }
+    if (pre) { const up = k.ease.out(k.span(0.42, 0.95)); kx = wx - 3.2; ky = SY + 0.5; kz = SZ + 0.75; kI = 38 * up; }
+    else if (shotA) { kx = wx - 2.8; ky = wy - 0.6; kz = SZ + 0.95; kI = 40; }
+    else if (shotB) { kx = wx - 3.4; ky = wy - 3.6; kz = SZ + 1.5; kI = 34; }
     else { kx = MX - 3.4; ky = SY + MY - 6.5; kz = SZ + 1.3; kI = 60; }
-    k.light(0, kx, ky, kz, STEEL, kI * lo, 15);
+    k.light(0, kx, ky, kz, STEEL, kI * lo, shotC ? 15 : 8.5);
     const glint = pre ? 0.35 * tug : shotC ? 0 : (0.75 + 0.25 * Math.sin(t * 41) * Math.sin(t * 13)) * (1 + 1.5 * k.pulse(RIP, 0.03, 0.3) + 1.5 * k.pulse(KNOT, 0.02, 0.35));
-    if (glint > 0.01) k.light(1, wx, wy + 0.3, SZ + 0.7, STEEL_HI, 0.9 * glint * lo, 2.2);
+    if (glint > 0.01) k.light(1, wx + 0.3, wy - 0.5, SZ + 1.0, STEEL_HI, 1.5 * glint * lo, 3.4);
     const mo = shotC ? sm(4.3, 4.75, t) : shotW ? 0 : 0;
     if (shotC) { k.light(1, MX + 1.5, SY + MY + 2.5, SZ + MZ + 3.5, STEEL, 40 * lo, 12); k.light(2, MX, SY + MY + 0.6, SZ + MZ + 0.5, MOUTH, (8 + 26 * mo) * lo, 7); }
     else if (shotW) k.light(2, MX, SY + MY + 0.6, SZ + MZ + 0.5, MOUTH, 10 * lo, 7);
@@ -458,7 +458,7 @@ vec3 tubeMove(out vec3 nrm) {
     const rip = k.pulse(RIP, 0.02, 0.3), kn = k.pulse(KNOT, 0.02, 0.3), arr = k.pulse(ARRIVE, 0.02, 0.25), cb = k.pulse(BACK, 0.01, 0.2);
     lens.streak(0.8 * rip + 0.6 * kn, STEEL, 2.4, 1);
     lens.fringe(1.4 * rip + 1.6 * kn + 0.6 * cb + 1.0 * arr + 1.6 * k.ease.in2(k.span(4.8, BLACK)));
-    lens.flash(STEEL, 0.05 * rip + 0.1 * kn);
+    lens.flash(STEEL, 0.03 * rip + 0.035 * kn);
     lens.exposure((t < 0.42 ? 0 : 1) * (1 - k.ease.in(k.span(4.9, BLACK))));
     lens.vignette(0.35);
     k.gate(pre ? lerp(0.5, 0.2, k.ease.out(k.span(0.3, 0.9))) : lerp(0.2, 0.07, k.ease.out(k.span(RIP, RIP + 0.4))));
@@ -515,33 +515,37 @@ vec3 tubeMove(out vec3 nrm) {
 
   /* ================================================================================================================
      DEATH "Reweave"   len 6.3 s   key 2.6   lights 3
-     idea:     the entrance played backward. Everything it pulled out of the cloth spills out of it: the cloth falls away from
-               the hem up and leaves it hanging in the dark. Then a giant shuttle shoots across and weaves the world back, row by
-               row, from the top down; its first passes go straight through the Unraveller and bind it, flattened, into the new
-               cloth as a woven picture of itself; then the shuttle runs back down the cloth, faster and faster, to the hem.
-     camera:   pursuit again, of the shuttle now: back and wide while the cloth falls; close on it from below as the shuttle
-               crosses it, leaning with each pass; then a wide carried down the cloth with the woven edge, the shuttle racing
-               ahead and its light streaking each pass like a long exposure; to the hem; home.
-     colour:   steel and mist on black, the shuttle's dark wood and steel, the linen weft; ends on the house lights.
-     rhythm:   choke; a rushing fall; CLACK ... CLACK ... CLACK ... (slow, five heavy beats); clack-clack-clack-rrrr; tie; light.
+     idea:     the entrance played backward. Everything it pulled out of the cloth spills out of it: the floor drops out from
+               the hem up and leaves it hanging in the dark. Then a loom strings itself across the dark, a giant shuttle shoots
+               through and the reed slams each row home, weaving the world back from the top down; its first passes go straight
+               through the Unraveller and bind it, flattened, into the new cloth as a woven picture of itself; then the shuttle
+               runs back down the cloth, faster and faster, to the hem, where the loose end is tied off.
+     camera:   pursuit again, of the shuttle now: a high angle down the cloth as the floor falls away toward the lens (a
+               vertigo lurch); low at the selvedge as the shuttle comes straight at the lens and then shoots away through it;
+               low under it face on as the reed slams the bands up into it; carried down the cloth with the woven edge, low
+               and close; a close on the knot; home.
+     colour:   steel on black, the shuttle's dark wood and steel tips, linen warp; the house lights come back with the cloth.
+     rhythm:   choke; a rushing fall; twang; CLACK ... CLACK ... CLACK ... (five heavy beats); clack-clack-clack-rrrr; tie; light.
      ends on:  the whole cloth, taut and lit, the house lights full, the body gone, nothing moving: the fireworks follow.
 
      beat      film s       shot (camera, lens)                          what we see                                 light                       sound / buzz
-     choke     0.0-0.5      the play camera, a push to its mouth; slow    it gags; the thread it ate whips out of     house down; its mouth       unraveller_choke 0.02
-                            motion 0.3x; fringe                           its mouth                                   green (light 2)            buzz 0.03
-     spill     0.5-1.3      back and wide, the whole cloth                the cloth falls away from the hem up, rows  a steel top light (1)       unraveller_spill 0.5
-                                                                          gone, loose yarn flying; it hangs alone                                 buzz 0.55
-                                                                          over the dark
-     bind      1.3-3.01     close on it from below; the camera leans with a giant shuttle shoots across: five passes  the shuttle carries a cold  unraveller_shuttle x5
-                            each pass; slow motion 0.6x; fringe on beats through it, laying cloth a band at a time;  light across it (0); the    unraveller_beat x5
-                                                                          each pass pulls a band of its stitches     top light (1)               unraveller_bind 1.3
-                                                                          into the weave: flattened, it becomes a                                 buzz each beat
-                                                                          picture in the cloth; its hooks flail
-     run       3.01-4.44    a wide carried down with the woven edge;      the shuttle zig-zags down the cloth faster  the shuttle's light; a      unraveller_loom 3.01
-                            streaks of its light, fading                  and faster, the rows coming back behind it  fill over the new cloth (2) buzz 4.44
-     tie       4.44-4.8     wide on the hem                               the last pass; the shuttle shoots off; a    house lights coming up      unraveller_tie 4.44
-                                                                          knot tied off where the loose end was
-     settle    4.8-5.6      eases back to the play camera                 the whole cloth; its woven picture settles  house lights up             unraveller_rest 4.8
+     choke     0.0-0.5      the play camera, a push in to its mouth;      it gags; the thread it ate whips out of     house down; its mouth       unraveller_choke 0.02
+                            slow motion 0.3x; fringe                      its mouth                                   green (light 2)            buzz 0.03
+     spill     0.5-1.3      CUT high over the cloth looking down it to    the cloth falls away from the hem toward    house lights half; a steel  unraveller_spill 0.5
+                            the hem; as the edge reaches us the lens      us, its edge drooping into the dark, loose  key from over the lens (1)  buzz 0.55
+                            lurches (dolly zoom) down into the dark       loops flying off it
+     bind      1.3-3.01     A (passes 1, 2): CUT low at the selvedge;     warp threads snap taut across the dark; the  the shuttle carries a hard  unraveller_shuttle x5
+                            the shuttle comes at the lens and shoots      shuttle fills the frame and is gone; the     steel light with it (0);   unraveller_beat x5
+                            past, then away through it. B (passes 3-5):   next shoots away through its body, dragging  a top light over it (1)     unraveller_bind 1.3
+                            CUT low under it, face on; slow motion 0.6x;  its stitches into the weave; the reed                                  buzz each beat
+                            a shudder on each beat                        slams each band up into it: it is flattened
+                                                                          into a woven picture of itself
+     run       3.01-4.44    carried down with the woven edge, low and     the shuttle zig-zags down faster and faster, the shuttle's light; the     unraveller_loom 3.01
+                            close from the side                           the reed clacking each row home; lit cloth   house lights coming back    buzz 4.44
+                                                                          above, the warp over the dark below          over the new cloth (2)
+     tie       4.44-4.8     a close on the hem                            the last pass; a knot of madder yarn         house lights coming up      unraveller_tie 4.44
+                                                                          pulled tight where the loose end was
+     settle    4.8-5.6      eases back to the play camera                 the whole cloth; its woven picture settles   house lights up             unraveller_rest 4.8
                                                                           into the weave and is gone                                              (title 4.95)
      up        5.6-6.3      the play camera                               the calm, lit, whole cloth
      reduced motion: the camera stays at the play camera; the same story plays on the cloth, without the flashes. */
@@ -583,7 +587,7 @@ vec3 tubeMove(out vec3 nrm) {
   function buildFlag(T) { const m = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ color: new T.Color(0, 0, 0) })); m.renderOrder = -3; return m; }   // black over the top rail, as a lighting crew would rig
   function beatFx(k, i) {   // the reed beats the new band up against the cloth
     const r = k.r, K = k.K, y = YTOP - BW * (i + 1), last = i === NP - 1;
-    r.shake = Math.max(r.shake, i < NBIND ? 0.16 : last ? 0.12 : 0.04);
+    r.shake = Math.max(r.shake, i < NBIND ? 0.28 : last ? 0.12 : 0.07);
     if (i < NBIND || last) { for (let j = 0, n = r.n(i < NBIND ? 10 : 6); j < n; j++) r.lint.emit(rnd(-6.5, 6.5), y, 0.1, rnd(-0.3, 0.3), rnd(-0.8, -0.1), rnd(0.3, 1.2), rnd(0.6, 1), rnd(0.02, 0.04), K.mist, 0.7, 6, 2, 1.2, undefined, rnd(-3, 3), 0); }
   }
   function passFx(k, i) {   // the shuttle comes out of the dark at the selvedge
@@ -604,7 +608,7 @@ vec3 tubeMove(out vec3 nrm) {
 
   const DEATH = {
     kit: true, len: 6.3, key: 2.6, lights: 3,
-    sheet: [0.2, 0.78, 1.08, 1.5, 1.95, 2.3, 2.78, 3.3, 3.85, 4.62, 5.25, 6.15],
+    sheet: [0.25, 0.8, 1.02, 1.5, 1.95, 2.3, 2.75, 3.3, 3.9, 4.65, 5.25, 6.2],
     beats: {
       choke:  [0, SPILL, 'out'],
       spill:  [SPILL, T_IN, 'in2'],
@@ -637,94 +641,138 @@ vec3 tubeMove(out vec3 nrm) {
     steps: DSTEPS,
     setup(k) {
       k.r.bfOrders.unrbind = bindOrder;
-      k.prop('shuttle', buildShuttle); k.prop('flag', buildFlag);
+      fabricColours(k); k.prop('shuttle', buildShuttle); k.prop('flag', buildFlag); k.prop('reed', buildReed); k.prop('knit', buildKnit); k.prop('sky', buildSky); k.prop('floor', buildFloor);
       const gs = k.stitched(DEF.sprite, DEF.cell); gs.g.traverse(o => { o.castShadow = false; o.receiveShadow = false; });   // a picture in the cloth throws no shadow
       const c = k.c; c.arena = c.arenaO; c.arenaO.floor = c.F0 || 0; c.arenaO.inset = c.I0 || 0; c.acc = 0; c.n1 = 0;
     },
     frame(k, t, dt) { reweave(k, t, dt); }
   };
 
+  /* The reed (the beater): a long comb of steel dents between two bars of dark wood, that slams each new row up into the cloth.
+     Its origin is the middle of its top edge, the edge that strikes. */
+  function buildReed(T, k) {
+    const items = [], bar = new T.BoxGeometry(19, 0.24, 0.34), dent = new T.BoxGeometry(0.035, 1.05, 0.06), n = tierName(k) === 'low' ? 60 : 96;
+    for (let i = 0; i < n; i++) items.push([dent.clone(), new T.Matrix4().makeTranslation(-9.2 + 18.4 * (i + 0.5) / n, -0.64, 0)]);
+    const dents = new T.Mesh(FX.merge(T, items), new T.MeshStandardMaterial({ color: new T.Color(PAL.steelHi), roughness: 0.3, metalness: 0.6 }));
+    const wood = new T.Mesh(FX.merge(T, [[bar, new T.Matrix4().makeTranslation(0, -0.12, 0)], [bar.clone(), new T.Matrix4().makeTranslation(0, -1.28, 0)]]), new T.MeshStandardMaterial({ color: new T.Color('#4A3220'), roughness: 0.55 }));
+    const g = new T.Group(); g.add(dents); g.add(wood); g.traverse(o => { o.frustumCulled = false; }); return g;
+  }
+  const NWARP = 15;
+  function slamAt(k, t) {   // how hard the reed is home now (0..1) and against which edge (the fell it beats to): in SS2
+    let best = 0, F = YTOP; for (let j = 0; j < NP; j++) { const e = PT[j] + PD[j]; if (e - 0.06 > t) break; const p = k.pulse(e - 0.045, 0.045, j < NBIND ? 0.3 : 0.16); if (p >= best) { best = p; F = YTOP - BW * (j + 1); } }
+    SS2[0] = best; SS2[1] = F; return SS2;
+  }
+  const SS2 = new Float32Array(2);
+
+
+  /* The spill, as the entrance saw the knit: the camera hangs over it, looking back down it, and the unravelling comes at us
+     (the entrance's own unravelling, run on a clock of its own); as the edge reaches us the lens lurches down into the dark. */
+  const SPC = endY(4.02) + 0.8;   // where the camera hangs over the knit (set y)
+  function spillMacro(k, t) {
+    const cam = k.cam, lens = k.lens, lo = k.has.post ? 1 : 0.5, te = 2.78 + (t - SPILL) * 1.55, ey = endY(te), ex = endX(ey), lurch = k.ease.in2(k.span(1.08, T_IN));
+    if (k.r.playerGroup) k.r.playerGroup.visible = false;
+    cam.at(0.7, SY + SPC + 0.3, SZ + 2.3, -0.2, SY + SPC - 5.5, SZ - 0.2, 0.05, 46);
+    if (lurch > 0) { cam.mark(); cam.at(0.5, SY + SPC - 0.2, SZ + 2.0, 0.2, SY + SPC - 1.6, SZ - 3.5, -0.1, 64).mix(lurch); cam.motion(0.7); }
+    cam.full(1); lens.focus(ex, SY + ey, SZ + 0.2, 0.6, 0.012);
+    const kx = ex - 3.4, ky = SY + ey - 3.6, kz = SZ + 1.5;
+    k.light(0, kx, ky, kz, STEEL, 34 * lo, 8.5); k.light(1, ex + 0.3, SY + ey - 0.5, SZ + 1.0, STEEL_HI, 1.4 * lo, 3.4);
+    const sky = k.prop('sky'); sky.position.set(0, SY + 12, SZ);
+    const fl = k.prop('floor'); fl.position.set(0, SY + 12, SZ - 0.75); fl.scale.set(300, 300, 1);
+    const knit = k.prop('knit'), U = knit.userData.U; knit.position.set(0, SY, SZ);
+    U.uT.value = te; U.uRow0.value = Math.floor((SPC - 15) / KH); U.uKey.value.set(kx, ky - SY, kz - SZ); U.uWave.value.set(0, 0, 0, 0); U.uPull.value.set(ex, ey + 0.2, 0.75, 1.0);
+  }
+
   function reweave(k, t, dt) {
     const c = k.c, r = k.r, K = k.K, cam = k.cam, lens = k.lens, cl = k.cloth, q = k.q(), time = r.time, lo = k.has.post ? 1 : 0.5;
     const bx = 0, by = BY0, my = by + SOFT, sp = shuttle(t), si = sp[0], spp = sp[1], sx = sp[2], sy = sp[3], dir = sp[4];
     const inPass = t >= T_IN && t < PEND, done = t < T_IN ? 0 : t >= PEND ? NP : si + (spp >= 1 ? 1 : 0);
     const fell = YTOP - BW * done, spill = k.ease.in2(k.span(SPILL, T_IN - 0.08)), woven = t >= PEND + 0.04;
-    const binding = t >= T_IN && t < RUN + 0.15, home = t >= 4.8;
+    const binding = t >= T_IN && t < RUN + 0.15, home = t >= 4.8, ey = B + spill * VTOP * FH;
+    const shotA = t >= T_IN && t < PT[2], shotB = t >= PT[2] && t < RUN;
+    const sl = slamAt(k, t), slam = sl[0], slamF = sl[1];
 
     // ---- the camera first
-    const WIDE_Y = 8.2;
-    if (t < SPILL) { const u = k.ease.out(k.span(0, SPILL)); cam.home().mark(); cam.orbit(bx, my + 0.4, 1, cam.fit(9, 9), 0.25, 0).mix(0.4 * u); cam.full(u); }
-    else if (t < T_IN + 0.3) {   // back and wide: the whole cloth falling away under it, from the hem up
-      const u = k.ease.io(k.span(SPILL, T_IN - 0.1));
-      cam.home().mark(); cam.orbit(bx, my + 0.4, 1, cam.fit(9, 9), 0.25, 0).mix(0.4).mark();
-      cam.fov = 34; cam.orbit(0, WIDE_Y, 0.5, cam.fit(15, 21), 0.34, 0.08, 0).mix(u); cam.full(1);
-      if (t > T_IN) { cam.mark(); cam.orbit(bx + clamp(sx, -7, 7) * 0.12, by - 0.4, 0.6, cam.fit(10.5, 10.5), 0.42, -0.25, 0.01 * dir).mix(k.ease.io(k.span(T_IN, T_IN + 0.3))); cam.motion(0.6); }
-    } else if (t < RUN + 0.06) {   // close beside it, the camera leaning with each pass
-      const u = k.ease.io(k.span(T_IN, RUN)), pan = clamp(sx, -7, 7) * 0.12;
-      cam.fov = 34; cam.orbit(bx + pan, by - 0.4 + 0.3 * u, 0.6, cam.fit(lerp(9.6, 8.2, u), lerp(9.6, 8.2, u)), 0.42, lerp(-0.25, 0.22, u), 0.015 * dir);
-      cam.handheld(0.04, 1.4); cam.motion(0.4); cam.full(1);
-      lens.focus(bx, by - 0.4, 0.5, 0.7, 0.012);
-    } else if (!home) {   // carried down the cloth with the woven edge, wide enough to see each pass from selvedge to selvedge
-      const u = k.span(RUN, PEND), fy = Math.max(B, fell);
-      cam.fov = 36; cam.orbit(0, fy + 1.8, 0, cam.fit(15.5, 15.5), lerp(0.52, 0.36, u), lerp(0.2, -0.12, u), 0.02 * Math.sin(t * 3)).mark();
-      if (t < RUN + 0.3) { cam.orbit(bx, by - 0.1, 0.6, cam.fit(9, 9), 0.42, 0.22, 0); cam.mix(1 - k.ease.io(k.span(RUN + 0.06, RUN + 0.3))); cam.mark(); }
-      if (t > PEND) { cam.orbit(0, B + 3.2, 0, cam.fit(14, 14), 0.36, 0, 0).mix(k.ease.io(k.span(PEND, 4.75))); cam.mark(); }
-      cam.handheld(0.05, 2); cam.motion(0.5); cam.full(1);
+    if (t < SPILL) {   // the play camera, pushing in on its choking mouth
+      const u = k.ease.out(k.span(0, SPILL)); cam.home().mark(); cam.orbit(bx, my + 0.6, 1, cam.fit(7.5, 7.5), 0.3, 0).mix(0.55 * u); cam.full(u);
+    } else if (t < T_IN && !k.reduce) {   // the knit again, at macro scale: its edge comes racing at us, and the floor drops out
+      spillMacro(k, t);
+    } else if (t < T_IN) {   // (reduced motion: the camera is held; the cloth falls away from the hem up)
+      const u = k.ease.io(k.span(SPILL, T_IN)), lurch = k.ease.in2(k.span(0.98, T_IN));
+      cam.at(0.8 - 0.4 * u, by - 1.2 - 0.6 * u, 4.4 - 0.4 * u, -0.3, B + 3.5 + 4 * u, 0, 0.03 - 0.05 * u, 46);
+      if (lurch > 0) { cam.mark(); cam.at(0.4, by - 1.8, 4.0, 0, by - 4.5, -3.5, -0.08, 62).mix(lurch); cam.motion(0.6); }
+      cam.full(1);
+    } else if (shotA) {   // A: low at the selvedge, the band at eye height; the shuttle comes at the lens, then shoots away through it
+      const u = k.span(T_IN, PT[2]);
+      cam.at(6.6 - 0.5 * u, by - 0.6, 3.9 - 0.3 * u, -1.2, by + 0.9, 0.3, -0.05 + 0.03 * Math.sin(t * 3), 48).handheld(0.03, 1.4);
+      lens.focus(0, by + 0.6, 0.4, 0.45, 0.012); cam.full(1);
+    } else if (!home && t < RUN) {   // B: low under it, face on; it leans with each pass
+      const u = k.ease.io(k.span(PT[2], RUN)), pan = clamp(sx, -7, 7) * 0.05;
+      cam.fov = 44; cam.orbit(bx + pan, by - 0.4 - 0.5 * u, 0.6, cam.fit(6.4, 6.4) * lerp(1, 0.92, u), 0.6, -0.12 + 0.24 * u, 0.02 * dir);
+      cam.handheld(0.035, 1.4); cam.full(1);
+      lens.focus(bx, by - 1, 0.4, 0.5, 0.012);
+    } else if (!home) {   // carried down the cloth with the woven edge, low and close from the side
+      const fy = Math.max(B + 0.6, fell), u = k.span(RUN, PEND);
+      cam.at(3.6, fy - 4.4, 5.6, -0.4, fy + 1.0, 0, 0.05 * Math.sin(t * 2.3), 46).mark();
+      if (t < RUN + 0.25) { cam.mark(); cam.fov = 44; cam.orbit(bx, by - 0.9, 0.6, cam.fit(6.4, 6.4) * 0.92, 0.6, 0.12, 0); cam.mix(1 - k.ease.io(k.span(RUN, RUN + 0.25))); cam.motion(0.6); }
+      if (t > PEND - 0.1) { cam.mark(); cam.at(PX0 + 2.0, B - 1.3, 2.8, PX0 + 0.3, B + 0.7, 0, 0.02, 40); cam.mix(k.ease.io(k.span(PEND - 0.1, PEND + 0.22))); }
+      cam.handheld(0.04 * (1 - u * 0.5), 1.8); cam.motion(0.3); cam.full(1);
+      if (t > PEND) lens.focus(PX0, B + 0.45, 0.1, 0.5, 0.01);
     } else {   // home
-      cam.fov = 36; cam.orbit(0, B + 3.2, 0, cam.fit(14, 14), 0.36, 0, 0).mark(); cam.home().mix(k.ease.io(k.span(4.8, 5.6)));
+      cam.at(PX0 + 2.0, B - 1.3, 2.8, PX0 + 0.3, B + 0.7, 0, 0.02, 40).mark(); cam.home().mix(k.ease.io(k.span(4.8, 5.6)));
       cam.full(1 - k.ease.io(k.span(4.8, 5.5)));
     }
 
-    // ---- light: the house goes down but not out while the cloth falls (so its going reads), to the dark for the binding,
-    //      and comes back up from the hem. 0: a cold light riding ahead of the shuttle; 1: a top light over it; 2: its mouth,
-    //      then a fill over the new cloth
-    const choke = 1 - sm(0.3, SPILL + 0.2, t), houseUp = k.ease.io(k.span(4.5, 5.8));
-    const dk = t < SPILL ? lerp(c.d0, 0.7, sm(0, 0.35, t)) : t < T_IN ? lerp(0.7, 0.6, sm(SPILL, 0.8, t)) + 0.32 * sm(1.0, T_IN + 0.1, t) : 0.92 - 0.12 * sm(RUN, PEND, t);
-    if (t < 5.8) k.dark(dk * (1 - houseUp), (t < SPILL ? 0 : t < T_IN ? 0.15 + 0.4 * sm(1.0, T_IN, t) : 0.55 - 0.3 * sm(RUN, PEND, t)) * (1 - houseUp)); else k.dark(0, 0);
-    k.vig(0.4 * (1 - houseUp)); if (!home) k.quiet(true, t > SPILL);
-    if (t < SPILL + 0.3) k.light(2, bx, my - 0.3, 2.2, MOUTH, 24 * choke * lo, 8);
-    if (t > 0.35 && t < RUN + 0.4) k.light(1, bx, by + 1.4, 4.2, STEEL, 34 * sm(0.35, 0.9, t) * (1 - sm(RUN, RUN + 0.4, t)) * lo, 10);
-    if (inPass) { const on = sm(0, 0.06, spp) * sm(1, 0.94, spp), lx = clamp(sx + dir * 1.8, -7.5, 7.5); k.light(0, lx, sy + 0.7, 2.4, STEEL, (si < NBIND ? 16 : 10) * on * lo, 6.5); k.pool(lx, sy, 3, K.steel, 0.05 * on); }
-    if (t >= RUN && t < 4.8) k.light(2, 0, Math.max(B, fell) + 3.5, 4.5, STEEL, 22 * (1 - sm(4.4, 4.8, t)) * lo, 12);
+    // ---- light: the house half down while the floor falls (so its going reads), dark for the binding, back with the cloth.
+    //      0: a hard steel light riding with the shuttle; 1: a key over the lens in the fall, a top light over it in the binding;
+    //      2: its mouth, then a fill over the new cloth
+    const choke = 1 - sm(0.3, SPILL + 0.2, t), houseUp = k.ease.io(k.span(4.45, 5.7));
+    let dk, pitch;
+    if (t < SPILL) { dk = lerp(c.d0 || 0, 0.75, sm(0, 0.35, t)); pitch = 0; }
+    else if (t < T_IN) { dk = k.reduce ? 0.5 + 0.3 * sm(1.0, T_IN, t) : 1; pitch = k.reduce ? 0.15 + 0.35 * sm(1.0, T_IN, t) : 1; }
+    else { const back = sm(RUN, PEND, t); dk = 0.88 - 0.33 * back; pitch = 0.45 - 0.35 * back; }
+    if (t < 5.8) k.dark(dk * (1 - houseUp), pitch * (1 - houseUp)); else k.dark(0, 0);
+    k.vig(0.45 * (1 - houseUp)); if (!home) k.quiet(true, t > SPILL);
+    if (t < SPILL + 0.3) k.light(2, bx, my - 0.3, 2.2, MOUTH, 30 * choke * lo, 8);
+    if (t >= SPILL && t < T_IN && k.reduce) k.light(1, 0.3, Math.max(ey, B) + 2.2, 2.6, STEEL, 34 * lo, 9);
+    else if (t >= T_IN && t < RUN + 0.3) k.light(1, bx + 1.5, by + 2.2, 4.0, STEEL, 26 * (1 - sm(RUN, RUN + 0.3, t)) * lo, 10);
+    if (inPass) { const on = sm(0, 0.05, spp) * sm(1, 0.95, spp), lx = clamp(sx + dir * 1.4, -8, 8); k.light(0, lx, sy - 0.3, 1.9, STEEL_HI, (si < NBIND ? 22 : 15) * on * lo, 7.5); }
+    if (t >= RUN && t < 4.9) k.light(2, 0, Math.max(B, fell) + 2.6, 4.0, STEEL, 40 * (1 - sm(4.5, 4.9, t)) * lo, 11);
     if (t > SPILL && t < 4.5) { const fg = k.prop('flag'); fg.position.set(0, H + 7.8, 0.62); fg.scale.set(60, 15.6, 1); }
 
-    // ---- the cloth: falling away, then woven back a band at a time
+    // ---- the cloth: falling away toward us (its edge drooping into the dark), then woven back a band at a time
     if (!woven && t > SPILL - 0.02) {
       const v0 = t < T_IN ? spill * VTOP : clamp((fell - B) / FH, 0, VTOP);
-      cl.rows(v0, 1); cl.backing(VOID, 1); cl.crumple(0.03, 0.6, 0);
-      if (binding) cl.pull(clamp(sx, -7, 7), sy, dir * 0.12, 0, 1.0);
-      // the fight's lost rows go with the rest, and come back with it
+      cl.rows(v0, 1); cl.backing(VOID, 1); cl.crumple(0.05, 0.7, 0);
+      if (t < T_IN && spill > 0.002 && k.reduce) for (let i = 0; i < 7; i++) cl.bulge(-6.3 + i * 2.1, ey + 0.5, 1.5, -2.0);
+      if (binding) cl.pull(clamp(sx, -7, 7), sy, dir * 0.14, 0, 1.1);
+      if (slam > 0.02) cl.wave(0, slamF, 0.4 + 6 * (1 - slam), 0.18 * slam, 0.8);
       c.arenaO.floor = (c.F0 || 0) * (1 - sm(SPILL, SPILL + 0.2, t)); c.arenaO.inset = (c.I0 || 0) * (1 - spill);
-      // the edge: loops of yarn hanging into the dark (falling away), or the fell, bright where the reed beats it (weaving)
-      const ey = t < T_IN ? B + spill * VTOP * FH : fell, lit = k.lit(K.patch, 0, ey, 0.3, 0.04);
-      WC[0] = lit[0] * 1.5 + 0.012; WC[1] = lit[1] * 1.5 + 0.014; WC[2] = lit[2] * 1.5 + 0.024;
-      if (ey < YTOP - 0.05 || t < T_IN) for (let i = 0; i < 25; i++) { const x = -6.9 + i * 0.57 + 0.12 * Math.sin(i * 2.1); k.thread(x, ey, 0.02, x + 0.34, ey, 0.02, 0.035, WC, 0.9, 1, (0.16 + 0.2 * hash(i * 4.7)) * (t < T_IN ? 1 : 0.5)); }
-      if (t < T_IN && spill > 0.01 && spill < 0.995) { const g = 0.6 + 0.4 * Math.sin(t * 37);   // the unravelling front, racing up the cloth
-        WC[0] = GREEN[0] * 0.22 * g; WC[1] = GREEN[1] * 0.22 * g; WC[2] = GREEN[2] * 0.22 * g; k.thread(-7, ey + 0.05, 0.08, 7, ey + 0.05, 0.08, 0.3, WC, 1, 0, 0, true);
-        WC[0] = 0.5; WC[1] = 0.8; WC[2] = 0.5; k.thread(-7, ey + 0.05, 0.09, 7, ey + 0.05, 0.09, 0.05, WC, 0.9, 0, 0, true); }
-      if (t < T_IN && spill > 0.01) { c.acc += dt * 70 * q; while (c.acc > 1) { c.acc--; r.curls.emit(rnd(-6.8, 6.8), ey, 0.1, rnd(-1, 1), rnd(0.2, 2.5), rnd(1, 3), rnd(0.7, 1.1), 0.26, Math.random() < 0.5 ? K.patch : K.mist, 0.1, rnd(0, 6), rnd(-6, 6), rnd(-3, 3), -9, 1.5, 0.5, 1); } }
-      if (inPass && spp > 0 && spp < 1) {   // the weft being laid behind the shuttle across this band
-        const x0 = -dir * 7, x1 = clamp(sx - dir * 1.4, -7, 7), wl0 = k.lit(K.linen, sx, sy, 0.4, 0.02), wl = WC; WC[0] = wl0[0] * 0.55; WC[1] = wl0[1] * 0.55; WC[2] = wl0[2] * 0.55;
-        if ((x1 - x0) * dir > 0.05) for (let j = 0; j < 3; j++) { const yy = fell - BW * (0.2 + 0.3 * j); k.thread(x0, yy, 0.03, x1, yy, 0.03, 0.12, wl, 0.95, 4); }
-        k.thread(x1, sy, 0.32, clamp(sx, -9, 9), sy, 0.32, 0.03, wl, 0.9, 1);
+      // the edge: loops of yarn hanging off it into the dark as it falls
+      if (t < T_IN && spill > 0.002 && k.reduce) { const lit = k.lit(YARN, 0, ey, 0.3, 0.05); WC[0] = lit[0] * 1.6 + 0.01; WC[1] = lit[1] * 1.6 + 0.012; WC[2] = lit[2] * 1.6 + 0.02;
+        for (let i = 0; i < 25; i++) { const x = -6.9 + i * 0.57 + 0.12 * Math.sin(i * 2.1); k.thread(x, ey - 0.1, -0.5, x + 0.34, ey - 0.1, -0.5, 0.05, WC, 0.95, 1, 0.3 + 0.3 * hash(i * 4.7)); }
+        c.acc += dt * 22 * q; while (c.acc > 1) { c.acc--; r.curls.emit(rnd(-6.8, 6.8), ey, 0.1, rnd(-1, 1), rnd(0.5, 3), rnd(0.5, 2.5), rnd(0.7, 1.1), 0.26, WC, 0.1, rnd(0, 6), rnd(-6, 6), rnd(-3, 3), -9, 1.5, 0.5, 1); } }
+      if (inPass && spp > 0 && spp < 1) {   // the weft trailing behind the shuttle across its band
+        const x0 = -dir * 7.2, x1 = clamp(sx - dir * 1.6, -7.2, 7.2), wl = k.lit(K.linen, sx, sy, 0.4, 0.03); WC[0] = wl[0] * 0.8; WC[1] = wl[1] * 0.8; WC[2] = wl[2] * 0.8;
+        if ((x1 - x0) * dir > 0.05) k.thread(x0, sy, 0.12, x1, sy, 0.3, 0.07, WC, 1, 1, 0.04);
       }
-      const bt = k.pulse(si > 0 && spp < 0.3 ? PT[si] : 99, 0.01, 0.16);
-      if (bt > 0.01) { WC[0] = K.steelHi[0] * 0.25 * bt; WC[1] = K.steelHi[1] * 0.25 * bt; WC[2] = K.steelHi[2] * 0.25 * bt; k.thread(-7, fell, 0.04, 7, fell, 0.04, 0.08, WC, 0.7, 0, 0, true); }
     }
-    // ---- the run as a long exposure: each pass leaves a streak of the shuttle's light across its band, fading
-    if (t >= RUN && t < PEND + 0.6) for (let j = Math.max(NBIND, si - 7); j <= Math.min(si, NP - 1); j++) {
-      const e = PT[j] + PD[j], cur = t < e, age = cur ? 0 : t - e; if (age > 0.55 || t < PT[j]) continue;
-      const a = (1 - age / 0.55) * (1 - age / 0.55), yj = YTOP - BW * (j + 0.5), dj = j & 1 ? -1 : 1, xa = -dj * 7.6, xb = cur ? clamp(sx, -7.6, 7.6) : dj * 7.6;
-      WC[0] = STEEL[0] * 0.16 * a; WC[1] = STEEL[1] * 0.2 * a; WC[2] = STEEL[2] * 0.22 * a; k.thread(xa, yj, 0.5, xb, yj, 0.5, 0.55, WC, 1, 0, 0, true);
-      WC[0] = 0.5 * a; WC[1] = 0.62 * a; WC[2] = 0.8 * a; k.thread(xa, yj, 0.52, xb, yj, 0.52, 0.05, WC, 1, 0, 0, true);
-      if (!cur) { const yn = yj - BW; k.thread(dj * 7.6, yj, 0.5, dj * 7.9, (yj + yn) * 0.5, 0.5, 0.05, WC, 1, 0, 0, true); k.thread(dj * 7.9, (yj + yn) * 0.5, 0.5, dj * 7.6, yn, 0.5, 0.05, WC, 1, 0, 0, true); }
+    // ---- the warp: threads strung down across the dark under the woven edge; they snap taut as the loom takes them
+    if (t > T_IN - 0.02 && t < PEND + 0.05) {
+      const ts = t - T_IN, amp = 1.1 * Math.exp(-ts * 4.5) * Math.cos(ts * 34), top = Math.max(B, fell), bot = B - 0.6;
+      for (let i = 0; i < NWARP; i++) { const x = -7 + 14 * i / (NWARP - 1), wl = k.lit(K.linen, x, (top + bot) * 0.5, 0.3, 0.02), a = amp * (0.7 + 0.3 * Math.sin(i * 2.3)); WC[0] = wl[0] * 0.75; WC[1] = wl[1] * 0.75; WC[2] = wl[2] * 0.75;
+        let px = x, py = top, pz = 0.06;
+        for (let s = 1; s <= 4; s++) { const u = s / 4, nx = x + a * 0.25 * Math.sin(u * PI) * Math.sin(i * 1.7), ny = lerp(top, bot, u), nz = 0.06 + a * Math.sin(u * PI); k.thread(px, py, pz, nx, ny, nz, 0.045, WC, 0.95, 1); px = nx; py = ny; pz = nz; } }
+    }
+    // ---- the reed: under the band being laid, slamming it home on each beat
+    if (t >= PT[2] - 0.05 && t < PEND + 0.3) {
+      const reed = k.prop('reed'), yb = slamF - 1.5 * (1 - slam) - (t > PEND ? 3 * k.ease.in2(k.span(PEND + 0.05, PEND + 0.3)) : 0);
+      reed.position.set(0, yb, 0.34 + 0.06 * slam); reed.rotation.set(-0.25 * (1 - slam), 0, 0);
     }
     // ---- the shuttle
-    if (inPass && Math.abs(sx) < SXR + 0.2) {
-      const sh = k.prop('shuttle'), wob = Math.sin(t * 31) * 0.03; sh.position.set(sx, sy, 0.42); sh.rotation.set(0.2 + wob, dir > 0 ? 0 : PI, wob * 0.5);
-      sh.scale.setScalar(si >= NBIND ? 1.45 : 1.9);
-      const fast = si >= NBIND + 4; if (fast) { WC[0] = K.steel[0] * 0.18; WC[1] = K.steel[1] * 0.18; WC[2] = K.steel[2] * 0.2; k.thread(sx - dir * 3.5, sy, 0.42, sx, sy, 0.42, 0.5, WC, 0.7, 0, 0, true); }
-      r.spr.add(sx + dir * 1.9, sy, 0.45, 0.35, K.steelHi, 0.7, 1, time * 3);
+    if (inPass && Math.abs(sx) < SXR + 0.6) {
+      const sh = k.prop('shuttle'), wob = Math.sin(t * 31) * 0.03; sh.position.set(sx, sy, si >= NBIND ? 0.5 : 0.62); sh.rotation.set(0.25 + wob, dir > 0 ? 0 : PI, wob * 0.5);
+      sh.scale.setScalar(si >= NBIND ? 1.7 : 2.4);
+      r.spr.add(sx + dir * (si >= NBIND ? 2.6 : 3.7), sy, 0.65, 0.35, K.steelHi, 0.6, 1, time * 3);
     }
     // ---- it: gagging; hanging in the dark; bound into the weave, a band of its stitches with each pass
     if (t < RUN + 0.1) {
@@ -759,17 +807,16 @@ vec3 tubeMove(out vec3 nrm) {
     }
     // ---- the tie: a knot pulled tight where the loose end was
     if (t > PEND - 0.05 && t < 5.9) { const kt = k.ease.back(k.span(PEND, PEND + 0.25)), kl = WC, a = 1 - sm(5.3, 5.9, t); WC[0] = K.madder[0] * 0.8; WC[1] = K.madder[1] * 0.8; WC[2] = K.madder[2] * 0.8;
-      if (a > 0.02) { c.ball(PX0, B + 0.45, 0.08, 0.13 * kt * a, 0.11 * kt * a, 0.08 * kt * a, 0.3, kl, 0, 0.05); k.thread(PX0 - 0.45 * kt, B + 0.1, 0.04, PX0, B + 0.45, 0.06, 0.04, kl, a, 1, 0.05); } }
+      if (a > 0.02) { c.ball(PX0, B + 0.45, 0.1, 0.22 * kt * a, 0.18 * kt * a, 0.14 * kt * a, 0.3, kl, 0, 0.05); k.thread(PX0 - 0.75 * kt, B + 0.05, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); k.thread(PX0 + 0.6 * kt, B + 0.2, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); } }
 
-    // ---- the lens
     let bt = 0; for (let i = 0; i < NBIND; i++) bt = Math.max(bt, k.pulse(PT[i] + PD[i], 0.015, 0.22));
-    const ch = k.pulse(0.03, 0.03, 0.4);
-    lens.fringe(1.3 * ch + 0.9 * bt + 0.5 * k.pulse(PEND, 0.02, 0.25));
-    lens.streak(0.6 * ch + 0.5 * bt, STEEL, 2.6, 1);
-    if (t >= RUN && t < PEND) lens.smear(0, 0, 0.006 + 0.03 * k.span(RUN, PEND));
+    const ch = k.pulse(0.03, 0.03, 0.4), sp0 = k.pulse(SPILL, 0.02, 0.3);
+    lens.fringe(1.3 * ch + 0.9 * bt + 0.6 * sp0 + 0.5 * k.pulse(PEND, 0.02, 0.25));
+    lens.streak(0.6 * ch + 0.25 * bt, STEEL, 2.8, 1);
     lens.vignette(0.3 * (1 - houseUp));
-    k.gate(t < 4.8 ? 0.11 : 0.11 * (1 - k.ease.io(k.span(5.9, 6.3))));
+    k.gate(t < 4.8 ? 0.09 : 0.09 * (1 - k.ease.io(k.span(5.9, 6.3))));
   }
+
 
   ST.registerFilm('unraveller', {
     entrance: ENTRANCE,
