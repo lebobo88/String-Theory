@@ -42,7 +42,7 @@
       burst:  ['bomb.mp3',   'Arcade game bomb explosion: a compact deep boom with a sharp crack at the start, followed by a quick spray of small debris and snapping threads, powerful and satisfying, tight tail, 0.9 seconds'],
       phase:  ['bossphase.mp3','Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds'],
       // weapons: one voice each (the bobbin plays the same sound quieter and higher)
-      fire_backstitch:  ['fire_double.mp3', 'Arcade game shot: two tight crisp string snaps in very quick succession, like a taut bowstring double-twang, bright sharp attack, the second slightly higher in pitch, punchy and dry, no reverb, 0.3 seconds', 0.22, 'fire'],
+      fire_backstitch:  ['fire_double.mp3', 'Layered: two short arcade pews made from a plucked metal string with a fast downward pitch sweep, the second 70 ms later and three semitones higher, over a faint whip swish, 0.2 seconds. Picked by the owner from four candidates (thread laser)', 0.22, 'fire'],
       fire_chain:       ['fire_chain.mp3',  'Short bright metallic chain-link jingle with a light zip, like a tiny chain flicked, dry, 0.3 seconds', 0.25, 'fire'],
       fire_herringbone: ['fire_spread.mp3', 'Soft fabric fan snapping open with a breathy spray of thread, wide and airy, dry, 0.3 seconds', 0.25, 'fire'],
       fire_knot:        ['fire_knot.mp3',   'Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds', 0.4, 'fire'],
@@ -128,7 +128,16 @@
       ui_tab:   ['ui_tab.mp3',   'A paper label flicked over, light crisp flip, 0.12 seconds', 0.3, null],
       ui_fail:  ['ui_fail.mp3',  'A thread pulled and refusing to give, a short dull double thud, gentle and not harsh, 0.25 seconds', 0.4, null],
       ui_equip: ['ui_equip.mp3', 'A spool dropped onto its spindle and seated with a wooden click and a short thread zip, 0.3 seconds', 0.45, 'buy'],
-      ui_start: ['ui_start.mp3', 'A needle threaded and pulled taut, quick zip rising to a bright confident pluck, 0.5 seconds', 0.5, 'chart']
+      ui_start: ['ui_start.mp3', 'A needle threaded and pulled taut, quick zip rising to a bright confident pluck, 0.5 seconds', 0.5, 'chart'],
+      // fireworks
+      fw_launch: ['fw_launch.mp3', 'A firework rocket launch: a thread zipping fast up through cloth with a soft rising whistle, dry abrupt end, 0.6 seconds', 0.8, 'dash'],
+      fw_pop:    ['fw_pop.mp3',    'A distant firework burst: a muffled soft boom like thick cloth whumping, followed by a light crackle of tiny sparks, warm and round, 0.9 seconds', 0.8, 'burst'],
+      fw_ring:   ['fw_ring.mp3',   'A bright firework burst: a sharp ting-pop like a wire hoop pulled taut, then a short glittering shimmer fading quickly, 0.9 seconds', 0.8, 'xstitch'],
+      fw_willow: ['fw_willow.mp3', 'A willow firework: one soft pop at the start, then a long gentle falling glitter of sparkles raining down and fading, 1.8 seconds', 0.8, 'silk'],
+      fw_cross:  ['fw_cross.mp3',  'A crossette firework: one pop at the start, a short pause, then a rapid cluster of seven small sharp crackling snaps, 0.9 seconds', 0.8, 'xstitch'],
+      fw_finale: ['fw_finale.mp3', 'A fireworks finale volley: six quick rocket whooshes one after another, then five booming bursts in rapid succession with crackle, 1.5 seconds', 0.8, 'burst'],
+      fw_crown:  ['fw_crown.mp3',  'The biggest firework of the show: a deep warm boom, a bright plucked harp chord blooming over it, then a long shimmering glitter tail, 2 seconds', 1, 'chart'],
+      fw_spark:  ['fw_spark.mp3',  'One tiny soft firework pop with a brief delicate sparkle, 0.5 seconds', 0.5, 'silk']
     },
     music: {
       menu:    ['music_menu.mp3',    'Calm night-time lullaby for plucked harp, music box and soft strings, slow 3/4, cosy and a little mysterious, seamless loop'],
@@ -218,6 +227,9 @@
       this.ui = new ST.UI(this);
       this.canvas = document.getElementById('cloth');
       this.renderer = new ST.Renderer(this.canvas, THREE, { shadows: this.profile.settings.shadows });
+      // effects that keep their own time (the fireworks) ask for their sounds here; `alt` plays until the named sound has a file
+      this.renderer.hook = { sfx: (n, g, r, alt) => { const k = AUDIO.sfx[n] ? n : alt; if (k) this.sfx(k, g, r); }, buzz: p => this.buzz(p) };
+      this.sheet = null;   // a results sheet waiting for a celebration to end (sheetTick)
       this.sim = null; this.state = 'title'; this.midNight = false; this.visit = {};
       this.evbuf = []; this.perf = { t: 0, frames: 0, sim: 0, hud: 0, draw: 0 }; this.drawDt = 0; this.hudN = 0; this.hudNow = true;
       this.keys = {}; this.pointer = null; this.steer = null; this.aim = null; this.tap2 = null; this.touch = false; this.one = { notion: -1, special: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
@@ -228,6 +240,15 @@
       requestAnimationFrame(t => this.loop(t));
     }
     /* Play a sound by name. gain scales it, rate re-pitches it. A sound whose file is missing plays its stand-in; unknown names are silent. */
+    /* Android's back button or gesture (called from MainActivity). True = handled here; false = nothing left to go back from,
+       so the app steps into the background the way any Android app does at its first screen. */
+    back() {
+      const c = this.renderer && this.renderer.cine;
+      if (c && c.active) { c.skip(); this.hush(); return true; }
+      if (this.state === 'flight') { this.pause(); return true; }
+      if (this.state === 'paused') { this.resume(); return true; }
+      return !!(this.ui && this.ui.back && this.ui.back());
+    }
     hush() {   // a skipped film takes its sound with it
       const a = this.filmSnd; this.filmSnd = null; if (!a) return;
       try { if (a.stop) a.stop(); else if (a.pause) a.pause(); } catch (e) { /* already ended */ }
@@ -381,7 +402,10 @@
       st.addEventListener('pointerup', up); st.addEventListener('pointercancel', up);
       window.addEventListener('pointerdown', wake, { passive: true });
       window.addEventListener('resize', () => this.renderer.resize());
-      document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(); });
+      // Screen off, app in the background, tab hidden: stop drawing and stop every sound. (Android also calls sleep/wake from MainActivity,
+      // because a WebView is not always told it is hidden when the screen turns off.)
+      document.addEventListener('visibilitychange', () => { if (document.hidden) this.sleep(); else this.wake(); });
+      window.addEventListener('pagehide', () => this.sleep());
     }
     input() {
       const k = this.keys, st = this.profile.settings;
@@ -393,7 +417,21 @@
     }
 
     // ---------- frame ----------
+    sleep() {
+      if (this.asleep) return; this.asleep = true;
+      this.pause(); this.hush();
+      for (const m of [audio.cur, audio.old]) if (m && !m.paused) { m.pause(); m._slept = true; }
+      for (const k in audio.pool) for (const a of audio.pool[k]) { try { a.pause(); } catch (e) { /* never played */ } }
+      if (ac && ac.state === 'running' && ac.suspend) ac.suspend();
+    }
+    wake() {
+      if (!this.asleep) return; this.asleep = false; this.last = 0;
+      if (ac && ac.state === 'suspended') ac.resume();
+      for (const m of [audio.cur, audio.old]) if (m && m._slept) { m._slept = false; const p = m.play(); if (p && p.catch) p.catch(() => { /* needs a tap */ }); }
+      requestAnimationFrame(t => this.loop(t));
+    }
     loop(ts) {
+      if (this.asleep) return;   // nothing is drawn or stepped while the screen is off; wake() starts the loop again
       requestAnimationFrame(t => this.loop(t));
       const dt = this.last ? Math.min(0.1, (ts - this.last) / 1000) : STEP; this.last = ts; this.frame++;
       if (this.frame % 20 === 0) this.music();
@@ -425,15 +463,33 @@
         const t1 = now();
         this.pump(events);
         r.sync(this.sim, this.drawDt, events);
+        if (this.sheet) this.sheetTick(this.drawDt);
         const t2 = now();
         if (++this.hudN >= 6 || this.hudNow) { this.hudN = 0; this.hudNow = false; this.ui.hud(this.sim); }   // ten times a second, not every frame
         P.hud += now() - t2; P.draw += t2 - t1; P.frames++; this.drawDt = 0;
       } else {
         if (this.tutor && this.state !== 'paused') { if (this.ui.coach) this.ui.coach(null); this.tutor = null; }
+        if (this.sheet) { this.sheet = null; document.body.classList.remove('celebrating'); }
+        // paused: the picture holds exactly as it was (the same frame, redrawn a few times a second so a resize still shows)
+        if (this.state === 'paused' && r.still) { this.drawDt += dt; if (this.drawDt < 0.2) return; r.still(); this.drawDt = 0; return; }
         // menus: thirty frames a second is plenty behind a sheet of paper
         this.drawDt += dt; if (this.drawDt < 1 / 31) return;
         r.idle(this.drawDt); this.drawDt = 0; P.frames++;
       }
+    }
+    /* A results sheet never covers a celebration. It waits (at least s.t seconds) until the renderer says the fireworks after a
+       perfect bonus wave, or a boss's death and the flourish after it, are over; the picture keeps drawing the whole time, and
+       goes on drawing under the sheet. The cap makes sure the sheet always comes. Then the light version of the celebration
+       carries on round the sheet (renderer.afterglowAround). */
+    sheetTick(dt) {
+      const s = this.sheet, r = this.renderer; s.t -= dt; s.cap -= dt;
+      const busy = s.cap > 0 && !!(r.celebrating && r.celebrating());
+      document.body.classList.toggle('celebrating', busy);
+      if (s.t > 0 || busy) return;
+      this.sheet = null;
+      if (this.state !== 'tally') return;
+      s.show();
+      if (r.afterglowAround) r.afterglowAround(document.querySelector('#overlay .sheet'));
     }
     pump(events) {
       const ui = this.ui, sim = this.sim, r = this.renderer, fired = this.firedTmp || (this.firedTmp = { l: false, b: false }); fired.l = fired.b = false;
@@ -453,7 +509,7 @@
               r.cine.play(id, { short: !!seen[id] }); this.filmSnd = this.sfx(seen[id] ? SHORT_SFX[id] : FILM_SFX[id]); seen[id] = true; this.saved();
             } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); }
             this.hudNow = true; break; }
-          case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, b ? 1.3 : 1); } break; }
+          case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, (b ? 1.3 : 1) * (0.97 + Math.random() * 0.06)); } break; }   // a touch of pitch drift so steady fire never sounds like a machine
           case 'hit': case 'bosshit': this.sfx('hit'); break;
           case 'uncase': this.sfx('armour'); break;
           case 'guard': case 'bossblock': this.sfx('deflect'); break;
@@ -488,8 +544,8 @@
           case 'patch': this.sfx('patch'); this.buzz(15); break;
           case 'repad': this.sfx('repad'); ui.toast('Pad re-stuffed', 'Next hit blocked.'); break;
           case 'burst': this.sfx('burst'); break;
-          case 'stageclear': if (e.last) { this.closeBook(); this.profile.run = null; this.saved(); } else this.keep('after'); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; setTimeout(() => { if (this.state === 'tally') this.ui.tally(e, this.pocket); }, 300); break;
-          case 'snapped': this.closeBook(); this.profile.run = null; this.saved(); this.state = 'tally'; setTimeout(() => { if (this.state === 'tally') this.ui.snapped(e); }, 300); break;
+          case 'stageclear': if (e.last) { this.closeBook(); this.profile.run = null; this.saved(); } else this.keep('after'); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; this.sheet = { t: 0.3, cap: 9, show: () => this.ui.tally(e, this.pocket) }; break;
+          case 'snapped': this.closeBook(); this.profile.run = null; this.saved(); this.state = 'tally'; this.sheet = { t: 0.3, cap: 9, show: () => this.ui.snapped(e) }; break;
         }
       }
     }

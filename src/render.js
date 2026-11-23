@@ -3,7 +3,17 @@
    shots are stitches, the ship sews a running stitch behind it, and anything that dies comes apart into its own X-stitches.
    Moths, shots, enemy shots and pickups are drawn as instance pools (one draw per chart); bursts are GPU particles (src/fx.js);
    the cloth, trails, hazards and the post pass are shaders (src/shaders.js). Effects run on their own clock, which slows
-   for a moment on big hits ("hit-stop"); the sim's clock is never touched. */
+   for a moment on big hits ("hit-stop"); the sim's clock is never touched.
+   Nothing an effect draws may end on a straight line. Three rules keep that true:
+     1. The table, the cloth and the frame are the ground: they are drawn first and the depth buffer is then cleared
+        (groundDone), so no sprite, ring, trail or burst is ever cut by the cloth plane or hidden under a frame rail.
+        (Sprites face the lens, the cloth leans away from it by 0.2 rad: a large sprite low over the cloth used to be sliced
+        along a level line about five times its height below its centre.)
+     2. Large rings are flat hoops of thread drawn as strips (ringFlat), not point sprites: no size cap, no slicing, and they
+        pass over the frame and the table. Ripples in the cloth die away before its edge (uField in the cloth shader).
+     3. A celebration (fireworks after a perfect bonus wave, the flourish after a boss) owns the cloth until it is over:
+        celebrating() is true, and the game holds the results sheet back. After that a light version carries on behind
+        and over the sheet (afterglow). */
 (function (ST) {
   'use strict';
   const C = ST.content, PAL = C.PAL, FX = ST.fx, SH = ST.shaders;
@@ -16,6 +26,31 @@
   const eo = k => 1 - (1 - k) * (1 - k) * (1 - k), eio = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const HW = W / 2, FZ = 3.2;   // FZ: the plane the low-shield fray is drawn on, just under the lens
+  /* The celebrations, as timed lists of shells: [launch time, kind, x, burst height, colour, second colour, size, fuse, quiet, sound].
+     Kinds: 0 peony (a round head of X-stitches), 1 ring (one clean hoop), 2 willow (long drooping gold threads), 3 crossette
+     (stars that each pop into a little cross-stitch), 4 crown (the finale: a peony with a willow's tails), 5 spark (the small
+     shell of the light version). Colours are palette names; in the boss list a number picks from the boss's own colours and
+     x, y are offsets from where it fell. A shell bursts `fuse` seconds after launch (0.55 unless given).
+     Sounds (asked for through renderer.hook.sfx, each with a stand-in until it has a file): fw_launch as a shell goes up, fw_pop /
+     fw_ring / fw_willow / fw_cross as it bursts, fw_finale once for the six-shell volley (its shells are quiet), fw_crown for the
+     last big one, fw_spark for the small shells of the light version. */
+  const SHOW = {
+    bonus: [   // a perfect bonus wave: eight single shells up the whole cloth, then a six-shell finale. Last burst at 3.02 s.
+      [0.00, 0, -3.2, 9.6, 'saffron', 'glare', 1], [0.24, 1, 3.6, 12.8, 'madderHi', 'madderPale', 1], [0.52, 2, 0.3, 15.2, 'saffron', 'glare', 1.15],
+      [0.80, 3, -4.3, 13.2, 'steelHi', 'paper', 1], [1.02, 0, 4.3, 7.0, 'greenPale', 'glare', 0.95], [1.26, 1, -1.8, 5.2, 'linen', 'saffron', 0.9],
+      [1.52, 3, 3.1, 15.6, 'madderPale', 'glare', 1], [1.74, 2, -3.9, 16.3, 'glare', 'saffron', 1.05],
+      [2.16, 0, -5.3, 10.4, 'madderHi', 'glare', 0.9, 0.5, 1, 'fw_finale'], [2.22, 1, 5.3, 10.4, 'saffron', 'glare', 0.9, 0.5, 1], [2.28, 0, -2.8, 14.2, 'greenPale', 'glare', 0.9, 0.5, 1],
+      [2.34, 1, 2.8, 14.2, 'madderPale', 'glare', 0.9, 0.5, 1], [2.40, 3, 0, 6.6, 'steelHi', 'paper', 1, 0.5, 1], [2.50, 4, 0, 11.8, 'saffron', 'glare', 1.45, 0.52, 1]
+    ],
+    boss: [   // after a boss's death film: its own colours, from where it fell. Last burst at 2.12 s.
+      [0.00, 1, 0, 0, 'saffron', 'glare', 1.25, 0], [0.22, 0, -3.6, -1.6, 0, 'glare', 1], [0.48, 3, 3.6, -1.0, 1, 'glare', 1], [0.78, 2, 0, 1.8, 'saffron', 'glare', 1.1],
+      [1.06, 0, 2.4, -4.4, 2, 'glare', 0.95], [1.30, 1, -2.6, -4.8, 0, 'saffron', 0.95], [1.58, 4, 0, -1.2, 'saffron', 'glare', 1.2, 0.54]
+    ],
+    glow: ['saffron', 'glare', 'madderPale', 'greenPale', 'steelHi', 'linen']
+  };
+  /* How hard each weapon kicks: [camera, in cloth units; the ship's own recoil]. Light, fast weapons move only the ship. */
+  const HOT = { heat: 0.7 };
+  const KICK = { running: [0, 0.8], satin: [0, 0.55], backstitch: [0.014, 1], chain: [0.012, 1], cross: [0.016, 1.05], herringbone: [0.026, 1.2], fan: [0, 0.8], knot: [0.11, 1.7], couching: [0.16, 1.5] };
   /* per-frame helpers kept outside the class so no closure is made each frame */
   function unsee(v) { v.seen = false; }
   function dropEnemyView(v, id, map) { if (v.seen) return; if (v.extra) { if (v.extra.cone) this.scene.remove(v.extra.cone); if (v.extra.captive) this.scene.remove(v.extra.captive); } map.delete(id); }
@@ -47,11 +82,23 @@
       this.free = { shots: [], eshots: [] };
       this.poolList = null; this.mp = {}; this.dp = {}; this.palCache = {}; this.rgbS = [0, 0, 0];
       this.stats = { calls: 0, triangles: 0, points: 0, quality: '', pixelRatio: 1 };
-      this.viewTop = H + 2; this.edgeN = 0; this.edgeA = new Float32Array(40 * 5);
+      this.viewTop = H + 2; this.edgeN = 0; this.edgeA = new Float32Array(40 * 6);
       this.sfxList = []; this.sfxFree = []; this.dashTr = []; this.zoneMeta = new Map(); this.beadX = new Float32Array(48); this.beadY = new Float32Array(48); this.beadI = new Float64Array(16);
       this.frayK = 0; this.focusK = 0; this.focusK0 = -1; this.ramK = 0; this.spNow = null; this.spX = 0; this.spY = 0;
       this.calm = null; try { this.calm = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) { /* no media queries */ }
-      this.arcs = []; this.lances = []; this.rockets = []; this.ghostTrails = []; this.shocks = []; this.ghostsT = 0;
+      ST.reducedMotion = !!(this.calm && this.calm.matches);   // the sim reads it: no hit-stop when the system asks for less motion
+      try { if (this.calm && this.calm.addEventListener) this.calm.addEventListener('change', () => { ST.reducedMotion = this.calm.matches; }); } catch (e) { /* older browsers */ }
+      this.arcs = []; this.lances = []; this.ghostTrails = []; this.shocks = []; this.ghostsT = 0;
+      this.rockets = { length: 0 };   // how many shells are in the air (kept under its old name for the tests)
+      this.showLive = 0; this.partyCache = {}; this.top = null;
+      // pooled once, reused for ever: flat rings, firework shells and their stars, the camera's kick
+      this.frings = []; for (let i = 0; i < 24; i++) this.frings.push({ on: false, x: 0, y: 0, r0: 0, r1: 0, t: 0, life: 1, w: 0.2, a: 1, style: 0, rot: 0, c: [0, 0, 0], z: 0.6 });
+      this.fringI = 0;
+      this.shells = []; for (let i = 0; i < 28; i++) this.shells.push({ on: false, x0: 0, y0: 0, x1: 0, y1: 0, t: 0, fuse: 1, type: 0, col: null, col2: null, size: 1, quiet: false, tail: 0, bx: 0, by: 0, bt: 0, seed: 0 });
+      this.stars = []; for (let i = 0; i < 48; i++) this.stars.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, t: 0, fuse: 0.4, col: null, kind: 0, size: 1 });
+      this.cel = { on: false, kind: '', t: 0, secs: 0, i: 0, list: null, x: 0, y: 12, pal: null, delay: 0, glow: false, glowT: 0, glowN: 0, box: null, last: false };
+      this.fireworks = false; this.fwN = 0; this.fwT = 0;
+      this.kick = 0; this.kickV = 0; this.zoomK = 0; this.hook = null; this.enterT = 0;
       this.post = new FX.Post(T, this.gl);
       this.buildWorld(); this.buildFx(); this.buildPlayer();
       this.ema = 0; this.slow = 0; this.warm = 3;
@@ -126,9 +173,9 @@
     lcs(hex, k) { const c = this.lc(hex), o = this.rgbS; o[0] = c[0] * k; o[1] = c[1] * k; o[2] = c[2] * k; return o; }   // a scale that changes every frame: a shared scratch (read at once)
     pools_() { let l = this.poolList; if (!l) { l = this.poolList = []; for (const k in this.pools) l.push(this.pools[k]); } return l; }   // every instance pool, as a list (rebuilt only when one is added or removed)
     coneMaterial(clip) {   // the capture beam and the gaze cones; clip false for a film's light across the lens
-      const T = this.T;
-      return FX.shaderMat(T, { vs: SH.coneVS, fs: SH.coneFS, add: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uAlpha: { value: 1 }, uPull: { value: 0 }, uColor: { value: new T.Vector3() },
-        uClip: { value: clip === false ? new T.Vector4(-1e4, -1e4, 1e4, 1e4) : new T.Vector4(-HW, B, HW, H) } } });
+      const T = this.T;   // the light runs on across the frame and falls away over the table (it used to stop dead on the cloth's edge)
+      return FX.shaderMat(T, { vs: SH.coneVS, fs: SH.coneFS, add: true, side: T.DoubleSide, uniforms: { uTime: { value: 0 }, uAlpha: { value: 1 }, uPull: { value: 0 }, uColor: { value: new T.Vector3() }, uFade: { value: 2.4 },
+        uClip: { value: clip === false ? new T.Vector4(-1e4, -1e4, 1e4, 1e4) : new T.Vector4(-HW - 2.8, B - 2.8, HW + 2.8, H + 2.8) } } });
     }
 
     // ---------- materials & geometry ----------
@@ -232,7 +279,7 @@
       // the cloth: a standard lit material with the weave, the star-holes, the light behind and the ripples injected
       const rip = [], ripB = []; for (let i = 0; i < 8; i++) { rip.push(new T.Vector4(0, 0, 0, 0)); ripB.push(new T.Vector4(1, 1, 1, 0)); }
       this.clothU = { uTime: { value: 0 }, uHeat: { value: 0 }, uRip: { value: rip }, uRipB: { value: ripB },
-        uGlare: { value: new T.Vector3().fromArray(this.lc(PAL.glare)) }, uBack: { value: new T.Vector3().fromArray(this.lc('#6E5A8A')) } };
+        uGlare: { value: new T.Vector3().fromArray(this.lc(PAL.glare)) }, uBack: { value: new T.Vector3().fromArray(this.lc('#6E5A8A')) }, uField: { value: new T.Vector4(-HW, B, HW, H) } };
       this.ripI = 0;
       const cm = this.clothMat = new T.MeshStandardMaterial({ map: this.clothTexture(), roughness: 1 });
       cm.defines = { DETAIL: 2 };
@@ -258,9 +305,19 @@
       const lg = new T.CylinderGeometry(0.035, 0.035, 1.1, 5);
       for (let i = 0; i < 12; i++) { const y0 = B + i * FH / 12 + FH / 24, rz = i % 2 ? 0.9 : -0.9; laces.push([lg, mm(-W / 2 - 0.05, y0, 0.12, 0, 0, rz)]); laces.push([lg, mm(W / 2 + 0.05, y0, 0.12, 0, 0, rz)]); }
       const add = (items, m, cast) => { const o = new T.Mesh(FX.merge(T, items), m); o.castShadow = cast; o.receiveShadow = true; sc.add(o); return o; };
-      add(bars, wood, true); this.pegs = add(pegs, brass, false); add(laces, lace, false);
+      const frame = add(bars, wood, true); this.pegs = add(pegs, brass, false); const lacing = add(laces, lace, false);
       const table = new T.Mesh(new T.PlaneGeometry(120, 120), new T.MeshStandardMaterial({ color: new T.Color(PAL.night), roughness: 1 }));
       table.position.set(0, CY, -0.2); table.receiveShadow = true; sc.add(table);
+      /* The ground. Table, cloth and frame are drawn first, in this order, and then the depth buffer is cleared: everything else
+         (moths, shots, sprites, rings, trails, debris) is drawn over the ground whatever its height, so nothing is ever cut where
+         a sprite's flat face meets the leaning cloth, and nothing disappears under a frame rail. Shadows are unaffected (the
+         shadow pass is separate). Keep anything that belongs to the ground at a renderOrder below groundDone's. */
+      table.renderOrder = -9; cloth.renderOrder = -8; frame.renderOrder = -7; lacing.renderOrder = -6; this.pegs.renderOrder = -5;
+      const dg = new T.BufferGeometry(); dg.setAttribute('position', new T.Float32BufferAttribute([0, 0, -1, 0, 0, -1, 0, 0, -1], 3));
+      const done = this.groundDone = new T.Mesh(dg, new T.MeshBasicMaterial({ colorWrite: false, depthWrite: false, depthTest: false }));
+      done.frustumCulled = false; done.renderOrder = -4;
+      done.onAfterRender = gl => { gl.state.buffers.depth.setMask(true); gl.clearDepth(); };
+      sc.add(done);
       this.bossGroup = null; this.corpse = null;
     }
     resize() {
@@ -287,7 +344,7 @@
       this.post.comp.uniforms.uAspect.value = db.x / Math.max(1, db.y);
       const scale = db.y / (2 * t);
       for (const s of [this.lint, this.glow, this.halo, this.spr]) if (s) s.mat.uniforms.uScale.value = scale;
-      this.viewTop = this.onPlane(0, this.ndT, 0.5).y;
+      this.viewTop = this.onPlane(0, this.ndT, 0.5).y; this.viewBot = this.onPlane(0, this.ndB, 0.5).y;
       this.edges();
     }
     onPlane(nx, ny, z) {   // where the ray through a screen point (NDC) meets the plane at height z, with the camera at rest
@@ -295,21 +352,24 @@
       const v = this.tmpV.set(nx, ny, 0.5).unproject(cam), p = cam.position, dx = v.x - p.x, dy = v.y - p.y, dz = v.z - p.z, t = (z - p.z) / (dz || -1e-6);
       return v.set(p.x + dx * t, p.y + dy * t, z);
     }
-    /* Anchors round the border of the screen for the low-shield fray: x, y on the plane FZ, the inward direction, and a seed. */
+    /* Anchors round the border of the screen for the low-shield fray: x, y on the plane FZ, the inward direction, a seed, and how
+       far the thread runs under the status row or the item row before it reaches open cloth. The top and bottom threads start at
+       the real edge of the screen, not where those rows end, so no thread ever begins in view. */
     edges() {
       const A = this.edgeA; let n = 0;
       const nT = this.ndT === undefined ? 1 : this.ndT, nB = this.ndB === undefined ? -1 : this.ndB, mid = (nT + nB) / 2, half = (nT - nB) / 2;
-      const put = (nx, ny, ix, iy) => {
+      const put = (nx, ny, ix, iy, open) => {
         const a = this.onPlane(nx, ny, FZ), ax = a.x, ay = a.y, b = this.onPlane(nx + ix * 0.1, ny + iy * 0.1, FZ), dx = b.x - ax, dy = b.y - ay, l = Math.sqrt(dx * dx + dy * dy) || 1;
-        A[n * 5] = ax; A[n * 5 + 1] = ay; A[n * 5 + 2] = dx / l; A[n * 5 + 3] = dy / l; A[n * 5 + 4] = hash(n * 3.7 + 1); n++;
+        let ext = 0; if (open !== ny) { const c = this.onPlane(nx, open, FZ); ext = Math.sqrt((c.x - ax) * (c.x - ax) + (c.y - ay) * (c.y - ay)); }
+        A[n * 6] = ax; A[n * 6 + 1] = ay; A[n * 6 + 2] = dx / l; A[n * 6 + 3] = dy / l; A[n * 6 + 4] = hash(n * 3.7 + 1); A[n * 6 + 5] = ext; n++;
       };
-      for (let i = 0; i < 10; i++) { const t = -0.92 + i * 1.84 / 9 + (hash(i) - 0.5) * 0.08; const ty = mid + t * half; put(-1, ty, 1, 0); put(1, ty, -1, 0); }
-      for (let i = 0; i < 7; i++) { const t = -0.86 + i * 1.72 / 6 + (hash(i + 20) - 0.5) * 0.1; put(t, nT, 0, -1); put(t, nB, 0, 1); }
+      for (let i = 0; i < 10; i++) { const t = -0.92 + i * 1.84 / 9 + (hash(i) - 0.5) * 0.08; const ty = mid + t * half; put(-1, ty, 1, 0, ty); put(1, ty, -1, 0, ty); }
+      for (let i = 0; i < 7; i++) { const t = -0.86 + i * 1.72 / 6 + (hash(i + 20) - 0.5) * 0.1; put(t, 1, 0, -1, nT); put(t, -1, 0, 1, nB); }
       this.edgeN = n;
     }
     placeCamera(ox, oy) {
-      const cam = this.camera, tilt = 0.2;
-      cam.position.set(ox, CY - Math.sin(tilt) * this.dist + oy, Math.cos(tilt) * this.dist);
+      const cam = this.camera, tilt = 0.2, d = this.dist * (1 - (this.zoomK || 0));
+      cam.position.set(ox, CY - Math.sin(tilt) * d + oy, Math.cos(tilt) * d);
       cam.lookAt(ox, CY + 0.2 + oy, 0);
     }
     project(x, y) {
@@ -354,7 +414,7 @@
       shape('bead', new T.SphereGeometry(0.17, 10, 8), 120, true);
       shape('beadring', new T.TorusGeometry(0.2, 0.035, 5, 16), 120, false);
       shape('eknot', new T.TorusKnotGeometry(0.2, 0.05, 40, 5, 2, 3), 40, true);
-      this.loops = [];
+      this.loops = []; this.loopFree = [];
     }
     mothPool(name, part, noSplit) {   // looked up per enemy per frame: cached by name, no key string built
       const m = this.mp[name] || (this.mp[name] = { body: null, left: null, right: null, solo: null }), slot = noSplit ? 'solo' : part;
@@ -391,7 +451,34 @@
         this.glow.emit(x, y, 0.6, Math.cos(a) * s, Math.sin(a) * s, 0, rnd(0.18, 0.35), rnd(0.25, 0.45), rgb, 1, 4, 4, 0.4, a, 0, 0); }
     }
     flare(x, y, z, size, rgb, life, kind, grow) { this.glow.emit(x, y, z, 0, 0, 0, life, size, rgb, 1, kind || 0, 0, grow === undefined ? 0.4 : grow, 0, 0, 0); }
-    ring(x, y, size, rgb, life, kind) { this.glow.emit(x, y, 0.35, 0, 0, 0, life || 0.4, size, rgb, 1, kind || 3, 0, 1, Math.random() * 6, kind === 7 ? 3 : 0, 0); }
+    ring(x, y, size, rgb, life, kind) {
+      if (size > 3.4) {   // a big ring is a flat hoop of thread: no size cap, never cut, free to cross the frame
+        const dash = kind === 7 || kind === 10;
+        this.ringFlat(x, y, size * 0.06, size * 0.41, life || 0.4, rgb, dash ? 2 : 0, dash ? Math.min(0.3, 0.1 + size * 0.02) : Math.min(0.34, 0.1 + size * 0.012), Math.min(0.9, 0.3 + 2.4 / size));   // thin and quiet: a thread, not a halo
+        return;
+      }
+      this.glow.emit(x, y, 0.35, 0, 0, 0, life || 0.4, size, rgb, 1, kind || 3, 0, 1, Math.random() * 6, kind === 7 ? 3 : 0, 0);
+    }
+    /* A hoop of thread lying over the cloth that opens from radius r0 to r1 in `life` seconds and fades as it goes.
+       style 0 a soft glowing thread, 2 running stitches, 9 short dashes. It is a strip: only the hoop itself is filled. */
+    ringFlat(x, y, r0, r1, life, rgb, style, w, a, z) {
+      const f = this.frings[this.fringI]; this.fringI = (this.fringI + 1) % this.frings.length;
+      f.on = true; f.x = x; f.y = y; f.r0 = r0; f.r1 = r1; f.t = 0; f.life = life || 0.4; f.style = style || 0; f.w = w || 0.2; f.a = a === undefined ? 1 : a; f.z = z || 0.6;
+      f.c[0] = rgb[0]; f.c[1] = rgb[1]; f.c[2] = rgb[2]; f.rot = Math.random() * TAU;
+    }
+    updateRings(fdt) {
+      const F = this.frings, px = this.px, py = this.py, pz = this.pz, ps = this.ps;
+      for (let i = 0; i < F.length; i++) {
+        const f = F[i]; if (!f.on) continue;
+        f.t += fdt; const k = f.t / f.life; if (k >= 1) { f.on = false; continue; }
+        const R = f.r0 + (f.r1 - f.r0) * Math.sqrt(k), al = f.a * (1 - k) * (1 - k); if (al < 0.004) continue;
+        const n = R > 6 ? 72 : R > 2.5 ? 48 : 32, st = f.style, per = st === 2 ? 0.44 : st === 9 ? 0.3 : 0, circ = TAU * R;
+        // a stitched hoop keeps a whole number of stitches, so there is no half stitch where it closes
+        const sk = per ? Math.max(8, Math.round(circ / (per * (1 + R * 0.1)))) * per / circ : 1;
+        for (let j = 0; j < n; j++) { const an = f.rot + j / (n - 1) * TAU; px[j] = f.x + Math.cos(an) * R; py[j] = f.y + Math.sin(an) * R; pz[j] = f.z; ps[j] = j / (n - 1) * circ * sk; }
+        this.trA.strip(px, py, pz, ps, n, f.w, f.w, f.c, al, al, st);
+      }
+    }
     strands(x, y, colors, n, power, o) {
       for (let i = 0, c = this.n(n); i < c; i++) {
         const a = Math.random() * TAU, sp = (1.5 + Math.random() * 4) * (power || 1), rgb = this.lc(colors[i % colors.length]);
@@ -421,11 +508,13 @@
     }
     hitStop(dur, scale) { if (dur > this.hs) { this.hs = dur; this.hsScale = scale; } }
     flashAdd(hex, k) { const c = this.lc(hex); this.flash.x += c[0] * k; this.flash.y += c[1] * k; this.flash.z += c[2] * k; }
-    loop(x, y, r, color) {   // a thread loop that opens out (knot bursts, phase changes, pickups)
+    loop(x, y, r, color) {   // a thread loop that opens out (knot bursts, phase changes, pickups); the meshes are reused
       const T = this.T, g = this.shared('loop', () => new T.TorusGeometry(1, 0.035, 5, 40));
-      const m = new T.Mesh(g, new T.MeshStandardMaterial({ color: new T.Color(color), roughness: 0.9, transparent: true, emissive: new T.Color(color), emissiveIntensity: 0.6 }));
-      m.position.set(x, y, 0.5); m.scale.setScalar(0.1); this.scene.add(m);
-      this.loops.push({ m, r, life: 0, max: 0.5 });
+      let l = this.loopFree.pop();
+      if (!l) l = { m: new T.Mesh(g, new T.MeshStandardMaterial({ roughness: 0.9, transparent: true, emissiveIntensity: 0.6 })), r: 0, life: 0, max: 0.5 };
+      const m = l.m; m.material.color.set(color); m.material.emissive.set(color); m.material.opacity = 1;
+      m.position.set(x, y, 0.5); m.scale.setScalar(0.1); m.rotation.z = 0; this.scene.add(m);
+      l.r = r; l.life = 0; this.loops.push(l);
       this.ring(x, y, r * 2.2, this.lc(color, 1.6), 0.5, 3);
     }
 
@@ -475,6 +564,7 @@
       let k = 0, m = 0;
       for (let i = 0; i < tr.n; i++) {
         const age = now - tr.t[i], dy = age * SCROLL;
+        if (tr.y[i] - dy < B + 0.05 && m >= 2) break;   // the seam is carried off under the frame: it ends, faded right out, at the cloth's edge
         px[m] = tr.x[i]; py[m] = tr.y[i] - dy; ps[m] = tr.s[i];
         pz[m] = dy < lift ? 0.04 + 0.42 * Math.pow(1 - dy / lift, 1.6) : 0.03; m++;
         if (dy < lift) k = i;
@@ -503,9 +593,11 @@
       for (let i = 0; i < events.length; i++) {
         const e = events[i];
         switch (e.t) {
-          case 'stage': this.ripple(0, H / 2, 0.7, 7, 0.9, 1.2); this.sewn = 0; this.fireworks = false; if (e.keeper) { this.flashAdd(PAL.madderDeep, 0.25); this.shake = Math.max(this.shake, 0.25); } break;
+          case 'stage': this.ripple(0, H / 2, 0.7, 7, 0.9, 1.2); this.sewn = 0; this.afterglowStop(); if (e.keeper) { this.flashAdd(PAL.madderDeep, 0.25); this.shake = Math.max(this.shake, 0.25); } break;
+          case 'celebrate': this.celebrate(e); break;
           case 'fire': {
-            this.punch = 1;
+            const kk = KICK[e.thread] || KICK.running, bob = e.src === 'B' ? 0.4 : 1;   // each weapon has its own weight: the ship recoils, the heavy ones jolt the lens
+            this.punch = Math.max(this.punch, kk[1] * bob); if (kk[0]) this.kick = Math.max(this.kick, kk[0] * bob);
             if (this.time - this.muzzleT > 0.06) {
               this.muzzleT = this.time; const th = C.THREADS[e.thread], col = th ? th.color : PAL.linen, hx = e.x !== undefined ? e.x : pl.x, hy = (e.y !== undefined ? e.y : PY + 0.7) + 0.35;
               this.flare(hx, hy, 0.9, 0.65, this.lc(col, 1.7), 0.1, 0, 0.3);
@@ -576,6 +668,7 @@
               this.glow.emit(e.x + rnd(-0.1, 0.1) * e.w, y, 0.6, s, rnd(-1, 1), 0, rnd(0.15, 0.35), rnd(0.25, 0.4), this.lc(PAL.steelHi, 2.5), 1, 4, 5, 0.3, Math.atan2(0, s), 0, 0); }
             for (let y = ly + 0.3; y < H; y += 1.6) this.fibres(e.x, y, 0.6, 1, this.lc(PAL.steelHi));
             this.ripple(e.x, ly + 0.3, 0.6, 8, 0.4, 2.5); this.shake = Math.max(this.shake, 0.18); this.aberr = Math.max(this.aberr, 0.9);
+            this.kick = Math.max(this.kick, KICK.couching[0] * Math.min(1.5, e.w || 1)); this.zoomK = Math.max(this.zoomK, 0.006);
             this.flare(e.x, ly + 0.2, 1, 2, this.lc(PAL.steelHi, 3), 0.15);
             break;
           }
@@ -644,8 +737,27 @@
       this.darn(e.x, e.y, this.lc(PAL.madderHi), 0.5, 7);
       if (e.type === 'firefly') { this.flare(e.x, e.y, 1, 3.4, this.lc(PAL.saffron, 3), 0.3); this.ring(e.x, e.y, 4, this.lc(PAL.glare, 2.4), 0.45, 3); this.glints(e.x, e.y, 0.9, 14, this.lc(PAL.saffron, 3), 4, 0.5); this.shock(e.x, e.y, 0.5, 0.9); }
       if (e.pts >= 300 || m >= 3) this.shock(e.x, e.y, 0.35 + m * 0.08, 0.8, 0.45);
-      this.hitStop(m >= 3 ? 0.06 : 0.035, 0.35);
+      if (e.held) this.hitStop(e.big > 1 ? 0.085 : 0.05, 0.08); else this.hitStop(m >= 3 ? 0.06 : 0.035, 0.35);   // held: the sim is holding the moment too
       if (m >= 4) this.shake = Math.max(this.shake, 0.15);
+      if (e.big) this.heavyFx(e, sprite, rot);
+    }
+    /* A heavy moth does not just come apart, it bursts: a dark thump under a white core, a hoop of stitches thrown out flat,
+       more thread, a harder shake, and (weight 2) a thread loop, a second hoop that runs over the frame, and the lens leaning in. */
+    heavyFx(e, sprite, rot) {
+      const x = e.x, y = e.y, w = e.big, gl = this.lc(PAL.glare, 2.4), sa = this.lc(PAL.saffron, 2.2);
+      this.lint.emit(x, y, 0.5, 0, 0, 0, 0.2, 1.7 + w * 0.5, this.lc('#05060C'), 0.62, 9, 0, 1.25, 0, 0, 0);
+      this.flare(x, y, 1.15, 1.7 + w * 0.5, this.lc(PAL.glare, 1.7), 0.13, 0, 0.25);
+      this.ringFlat(x, y, 0.25, 1.5 + w * 0.7, 0.34, this.lc(PAL.saffron, 1.6), 2, 0.12, 0.9);
+      this.strands(x, y, this.paletteOf(sprite), 6 + w * 5, 1.25 + w * 0.2, HOT);
+      this.sparks(x, y, gl, 5 + w * 4, 7); this.lintPuff(x, y, 0.75, 5 + w * 4, this.lc(PAL.linen), 0.8, 2.6);
+      this.ripple(x, y, 0.7 + w * 0.25, 6, 0.45, 2.2, true);
+      this.shake = Math.max(this.shake, 0.14 + w * 0.08);
+      if (w > 1) {
+        this.stitchBurst(x, y, rot + 0.5, this.cells(sprite, 0.088), 0.1, 1.9, 1.4, 2);   // a second, wider throw of its stitches
+        this.loop(x, y, 1.5, PAL.saffron); this.ringFlat(x, y, 0.4, 4.4, 0.5, this.lc(PAL.glare, 1.3), 0, 0.26, 0.4);
+        this.shock(x, y, 0.7, 1, 0.5); this.aberr = Math.max(this.aberr, 0.7);
+        this.zoomK = Math.max(this.zoomK, 0.011); this.kick = Math.max(this.kick, 0.05);
+      }
     }
     pickupPop(pl, hex, big) {
       const x = pl.x, y = PY + 0.2, c = this.lc(hex, 2.4);
@@ -883,8 +995,8 @@
       const A = this.edgeA, k = this.frayK, t = this.calm && this.calm.matches ? 0 : this.time, red = this.lc(PAL.madder, 1.15), hi = this.lc(PAL.madderHi, 1.5), pale = this.lc(PAL.madderPale);
       const px = this.px, py = this.py, pz = this.pz, ps = this.ps, m = 7;
       for (let i = 0; i < this.edgeN; i++) {
-        const ax = A[i * 5], ay = A[i * 5 + 1], ix = A[i * 5 + 2], iy = A[i * 5 + 3], sd = A[i * 5 + 4], nx = -iy, ny = ix;
-        const L = (0.6 + 1.0 * sd) * k * (0.9 + 0.1 * Math.sin(t * 0.6 + sd * 20));
+        const ax = A[i * 6], ay = A[i * 6 + 1], ix = A[i * 6 + 2], iy = A[i * 6 + 3], sd = A[i * 6 + 4], nx = -iy, ny = ix;
+        const Lv = (0.6 + 1.0 * sd) * k * (0.9 + 0.1 * Math.sin(t * 0.6 + sd * 20)), L = Lv + A[i * 6 + 5];
         for (let j = 0; j < m; j++) {
           const u = j / (m - 1), d = -0.3 + (L + 0.3) * u, w = Math.sin(u * 4.5 + t * 0.9 + sd * 9) * 0.07 * u + u * u * u * 0.18 * (sd - 0.5);
           px[j] = ax + ix * d + nx * w; py[j] = ay + iy * d + ny * w; pz[j] = FZ; ps[j] = d;
@@ -892,10 +1004,10 @@
         this.trA.strip(px, py, pz, ps, m, 0.34, 0.1, hi, 0.16 * k, 0, 0);
         this.trN.strip(px, py, pz, ps, m, 0.12, 0.035, red, 0.85 * k, 0.3 * k, 8);
         if (i & 1) { const s2 = sd > 0.5 ? 1 : -1; px[0] = px[3]; py[0] = py[3]; ps[0] = ps[3];   // a loose ply splaying off the tip
-          px[1] = px[3] + (ix * 0.35 + nx * 0.22 * s2) * L; py[1] = py[3] + (iy * 0.35 + ny * 0.22 * s2) * L; ps[1] = ps[3] + 0.4 * L;
+          px[1] = px[3] + (ix * 0.35 + nx * 0.22 * s2) * Lv; py[1] = py[3] + (iy * 0.35 + ny * 0.22 * s2) * Lv; ps[1] = ps[3] + 0.4 * Lv;
           this.trN.strip(px, py, pz, ps, 2, 0.035, 0.02, pale, 0.7 * k, 0.1 * k, 1); }
       }
-      if (t && Math.random() < fdt * 2.5 * this.q.particles * k) { const i = (Math.random() * this.edgeN) | 0; this.lint.emit(A[i * 5], A[i * 5 + 1], FZ, A[i * 5 + 2] * 0.6, A[i * 5 + 3] * 0.6, 0, 1.4, 0.45, red, 0.8, 2, 0.5, 1, undefined, rnd(-2, 2), 0); }
+      if (t && Math.random() < fdt * 2.5 * this.q.particles * k) { const i = (Math.random() * this.edgeN) | 0, e5 = A[i * 6 + 5]; this.lint.emit(A[i * 6] + A[i * 6 + 2] * e5, A[i * 6 + 1] + A[i * 6 + 3] * e5, FZ, A[i * 6 + 2] * 0.6, A[i * 6 + 3] * 0.6, 0, 1.4, 0.45, red, 0.8, 2, 0.5, 1, undefined, rnd(-2, 2), 0); }
     }
     /* A guarded enemy: a small stitched shield bowed in front of (below) it; it flashes and bulges when a shot glances off. */
     guardShield(e, z) {
@@ -1040,20 +1152,23 @@
     mothSprite(e) { return e.type === 'casebearer' && !e.cased ? 'casebearer_bare' : e.def.sprite; }
     syncEnemies(sim, dt, fdt) {
       const map = this.views.enemies, top = this.cine && this.cine.active ? 1e9 : this.viewTop + 1.4, white = this.lc('#FFFFFF');
+      const edgeY = Math.min(H, this.viewTop), tell = this.cb ? this.lc(PAL.glare, 2.3) : this.lc(PAL.madderHi, 2.1);   // warnings: red, or bright cream with colour-blind-safe shots on
       map.forEach(unsee);
       for (let ei = 0; ei < sim.enemies.length; ei++) {
         const e = sim.enemies[ei];
         let v = map.get(e.id);
         if (!v) { v = { type: e.type, x: e.x, y: e.y, rot: 0, lint: Math.random(), extra: null }; map.set(e.id, v); }
         v.seen = true; v.x = e.x; v.y = e.y;
-        if (e.y > top && !v.extra) continue;   // still above the top of the screen: nothing to draw yet
         const diving = e.state === 'dive' || e.state === 'strafe' || e.state === 'coal';
+        // coming down from above the cloth: a chevron at the top of its column says where, before it is on screen
+        if (diving && e.y > edgeY - 0.3 && e.y < edgeY + 7) this.spr.add(clamp(e.x, -HW + 0.5, HW - 0.5), edgeY - 0.95 + 0.12 * Math.sin(this.time * 14), 1.2, 0.95, tell, Math.floor(this.time * 9) % 2 ? 1 : 0.5, 13, 0);
+        if (e.y > top && !v.extra) continue;   // still above the top of the screen: nothing to draw yet
         const rot = v.rot = diving ? Math.PI + (e.vx || 0) * 0.12 : (e.type === 'looper' ? (e.dir > 0 ? 0 : Math.PI) : 0);
         const z = 0.35 + (e.state === 'form' ? 0 : 0.5);
-        const hurt = e.hurt ? e.hurt / 0.15 : 0, wind = e.state === 'windup';
+        const hurt = e.hurt ? e.hurt / 0.15 : 0, wind = e.state === 'windup', wk = wind ? clamp(1 - e.t / 0.3, 0, 1) : 0;   // wk: the last 0.3 s before it goes
         const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0);
         const sprite = this.mothSprite(e), noSplit = e.type === 'looper';
-        this.compose(e.x, e.y, z, rot, 0, diving ? -0.25 : 0, sx, sy, 1);
+        this.compose(e.x, e.y + wk * 0.2, z + wk * 0.25, rot, 0, diving ? -0.25 : wk * 0.4, sx, sy, 1);   // it rears back before it dives
         const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = e.state === 'trace' ? 0.12 : 0, flash = hurt * 0.9;
         this.mothPool(sprite, 'body', noSplit).push(this.M, white, flash, glow, warn);
         if (!noSplit) {
@@ -1069,7 +1184,12 @@
         if (e.type === 'weevil' && e.state === 'dive' && Math.random() < fdt * 40 * this.q.particles) { this.lintPuff(e.x + rnd(-0.3, 0.3), e.y + 0.45, 0.4, 1, this.lc(PAL.tan), 0.5, 1.2); this.fibres(e.x, e.y + 0.4, 0.4, 1, this.lc(PAL.brown), 1.5); }
         if (diving && e.type !== 'weevil' && Math.random() < fdt * 10 * this.q.particles) this.glow.emit(e.x, e.y + 0.3, z, 0, rnd(0, 1), 0, 0.4, 0.22, this.lc(PAL.tan, 1.2), 0.7, 1, 1, 0.3);
         if (e.state === 'trace' && Math.random() < fdt * 6 * this.q.particles) this.glow.emit(e.x, e.y, 0.5, 0, 0, 0, 0.6, 0.25, this.lc(PAL.linen, 1.6), 0.8, 1, 0, 0.2);
-        if (wind) this.spr.add(e.x, e.y, z + 0.5, 1.6, this.lc(PAL.madderHi, 1.6), 0.25 + 0.2 * Math.sin(this.time * 30), 0);
+        if (wind) {   // the tell: a glow, a danger rim drawing tight, and two chevrons marching the way it will go
+          const tx = e.next === 'coal' ? e.x : sim.player.x, dx = tx - e.x, dy = PY - e.y, dl = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / dl, uy = dy / dl, th = Math.atan2(ux, -uy);
+          this.spr.add(e.x, e.y, z + 0.5, 1.6, this.lc(PAL.madderHi, 1.6), 0.25 + 0.2 * Math.sin(this.time * 30), 0);
+          this.spr.add(e.x, e.y + wk * 0.2, z + 0.55, 2.5 - 1.15 * wk, tell, 0.5 + 0.5 * wk, 10, this.time * 5);
+          for (let j = 0; j < 2; j++) { const d = 0.9 + j * 0.5 + 0.3 * wk; this.spr.add(e.x + ux * d, e.y + uy * d, z + 0.55, 0.72, tell, (0.45 + 0.55 * wk) * ((Math.floor(this.time * 10) + j) % 2 ? 1 : 0.45), 13, th); }
+        }
         if (e.guard === true) this.guardShield(e, z);
         if (e.type === 'spinner' || e.mark) this.enemyExtras(v, e, sim);
       }
@@ -1086,7 +1206,7 @@
         const on = e.state === 'draw' && e.cone > 0.5;
         x.cone.visible = on;
         if (on) {
-          const hgt = e.y - PY, half = 0.45 + hgt * 0.15, cu = x.cone.material.uniforms;
+          const hgt = (e.y - PY) * 1.14, half = (0.45 + (e.y - PY) * 0.15) * 1.14, cu = x.cone.material.uniforms;   // a little past the ship: the far end of the light fades out (coneFS)
           x.cone.position.set(e.x, e.y, 0.3); x.cone.scale.set(half, hgt, 1);
           cu.uTime.value = this.ft; cu.uPull.value = e.pull || 0; cu.uAlpha.value = Math.min(1, (e.cone - 0.5) * 4) * (e.cone > 2.4 ? Math.max(0, (2.7 - e.cone) / 0.3) : 1);
           if (Math.random() < 0.5 * this.q.particles) { const yy = rnd(PY, e.y), hw = 0.45 + (yy - PY) * 0.15, xx = clamp(e.x + rnd(-hw, hw), -HW + 0.2, HW - 0.2); this.glow.emit(xx, yy, 0.4, 0, 3, 0, 0.5, 0.2, this.lc(PAL.linen, 1.6), 0.8, 1, 0, 0.3); }
@@ -1182,7 +1302,7 @@
       }
     }
     syncEshots(sim, dt) {
-      const map = this.views.eshots, P = this.pools, t = this.time, dark = this.lc('#070A16');
+      const map = this.views.eshots, P = this.pools, t = this.time, dark = this.lc('#070A16'), cb = this.cb, bright = this.lc(PAL.glare, 2.3);
       map.forEach(unsee);
       for (let si = 0; si < sim.eshots.length; si++) {
         const s = sim.eshots[si];
@@ -1190,9 +1310,13 @@
         if (!v) { v = this.free.eshots.pop() || { hx: new Float32Array(9), hy: new Float32Array(9), hs: new Float32Array(9) }; v.n = 0; v.len = 0; v.x = s.x; v.y = s.y; map.set(s.id, v); }
         v.seen = true;
         const z = 0.6;
-        // readable at any glow: a dark backing disk and a warm dashed rim
-        this.halo.add(s.x, s.y, 0.42, s.kind === 'knot' ? 1.15 : 0.78, dark, 0.78, 9);
-        this.spr.add(s.x, s.y, 0.5, s.kind === 'knot' ? 1.2 : 0.8, this.lc(s.kind === 'coal' ? PAL.saffron : PAL.madderPale, 1.3), 0.75, 10, t * 4 + s.id);
+        if (cb) {   // colour-blind-safe: told apart by shape and brightness, not hue. Every enemy shot is a bright hollow diamond on a wide dark disk
+          this.halo.add(s.x, s.y, 0.42, s.kind === 'knot' ? 1.7 : 1.15, dark, 0.92, 9);
+          this.spr.add(s.x, s.y, 0.95, s.kind === 'knot' ? 1.55 : 1.15, bright, 1, 12, s.kind === 'coal' ? Math.PI / 4 : 0);
+        } else {   // readable at any glow: a dark backing disk and a warm dashed rim
+          this.halo.add(s.x, s.y, 0.42, s.kind === 'knot' ? 1.15 : 0.78, dark, 0.78, 9);
+          this.spr.add(s.x, s.y, 0.5, s.kind === 'knot' ? 1.2 : 0.8, this.lc(s.kind === 'coal' ? PAL.saffron : PAL.madderPale, 1.3), 0.75, 10, t * 4 + s.id);
+        }
         switch (s.kind) {
           case 'frass': this.compose(s.x, s.y, z, 0, 0, 0, 1, 1.4, 1); P.frass.push(this.M, this.lc(PAL.umber), 0, 0, 0.35); this.spr.add(s.x, s.y, 0.75, 0.35, this.lc(PAL.madderPale, 1.5), 0.8, 0); break;
           case 'silk': this.compose(s.x, s.y, z, Math.sin(s.t * 5) * 0.5, 0, 0, 1); P.silk.push(this.M, this.lc(PAL.linen), 0, 0.3); break;
@@ -1278,8 +1402,8 @@
         const q = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); q.scale.setScalar(h.w * 1.9); q.position.set(0, GY, 0.03); q.renderOrder = 1; g.add(q); g.userData.burn = q;
       } else {
         const col = h.kind === 'glare' ? PAL.glare : PAL.madderHi;
-        const m = FX.shaderMat(T, { vs: SH.quadVS, fs: SH.beamFS, transparent: true, uniforms: { uColor: { value: new T.Vector3().fromArray(this.lc(col)) }, uWarn: { value: 0 }, uOn: { value: 0 }, uTime: { value: 0 }, uKind: { value: h.kind === 'strike' ? 1 : 0 }, uW: { value: h.w }, uH: { value: H } } });
-        const beam = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); beam.scale.set(h.w, FH, 1); beam.position.set(0, CY, 0.08); beam.renderOrder = 1; g.add(beam); g.userData.beam = beam;
+        const m = FX.shaderMat(T, { vs: SH.quadVS, fs: SH.beamFS, transparent: true, uniforms: { uColor: { value: new T.Vector3().fromArray(this.lc(col)) }, uWarn: { value: 0 }, uOn: { value: 0 }, uTime: { value: 0 }, uKind: { value: h.kind === 'strike' ? 1 : 0 }, uW: { value: h.w }, uH: { value: FH + 4 }, uEnd: { value: 2 / (FH + 4) } } });
+        const beam = new T.Mesh(this.shared('quad', () => new T.PlaneGeometry(1, 1)), m); beam.scale.set(h.w, FH + 4, 1); beam.position.set(0, CY, 0.08); beam.renderOrder = 1; g.add(beam); g.userData.beam = beam;   // the column runs two units past each end of the cloth and fades out there (beamFS)
         if (h.kind === 'strike') { const head = this.chart('hawk', 0.1, true); head.rotation.z = Math.PI; head.position.set(0, H + 2, 0.8); g.add(head); g.userData.head = head; }
       }
       g.position.x = h.x; g.userData.warn0 = Math.max(h.warn, 0.01); g.userData.life0 = h.life; g.userData.wasWarn = h.warn > 0; g.userData.age = 0;
@@ -1356,27 +1480,220 @@
         this.spr.add(p.x, p.y, 0.3, 1.6, this.lc(PAL.saffron, 1.6), 0.45, 0);
         if (Math.random() < fdt * 20 * this.q.particles) this.glow.emit(p.x, p.y, 0.2, rnd(-1, 1), rnd(-1, 1), rnd(0.5, 1.5), 0.6, 0.25, this.lc(PAL.saffron, 2.4), 1, 1, 2, 0.2);
       }
-      const sm = sim.sampler;
-      if (sm && sm.hit >= sm.total && !this.fireworks) { this.fireworks = true; this.fwT = 0; this.fwN = 0; }
     }
-    updateFireworks(fdt) {   // a perfect bonus wave: stitched fireworks
-      if (this.fireworks && this.fwN < 8) {
-        this.fwT -= fdt;
-        if (this.fwT <= 0) { this.fwT = 0.24; this.fwN++; const cols = [PAL.saffron, PAL.madderHi, PAL.linen, PAL.madderPale, PAL.glare, PAL.greenPale];
-          this.rockets.push({ x: rnd(-5, 5), y: GY + 0.5, vy: rnd(12, 15), t: 0, fuse: rnd(0.55, 0.8), col: cols[this.fwN % cols.length] }); }
+    // ---------- celebrations: stitched fireworks ----------
+    isCalm() { return !!(this.calm && this.calm.matches); }
+    sound(name, gain, rate, alt) { const h = this.hook; if (h && h.sfx) h.sfx(name, gain, rate, alt); }   // the game plays it; alt: the sound to use until `name` has a file
+    buzz(pattern) { const h = this.hook; if (h && h.buzz) h.buzz(pattern); }
+    /* True while a celebration owns the cloth: the fireworks after a perfect bonus wave, a boss coming apart (its death film or
+       the plain collapse) and the flourish after it. The game holds the results sheet back until this is false. */
+    celebrating() { const c = this.cel; return (c.on && !c.glow) || this.showLive > 0 || !!this.corpse || !!(this.cine && this.cine.active && this.cine.kind === 'death'); }
+    /* True while the light version runs behind and round the results sheet. */
+    afterglow() { return this.cel.on && this.cel.glow; }
+    partyPal(sprite) {   // a boss's three brightest colours, for its own fireworks
+      let l = this.partyCache[sprite];
+      if (!l) { const lum = h => { const c = this.lc(h); return c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722; };
+        l = this.partyCache[sprite] = this.paletteOf(sprite).slice().sort((p, q) => lum(q) - lum(p)).slice(0, 3); while (l.length < 3) l.push(PAL.saffron); }
+      return l;
+    }
+    celebrate(e) {   // the sim's `celebrate` event: { kind: 'bonus' | 'boss', secs, last, x, y, sprite }
+      const c = this.cel, boss = e.kind === 'boss' && !e.last;
+      c.on = true; c.glow = false; c.kind = e.kind; c.t = 0; c.i = 0; c.secs = e.secs || (boss ? 2.8 : 3.9); c.last = !!e.last;
+      c.x = clamp(e.x || 0, -3, 3); c.y = clamp(e.y === undefined ? 12 : e.y, 9.5, 14.2);
+      c.list = boss ? SHOW.boss : SHOW.bonus; c.pal = e.sprite && C.SPRITES[e.sprite] ? this.partyPal(e.sprite) : null;
+      c.delay = this.corpse ? 1.35 : 0; c.glowT = 0; c.glowN = 0; c.box = null; this.fireworks = true;
+      if (this.isCalm()) c.secs = Math.min(c.secs, 2.6);
+      try { document.body.classList.add('celebrating'); } catch (err) { /* no document */ }
+    }
+    partyHex(c, v) { return typeof v === 'number' ? (c.pal ? c.pal[v % c.pal.length] : PAL[SHOW.glow[v % SHOW.glow.length]]) : PAL[v] || PAL.saffron; }
+    shellGet() { const S = this.shells; for (let i = 0; i < S.length; i++) if (!S[i].on) return S[i]; return null; }
+    launch(s, c, calm) {
+      const sh = this.shellGet(); if (!sh) return;
+      const rel = c.list === SHOW.boss, hex = this.partyHex(c, s[4]), hex2 = this.partyHex(c, s[5]);
+      sh.on = true; sh.t = 0; sh.type = s[1]; sh.size = s[6] || 1; sh.glow = false; sh.calm = calm; sh.quiet = !!s[8];
+      sh.x1 = rel ? clamp(c.x + s[2], -5.8, 5.8) : s[2]; sh.y1 = rel ? clamp(c.y + s[3], 4.6, 16.4) : s[3];
+      sh.x0 = sh.x1 * 0.6 + rnd(-0.5, 0.5); sh.y0 = B - 1.8; sh.fuse = calm ? 0 : s[7] === undefined ? 0.55 : s[7];
+      sh.col = this.lc(hex, 2.6); sh.col2 = this.lc(hex2, 2.5); sh.base = this.lc(hex);
+      if (s[9] && !calm) this.sound(s[9], 0.9, 1, 'burst');   // one sound for the whole finale volley
+      if (sh.fuse > 0 && !sh.quiet) this.sound('fw_launch', 0.5, 0.92 + (c.i % 4) * 0.06, 'dash');
+    }
+    launchGlow(c) {   // the light version: one small shell at a time, placed where it shows round the results sheet
+      const sh = this.shellGet(); if (!sh) return;
+      const bx = c.box, top = Math.min(H - 0.6, this.viewTop - 0.8), bot = Math.max(B + 0.6, (this.viewBot === undefined ? B : this.viewBot) + 0.8);
+      let x = rnd(-5.4, 5.4), y = rnd(6, 16);
+      if (bx) {
+        const above = top - bx[3], below = bx[1] - bot, n = c.glowN;
+        if (above > 1 && (below <= 1 || n % 2 === 0)) y = bx[3] + rnd(0.5, Math.max(0.6, above));
+        else if (below > 1) y = bx[1] - rnd(0.5, Math.max(0.6, below));
+        else { x = (n % 2 ? 1 : -1) * rnd(Math.min(HW - 0.3, Math.abs(bx[2]) + 0.2), HW + 0.4); y = rnd(bot + 1, top - 1); }
       }
-      for (let i = this.rockets.length - 1; i >= 0; i--) {
-        const r = this.rockets[i]; r.t += fdt; r.y += r.vy * fdt; r.vy *= 1 - 1.2 * fdt;
-        this.glow.emit(r.x + rnd(-0.05, 0.05), r.y, 0.8, rnd(-0.3, 0.3), -1, 0, 0.4, 0.3, this.lc(PAL.saffron, 2.5), 1, 1, 1, 0.2);
-        if (r.t < r.fuse) continue;
-        this.rockets.splice(i, 1);
-        const c = this.lc(r.col, 2.6), n = this.n(36);
-        for (let k = 0; k < n; k++) { const a = k / n * TAU, sp = rnd(5, 7);
-          this.glow.emit(r.x, r.y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 0, rnd(0.8, 1.2), 0.42, c, 1, 5, 1.8, 0.5, a + Math.PI / 4, 0, 0, -3);
-          if (k % 2 === 0) this.glow.emit(r.x, r.y, 1, Math.cos(a) * sp * 0.6, Math.sin(a) * sp * 0.6, 0, rnd(0.6, 1), 0.3, this.lc(PAL.glare, 2.5), 1, 1, 2, 0.3, 0, 0, 0, -2); }
-        for (let k = 0; k < this.n(14); k++) { const a = Math.random() * TAU, sp = rnd(2, 5); this.xs.emit(r.x, r.y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 2, rnd(0.9, 1.4), 0.45, this.lc(r.col), 1.2, a, rnd(-8, 8), rnd(-8, 8), 6, 1.6, 0, undefined, -1); }
-        this.flare(r.x, r.y, 1, 3, c, 0.25); this.ring(r.x, r.y, 5, c, 0.6, 7); this.ripple(r.x, r.y, 0.6, 6, 0.5, 2); this.shock(r.x, r.y, 0.5, 1, 0.5);
+      const hex = PAL[SHOW.glow[c.glowN % SHOW.glow.length]]; c.glowN++;
+      sh.on = true; sh.t = 0; sh.type = 5; sh.size = rnd(0.55, 0.8); sh.glow = true; sh.calm = this.isCalm(); sh.quiet = false;
+      sh.x1 = x; sh.y1 = y; sh.x0 = x + rnd(-0.3, 0.3); sh.y0 = y - 2.4; sh.fuse = sh.calm ? 0 : 0.34;
+      sh.col = this.lc(hex, 2.4); sh.col2 = this.lc(PAL.glare, 2.4); sh.base = this.lc(hex);
+    }
+    /* Drooping threads (a willow's arms) and the stars of a crossette: a few points flown on the CPU so they can lay a trail or pop. */
+    arms(x, y, col, col2, base, n, speed, life, kind, glow) {
+      const S = this.stars; let k = 0;
+      for (let i = 0; i < S.length && k < n; i++) {
+        const st = S[i]; if (st.on) continue;
+        const a = (k + rnd(-0.25, 0.25)) / n * TAU, sp = speed * rnd(0.72, 1);
+        st.on = true; st.x = x; st.y = y; st.vx = Math.cos(a) * sp; st.vy = Math.sin(a) * sp + (kind === 2 ? 1.4 : 0); st.t = 0; st.fuse = life * rnd(0.9, 1.1); st.col = col; st.col2 = col2; st.base = base; st.kind = kind; st.e = 0; st.glow = !!glow; k++;
       }
+    }
+    burstShell(sh) {
+      const x = sh.x1, y = sh.y1, c = sh.col, c2 = sh.col2, z = sh.size, type = sh.type, calm = sh.calm, v = calm ? 0.2 : 1, lk = calm ? 1.5 : 1;
+      if (type === 5) {   // the small shell of the light version
+        const n = this.n(14);
+        for (let k = 0; k < n; k++) { const a = k / n * TAU, sp = rnd(2.4, 3.6) * z * v;
+          this.glow.emit(x, y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 0, rnd(0.6, 0.95) * lk, 0.36, c, 1, k & 1 ? 5 : 1, 1.8, 0.5, a + Math.PI / 4, 0, 0, -2 * v); }
+        this.flare(x, y, 1, 1.6 * z, c, 0.18); this.ringFlat(x, y, 0.2, 1.7 * z, 0.6, c, 2, 0.12, 0.8);
+        this.sound('fw_spark', 0.35, rnd(0.9, 1.2)); return;
+      }
+      this.flare(x, y, 1, 3.4 * z, sh.base, 0.24); this.flare(x, y, 1.05, 1.1 * z, c2, 0.1);
+      if (!calm) { this.ripple(x, y, 0.5 * z, 6, 0.5, 2); this.shock(x, y, 0.4 * z, 1, 0.5); }
+      for (let k = 0, n = this.n(type === 4 ? 16 : 8); k < n; k++) { const a = Math.random() * TAU, sp = rnd(2, 5) * v;   // real stitches thrown clear, to land on the cloth
+        this.xs.emit(x, y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 2, rnd(0.9, 1.4), 0.45, sh.base, 1.2, a, rnd(-8, 8), rnd(-8, 8), 6, 1.6, 0, undefined, -1); }
+      if (type === 0 || type === 4) {   // peony: a round head of X-stitches round a pale heart
+        const n = this.n(type === 4 ? 72 : 50);
+        for (let k = 0; k < n; k++) { const a = k / n * TAU + rnd(-0.05, 0.05), sp = rnd(5.2, 7.8) * z * v;
+          this.glow.emit(x, y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 0, rnd(0.95, 1.4) * lk, 0.5, c, 1, 5, 1.8, 0.5, a + Math.PI / 4, 0, 0, -3 * v);
+          if (!(k & 1)) this.glow.emit(x, y, 1, Math.cos(a) * sp * 0.55, Math.sin(a) * sp * 0.55, 0, rnd(0.6, 1) * lk, 0.32, c2, 1, 1, 2, 0.3, 0, 0, 0, -2 * v); }
+        this.ringFlat(x, y, 0.3, 3.6 * z, 0.7, c, 2, 0.16, 0.9);
+        if (!sh.quiet) this.sound('fw_pop', 0.6, rnd(0.94, 1.1), 'burst');
+      } else if (type === 1) {   // ring: one clean hoop of X-stitches, a hoop of running stitch inside it
+        const n = this.n(30), sp = 7.2 * z * v, a0 = Math.random() * TAU;
+        for (let k = 0; k < n; k++) { const a = a0 + k / n * TAU;
+          this.glow.emit(x, y, 1, Math.cos(a) * sp, Math.sin(a) * sp, 0, 1.15 * lk, 0.52, c, 1, 5, 1.8, 0.6, a + Math.PI / 4, 0, 0, -1.2 * v);
+          this.glow.emit(x, y, 1, Math.cos(a + 0.12) * sp * 0.58, Math.sin(a + 0.12) * sp * 0.58, 0, 0.85 * lk, 0.34, c2, 1, 4, 1.8, 0.6, a + 0.12 + Math.PI / 2, 0, 0, -1 * v); }
+        this.ringFlat(x, y, 0.3, sp * 0.47, 0.95, c, 2, 0.2, 0.8); this.ringFlat(x, y, 0.2, sp * 0.27, 0.7, c2, 0, 0.3, 0.5);
+        if (!sh.quiet) this.sound('fw_ring', 0.6, rnd(0.96, 1.08), 'burst');
+      } else if (type === 2) {   // willow: long threads that droop and hang
+        this.arms(x, y, c, c2, sh.base, Math.max(6, this.n(14)), 6.2 * z * v, 1.15 * lk, 2, false);
+        this.glints(x, y, 1, 14, c2, 3 * v, 0.34, 0.6); this.ringFlat(x, y, 0.3, 2.2 * z, 0.5, c2, 0, 0.3, 0.6);
+        if (!sh.quiet) this.sound('fw_willow', 0.6, 1, 'silk');
+      } else if (type === 3) {   // crossette: stars fly out and each pops into a little cross-stitch
+        this.arms(x, y, c, c2, sh.base, 7, 6.6 * z * v, calm ? 0.02 : 0.36, 3, false);
+        this.glints(x, y, 1, 10, c2, 2.5 * v, 0.3, 0.5); this.ringFlat(x, y, 0.2, 1.6 * z, 0.45, c, 9, 0.12, 0.8);
+        if (!sh.quiet) this.sound('fw_cross', 0.6, 1, 'xstitch');
+      }
+      if (type === 4) {   // the crown: gold tails, and one soft hoop of light that runs out over the frame and the table
+        this.arms(x, y, c2, c, sh.base, Math.max(8, this.n(18)), 6.6 * z * v, 1.1 * lk, 2, false);
+        this.ringFlat(x, y, 0.5, 13.5, 1.5, c, 0, 0.5, 0.28); this.ringFlat(x, y, 0.4, 7.2 * z * 0.7, 1.0, c2, 2, 0.24, 0.9);
+        this.sound('fw_crown', 0.9, 1, 'chart');
+        if (!calm) { this.flashAdd(PAL.saffron, 0.14); this.ripple(x, y, 1.2, 8, 0.9, 1.1); this.shock(x, y, 1.2, 1.2, 0.8); this.shake = Math.max(this.shake, 0.22); this.buzz(35); }
+      }
+    }
+    popStar(st) {   // one star of a crossette: a little cross-stitch, pulled tight
+      const x = st.x, y = st.y, c = st.col;
+      for (let d = 0; d < 4; d++) { const a = Math.PI / 4 + d * Math.PI / 2; this.glow.emit(x, y, 1, Math.cos(a) * 3.6, Math.sin(a) * 3.6, 0, 0.44, 0.5, c, 1, 4, 3.4, 0.5, a, 0, 0, 0); }
+      this.glow.emit(x, y, 1, 0, 0, 0, 0.5, 1.2, st.col2, 1, 5, 0, 0.35, 0, 0, 0);
+      this.glints(x, y, 1, 3, st.col2, 2, 0.28, 0.4); this.flare(x, y, 1, 1.1, c, 0.12);
+      this.xs.emit(x, y, 1, rnd(-1, 1), rnd(-1, 1), 2.5, 1.1, 0.5, st.base, 1.2, Math.PI / 4, rnd(-6, 6), rnd(-6, 6), 7, 1.6, 0, undefined, -1);
+    }
+    updateShells(fdt) {
+      const S = this.shells, q = this.q.particles; let live = 0, air = 0;
+      for (let i = 0; i < S.length; i++) {
+        const sh = S[i]; if (!sh.on) continue;
+        sh.t += fdt;
+        if (sh.t < sh.fuse) {   // rising: a line of stitches sewn up the cloth, a bright eye at its head
+          const k = eo(sh.t / sh.fuse), tk = Math.max(0, k - 0.42), dx = sh.x1 - sh.x0, dy = sh.y1 - sh.y0, x = sh.x0 + dx * k, y = sh.y0 + dy * k;
+          this.tline(this.trA, sh.x0 + dx * tk, sh.y0 + dy * tk, x, y, 0.8, 0.11 * sh.size, sh.col, 0, 2, 0, 0, 0.95);
+          this.spr.add(x, y, 0.9, 0.75 * sh.size, sh.col2, 1, 1, sh.t * 9);
+          if (Math.random() < fdt * 70 * q) this.glow.emit(x + rnd(-0.06, 0.06), y, 0.8, rnd(-0.4, 0.4), rnd(-2.2, -0.6), 0, rnd(0.25, 0.5), 0.26, sh.col, 1, 1, 1, 0.2);
+          air++; if (!sh.glow) live++;
+          continue;
+        }
+        sh.on = false; this.burstShell(sh);
+      }
+      const T_ = this.stars, ex1 = Math.exp(-1.15 * fdt), ex3 = Math.exp(-2.6 * fdt);
+      for (let i = 0; i < T_.length; i++) {
+        const st = T_[i]; if (!st.on) continue;
+        st.t += fdt; const k = st.t / st.fuse;
+        if (st.kind === 2) {   // a willow's arm: it flies, slows, droops, and leaves its thread hanging
+          if (k >= 1) { st.on = false; continue; }
+          st.vx *= ex1; st.vy = st.vy * ex1 - 5.4 * fdt; st.x += st.vx * fdt; st.y += st.vy * fdt;
+          st.e += fdt * 58 * q; let m = 0;
+          while (st.e >= 1 && m++ < 3) { st.e -= 1; this.glow.emit(st.x - st.vx * fdt * 0.3 * m, st.y - st.vy * fdt * 0.3 * m, 0.9, 0, 0, 0, rnd(0.55, 0.95), 0.2, k > 0.6 ? st.col2 : st.col, 1 - k * 0.5, 4, 0, 0.5, Math.atan2(st.vy, st.vx), 0, 0, -1.4); }
+          this.spr.add(st.x, st.y, 1, 0.5, st.col2, 1 - k, 1, st.t * 8);
+        } else {               // a crossette's star
+          if (k >= 1) { st.on = false; this.popStar(st); continue; }
+          st.vx *= ex3; st.vy *= ex3; st.x += st.vx * fdt; st.y += st.vy * fdt;
+          st.e += fdt * 30 * q; if (st.e >= 1) { st.e -= 1; this.glow.emit(st.x, st.y, 0.9, 0, 0, 0, 0.3, 0.2, st.col, 0.9, 0, 0, 0.4); }
+          this.spr.add(st.x, st.y, 1, 0.55, st.col2, 1, 1, st.t * 12);
+          if (!st.glow) live++;
+        }
+      }
+      this.rockets.length = air; this.showLive = live;
+    }
+    updateCelebration(dt, fdt) {
+      const c = this.cel;
+      if (c.on) {
+        if (c.delay > 0) c.delay -= fdt;
+        else if (!c.glow) {
+          c.t += fdt; const L = c.list, calm = this.isCalm();
+          while (c.i < L.length && L[c.i][0] <= c.t) { const s = L[c.i++]; if (!calm || (c.i & 1)) this.launch(s, c, calm); }
+          // over: hand the cloth back. What is still falling carries on as the light version
+          if (c.t >= c.secs && c.i >= L.length) { c.glow = true; c.glowT = 0.9; c.glowN = 0; c.t = 0; this.fireworks = false; try { document.body.classList.remove('celebrating'); } catch (err) { /* no document */ } }
+        } else {
+          c.t += fdt; c.glowT -= fdt;
+          if (c.t > 24) this.afterglowStop();
+          else if (c.glowT <= 0) { c.glowT = rnd(0.8, 1.3) * (1 + c.t * 0.07); this.launchGlow(c); }
+        }
+      }
+      this.updateShells(fdt);
+      if (this.top && this.top.on) this.stepConfetti(dt);
+    }
+    /* The results sheet is up (el: its element). Works out where it lies on the cloth so the light version plays round it,
+       and lets a few loose stitches fall on a layer above it, so nothing stops at the sheet's edge. */
+    afterglowAround(el) {
+      const c = this.cel; if (!c.on || !el || !el.getBoundingClientRect) return;
+      const r = el.getBoundingClientRect(), cr = this.canvas.getBoundingClientRect(); if (!(r.width > 0) || !(cr.width > 0)) return;
+      const nx0 = (r.left - cr.left) / cr.width * 2 - 1, nx1 = (r.right - cr.left) / cr.width * 2 - 1, ny1 = 1 - (r.top - cr.top) / cr.height * 2, ny0 = 1 - (r.bottom - cr.top) / cr.height * 2;
+      const bx = c.boxA || (c.boxA = [0, 0, 0, 0]), a = this.onPlane(nx0, ny0, 1); bx[0] = a.x; bx[1] = a.y;
+      const b = this.onPlane(nx1, ny1, 1); bx[2] = b.x; bx[3] = b.y; c.box = bx;
+      this.confetti(r);
+    }
+    afterglowStop() {
+      const c = this.cel; c.on = false; c.glow = false; c.box = null; this.fireworks = false;
+      const t = this.top; if (t && t.on) { t.on = false; t.cv.style.display = 'none'; }
+      try { document.body.classList.remove('afterglow'); document.body.classList.remove('celebrating'); } catch (e) { /* no document */ }
+    }
+    /* Loose stitches falling over the results sheet: a small 2D canvas above the page, shown only while they fall
+       (about eight seconds), drawn thirty times a second. Over the sheet's text they go faint. */
+    confetti(rect) {
+      if (this.isCalm()) return;
+      let t = this.top;
+      if (!t) {
+        const cv = document.createElement('canvas'); cv.id = 'fxtop'; cv.setAttribute('aria-hidden', 'true');
+        cv.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;z-index:30;pointer-events:none;display:none';
+        document.body.appendChild(cv);
+        t = this.top = { cv, g: cv.getContext ? cv.getContext('2d') : null, on: false, t: 0, acc: 0, n: 0, p: new Float32Array(32 * 8), box: [0, 0, 0, 0], w: 0, h: 0, k: 1, cols: SHOW.glow.map(n => PAL[n]) };
+      }
+      if (!t.g || !t.g.setTransform) return;
+      const w = window.innerWidth || 1, h = window.innerHeight || 1, k = Math.min(1.5, window.devicePixelRatio || 1);
+      if (t.w !== w || t.h !== h || t.k !== k) { t.w = w; t.h = h; t.k = k; t.cv.width = Math.round(w * k); t.cv.height = Math.round(h * k); }
+      t.box[0] = rect.left + 22; t.box[1] = rect.top + 22; t.box[2] = rect.right - 22; t.box[3] = rect.bottom - 22;
+      t.n = this.quality === 'low' || this.quality === 'lite' ? 16 : 28;
+      for (let i = 0; i < t.n; i++) { const P = t.p, o = i * 8;   // x, y, vx, vy, turn, spin, size, colour
+        P[o] = Math.random() * w; P[o + 1] = -20 - Math.random() * h * 0.9; P[o + 2] = rnd(-14, 14); P[o + 3] = rnd(70, 130); P[o + 4] = Math.random() * 6; P[o + 5] = rnd(-3, 3); P[o + 6] = rnd(5, 9); P[o + 7] = i % t.cols.length; }
+      t.on = true; t.t = 0; t.acc = 1; t.cv.style.display = 'block';
+      document.body.classList.add('afterglow');
+    }
+    stepConfetti(dt) {
+      const t = this.top; t.t += dt; t.acc += dt; if (t.acc < 1 / 31) return;
+      const d = Math.min(0.1, t.acc), g = t.g, P = t.p, bx = t.box, fade = t.t > 7 ? Math.max(0, 1 - (t.t - 7) / 1.5) : 1; t.acc = 0;
+      g.setTransform(t.k, 0, 0, t.k, 0, 0); g.clearRect(0, 0, t.w, t.h);
+      if (fade <= 0) { t.on = false; t.cv.style.display = 'none'; return; }
+      g.lineCap = 'round';
+      for (let i = 0; i < t.n; i++) {
+        const o = i * 8; P[o] += (P[o + 2] + Math.sin(t.t * 1.7 + i) * 18) * d; P[o + 1] += P[o + 3] * d; P[o + 4] += P[o + 5] * d;
+        const x = P[o], y = P[o + 1], s = P[o + 6], a = P[o + 4]; if (y < -12 || y > t.h + 12) continue;
+        const inside = x > bx[0] && x < bx[2] && y > bx[1] && y < bx[3], c = Math.cos(a) * s, sn = Math.sin(a) * s, sq = Math.abs(Math.cos(a * 0.7 + i)) * 0.6 + 0.4;
+        g.globalAlpha = (inside ? 0.22 : 0.95) * fade; g.strokeStyle = t.cols[P[o + 7] | 0]; g.lineWidth = s * 0.34;
+        g.beginPath(); g.moveTo(x - c, y - sn * sq); g.lineTo(x + c, y + sn * sq); g.moveTo(x + sn, y - c * sq); g.lineTo(x - sn, y + c * sq); g.stroke();
+      }
+      g.globalAlpha = 1;
     }
     updateArcsAndLances(fdt) {
       const px = this.px, py = this.py, pz = this.pz, ps = this.ps;
@@ -1431,7 +1748,7 @@
     syncPlayer(sim, dt, fdt, alive) {
       const pl = sim.player, now = this.time;
       this.setNeedle(sim.d.needle);
-      this.punch = Math.max(0, this.punch - dt * 9);
+      this.punch = Math.max(0, this.punch - dt * 9 * Math.max(1, this.punch));
       const blink = pl.invuln > 0 && sim.fx.starch <= 0 && Math.floor(this.time * 14) % 2 === 0;
       this.playerGroup.visible = alive && !blink;
       const raw = (pl.x - (this.lastX === undefined ? pl.x : this.lastX)) / Math.max(dt, 0.001); this.lastX = pl.x;
@@ -1490,6 +1807,8 @@
     // ---------- frame ----------
     sync(sim, dt, events) {
       PY = sim.player ? sim.player.y : GY;
+      this.cb = !!(sim.p && sim.p.settings && sim.p.settings.cbShots);   // colour-blind-safe enemy shots (Settings)
+      if (this.cel.on && sim.phase !== 'clear' && sim.phase !== 'done') this.afterglowStop();   // the next stage has begun: the celebration is over (a stage's first event never reaches here)
       this.gl.info.reset();
       this.monitor(dt);
       this.time += dt;
@@ -1500,7 +1819,7 @@
       this.trN.begin(this.ft); this.trA.begin(this.ft); this.halo.begin(); this.spr.begin();
       { const pl_ = this.pools_(); for (let i = 0; i < pl_.length; i++) pl_[i].begin(); }
       this.handleEvents(events || sim.events, sim);
-      const alive = sim.phase !== 'dying' && sim.phase !== 'done' && sim.phase !== 'idle';
+      const alive = sim.phase !== 'dying' && sim.phase !== 'idle' && (sim.phase !== 'done' || !!(sim.result && sim.result.kind === 'clear'));   // a cleared stage: the ship stays on the cloth under the results
       this.syncPlayer(sim, dt, fdt, alive);
       this.updateSfx(sim, fdt);
       this.drawFray(sim, dt, fdt, alive);
@@ -1526,9 +1845,10 @@
     }
     finish(dt, fdt) {
       this.updateCorpse(fdt);
-      this.updateFireworks(fdt);
+      this.updateCelebration(dt, fdt);
       this.updateArcsAndLances(fdt);
-      for (let i = this.loops.length - 1; i >= 0; i--) { const l = this.loops[i]; l.life += fdt; const k = l.life / l.max; if (k >= 1) { this.scene.remove(l.m); l.m.material.dispose(); this.loops.splice(i, 1); continue; } l.m.scale.setScalar(0.1 + l.r * Math.sqrt(k)); l.m.material.opacity = 1 - k * k; l.m.rotation.z += fdt * 2; }
+      for (let i = this.loops.length - 1; i >= 0; i--) { const l = this.loops[i]; l.life += fdt; const k = l.life / l.max; if (k >= 1) { this.scene.remove(l.m); this.loopFree.push(l); this.loops[i] = this.loops[this.loops.length - 1]; this.loops.pop(); continue; } l.m.scale.setScalar(0.1 + l.r * Math.sqrt(k)); l.m.material.opacity = 1 - k * k; l.m.rotation.z += fdt * 2; }
+      this.updateRings(fdt);
       { const pl_ = this.pools_(); for (let i = 0; i < pl_.length; i++) pl_[i].end(); }
       this.trN.end(); this.trA.end(); this.halo.end(); this.spr.end();
       for (let i = 0; i < this.gpu.length; i++) this.gpu[i].update(this.ft);
@@ -1539,7 +1859,9 @@
       for (let i = 0; i < 8; i++) { const r = cu.uRip.value[i]; if (r.w > 0 && this.ft - r.z > 4) r.w = 0; }
       // camera
       this.shake = Math.max(0, this.shake - dt * 2.2);
-      const k = this.shake * this.shake * 0.5; this.placeCamera((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
+      this.kick *= Math.exp(-dt * 15); this.zoomK *= Math.exp(-dt * 11);   // a weapon's kick, a heavy kill's lean-in
+      if (this.isCalm()) { this.shake = 0; this.kick = 0; this.zoomK = 0; }
+      const k = this.shake * this.shake * 0.5; this.placeCamera((Math.random() - 0.5) * k, (Math.random() - 0.5) * k - this.kick);
       // post uniforms
       const pu = this.post.comp.uniforms;
       this.flash.multiplyScalar(Math.max(0, 1 - dt * 7)); pu.uFlash.value.copy(this.flash);
@@ -1563,11 +1885,13 @@
       }
     }
     render() {
+      const lost = this.bf && this.bf.lost; if (lost && lost.mat.depthWrite) lost.mat.depthWrite = false;   // unravelled cloth (render-boss.js) is a flat sheet like the ground: it must not slice sprites either
       if (this.q.post && this.post.rt) this.post.render(this.scene, this.camera);
       else { this.gl.setRenderTarget(null); this.gl.render(this.scene, this.camera); }
       const inf = this.gl.info.render, st = this.stats;
       st.calls = inf.calls; st.triangles = inf.triangles; st.points = inf.points; st.quality = this.quality; st.pixelRatio = this.gl.getPixelRatio();
     }
+    still() { this.gl.info.reset(); this.render(); }   // paused: the same frame again (nothing moves, nothing vanishes)
     idle(dt) {   // behind menus: just the cloth and any settling thread
       this.gl.info.reset();
       this.time += dt; this.hs = 0; this.ft += dt; this.focusK *= 0.9; this.frayK = 0;
@@ -1584,7 +1908,9 @@
       this.views.enemies.forEach(v => { if (v.extra) { if (v.extra.cone) this.scene.remove(v.extra.cone); if (v.extra.captive) this.scene.remove(v.extra.captive); } });
       for (const k of ['enemies', 'shots', 'eshots', 'drops']) this.views[k].clear();
       this.ghostTrails.length = 0; this.arcs.length = 0; this.lances.length = 0; this.rockets.length = 0; this.shocks.length = 0; this.fireworks = false;
-      for (const l of this.loops) this.scene.remove(l.m); this.loops.length = 0;
+      for (const l of this.loops) { this.scene.remove(l.m); this.loopFree.push(l); } this.loops.length = 0;
+      for (const f of this.frings) f.on = false; for (const sh of this.shells) sh.on = false; for (const st of this.stars) st.on = false;
+      this.afterglowStop(); this.kick = 0; this.zoomK = 0; this.showLive = 0;
       for (const t of this.trails) t.n = 0;
       while (this.sfxList.length) this.sfxFree.push(this.sfxList.pop()); for (const d of this.dashTr) d.t = d.life; this.zoneMeta.clear(); this.frayK = 0; this.ramK = 0; if (this.lassoMesh) this.lassoMesh.visible = false;
       if (this.bossGroup) { this.scene.remove(this.bossGroup); this.bossGroup = null; }

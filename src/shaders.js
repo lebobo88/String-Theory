@@ -14,7 +14,7 @@ float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f)
 
   /* Point-sprite shapes, shared by the analytic particle pools and the per-frame sprite sets.
      p is -1..1 across the sprite. Kinds: 0 glow, 1 glint, 2 lint fibre, 3 ring, 4 streak, 5 flat X-stitch,
-     6 lint puff, 7 hoop of dashes, 8 rays, 9 disk, 10 dashed danger rim, 11 button (four holes). */
+     6 lint puff, 7 hoop of dashes, 8 rays, 9 disk, 10 dashed danger rim, 11 button (four holes), 12 hollow diamond, 13 chevron. */
   S.shape = `
 float shape(float kind, vec2 p, float rot, float seed){
   float r = length(p);
@@ -38,8 +38,10 @@ float shape(float kind, vec2 p, float rot, float seed){
   if (kind < 8.5) { float a = atan(q.y, q.x); return pow(max(0., cos(a * 4.)), 10.) * smoothstep(1., .05, r) + exp(-r * r * 14.) * .7; }
   if (kind < 9.5) return smoothstep(1., .82, r);
   if (kind < 10.5) { float a = atan(q.y, q.x); return smoothstep(.13, .03, abs(r - .78)) * step(fract(a / 6.2832 * 8.), .62); }
-  { float hole = 0.; for (int i = 0; i < 4; i++) { float a = float(i) * 1.5708 + .785; hole += smoothstep(.13, .07, length(q - vec2(cos(a), sin(a)) * .3)); }
+  if (kind < 11.5) { float hole = 0.; for (int i = 0; i < 4; i++) { float a = float(i) * 1.5708 + .785; hole += smoothstep(.13, .07, length(q - vec2(cos(a), sin(a)) * .3)); }
     return smoothstep(1., .9, r) * (1. - hole) * (.75 + .25 * smoothstep(.75, .65, r)); }
+  if (kind < 12.5) { float d = abs(q.x) + abs(q.y); return smoothstep(.2, .07, abs(d - .74)) + smoothstep(.2, .06, d) * .9; }   // 12: hollow diamond with a pip (colour-blind-safe enemy shots)
+  { float d = abs(q.y - abs(q.x) * .9 + .3); return smoothstep(.2, .06, d) * step(abs(q.x), .72); }   // 13: a chevron, point down (something is about to come this way)
 }
 `;
 
@@ -193,11 +195,13 @@ void main(){
   #include <colorspace_fragment>
 }`;
   S.beamFS = `
-uniform vec3 uColor; uniform float uWarn, uOn, uTime, uKind, uW, uH;
+uniform vec3 uColor; uniform float uWarn, uOn, uTime, uKind, uW, uH, uEnd;
 varying vec2 vUv;
 void main(){
   float x = (vUv.x - .5) * 2., ax = abs(x), yW = vUv.y * uH;
   vec3 c = uColor; float a = 0.;
+  // the column runs past both ends of the cloth and falls away over the frame: it never stops on a line
+  float ends = smoothstep(0., uEnd, vUv.y) * smoothstep(0., uEnd, 1. - vUv.y);
   if (uWarn >= 0.) {
     float march = step(fract(yW / .5 - uTime * 3.), .55);
     float edge = smoothstep(.12, .0, abs(ax - .9)) * march;
@@ -206,13 +210,16 @@ void main(){
     float cy = fract(yW / 1.1 + uTime * 1.6);
     float chev = smoothstep(.07, .0, abs(cy - .3 - ax * .3)) * step(ax, .55) * uKind;
     float blink = .6 + .4 * step(.5, fract(uTime * (4. + uWarn * 10.)));
-    a = (edge * .95 + fill + chev * .8) * blink; c *= 1.4;
+    // the telegraph: a steady floor of colour that thickens as the strike nears, and a bright line racing down the last third
+    float body = (.05 + .15 * uWarn * uWarn) * (1. - ax * .5);
+    float last = smoothstep(.66, 1., uWarn), sweep = smoothstep(.09, .0, abs(vUv.y - (1. - (uWarn - .66) / .34))) * last * (1. - ax * .3);
+    a = ((edge * .95 + fill + chev * .8) * blink + body + sweep * .9) * ends; c *= 1.4 + sweep;
   } else {
     float core = exp(-x * x * 5.);
     float streak = vnoise(vec2(x * 5., yW * .55 + uTime * 16.)) * vnoise(vec2(x * 9. + 4., yW * .3 + uTime * 9.));
     float shimmer = .8 + .2 * sin(yW * 2. - uTime * 40.);
     c = uColor * (.3 + .55 * core * shimmer + 1.1 * streak * (1. - ax * .6));
-    a = clamp(core * .75 + streak * .6 * (1. - ax) + .2 * smoothstep(1., .6, ax), 0., 1.) * uOn;
+    a = clamp(core * .75 + streak * .6 * (1. - ax) + .2 * smoothstep(1., .6, ax), 0., 1.) * uOn * ends;
   }
   if (a < .004) discard;
   gl_FragColor = vec4(c, min(a, 1.));
@@ -272,36 +279,39 @@ void main(){
   gl_FragColor = vec4(c, min(a, 1.));
   #include <colorspace_fragment>
 }`;
-  /* Cones of light (the Spinner's capture beam, the Atlas's gaze) lie on the cloth and stop at its edge: uClip is the cloth's
-     rectangle in world units (x0, y0, x1, y1); the light fades over the last stitch before the frame. */
+  /* Cones of light (the Spinner's capture beam, the Atlas's gaze) lie on the cloth. They never end on a line: uClip is a
+     rectangle in world units (x0, y0, x1, y1) well outside the frame, and the light falls away over uFade units before it,
+     across the frame and onto the table. */
   S.coneVS = `varying vec2 vUv; varying vec2 vW; void main(){ vUv = uv; vec4 w = modelMatrix * vec4(position, 1.); vW = w.xy; gl_Position = projectionMatrix * viewMatrix * w; }`;
   S.coneFS = `
-uniform float uTime, uAlpha, uPull; uniform vec3 uColor; uniform vec4 uClip;
+uniform float uTime, uAlpha, uPull, uFade; uniform vec3 uColor; uniform vec4 uClip;
 varying vec2 vUv; varying vec2 vW;
 void main(){
-  float clip = smoothstep(0., .22, min(min(vW.x - uClip.x, uClip.z - vW.x), min(vW.y - uClip.y, uClip.w - vW.y)));
+  float clip = smoothstep(0., uFade, min(min(vW.x - uClip.x, uClip.z - vW.x), min(vW.y - uClip.y, uClip.w - vW.y)));
   if (clip <= 0.) discard;
   float y = 1. - vUv.y, param = (vUv.x - .5) / max(y, .02);
   float strands = pow(abs(sin(param * 3.14159 * 13. + sin(y * 6. - uTime * 3.) * .6)), 18.);
   float band = smoothstep(.4, .0, abs(fract(y * 2.5 - uTime * 1.8) - .5));
   float side = smoothstep(.5, .35, abs(param));
-  float m = (strands * (.6 + uPull) + band * .25 + .12) * side * smoothstep(0., .1, y) * clip;
+  float m = (strands * (.6 + uPull) + band * .25 + .12) * side * smoothstep(0., .1, y) * smoothstep(1., .86, y) * clip;   // the far end falls away too: no hard base
   gl_FragColor = vec4(uColor * m * uAlpha * (1. + uPull * 2.), 1.);
   #include <colorspace_fragment>
 }`;
 
   // ---------- the cloth: injected into MeshStandardMaterial so it keeps light and shadow ----------
   S.clothPars = `
-uniform float uTime, uHeat; uniform vec4 uRip[8]; uniform vec4 uRipB[8]; uniform vec3 uGlare, uBack;
+uniform float uTime, uHeat; uniform vec4 uRip[8]; uniform vec4 uRipB[8]; uniform vec3 uGlare, uBack; uniform vec4 uField;
 varying vec2 vField;
 vec2 cRipOff; vec2 cBump; vec3 cEmit; float cWeave;
 void clothCompute(){
   vec2 P = vField; cRipOff = vec2(0.); cBump = vec2(0.); cEmit = vec3(0.); float tear = 0.;
+  // the cloth is laced tight to the frame: a ripple dies away over the last stitches before the edge instead of stopping on it
+  float pin = smoothstep(0., 1.1, min(min(P.x - uField.x, uField.z - P.x), min(P.y - uField.y, uField.w - P.y)));
   for (int i = 0; i < 8; i++) {
     vec4 R = uRip[i]; if (R.w <= 0.) continue;
     vec4 B = uRipB[i]; float age = uTime - R.z; if (age < 0.) continue;
     vec2 d = P - R.xy; float dist = length(d) + 1e-4; vec2 dir = d / dist;
-    float rad = age * B.x, x = (dist - rad) / B.y, env = R.w * exp(-age * B.z);
+    float rad = age * B.x, x = (dist - rad) / B.y, env = R.w * exp(-age * B.z) * pin;
     float wave = exp(-x * x) * env * cos(x * 2.2);
     cBump -= dir * (-2. * x / B.y) * exp(-x * x) * env * .3;
     cRipOff += dir * wave * .1;
@@ -414,6 +424,87 @@ void main(){
 #endif
   gl_FragColor = vec4(col, 1.);
 }`;
+
+  // ---- film lens (film-kit) ----
+  /* Owned by the film kit (src/film-kit.js, docs/FILM-KIT.md). Used only while a boss film asks for the lens: nothing here is
+     compiled or run in play. Four full-screen passes over the film's scene and its depth:
+       lensCocFS     half size: the scene, with how far out of focus each pixel is in alpha
+       lensDofFS     half size, twice: a disc of TAPS samples as wide as each pixel is out of focus, bright samples weighted up
+                     (bokeh); the second run, turned and narrower, fills the gaps between the first run's samples
+       lensRaysFS    quarter size, twice: light shafts, TAPS samples marched toward a point on screen, then again over one step
+       lensStreakFS  quarter size: a wide horizontal blur of the highlights (anamorphic streaks); run once or twice
+       lensFinalFS   full size: the scene with smear or fringing, the soft picture mixed in by depth, shafts and streaks added,
+                     exposure, flash and iris. Its output goes to Post as the scene, so bloom and the composite follow as usual. */
+  /* How far from the lens each pixel is. The renderer draws the ground (table, cloth, frame) first and then clears the depth
+     buffer (groundDone in render.js), so the ground is not in the depth texture: where nothing solid was drawn, the distance
+     is worked out instead, to the plane the cloth lies in (z = 0), from the eye and the pixel's line of sight. */
+  S.lensDepth = `
+uniform sampler2D tDepth; uniform vec2 uNF; uniform vec4 uDof; uniform mat4 uInvVP; uniform vec3 uEye;
+float lensZ(vec2 uv){ float d = texture2D(tDepth, uv).x;
+  if (d > .99999) { vec4 p = uInvVP * vec4(uv * 2. - 1., 1., 1.); float pz = p.z / p.w; return pz < uEye.z - 1e-4 ? min(uNF.y, uNF.y * uEye.z / (uEye.z - pz)) : uNF.y; }
+  return uNF.x * uNF.y / (uNF.y - d * (uNF.y - uNF.x)); }
+float lensCoc(vec2 uv){ float z = lensZ(uv); return clamp(abs(z - uDof.x) / z * uDof.y, 0., 1.); }
+`;
+  S.lensCocFS = S.lensDepth + `
+uniform sampler2D tScene; varying vec2 vUv;
+void main(){ gl_FragColor = vec4(min(texture2D(tScene, vUv).rgb, vec3(24.)), lensCoc(vUv)); }`;
+  S.lensDofFS = `
+uniform sampler2D tIn; uniform vec2 uRad; uniform float uBokeh, uTurn;
+varying vec2 vUv;
+void main(){
+  vec4 c = texture2D(tIn, vUv); float c0 = c.a, ws = 1., ca = c0; vec3 acc = c.rgb;
+  if (c0 > .01) {
+    for (int i = 0; i < TAPS; i++) {
+      float fi = float(i) + .5, r = sqrt(fi / float(TAPS)), a = fi * 2.39996 + uTurn;
+      vec4 s = texture2D(tIn, vUv + vec2(cos(a), sin(a)) * r * c0 * uRad);
+      float w = smoothstep(0., 1., s.a / c0 * 1.6 + .08);       // a sharper neighbour does not smear into the blur
+      float l = max(s.r, max(s.g, s.b)); w *= 1. + uBokeh * min(l * l, 9.);
+      acc += s.rgb * w; ws += w; ca += s.a * w;
+    }
+  }
+  gl_FragColor = vec4(acc / ws, ca / ws);
+}`;
+  S.lensRaysFS = `
+uniform sampler2D tScene; uniform vec4 uRay; uniform float uTh, uAspect;
+varying vec2 vUv;
+void main(){
+  vec2 d = (uRay.xy - vUv) * uRay.w / float(TAPS), uv = vUv;
+  vec3 acc = vec3(0.); float w = 1., ws = 0.;
+  for (int i = 0; i < TAPS; i++) {
+    vec3 s = texture2D(tScene, clamp(uv, 0., 1.)).rgb;
+    if (uTh > 0.) { float l = max(s.r, max(s.g, s.b)); s = min(s, vec3(8.)) * smoothstep(uTh, uTh * 1.5 + .3, l); }
+    acc += s * w; ws += w; w *= uTh > 0. ? .95 : 1.; uv += d;
+  }
+  vec2 q = (uRay.xy - vUv) * vec2(uAspect, 1.);
+  gl_FragColor = vec4(acc / ws * uRay.z * (uTh > 0. ? 1. / (1. + dot(q, q) * 2.5) : 1.), 1.);
+}`;
+  S.lensStreakFS = `
+uniform sampler2D tIn; uniform vec2 uDir; uniform float uTh;
+varying vec2 vUv;
+vec3 pick(vec2 uv){ vec3 c = texture2D(tIn, uv).rgb; if (uTh <= 0.) return c; float l = max(c.r, max(c.g, c.b)); return min(c, vec3(12.)) * smoothstep(uTh, uTh * 2. + .25, l); }
+void main(){
+  vec3 c = pick(vUv); float ws = 1.;
+  for (int i = 1; i <= 7; i++) { float f = float(i), w = exp(-f * f / 20.); c += (pick(vUv + uDir * f) + pick(vUv - uDir * f)) * w; ws += 2. * w; }
+  gl_FragColor = vec4(c / ws, 1.);
+}`;
+  S.lensFinalFS = S.lensDepth + `
+uniform sampler2D tScene, tDof, tRays, tStreak;
+uniform vec3 uSmear, uFlash, uRayCol, uStreakCol; uniform vec4 uIris;
+uniform float uFringe, uExposure, uAspect, uRaysOn, uStreakOn;
+varying vec2 vUv;
+void main(){
+  vec2 uv = vUv, cd = uv - .5, sm = uSmear.xy + cd * uSmear.z; vec3 col;
+  if (dot(sm, sm) > 2e-7) { col = vec3(0.); for (int i = 0; i < 7; i++) col += texture2D(tScene, uv + sm * (float(i) / 6. - .5)).rgb; col /= 7.; }
+  else if (uFringe > .00005) { vec2 o = cd * uFringe * (.5 + dot(cd, cd) * 5.); col = vec3(texture2D(tScene, uv + o).r, texture2D(tScene, uv).g, texture2D(tScene, uv - o).b); }
+  else col = texture2D(tScene, uv).rgb;
+  if (uDof.z > .5) { vec4 b = texture2D(tDof, uv); col = mix(col, b.rgb, smoothstep(.03, .32, max(lensCoc(uv), b.a * .9))); }
+  if (uRaysOn > .5) col += texture2D(tRays, uv).rgb * uRayCol;
+  if (uStreakOn > .5) col += texture2D(tStreak, uv).rgb * uStreakCol;
+  col = col * uExposure + uFlash;
+  if (uIris.z > 0.) { vec2 q = (uv - uIris.xy) * vec2(uAspect, 1.); col *= 1. - smoothstep(uIris.z, uIris.z + uIris.w, length(q)); }
+  gl_FragColor = vec4(col, 1.);
+}`;
+  // ---- /film lens ----
 
   ST.shaders = S;
 })(window.ST);

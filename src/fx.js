@@ -257,6 +257,9 @@
       u.tIn.value = b.texture; u.uDir.value.set(0, 1 / b.height); this.pass(this.blur, a);
     }
     render(scene, camera) {
+      // ---- film lens (film-kit) ---- while a boss film is using its lens, src/film-kit.js draws the scene through it and calls back here with the result; `lens` is unset in play
+      if (this.lens && this.lens.active) return this.lens.render(this, scene, camera);
+      // ---- /film lens ----
       const gl = this.gl, q = this.q;
       gl.setRenderTarget(this.rt); gl.render(scene, camera);
       const cu = this.comp.uniforms; cu.tScene.value = this.rt.texture;

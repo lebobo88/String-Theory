@@ -18,7 +18,7 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | lance | `audio/laser.mp3` | Metal wire drawn taut and released, bright zinging whip, 0.5 seconds |
 | burst | `audio/bomb.mp3` | Arcade game bomb explosion: a compact deep boom with a sharp crack at the start, followed by a quick spray of small debris and snapping threads, powerful and satisfying, tight tail, 0.9 seconds |
 | phase | `audio/bossphase.mp3` | Deep ominous bowed double-bass swell with fluttering moth wings, 1.5 seconds |
-| fire_backstitch | `audio/fire_double.mp3` | Arcade game shot: two tight crisp string snaps in very quick succession, like a taut bowstring double-twang, bright sharp attack, the second slightly higher in pitch, punchy and dry, no reverb, 0.3 seconds |
+| fire_backstitch | `audio/fire_double.mp3` | Layered: two short arcade pews made from a plucked metal string with a fast downward pitch sweep, the second 70 ms later and three semitones higher, over a faint whip swish, 0.2 seconds. Picked by the owner from four candidates (thread laser) |
 | fire_chain | `audio/fire_chain.mp3` | Short bright metallic chain-link jingle with a light zip, like a tiny chain flicked, dry, 0.3 seconds |
 | fire_herringbone | `audio/fire_spread.mp3` | Soft fabric fan snapping open with a breathy spray of thread, wide and airy, dry, 0.3 seconds |
 | fire_knot | `audio/fire_knot.mp3` | Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds |
@@ -101,6 +101,14 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | ui_fail | `audio/ui_fail.mp3` | A thread pulled and refusing to give, a short dull double thud, gentle and not harsh, 0.25 seconds |
 | ui_equip | `audio/ui_equip.mp3` | A spool dropped onto its spindle and seated with a wooden click and a short thread zip, 0.3 seconds |
 | ui_start | `audio/ui_start.mp3` | A needle threaded and pulled taut, quick zip rising to a bright confident pluck, 0.5 seconds |
+| fw_launch | `audio/fw_launch.mp3` | A firework rocket launch: a thread zipping fast up through cloth with a soft rising whistle, dry abrupt end, 0.6 seconds |
+| fw_pop | `audio/fw_pop.mp3` | A distant firework burst: a muffled soft boom like thick cloth whumping, followed by a light crackle of tiny sparks, warm and round, 0.9 seconds |
+| fw_ring | `audio/fw_ring.mp3` | A bright firework burst: a sharp ting-pop like a wire hoop pulled taut, then a short glittering shimmer fading quickly, 0.9 seconds |
+| fw_willow | `audio/fw_willow.mp3` | A willow firework: one soft pop at the start, then a long gentle falling glitter of sparkles raining down and fading, 1.8 seconds |
+| fw_cross | `audio/fw_cross.mp3` | A crossette firework: one pop at the start, a short pause, then a rapid cluster of seven small sharp crackling snaps, 0.9 seconds |
+| fw_finale | `audio/fw_finale.mp3` | A fireworks finale volley: six quick rocket whooshes one after another, then five booming bursts in rapid succession with crackle, 1.5 seconds |
+| fw_crown | `audio/fw_crown.mp3` | The biggest firework of the show: a deep warm boom, a bright plucked harp chord blooming over it, then a long shimmering glitter tail, 2 seconds |
+| fw_spark | `audio/fw_spark.mp3` | One tiny soft firework pop with a brief delicate sparkle, 0.5 seconds |
 | menu | `audio/music_menu.mp3` | Calm night-time lullaby for plucked harp, music box and soft strings, slow 3/4, cosy and a little mysterious, seamless loop |
 | hideout | `audio/music_hideout.mp3` | Warm workshop tune: pizzicato strings, upright piano and soft hand percussion, relaxed mid-tempo, seamless loop |
 | flight | `audio/music_flight.mp3` | Driving arcade shooter theme played on pizzicato strings, dulcimer and brushed drums with a retro synth bass, 140 bpm, upbeat and determined, seamless loop |
