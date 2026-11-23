@@ -81,7 +81,7 @@
   const SY = -2, SZ = 6;
   const KP = 0.62, KH = 0.47, KD = 0.11, KRX = 0.1, KRZ = 0.085, NC = 22;   // stitch pitch across, row height, depth of the loops, the yarn's section, stitches across
   const V0 = 2.4, YEND = 24, AC = 2 * (YEND - V0 * (ARRIVE - RIP)) / ((ARRIVE - RIP) * (ARRIVE - RIP));   // the running end: faster and faster, up to its mouth
-  const VS = 3.4, F0 = 0.32, FD = 0.8;                     // the hole spreads sideways this fast; a sprung loop starts to drop this long after, over this long
+  const VS = 5.5, F0 = 0.16, FD = 0.5;                     // the hole spreads sideways this fast; a sprung loop starts to drop this long after, over this long
   const MX = 0, MY = YEND + 1.3, MZ = 2.7;                 // its mouth (set coordinates), facing down the knit toward us
   function endY(t) { const u = Math.max(0, t - RIP); return Math.min(YEND, V0 * u + 0.5 * AC * u * u); }
   function endX(y) { return 1.5 * Math.sin(y * 0.27 - 0.6); }
@@ -90,7 +90,7 @@
   const g1 = v => v.toFixed(5);
   const KNIT_HEAD = `
 attribute vec4 aInfo;
-uniform float uT; uniform float uRow0; uniform vec4 uPull; uniform vec3 uKey;
+uniform float uT; uniform float uRow0; uniform vec4 uPull; uniform vec3 uKey; uniform vec4 uWave;
 const float RH = ${g1(KH)};
 float unrX(float y) { return 1.5 * sin(y * 0.27 - 0.6); }
 float unrTE(float y) { return ${g1(RIP)} + (sqrt(${g1(V0 * V0)} + ${g1(2 * AC)} * max(y, 0.0)) - ${g1(V0)}) / ${g1(AC)}; }
@@ -105,19 +105,21 @@ vec3 unrMove(vec3 p, inout vec3 nrm, out float shade) {
   vec3 q = vec3(p.x, p.y + uRow0 * RH, p.z);
   shade = 1.0;
   if (jw < -0.5) { shade = 0.0; return vec3(p.x, rowY, -60.0); }
-  float a = unrAge(mix(cx, p.x, 0.5), rowY + 0.1), pp = smoothstep(0.0, 0.16, a), ff = clamp((a - ${g1(F0)}) / ${g1(FD)}, 0.0, 1.0);
+  float a = unrAge(p.x, rowY + 0.1), pp = smoothstep(0.0, 0.16, a), ff = clamp((a - ${g1(F0)}) / ${g1(FD)}, 0.0, 1.0);
   vec2 d = q.xy - uPull.xy; float w = exp(-dot(d, d) / (uPull.w * uPull.w)) * uPull.z * (1.0 - pp);
   q.xy -= d * w * 0.28; q.z += w * 0.2;
-  float ph = pp * (1.25 + 0.3 * sin(cx * 2.3 + rowY * 1.7));
+  float wr = length(q.xy - uWave.xy) - uWave.z; q.z += uWave.w * exp(-wr * wr / 0.3) * (1.0 - pp);
+  float ph = pp * (1.2 + 0.25 * sin(p.x * 1.3 + rowY * 1.7));
   if (a > 0.0) ph *= 1.0 + 0.3 * sin(a * 24.0) * exp(-a * 7.0);
-  q.x = cx + (q.x - cx) * (1.0 + 0.28 * pp) + pp * 0.05 * sin(th * 3.0 + h * 6.0);
-  vec2 rel = vec2((q.y - rowY - 0.05) * (1.0 + 0.4 * pp), q.z);
+  q.x += pp * 0.06 * sin(th * 2.0);
+  vec2 rel = vec2((q.y - rowY - 0.05) * (1.0 + 0.15 * pp), q.z);
   float c = cos(ph), s = sin(ph);
   q.y = rowY + 0.05 + rel.x * c - rel.y * s; q.z = rel.x * s + rel.y * c + pp * 0.08;
   nrm = vec3(nrm.x, nrm.y * c - nrm.z * s, nrm.y * s + nrm.z * c);
   if (ff > 0.0) {
-    if (h > 0.88) { q.z += ff * 3.6; q.y -= ff * 1.8; q.x += (h - 0.94) * ff * 9.0; }
-    else { q.z -= ff * ff * 5.0; q.x += (h - 0.45) * ff * 1.4; q.y -= ff * 0.45; }
+    float hr = fract(sin(rowY * 12.9898) * 43758.5453);
+    if (hr > 0.82) { q.z += 1.6 * sin(3.14159 * ff) - ff * ff * 3.0; q.y -= ff * 0.8; }
+    else { q.z -= ff * ff * 5.0; q.y -= ff * 0.45 + ff * ff * 0.3 * sin(p.x * 2.1 + rowY); }
     if (ff >= 0.999) { shade = 0.0; return vec3(q.x, q.y, -60.0); }
   }
   float ao = mix(mix(0.14, 1.0, smoothstep(-0.14, 0.12, p.z)), 0.95, pp);
@@ -178,7 +180,7 @@ vec3 unrMove(vec3 p, inout vec3 nrm, out float shade) {
     const g = new T.BufferGeometry();
     g.setAttribute('position', new T.BufferAttribute(P, 3)); g.setAttribute('normal', new T.BufferAttribute(N, 3)); g.setAttribute('uv', new T.BufferAttribute(UV, 2));
     g.setAttribute('aInfo', new T.BufferAttribute(INF, 4)); g.setAttribute('color', new T.BufferAttribute(COL, 3)); g.setIndex(new T.BufferAttribute(IDX, 1));
-    const U = { uT: { value: 0 }, uRow0: { value: 0 }, uPull: { value: new T.Vector4(0, 0, 0, 1) }, uKey: { value: new T.Vector3(0, 0, 1) } };
+    const U = { uT: { value: 0 }, uRow0: { value: 0 }, uWave: { value: new T.Vector4(0, 0, 0, 0) }, uPull: { value: new T.Vector4(0, 0, 0, 1) }, uKey: { value: new T.Vector3(0, 0, 1) } };
     const tex = ply(T), mat = new T.MeshStandardMaterial({ color: 0xffffff, map: tex, bumpMap: tex, bumpScale: 1.6, roughness: 0.88, metalness: 0, vertexColors: true });
     mat.onBeforeCompile = sh => {
       for (const key in U) sh.uniforms[key] = U[key];
@@ -302,8 +304,8 @@ vec3 tubeMove(out vec3 nrm) {
     ramp: [[2.72, 1], [2.79, 0.22], [2.99, 0.22], [3.07, 1]],
     /* cam.shot keys, authored round the running end in world units (carried to it with ox, oy, oz): [u, camera x y z, target x y z, roll, fov] */
     shots: {
-      chaseA: [[0, 0.7, -1.9, 1.15, -0.1, 1.5, 0.05, 0.03, 40], [0.45, -0.6, -2.1, 0.95, 0.1, 1.9, 0.0, -0.07, 46], [1, 0.5, -2.3, 0.85, 0.0, 2.3, 0.1, 0.06, 52]],
-      chaseB: [[0, 1.3, 3.3, 1.55, -0.2, -1.4, 0.0, 0.07, 44], [0.5, 1.0, 2.8, 1.3, -0.3, -1.7, 0.0, -0.03, 48], [1, 0.8, 2.3, 1.1, -0.3, -2.0, 0.0, -0.08, 52]]
+      chaseA: [[0, 0.7, -2.7, 2.7, 0.0, 1.0, 0.0, 0.03, 42], [0.45, -0.6, -2.9, 2.45, 0.1, 1.2, 0.0, -0.06, 46], [1, 0.5, -3.1, 2.25, 0.0, 1.5, 0.1, 0.05, 50]],
+      chaseB: [[0, 1.4, 4.2, 2.4, -0.2, -1.6, 0.0, 0.07, 44], [0.5, 1.1, 3.7, 2.1, -0.3, -1.9, 0.0, -0.03, 48], [1, 0.9, 3.2, 1.9, -0.3, -2.2, 0.0, -0.08, 50]]
     },
     title: { at: 5.62, iv: 0.05, in: 'unrpull', pos: 'low', to: 7.3 },
     css: '.fk-t.i-unrpull .fk-n span.on{animation:unr-pull .5s cubic-bezier(.2,.9,.25,1) both;transform-origin:50% 100%}.fk-t.i-unrpull .fk-rule{border-top-color:#A3AEC6}' +
@@ -380,7 +382,7 @@ vec3 tubeMove(out vec3 nrm) {
     let row0 = 0;
     if (pre) {   // macro at the hem, low: the cast-on edge, the loose end, the knit raking away up into the dark
       const cr = k.ease.io(k.span(0.4, RIP));
-      cam.at(wx + 0.95 - 0.25 * cr, SY - 1.55 + 0.35 * cr, SZ + 1.1 - 0.12 * cr, wx - 0.1, SY + 1.6, SZ + 0.05, 0.04, 36);
+      cam.at(wx + 1.3 - 0.3 * cr, SY - 2.5 + 0.4 * cr, SZ + 1.65 - 0.15 * cr, wx - 0.1, SY + 2.0, SZ, 0.04, 38);
       lens.focus(wx - 0.05, SY + 0.05, SZ + 0.15, 1.4, 0.013);
       row0 = -4;
     } else if (shotA) {   // behind it, carried by it
@@ -394,26 +396,26 @@ vec3 tubeMove(out vec3 nrm) {
     } else {
       const a0 = k.ease.io(k.span(SHOTC, 4.82)), cr = k.ease.in2(k.span(4.78, BLACK));
       // C: under its mouth looking up; the push; then the crash down its throat
-      cam.at(MX + 0.7, SY + MY - 5.6, SZ + 0.75, MX, SY + MY - 0.4, SZ + MZ + 0.15, -0.04, 42).mark();
-      cam.at(MX + 0.25, SY + MY - 3.0, SZ + 1.35, MX, SY + MY - 0.2, SZ + MZ + 0.1, 0.03, 50).mix(a0);
+      cam.at(MX + 1.4, SY + MY - 13, SZ + 1.3, MX, SY + MY - 0.6, SZ + MZ + 0.4, -0.04, 44).mark();
+      cam.at(MX + 0.4, SY + MY - 6.5, SZ + 1.4, MX, SY + MY - 0.3, SZ + MZ + 0.1, 0.03, 50).mix(a0);
       if (cr > 0) { cam.mark(); cam.at(MX, SY + MY - 0.15, SZ + MZ - 0.12, MX, SY + MY + 2, SZ + MZ + 1.0, 0.1, 86).mix(cr); cam.motion(0.8); }
       if (shotW) {   // the whip: from the reverse, up the thread to its mouth
         const w = k.ease.io(k.span(WHIP, SHOTC)); cam.mark(); cam.shot('chaseB', 1, endX(endY(WHIP)), SY + endY(WHIP), SZ); cam.mix(1 - w); cam.motion(1.3);
       } else cam.handheld(0.025 * (1 - cr), 1.6);
       lens.focus(MX, SY + MY - 0.5, SZ + MZ - 0.3, shotW ? 0.3 : 0.7, 0.012);
-      row0 = Math.floor((MY - 9) / KH);
+      row0 = Math.floor((MY - 15) / KH);
     }
 
     // ---- light. 0: the hard steel key, low and to the side of the running end (in the mouth shot: from below, the camera's
     //      side). 1: a cold glint where the yarn leaves the knit (in the mouth shot, a steel rim from above it). 2: its throat.
     let kx, ky, kz, kI;
-    if (pre) { const up = k.ease.out(k.span(0.42, 0.95)); kx = wx - 4.2; ky = SY - 0.9; kz = SZ + 0.85; kI = 42 * up; }
+    if (pre) { const up = k.ease.out(k.span(0.42, 0.95)); kx = wx - 4.2; ky = SY - 0.9; kz = SZ + 0.85; kI = 75 * up; }
     else if (shotA) { kx = wx - 5.2; ky = wy - 0.6; kz = SZ + 1.05; kI = 70; }
     else if (shotB) { kx = wx - 3.6; ky = wy - 4.2; kz = SZ + 1.0; kI = 80; }
     else { kx = MX - 3.4; ky = SY + MY - 6.5; kz = SZ + 1.3; kI = 60; }
     k.light(0, kx, ky, kz, STEEL, kI * lo, 15);
     const glint = pre ? 0.35 * tug : shotC ? 0 : (0.75 + 0.25 * Math.sin(t * 41) * Math.sin(t * 13)) * (1 + 1.5 * k.pulse(RIP, 0.03, 0.3) + 1.5 * k.pulse(KNOT, 0.02, 0.35));
-    if (glint > 0.01) k.light(1, wx, wy + 0.25, SZ + 0.55, STEEL_HI, 2.4 * glint * lo, 2.6);
+    if (glint > 0.01) k.light(1, wx, wy + 0.3, SZ + 0.7, STEEL_HI, 0.9 * glint * lo, 2.2);
     const mo = shotC ? sm(4.3, 4.75, t) : shotW ? 0 : 0;
     if (shotC) { k.light(1, MX + 1.5, SY + MY + 2.5, SZ + MZ + 3.5, STEEL, 40 * lo, 12); k.light(2, MX, SY + MY + 0.6, SZ + MZ + 0.5, MOUTH, (8 + 26 * mo) * lo, 7); }
     else if (shotW) k.light(2, MX, SY + MY + 0.6, SZ + MZ + 0.5, MOUTH, 10 * lo, 7);
@@ -423,6 +425,7 @@ vec3 tubeMove(out vec3 nrm) {
     const fl = k.prop('floor'); fl.position.set(0, SY + 12, SZ - 0.75); fl.scale.set(300, 300, 1);
     const knit = k.prop('knit'), U = knit.userData.U; knit.position.set(0, SY, SZ);
     U.uT.value = t; U.uRow0.value = row0; U.uKey.value.set(kx, ky - SY, kz - SZ);
+    { const wv = clamp((t - KNOT) / 0.3, 0, 1); U.uWave.value.set(KNX, KNY, 0.3 + 4.5 * wv, t > KNOT ? 0.55 * (1 - wv) : 0); }
     U.uPull.value.set(ex, pre ? 0.15 : ey + 0.2, pre ? tug * 0.9 : (shotC && t > ARRIVE ? 0 : 0.75), pre ? 0.9 : 1.0);
     const hk = shotC && t < 4.84 ? 1 : 0;
     layYarn(k, t, ex, pre ? 0 : ey, tug, pre, hk);
@@ -446,9 +449,7 @@ vec3 tubeMove(out vec3 nrm) {
       }
     }
 
-    // ---- the knot, waiting in its path; the end tearing past; lint where the yarn leaves the knit
-    if (t < KNOT && t > 2.0) { const kl = k.lit(YARN, KNX, SY + KNY, SZ + 0.3, 0.02);
-      c.ball(KNX, SY + KNY, SZ + 0.22, 0.3, 0.26, 0.24, 0.4, kl, 0, 0.05); c.ball(KNX + 0.26, SY + KNY + 0.12, SZ + 0.2, 0.2, 0.18, 0.18, 1.2, kl, 0, 0.05); c.ball(KNX - 0.22, SY + KNY + 0.14, SZ + 0.2, 0.19, 0.21, 0.17, -0.7, kl, 0, 0.05); }
+    // ---- lint where the yarn leaves the knit
     if (!pre && !shotC && glint > 0.01) { c.acc += dt * 34 * q; while (c.acc > 1) { c.acc--; r.lint.emit(wx + rnd(-0.15, 0.15), wy + 0.1, SZ + 0.25, rnd(-0.6, 0.6), rnd(-2.2, -0.6), rnd(0.4, 1.6), rnd(0.25, 0.5), rnd(0.02, 0.04), Math.random() < 0.5 ? STEEL_HI : STEEL, 0.9, 6, 3, 0.8, undefined, rnd(-5, 5), 0); } }
     if (pre) k.motes(18, wx - 1.2, SY - 0.6, SZ + 0.2, wx + 1.6, SY + 2.2, SZ + 1.1, STEEL, 0.35 * k.ease.out(k.span(0.5, 1.0)), 0.016, 0.04, 3);
     else if (shotC) k.motes(20, MX - 3, SY + MY - 5, SZ + 0.6, MX + 3, SY + MY - 1, SZ + 3, STEEL, 0.25, 0.03, 0.3, 9);

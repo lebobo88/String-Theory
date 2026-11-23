@@ -71,3 +71,20 @@ atlas_in_sting aDXsNAPgqfJpvrGVEe74 8.4 stereo   # take A
 atlas_in_sting_b DVcZwPWHleYgf3RULPCF 8.4 stereo # take B
 atlas_down_sting m3Ny3pGfC7pDtGLkCMSi 7.4 stereo   # take A
 atlas_down_sting_b xENKwcni2VWW3bQf8Zb0 7.4 stereo # take B
+beetle_rumble 7Qr0RsI8TZLfjEiWPNFM 1.3
+beetle_pass yQzPasdjxBYYMSSUCXlu 1.0
+beetle_rail 8p6mC4XV0Mkm7mJqihuh 1.4
+beetle_rail_big xsFvvZ8lLw6DQwlcXlvH 2.0 level
+beetle_skid PjfigkfPrZYvIjMdSBjh 1.2
+beetle_slam iveAHnTSP62u4U91SMQT 2.2 level
+beetle_stamp 7GzbUXzZFxtdEGe2TMw7 1.0
+beetle_crack bj0pEffZd6KPfX29DFkw 1.2
+beetle_throw sIHKZBTmGh8kggQLdzJK 1.9 level
+beetle_plate xkUM3IJd2cCEVjnSH9wa 1.6
+beetle_last o8yjtl5ihVxjn8i43WMo 1.4
+beetle_coin PVBpbY4a8KUECahXKuk1 1.5
+beetle_settle SECHE2CMhgnPyiN2Pm2O 1.8 level
+beetle_in_sting iwUsKrGYmr8c3BVjD92M 8.9 stereo   # take A
+beetle_in_sting_b Yfgp2ji0HrU9Aqqjxn62 8.9 stereo # take B
+beetle_down_sting FOPgF2RrbMt4ZjLFQVel 9.2 stereo   # take A
+beetle_down_sting_b FIIoJVBDkjj3YsdlRCDR 9.2 stereo # take B
