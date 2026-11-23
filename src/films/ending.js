@@ -17,39 +17,47 @@
    like old embroidery. Rhythm: a breath; a lift; eight stitches rising, one a memory (the music box's eight notes); a knot; the
    long pull back; the words; gold; rest.
 
-   ENDING "Keepsake"  len 12.6 s  key 10.7 (the still)  lights 3
+   ENDING "Keepsake"  len 13.0 s  key 11.2 (the still)  lights 3
    idea:     the needle ship climbs the mended cloth and sews each boss it beat into it as a memory, ties off, and the cloth
-             is a sampler of the whole run
-   camera:   one unbroken take: the play camera, sinking behind the ship, a chase up the cloth looking up the weave, a lift to the
-             knot and the sun, the long pull back into the play camera
-   colour:   morning gold, saffron, the ship's madder thread, memories faded warm      rhythm: breath, lift, 1-2-3-4-5-6-7, 8, knot, rest
+             is a sampler of the whole run, framed
+   camera:   one unbroken take: the play camera, sinking behind the ship, a chase up the cloth looking up the weave toward the
+             sun, a lift to the knot under it, the long pull back to the whole piece framed; one cut, under the gold
+   colour:   morning gold and saffron on the Royal weave, the ship's madder thread, memories faded warm
+   rhythm:   breath, lift, 1-2-3-4-5-6-7, 8, knot, the long pull back, the words, the light runs home, gold, rest
    handover: in: the play camera on the whole, still, lit, mended Royal-weave cloth (Daybreak's end); house lights up; the
-             ship where the game left it, which the film takes over. out: the morning light swells to gold (11.0-11.6); under it
-             the sampler and the film's ship go and the game's own ship is back on its row; at 11.6 the film lifts body.stc-solo
-             (the title film's signal) and the victory page comes up over the gold; the gold falls away to the plain cloth at the
-             play camera, house lights up (11.6-12.4); the film ends (12.6) on exactly what the page sits over.
+             ship where the game left it, which the film takes over. out: light runs back down the thread and the picture burns
+             to gold (11.4-12.1); CUT under it to the play camera with the sampler gone and the game's own ship back on its row;
+             at 12.1 the film lifts body.stc-solo (the title film's signal) and the victory page comes up over the gold, which
+             falls away to the plain cloth, house lights up (12.1-12.75); the film ends (13.0) on exactly what the page sits over.
 
    beat      film s       shot (camera, lens)                                what we see                                     light                                 sound / buzz
    morning   0.0-1.1      the play camera, held                              the whole mended cloth, still; the morning      the sun beyond the top rail (light 0) ending_sting 0 (from the
-                                                                             comes over the top rail, warm, falling off      rakes in; a warm pool at the top      King's held golden chord),
-                                                                             down the cloth; the ship's eye catches it                                             ending_morning 0
-   lift      1.1-2.3      one move: the camera sinks behind and below the    the ship rises off its row and sets off up the  + the ship's light (light 1)          ending_lift 1.1, buzz
-                          ship, looking up the cloth; focus on the ship      cloth, its red thread paying out behind it
-   climb     2.3-6.6      the chase: behind and below the ship, looking up   it weaves up between them; as it passes each    the sun ahead, the ship's light       ending_sew x7 (each
-                          the weave toward the light; focus on the ship;     boss it sews it on, stitch by stitch, a hot     on each memory as it passes           memory's first stitch)
-                          memories slide by soft, then sharp                 saffron front, then a warm glow cooling: the
-                                                                             Great Lappet (2.55) ... the Silk Empress (6.15)
-   crown     6.6-7.3      the chase, slowing                                 the Moth King, last and largest, at the top     as before                             ending_last 6.6, buzz
-   knot      7.3-8.4      one lift and push to the knot under the top rail;  the ship rises over the King to the top, ties   the sun (light 0), the knot's glint   ending_knot 7.92, buzz
-                          the sun over the rail; one streak at the knot      off (7.95): the thread drawn tight, a ripple    (light 2)
-                                                                             through the cloth; it lays itself down
-   whole     8.4-10.0     the long pull back and down into the play camera   the whole cloth: eight memories up it on one    the sun's rake fading to plain        (sting: the theme, broad)
-                                                                             red running stitch, the hem to the knot         daylight, house lights to full
-   end       9.2-11.5     the play camera                                    "The cloth is mended." (9.2) "The end" (10.35)  daylight                              ending_letters 9.2, 10.35
-   gold      11.0-11.6    the play camera                                    the morning swells to gold over everything      gold wash (lens flash)                ending_gold 11.0
-   rest      11.6-12.6    the play camera                                    out of the gold: the plain cloth, the game's    house lights up
-                                                                             own ship on its row; the victory page rises
-   still (reduced motion): 10.7, the whole sampler finished, the ship laid down by the knot, under both lines. */
+                                                                             comes over the top rail, warm, falling off      comes up; a warm pool at the top      King's held golden chord),
+                                                                             down the cloth; the ship's tip catches it 0.6                                         ending_morning 0
+   lift      1.1-2.3      one move: the camera sinks behind and below the    the ship rises off its row and sets off up the  + the ship's light (light 1); house   ending_lift 1.1, buzz
+                          ship, looking up the cloth; focus comes onto it    cloth, its red thread paying out behind it;     lights down to 0.55
+                                                                             over the rail a morning sky
+   climb     2.3-6.6      the chase: behind and below the ship, looking up   it weaves up between them, and as it passes     the sun ahead over the rail, the      ending_sew at each memory's
+                          the weave to the sun; focus on the ship            each boss it sews it on, stitch by stitch, a    ship's light on each memory           first stitch (2.3 ... 5.9)
+                                                                             saffron front, its thread running down to the
+                                                                             needle point: the Great Lappet (2.55) ... the
+                                                                             Silk Empress (6.15), side to side
+   crown     6.6-7.3      the chase, slowing                                 the Moth King, last and largest, at the top     as before                             ending_last 6.58, buzz 6.95
+   knot      7.3-8.4      one lift and push to the knot under the top rail;  the ship rises over the King to the rail and    the sun (light 0), the knot's glint   ending_knot 7.92, buzz
+                          the sun over it; one streak at the knot            ties off (7.95): a glint, a ripple through the  (light 2)
+                                                                             cloth; it lays itself down beside the knot
+   whole     8.4-9.9      the long pull back to the whole piece, framed      the sampler: eight memories up the cloth on     the sun's rake easing; house lights   (sting: the theme, broad)
+                          (the cloth in the top two thirds, the dark table   one red running stitch from the hem to the      up
+                          under it); focus lets go                           knot, the ship laid down at the top
+   end       9.0-11.5     the framed wide, held                              under it on the dark: "The cloth is mended."    as before                             ending_letters 9.0, 10.1
+                                                                             (9.0), "The end" (10.1)
+   gold      11.4-12.1    the framed wide; the picture burns to gold          light runs back down the thread from the knot   exposure up from the highlights,      ending_gold 11.4
+                                                                             to the hem, each memory flaring as it passes;  then a gold wash over the cut
+                                                                             everything burns to gold
+   rest      12.1-13.0    CUT under the gold to the play camera              out of the gold: the plain cloth, the game's    house lights up                       (sting rings out)
+                                                                             own ship on its row; the victory page is up
+   still (reduced motion): 11.2, the whole sampler framed, the ship laid down by the knot, both lines under it.
+   reduced motion in the game: the victory page does not play the film at all (src/ui.js); the still is for previews. */
 (function (ST) {
   'use strict';
   const C = ST.content, PAL = C.PAL, L = ST.Cine.lib, FX = ST.fx;
@@ -71,6 +79,7 @@
 
   // ---------- the timeline ----------
   const LIFT = 1.1, CHASE = 2.3, TOP = 7.3, KNOT = 7.95, BACK = 8.4, HOME = 9.9, WORDS1 = 9.0, WORDS2 = 10.1, GOLD0 = 11.5, CUTW = 12.1, LEN = 13.0;
+  const RUN0 = GOLD0 - 0.1, RUN1 = CUTW - 0.15, MRUN = new Float32Array(NMEM);   // the light running back down the thread (see runAt)
   const SUNX = -1.2, SUNY = H + 9, SUNZ = 2.6, SR = 1.05;           // the sun, where Daybreak left it: beyond the top rail at x -1.2
   const GOLDC = [1, 0.7, 0.32], WARM = [1, 0.62, 0.3], HOT = [1, 0.86, 0.62], WASH = [1, 0.8, 0.5];
 
@@ -194,8 +203,8 @@ void main(){
       rest:    [CUTW, LEN, 'out']
     },
     titles: [
-      { text: 'The cloth is mended.', sub: false, at: WORDS1, iv: 0.055, in: 'endsew', pos: [0.5, 0.795], to: 11.75, size: 1 },
-      { text: 'The end', sub: false, at: WORDS2, iv: 0.1, in: 'endsew', pos: [0.5, 0.865], to: 11.75, size: 0.5, rule: false }
+      { text: 'The cloth is mended.', sub: false, at: WORDS1, iv: 0.055, in: 'endsew', pos: [0.5, 0.79], to: 11.75, size: 0.85 },
+      { text: 'The end', sub: false, at: WORDS2, iv: 0.1, in: 'endsew', pos: [0.5, 0.855], to: 11.75, size: 0.7, rule: false }
     ],
     /* The words arrive as the title page's wordmark is sewn: each letter drops in hot, glowing saffron, and cools to the
        wordmark's own linen with its madder shadow. */
@@ -203,15 +212,15 @@ void main(){
       '@keyframes end-sew{0%{opacity:0;transform:translateY(-.16em) scale(.9);color:#FFF4D6;text-shadow:0 0 .55em #E3A93C,0 0 .14em #FFF4D6;filter:blur(1.5px)}' +
       '28%{opacity:1;transform:none;color:#FFF4D6;text-shadow:0 0 .42em #E3A93C,0 .055em 0 #A82A33;filter:none}100%{}}',
     /* The sting is one file from film 0; the film has no slow motion, so its times are real seconds too. */
-    music: { name: 'ending_sting', len: 14.5, gain: 0.85, desc: 'The music for the end of the whole game, played straight after the Moth King\'s death music, which ends on a calm, golden, open major chord held by strings. Instrumental. Warm and tender, full of wonder, never loud. From 0 s that same calm golden major chord, soft strings and a little organ, held and breathing, as if it never stopped. At 1.1 s a soft rising harp figure as something lifts off. From 2.5 s a music box (or celesta) plays a simple, tender rising melody, one note each at 2.55, 3.15, 3.75, 4.35, 4.95, 5.55 and 6.15 s, seven notes climbing, while warm low strings move underneath. At 6.6 s the eighth note, higher, held, with warm horns entering softly under it. At 7.95 s a soft resolving harp chord, like a knot tied. From 8.4 s the full theme opens up: broad, warm strings and horns, the music box melody now carried by the whole orchestra, swelling gently, not loud, as the whole picture is seen. At 10.35 s the melody comes home on its final cadence, a warm major chord. From 11.0 s a soft shimmering swell of high strings and a wordless choir-like pad rising to 11.6 s, then settling back into the same calm golden chord the piece began on, ringing out quietly and fading away by 14.5 s' },
+    music: { name: 'ending_sting', len: 15, gain: 0.85, desc: 'The music for the end of the whole game, played straight after the Moth King\'s death music, which ends on a calm, golden, open major chord held by strings. Instrumental. Warm and tender, full of wonder, never loud. From 0 s that same calm golden major chord, soft strings and a little organ, held and breathing, as if it never stopped. At 1.1 s a soft rising harp figure as something small lifts off. From 2.55 s a music box (or celesta) plays a simple, tender rising melody, one note each at 2.55, 3.15, 3.75, 4.35, 4.95, 5.55 and 6.15 s, seven notes climbing, over warm low strings that move underneath. At 6.95 s the eighth note, higher and held, with soft warm horns entering under it. At 7.95 s a gentle resolving harp chord, like a knot tied. From 8.4 s the whole theme opens out: broad, warm strings and horns carrying the music box melody, swelling gently, never loud. At 10.1 s the melody comes home on its final cadence, a warm major chord, and holds. From 11.4 s a quick soft descending run of celesta notes for half a second, then a shimmering swell of high strings and a wordless choir-like pad rising to 12.1 s; then everything settles back into the same calm golden chord the piece began on, ringing out quietly and fading away by 15 s' },
     sounds: {
       ending_morning: { at: 0.0, len: 2.6, gain: 0.4, desc: 'Morning light coming into a quiet room: a soft warm hush of air that swells gently over 1 s, with a faint high glassy shimmer of sunlight on top; it holds, still and peaceful, and thins away by 2.6 s. No birds, no music' },
       ending_lift:    { at: LIFT, len: 1.4, gain: 0.55, desc: 'A small needle-shaped ship lifting gently off cloth and setting off: a soft airy rising whoosh over 0.6 s with a thin, sweet, silvery hum of steel on top, and from 0.3 s the faint quick rustle of a thread being drawn out behind it; fades by 1.4 s' },
       ending_sew:     { at: [MEMT[0] - 0.25, MEMT[1] - 0.25, MEMT[2] - 0.25, MEMT[3] - 0.25, MEMT[4] - 0.25, MEMT[5] - 0.25, MEMT[6] - 0.25], len: 0.6, gain: 0.45, desc: 'A small cross-stitch picture being sewn very quickly: six soft needle-through-cloth ticks in a quick run over 0.45 s, each with the faint zip of thread pulled through, ending with a tiny soft pluck as the thread pulls snug at 0.48 s. Gentle, close, warm' },
-      ending_last:    { at: MEMT[7] - 0.35, len: 1.1, gain: 0.55, desc: 'The last and biggest cross-stitch picture sewn: nine soft needle-through-cloth ticks over 0.75 s, slowing a little toward the end, each with the faint zip of thread, then at 0.78 s a soft warm glassy bloom like light settling, fading by 1.1 s' },
+      ending_last:    { at: MEMT[7] - 0.375, len: 1.1, gain: 0.55, desc: 'The last and biggest cross-stitch picture sewn: nine soft needle-through-cloth ticks over 0.75 s, slowing a little toward the end, each with the faint zip of thread, then at 0.78 s a soft warm glassy bloom like light settling, fading by 1.1 s' },
       ending_knot:    { at: KNOT - 0.03, len: 1.0, gain: 0.6, desc: 'A thread being tied off in a knot and drawn tight: a quick soft rustle of a loop for 0.15 s, the small taut creak of thread pulled tight at 0.18 s, then one soft bright pluck, like a single damped harp string, at 0.22 s that rings briefly and fades by 1 s' },
       ending_letters: { at: [WORDS1, WORDS2], len: 1.2, gain: 0.35, desc: 'Words being sewn on, one letter at a time: a run of soft quick needle ticks, about one every 0.06 s for 1.1 s, each with a faint thread zip, very light and even' },
-      ending_gold:    { at: GOLD0, len: 2.2, gain: 0.5, desc: 'Warm light filling everything: a soft bright airy swell rising over 0.6 s with a gentle shimmer of tiny high chimes, peaking at 0.6 s, then settling down into a calm hush and fading by 2.2 s. Not loud, no impact' }
+      ending_gold:    { at: RUN0, len: 2.4, gain: 0.5, desc: 'Light running down a long thread and then filling everything: a quick soft descending trickle of tiny glassy chimes over 0.55 s, then a warm bright airy swell rising to a peak at 0.7 s, with a gentle shimmer, settling into a calm hush and fading by 2.4 s. Soft, no impact' }
     },
     buzz: [[LIFT, 12], [MEMT[7], 14], [KNOT, [16, 30, 26]]],
     steps: [
@@ -273,7 +282,7 @@ void main(){
         k.prop('sky').material.uniforms.uA.value = ov; k.prop('holdout').position.set(0, H + 0.45, 0.2);
         const sun = k.prop('sun'), s = 2 * QS * SR; sun.position.set(SUNX, SUNY, SUNZ); sun.lookAt(cam.px, cam.py, cam.pz); sun.scale.set(s, s, 1);
         sun.material.uniforms.uTime.value = t; sun.material.uniforms.uA.value = 0.42 * sunUp * ov;
-        if (!k.has.post) k.flare(SUNX, SUNY, SUNZ, SR * 3.2, K.saffDim, 0.6 * sunUp * ov, 0);
+        if (!k.has.post) k.flare(SUNX, SUNY, SUNZ, SR * 1.5, K.saffDim, 0.45 * sunUp * ov, 0);   // no bloom on the low tier: a small glow round it instead
       }
 
       // ---- the game's own ship: the film flies it, so the game's copy is hidden until the gold
@@ -285,7 +294,7 @@ void main(){
         for (let i = 0; i < NMEM; i++) {
           const a = MEMT[i] - MEMD[i] * 0.5, u = (t - a) / MEMD[i]; if (u <= 0) continue;
           const s = MS[i], done = t - (a + MEMD[i]);
-          const glow = u < 1 ? 0.04 : 0.16 * Math.exp(-done * 2.4) + 0.05 * k.pulse(KNOT + 0.1 + i * 0.06, 0.1, 0.5) + 0.55 * k.pulse(MRUN[i], 0.06, 0.5) + 0.5 * k.ease.in(k.span(CUTW - 0.3, CUTW));
+          const glow = u < 1 ? 0.04 : 0.16 * Math.exp(-done * 2.4) + 0.05 * k.pulse(KNOT + 0.1 + i * 0.06, 0.1, 0.5) + 0.28 * k.pulse(MRUN[i], 0.06, 0.45) + 0.2 * k.ease.in(k.span(CUTW - 0.3, CUTW));
           s.at(MEMX[i], MEMY[i], 0.05, MEMR[i], 1, AGED, glow).edge(K.saffHi, 1.2);
           if (u < 1) { s.sew(u, 'rows');   // the working thread: from the ship's eye down to the stitch going in
             k.thread(SP[4], SP[5], SP[6], s.fx, s.fy, 0.08, 0.026, k.lit(K.madderHi, s.fx, s.fy, 0.4), 0.95, 1, 0.12);
@@ -311,7 +320,7 @@ void main(){
         // the light runs back down the thread from the knot to the hem, through every memory (the gold comes out of it)
         if (t > RUN0 && t < CUTW) { const f = runAt(t), g0 = Math.max(0, Math.floor(f) - 3), g1 = Math.min(TN * TR - 2, Math.ceil(f) + 3), a = 1 - sm(CUTW - 0.25, CUTW, t);
           for (let j = 0; j < TR; j++) { const lo = g0 - j * (TN - 1), hi = g1 - j * (TN - 1); if (hi < 1 || lo > TN - 1) continue;
-            k.rope(j).draw(0.13, K.saffHi, 0.9 * a, 0, true, Math.max(0, lo), Math.min(TN - 1, hi)); }
+            k.rope(j).draw(0.17, K.saffHi, a, 0, true, Math.max(0, lo), Math.min(TN - 1, hi)); }
           const gi = Math.max(0, Math.min(TN * TR - 2, Math.round(f))); r.spr.add(TX[gi], TY[gi], 0.12, 0.9, K.saffHi, 0.9 * a, 0); }
 
         // ---- the knot, and the ship laid down beside it
@@ -339,7 +348,7 @@ void main(){
         lens.streak(0.9 * kp, K.saff, 2.6, 0.9); lens.fringe(0.25 * kp);
         // the gold: the picture burns in from its highlights (exposure), and only at the last the wash covers the cut
         const e = k.ease.in(k.span(GOLD0 + 0.15, CUTW)) * (1 - k.ease.out(k.span(CUTW + 0.05, LEN - 0.25))), w = k.ease.in2(k.span(CUTW - 0.3, CUTW)) * (1 - k.ease.out(k.span(CUTW + 0.05, LEN - 0.25)));
-        if (e > 0.002) { lens.exposure(1 + 1.8 * e); lens.flash(WASH, 1.5 * w + 0.15 * e); }
+        if (e > 0.002) { if (k.has.post) { lens.exposure(1 + 1.8 * e); lens.flash(WASH, 1.5 * w + 0.15 * e); } else lens.flash(WASH, 2.4 * w + 0.6 * e); }   // low tier: no exposure, so the wash carries it
       }
       k.gate(t < CUTW ? 0.11 * Math.min(1, k.ease.out(k.span(0, 0.34))) : 0.11 * (1 - k.ease.io(k.span(CUTW + 0.2, LEN - 0.2))));
     }
@@ -352,7 +361,6 @@ void main(){
 
   /* The run of light down the thread: where it is (a stitch index, 62 the knot, 0 the hem) at film time t, and when it passes
      each memory (MRUN). */
-  const RUN0 = GOLD0 - 0.1, RUN1 = CUTW - 0.15, MRUN = new Float32Array(NMEM);
   function runAt(t) { return (TN * TR - 2) * (1 - k2(clamp((t - RUN0) / (RUN1 - RUN0), 0, 1))); }
   function k2(u) { return u * u * (3 - 2 * u); }
   for (let i = 0; i < NMEM; i++) { const g = clamp((MEMT[i] - T0) / TDT, 0, TN * TR - 2), u = 1 - g / (TN * TR - 2); let lo = 0, hi = 1; for (let n = 0; n < 30; n++) { const m = (lo + hi) / 2; if (k2(m) < u) lo = m; else hi = m; } MRUN[i] = RUN0 + lo * (RUN1 - RUN0); }
@@ -368,10 +376,10 @@ void main(){
   /* Up at the top: the knot under the rail, the sun over it. */
   function knotCam(k, t) {
     const cam = k.cam; cam.fov = 36;
-    cam.orbit(-0.3, H - 0.9, 0.8, cam.fit(4.8, 4.8), 0.98, -0.06, 0.01);
+    cam.orbit(-0.4, H - 0.5, 0.9, cam.fit(6.0, 6.0), 0.97, -0.06, 0.01);
   }
   /* The whole piece, framed, hanging: the cloth in its frame in the top of the picture, the dark table under it for the words. */
-  function wideCam(k) { const cam = k.cam; cam.fov = 30; cam.frame(0, 3.3, W + 2.8, 34.5, 0.08, 0, 0); }
+  function wideCam(k) { const cam = k.cam; cam.fov = 30; cam.frame(0, 4.9, W + 2.8, 39, 0.08, 0, 0); }   // tall enough that the gate never cuts the top rail, on a phone or a wide screen
 
   ST.registerFilm('ending', { solo: true, entrance: ENDING });
 })(window.ST);

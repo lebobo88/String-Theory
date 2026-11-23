@@ -681,7 +681,15 @@
       this.stitchOn();
     }
     /* Victory, after the last boss: the eight bosses crossed off in red thread, the run's numbers, and the credits. */
-    victory(res) {
+    victory(res, filmed) {
+      // ---- the ending film (src/films/ending.js) plays first, guarded as title() guards the title film. The page comes up when the
+      // film lets it in (it lifts body.stc-solo under its closing gold, as the title film does) or when it ends or is skipped.
+      // No film, "reduce motion", or a film that will not start: the page at once.
+      if (!filmed && !calm() && ST.Cine && ST.Cine.has && ST.Cine.has('ending')) {
+        let on = false; try { on = ST.Cine.play('ending'); } catch (e) { try { ST.Cine.stop(); } catch (e2) { /* nothing to stop */ } document.body.classList.remove('stc-on', 'stc-solo'); }
+        if (on) { const wait = () => { if (this.ctl.state !== 'tally') return; if (ST.Cine.active() && document.body.classList.contains('stc-solo')) { requestAnimationFrame(wait); return; } this.victory(res, true); }; requestAnimationFrame(wait); return; }
+      }
+      // ---- /ending film
       const s = this.ctl.sim || {}, p = this.p, n = v => `<span data-n="${v}">${num(v)}</span>`, mode = s.modeId || 'normal';
       const nextMode = Object.keys(C.MODES).find(k => C.MODES[k].need === mode), firstWin = nextMode && (p.stats['won_' + mode] || 0) === 1;
       const rows = [['Coins earned this run', dustTag(res.nightDust || 0, '', 1)], ['Gems earned this run', silkTag(res.nightSilk || 0, '', 1)], ['Best combo', '×' + n(res.bestCombo || 0)]]

@@ -179,3 +179,12 @@ title_sting_short_b DkRLqJhKV96WPUBIkQtZ 3.2 stereo # take B
 # unraveller_down_sting: take A - blare 0-1.6 s (written cut 1.3), quiet, then loud 3.9-4.8 s across the 4.02/4.52 hits; B starts late (2.95 s trimmed) and is loud at 1.7-3.2 s
 # title_sting: take B - pluck run starts 1.8 s (written 1.86) and builds to its densest hits at 4.8-5.2 s (written HIT 5.05); A is loudest at 0.5-2.0 s, wrong for the soft opening, and its hit is late (5.2-5.4 s)
 # title_sting_short: take A - onset at 0.9 s (written HIT 1.02) and holds; B fades away by 1.6 s with nothing at 1.02
+ending_morning z9SUW36t2THSLh5q46Qd 2.6
+ending_lift UWNfFf6NcE6FyW400d88 1.4
+ending_sew bqQWJ5zkBfZy5plgsoz8 0.6
+ending_last 77rVB3Qznyy0qBjk8zuB 1.1
+ending_knot btdr9kbFR28Fkekydsyz 1.0
+ending_letters iVAGTS1k0vZfaYyriJq5 1.2
+ending_gold Blugn6BfIXx6mLhDQsfu 2.4
+ending_sting c7ne6om9YWpVVjEfs15Z 15.0 stereo   # take A
+ending_sting_b SAK7VvuflWuTqTQ0mg3W 15.0 stereo # take B
