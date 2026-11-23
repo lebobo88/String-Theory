@@ -14,38 +14,39 @@
    Colour: night navy, the thread's saffron fire, the linen and madder of the wordmark. Rhythm: a breath, a pluck for every
    letter (faster and faster), a long pull, one hit, and the quiet of the page.
 
-   ENTRANCE "First Thread"  len 6.6 s of film (7.06 s real, slow motion 4.36-4.62)  key 4.3 (the still)  lights 2
+   ENTRANCE "First Thread"  len 6.45 s of film (6.88 s real, slow motion 0.35x round 4.38-4.58)  key 4.3 (the still)  lights 2
    idea:     a needle threads light and sews the name; the last stitch is pulled tight and the name is lit
    camera:   locked macro on the eye with a rack, one cut, then one rising crane to the play camera
    colour:   night, saffron, linen + madder         rhythm: breath, thread, pluck x12 accelerating, pull, HIT, rest
    handover: from the hit the camera is the play camera; the page's veil and the printed wordmark (DOM, in exactly the page's
-             place and size) rise over the stitched name as the flash dies; at 6.04 the page itself fades in under them
-             (its own 0.48 s fade) and the film ends on the page.
+             place and size) rise over the stitched name as the flare dies; at 5.89 (real 6.32) the page itself fades in under
+             them (its own 0.48 s fade) and the film ends on the page (real 6.88).
 
    beat      film s      shot (camera, lens)                              what we see                                light                 sound / buzz
    eye       0.00-1.36   macro, locked, eye of the needle face on; focus   the glowing tip of a thread comes out of   the tip (light 0),    title_sting 0,
                          racks from the tip (foreground) to the eye        the foreground blur and through the eye    moon rim (light 1)    title_glint 0.05,
-                         0.55-0.85; gate 0.11; exposure up from 0           (0.82), and on; the steel catches it                             title_thread 0.62
+                         0.46-0.80; gate 0.11; exposure up from 0.2         (0.82), and on; the steel catches it                             title_thread 0.62
    dive      1.36-1.86   CUT: low, close, on the first stitch of the S     the threaded needle drops point first      the thread at the     title_pierce 1.70,
                                                                            and pierces the dark cloth (1.70)          eye (light 0), pool   buzz 1.70
-   sew       1.86-4.10   one crane from table level to the play camera,    the name is sewn letter by letter, each    light 0 rides with    title_sew 1.86
+   sew       1.86-4.07   one crane from table level to the play camera,    the name is sewn letter by letter, each    light 0 rides with    title_sew 1.86
                          tracking the needle; focus on the needle,         stitch arriving hot and cooling to linen;  the needle; the
                          opening to deep focus; gate opens 3.0-4.0         the needle hops each gap on an arc of       stitches glow behind
                                                                            thread                                       it
-   pull      4.10-4.62   the play camera, held; slow motion 0.35x          the needle draws the thread out and up;    the light runs back   title_pull 4.12
-                         4.36-4.62                                         it goes taut, the cloth puckers, a wave    along the name
+   pull      4.09-4.62   the play camera, held; slow motion 0.35x          the needle draws the thread out and up;    the light runs back   title_pull 4.09
+                         4.38-4.58                                         it goes taut, the cloth puckers, a wave    along the name
                                                                            of light runs back along the name
-   hit       4.62        the play camera; flash, streaks, rays from the    the thread snaps, the needle is flung out,  the whole name        title_snap 4.62,
-                         name, fringe; a ring runs out over the cloth      every stitch flares                         flares                (sting hit), buzz
-   settle    4.62-5.40   the play camera; the flash dies                   the page's veil and the printed name rise  house lights up       title_settle 4.70
+   hit       4.62        the play camera; exposure kick, one anamorphic    the thread snaps, the needle is flung out,  the whole name        title_snap 4.62,
+            (real 5.05)  streak, fringe; a ring runs out over the cloth    every stitch flares                         flares                (sting hit), buzz
+   settle    4.62-5.40   the play camera; the flare dies                   the page's veil and the printed name rise  house lights up       title_settle 4.70
                                                                            over the stitched name                      under the veil
-   rest      5.40-6.04   the play camera                                   the name on the page                        page
-   reveal    6.04-6.60   the play camera                                   the page fades in (tagline, line, Play)     page
+   rest      5.40-5.89   the play camera                                   the name on the page                        page
+   reveal    5.89-6.45   the play camera                                   the page fades in (tagline, line, Play)     page
    still (reduced motion): 4.3, the whole name sewn and glowing, the needle drawing the last thread up.
 
-   SIG "Last Stitch" (the short cut for later launches)  len 2.42 s of film (2.64 s real)  key 0.5  lights 2
-   It is the entrance's own timeline from film 3.70: the crane's last rise over "eory", the pull, the hit, a short rest and
-   the page (it reveals at 0.95 s after the hit instead of 1.42). The same handover. */
+   SIG "Last Stitch" (the short cut for later launches)  len 2.42 s of film (2.52 s real)  key 0.5  lights 2
+   It is the entrance's own timeline from film 3.70, out of black in 0.2 s: the crane's last rise as "ory" is sewn, the pull,
+   the hit (film 0.92, real 1.02), a short rest and the page (it reveals 0.95 s after the hit instead of 1.42). The same
+   handover. */
 (function (ST) {
   'use strict';
   const C = ST.content, PAL = C.PAL, L = ST.Cine.lib, FX = ST.fx;
@@ -66,8 +67,8 @@
   const HOPS = [0.035, 0.03, 0.025, 0.025, 0.025, 0.08, 0.025, 0.02, 0.02, 0.02, 0.02];   // the needle's hop to the next letter (the word space after g)
   const LS = new Float32Array(NL), LE = new Float32Array(NL);
   { let t = SEW0; for (let i = 0; i < NL; i++) { LS[i] = t; LE[i] = t + LDUR[i]; t = LE[i] + (HOPS[i] || 0); } }
-  const SEW1 = LE[NL - 1], PULL0 = SEW1 + 0.02, HIT = 4.62, LEN = 6.6, REVEAL = 6.04, SIG_OFF = 3.70, SIG_REVEAL = HIT + 0.95;
-  const WARM = [1, 0.62, 0.3], HOT = [1, 0.86, 0.6], MOON = [0.42, 0.52, 0.85];
+  const SEW1 = LE[NL - 1], PULL0 = SEW1 + 0.02, HIT = 4.62, LEN = 6.45, REVEAL = 5.89, SIG_OFF = 3.70, SIG_REVEAL = HIT + 0.95;
+  const WARM = [1, 0.72, 0.46], HOT = [1, 0.86, 0.6], MOON = [0.42, 0.52, 0.85];
 
   // ---------- the cells of the name (decoded once) ----------
   let NC = 0, NS2 = 0;
@@ -92,7 +93,7 @@
   // ---------- where the page's wordmark is, in the world ----------
   /* PL: the placement. Screen: the page's wordmark box (or where it would be). World: each cell's centre on the cloth seen
      from the play camera, the size of a cell, the letters' extents. */
-  const PL = { ok: false, fs: 64, lh: 54.4, left: 0, top: 0, sh: 4, cell: 0.054, wx0: -6, wx1: 6, wy: CY, x0: 0, y0: 0 };
+  const PL = { ok: false, key: '', fs: 64, lh: 54.4, left: 0, top: 0, sh: 4, cell: 0.054, wx0: -6, wx1: 6, wy: CY, x0: 0, y0: 0 };
   const WX = new Float32Array(2400), WY = new Float32Array(2400), SX = new Float32Array(2400), SY = new Float32Array(2400);
   const LX0 = new Float32Array(NL), LX1 = new Float32Array(NL), LYT = new Float32Array(NL), LYB = new Float32Array(NL);
   let CAM0 = null, VV = null;
@@ -112,7 +113,9 @@
     if (el) { const b = el.getBoundingClientRect(), cs = getComputedStyle(el);
       if (b.width > 0) { fs = parseFloat(cs.fontSize) || fs; lh = parseFloat(cs.lineHeight) || fs * 0.85; cx = b.left + b.width / 2; top = b.top; color = cs.color; shadow = cs.textShadow || '';
         const m = /(-?[\d.]+)px\s+(-?[\d.]+)px/.exec(shadow); sh = m ? parseFloat(m[2]) : 4; } }
-    PL.fs = fs; PL.lh = lh; PL.left = cx - ADV * fs / 2; PL.top = top; PL.sh = sh; PL.color = color; PL.shadow = shadow;
+    const key = [fs, lh, cx, top, sh, rc.left, rc.top, rc.width, rc.height, r.dist, k.cam.view0].join(',');
+    if (PL.ok && key === PL.key) return;   // the page has not moved since it was measured: nothing to redo
+    PL.key = key; PL.fs = fs; PL.lh = lh; PL.left = cx - ADV * fs / 2; PL.top = top; PL.sh = sh; PL.color = color; PL.shadow = shadow;
     // the play camera, exactly as the film will end on it
     const c0 = CAM0; c0.copy(r.camera); c0.position.set(0, CY - Math.sin(0.2) * r.dist, Math.cos(0.2) * r.dist); c0.up.set(0, 1, 0); c0.lookAt(0, CY + 0.2, 0); c0.fov = k.c.fov0;
     if (c0.view && c0.view.enabled) c0.view.offsetY = k.cam.view0;
@@ -150,21 +153,22 @@
   function buildStitches(T) {
     if (STITCH.mesh) return STITCH.group;
     decode();
-    const n = STITCH.n = NC + NS2, u = STITCH.u = { uT: { value: 0 }, uHot: { value: 0 }, uWX: { value: -99 }, uWK: { value: 0 }, uGlow: { value: new T.Vector3(2.2, 1.1, 0.3) }, uFade: { value: 1 } };
+    const n = STITCH.n = NC + NS2, u = STITCH.u = { uT: { value: 0 }, uHot: { value: 0 }, uWX: { value: -99 }, uWK: { value: 0 }, uGlow: { value: new T.Vector3(1.5, 0.72, 0.2) }, uGlowW: { value: new T.Vector3(0.5, 0.42, 0.3) }, uSelf: { value: 0.06 } };
     const mat = new T.MeshStandardMaterial({ roughness: 0.78, metalness: 0 });
     mat.onBeforeCompile = s => {
       Object.assign(s.uniforms, u);
-      s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT, uHot, uWX, uWK;\nattribute float aT;\nattribute vec2 aUv;\nvarying float vGlow;\nvarying vec2 vUvS;')
+      s.vertexShader = s.vertexShader.replace('#include <common>', '#include <common>\nuniform float uT, uHot, uWX, uWK;\nattribute float aT;\nattribute vec2 aUv;\nvarying float vGlow, vGlowW;\nvarying vec2 vUvS;')
         .replace('#include <begin_vertex>', `#include <begin_vertex>
 float age = uT - aT;
 float pop = age <= 0. ? 0. : 1. - exp(-age * 26.) * cos(min(age, .4) * 24.);
 transformed.xy *= pop; transformed.z = transformed.z * pop + .5 * exp(-max(age, 0.) * 18.) * step(0., age);
 float wx = instanceMatrix[3].x;
-vGlow = age < 0. ? 0. : 1.7 * exp(-age * 2.8) + .22 * exp(-age * .7) + uHot + uWK * exp(-(wx - uWX) * (wx - uWX) * 1.4);
+vGlow = age < 0. ? 0. : 1.1 * exp(-age * 3.4) + uHot + uWK * exp(-(wx - uWX) * (wx - uWX) * 1.4);
+vGlowW = age < 0. ? 0. : .45 * exp(-age * .55) * (1. - exp(-age * 6.));
 vUvS = aUv;`);
-      s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uGlow;\nuniform float uFade;\nvarying float vGlow;\nvarying vec2 vUvS;')
+      s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform vec3 uGlow, uGlowW;\nuniform float uSelf;\nvarying float vGlow, vGlowW;\nvarying vec2 vUvS;')
         .replace('#include <color_fragment>', '#include <color_fragment>\nfloat ply = .8 + .2 * sin((vUvS.x * 7. + vUvS.y * 1.7) * 6.2832);\ndiffuseColor.rgb *= ply * (.55 + .45 * sin(vUvS.y * 3.1416));')
-        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += uGlow * vGlow * ply;');
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += (uGlow * vGlow + uGlowW * vGlowW * .4 + diffuseColor.rgb * (vGlowW * .9 + uSelf)) * ply;');
     };
     mat.customProgramCacheKey = () => 'title-stitch';
     const hi = legGeo(T, 4), lo = legGeo(T, 2);
@@ -206,8 +210,8 @@ vUvS = aUv;`);
   }
   /* Polished steel reflects a room, and there is no room: a little one is drawn in the steel itself. In view space, a warm soft
      band where the thread's light is and a cold band behind, so a thin needle carries a bright line down its length. */
-  function steel(m, u) {
-    u.uEnv = { value: 1 }; u.uWarm = { value: new m.color.constructor(1, 0.7, 0.4) }; u.uWarmDir = { value: new m.color.constructor(0.6, 0.2, 0.8) };
+  function steel(T, m, u) {
+    u.uEnv = { value: 1 }; u.uWarm = { value: new T.Vector3(1, 0.7, 0.4) }; u.uWarmDir = { value: new T.Vector3(0.6, 0.2, 0.8) };
     const before = m.onBeforeCompile;
     m.onBeforeCompile = s => { before(s); s.uniforms.uEnv = u.uEnv; s.uniforms.uWarm = u.uWarm; s.uniforms.uWarmDir = u.uWarmDir;
       s.fragmentShader = s.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uEnv;\nuniform vec3 uWarm, uWarmDir;')
@@ -215,18 +219,18 @@ vUvS = aUv;`);
 { vec3 Vv = normalize(vViewPosition); vec3 Rf = reflect(-Vv, normal); vec3 wd = normalize(uWarmDir);
   float warm = pow(max(dot(Rf, wd), 0.), 18.) * 3.2 + pow(max(dot(Rf, wd), 0.), 3.) * .25;
   float cold = smoothstep(.25, .95, Rf.y) * .55 + pow(max(-Rf.x * .7 + Rf.y * .7, 0.), 12.) * 1.4;
-  float fr = pow(1. - max(dot(normal, Vv), 0.), 3.);
-  reflectedLight.indirectSpecular += uEnv * (uWarm * warm + vec3(.35, .45, .7) * cold * (.4 + fr)); }`); };
+  float fr = pow(1. - max(dot(normal, Vv), 0.), 3.), face = pow(max(Rf.z, 0.), 3.) * .2 + pow(max(Rf.z * .8 - Rf.y * .6, 0.), 24.) * .5;
+  reflectedLight.indirectSpecular += uEnv * (uWarm * warm + vec3(.35, .45, .7) * cold * (.4 + fr) + vec3(.62, .58, .55) * face); }`); };
   }
   function buildNeedle(T) {
     if (NEEDLE) return NEEDLE;
-    const prof = [[0, 0], [0.0032, 0.012], [0.0085, 0.06], [0.0145, 0.19], [0.0188, 0.38], [0.0204, 0.56], [0.021, 1.26], [0.0204, 1.4], [0.0185, 1.43]];
-    const lathe = new T.LatheGeometry(prof.map(p => new T.Vector2(p[0], p[1])), 16);
-    const s = new T.Shape(); s.moveTo(-0.0172, 1.395); s.lineTo(-0.0212, 1.5); s.lineTo(-0.0212, 1.64); s.quadraticCurveTo(-0.0212, 1.705, 0, 1.712); s.quadraticCurveTo(0.0212, 1.705, 0.0212, 1.64); s.lineTo(0.0212, 1.5); s.lineTo(0.0172, 1.395); s.lineTo(-0.0172, 1.395);
-    const h = new T.Path(); h.moveTo(-0.0072, 1.515); h.lineTo(-0.0072, 1.655); h.quadraticCurveTo(0, 1.672, 0.0072, 1.655); h.lineTo(0.0072, 1.515); h.quadraticCurveTo(0, 1.498, -0.0072, 1.515); s.holes.push(h);
-    const ex = new T.ExtrudeGeometry(s, { depth: 0.017, bevelEnabled: true, bevelThickness: 0.0065, bevelSize: 0.005, bevelSegments: 3, curveSegments: 8 }); ex.translate(0, 0, -0.0085);
-    const I = new T.Matrix4(), geo = FX.merge(T, [[lathe, I], [ex, I]]);
-    const mat = clipMat(T, { color: new T.Color('#D7DCE8'), metalness: 0.9, roughness: 0.24 }, 'title-needle'); steel(mat, mat.userData.u);
+    const prof = [[0, 0], [0.0032, 0.012], [0.0085, 0.06], [0.0145, 0.19], [0.0188, 0.38], [0.0204, 0.56], [0.021, 1.26], [0.0196, 1.42], [0.0158, 1.48], [0.0118, 1.505], [0.0105, 1.512]];
+    const lathe = new T.LatheGeometry(prof.map(p => new T.Vector2(p[0], p[1])), 18);
+    // the eye: an oval loop of steel (a tube round an oval path), flattened front to back
+    const pts = []; for (let i = 0; i < 40; i++) { const a = i / 40 * TAU, c = Math.cos(a), sn = Math.sin(a); pts.push(new T.Vector3(c * 0.0134, 1.585 + Math.sign(sn) * Math.pow(Math.abs(sn), 0.7) * 0.078, 0)); }
+    const loop = new T.TubeGeometry(new T.CatmullRomCurve3(pts, true), 64, 0.0084, 10, true); loop.scale(1, 1, 1.4);
+    const I = new T.Matrix4(), geo = FX.merge(T, [[lathe, I], [loop, I]]);
+    const mat = clipMat(T, { color: new T.Color('#D7DCE8'), metalness: 0.9, roughness: 0.24 }, 'title-needle'); steel(T, mat, mat.userData.u);
     const m = new T.Mesh(geo, mat);
     m.frustumCulled = false; m.renderOrder = 2; NEEDLE = m; return m;
   }
@@ -310,7 +314,6 @@ vUvS = aUv;`);
   // ---------- one frame of the film, at entrance time T ----------
   const NP = new Float32Array(8);   // the needle this frame: point x y z, eye x y z
   const QS = { revealed: false, rrt: 0 };
-  const AX = new Float32Array(3);
   let Q1 = null, Q2 = null, YA = null, VA = null;
   function needle(k, px, py, pz, ax, ay, az, spin, clip) {   // stand it with its point at p, its axis (point to head) along a
     const m = k.prop('needle', buildNeedle); let l = Math.sqrt(ax * ax + ay * ay + az * az) || 1; ax /= l; ay /= l; az /= l;
@@ -324,144 +327,149 @@ vUvS = aUv;`);
     let i = 0; while (i < NL - 1 && T >= LS[i + 1]) i++;
     if (T < LS[0]) { FR[0] = LX0[0]; FR[1] = (LYT[0] + LYB[0]) * 0.5; FR[2] = 0; FR[3] = PL.x0; FR[4] = PL.y0; FR[5] = 0; FR[6] = 0; FR[7] = 0; return; }
     const mid = (LYT[i] + LYB[i]) * 0.5, amp = (LYT[i] - LYB[i]) * 0.32;
-    if (T < LE[i] || i === NL - 1) { const f = clamp((T - LS[i]) / LDUR[i], 0, 1), fl = clamp((T - 0.03 - LS[i]) / LDUR[i], 0, 1);
+    if (T < LE[i] || i === NL - 1) { const f = clamp((T - LS[i]) / LDUR[i], 0, 1), fl = clamp((T - 0.16 - LS[i]) / LDUR[i], 0, 1);
       FR[0] = lerp(LX0[i], LX1[i], f); FR[1] = mid + Math.sin(f * PI * 3.2) * amp; FR[2] = 0; FR[3] = lerp(LX0[i], LX1[i], fl); FR[4] = mid + Math.sin(fl * PI * 3.2) * amp; FR[5] = i; FR[6] = 0; FR[7] = f; return; }
     const g = clamp((T - LE[i]) / (LS[i + 1] - LE[i]), 0, 1), e = g * g * (3 - 2 * g), mid2 = (LYT[i + 1] + LYB[i + 1]) * 0.5, y1 = mid + Math.sin(PI * 3.2) * amp;
     FR[0] = lerp(LX1[i], LX0[i + 1], e); FR[1] = lerp(y1, mid2, e); FR[2] = Math.sin(PI * g) * (0.22 + (LS[i + 1] - LE[i]) * 4); FR[3] = LX1[i]; FR[4] = y1; FR[5] = i; FR[6] = 1; FR[7] = 1;
   }
 
   function draw(k, T, dt, M) {
-    const r = k.r, K = k.K, cam = k.cam, lens = k.lens, cloth = k.cloth, q = k.q(), post = k.has.post, lo = post ? 1 : 0.5;
+    const r = k.r, K = k.K, cam = k.cam, lens = k.lens, cloth = k.cloth, post = k.has.post, lo = post ? 1 : 0.5;
     if (!PL.ok) { k.dark(1, 1); k.gate(0.11); return; }
-    const u = STITCH.u, th = k.prop('thread', buildThread);
+    const u = STITCH.u; k.prop('thread', buildThread);
     const st = k.prop('stitches', buildStitches); st.children[0].visible = k.tier.name !== 'low'; st.children[1].visible = k.tier.name === 'low';
     u.uT.value = T;
-    const hit = T >= HIT, rev = M.reveal, after = hit ? T - HIT : -1;
+    const hit = T >= HIT, after = hit ? T - HIT : -1;
     // ---- house lights, the page's veil and name
     const up = hit ? k.ease.io(sm(HIT + 0.12, HIT + 0.62, T)) : 0;
     k.dark(1 - up, 1 - up);
-    if (!hit || up < 1) k.quiet(true, true);
-    let veil = hit ? 0.86 * k.ease.out(sm(HIT + 0.14, HIT + 0.78, T)) : 0, mark = hit ? k.ease.io(sm(HIT + 0.18, HIT + 0.62, T)) : 0;
-    if (T >= rev && !k.still) {
+    if (up < 1) k.quiet(true, true);
+    let veil = hit ? 0.86 * k.ease.out(sm(HIT + 0.12, HIT + 0.7, T)) : 0, mark = hit ? k.ease.io(sm(HIT + 0.16, HIT + 0.58, T)) : 0;
+    if (T >= M.reveal && !k.still) {
       if (!QS.revealed) { QS.revealed = true; QS.rrt = k.rt; document.body.classList.remove('stc-solo'); }   // the page fades in under the film's own veil and name
       const a = pageFade((k.rt - QS.rrt) / 0.48); veil = Math.max(0, 1 - 0.14 / (1 - 0.86 * a)); mark = 1;
     }
     op(veil, mark);
+    const ndl = k.prop('needle', buildNeedle).material.userData.u;
 
-    // ---- the thread's light and the moon's rim
-    const ign = clamp(T / 0.35, 0, 1);
-    // ---- the needle and the thread, by shot
-    let lx = 0, ly = 0, lz = 0, li = 0;
     const F0x = PL.x0, F0y = PL.y0, E1x = F0x - 0.05, E1y = F0y - 0.15, E1z = 1.72;   // where the needle waits over the first stitch
+    let ga = 0;   // the glowing line drawn over the thread (for when the tube is thinner than a pixel)
     if (T < CUT1) {
-      // the eye: the needle stands upright over the first stitch; the thread's lit tip comes out of the foreground and through
-      const sway = Math.sin(T * 1.3) * 0.004;
+      // ---- the eye: the needle stands upright over the first stitch; the lit tip of a thread comes out of the foreground blur
+      // and through the eye; the steel takes its light
+      const ign = k.ease.out(clamp(T / 0.4, 0, 1)), sway = Math.sin(T * 1.3) * 0.003;
       needle(k, E1x + sway, E1y, E1z - LEYE, 0.002, 0, 1, 0, -0.5);
-      const ex = NP[3], ey = NP[4], ez = NP[5], tu = clamp(T / TIP_IN, 0, 1), te = 1 - Math.pow(1 - tu, 2.2);
-      // the tip's path: from the lower left of the foreground, through the eye along +y, on beyond it
-      let tx, ty, tz;
-      if (T < TIP_IN) { tx = lerp(ex - 0.13, ex, te); ty = lerp(ey - 0.5, ey, te); tz = lerp(ez - 0.15, ez, te) + Math.sin(te * PI) * 0.025; }
-      else { const v = k.ease.out(clamp((T - TIP_IN) / 0.5, 0, 1)); tx = ex + v * 0.02; ty = ey + v * 0.34; tz = ez - v * v * 0.09; }
-      const fx = ex - 0.5, fy = ey - 1.35, fz = ez - 0.55;   // the far end, behind the lens
-      if (T < TIP_IN) { curve(0, NSP - 1, fx, fy, fz, tx, ty, tz, 0.06, 0.04, 0.15, 1, 0.0042, 0.0036); }
-      else { curve(0, NM, fx, fy, fz, ex, ey, ez, 0.05, 0.03, 0.15, 0.7, 0.0042, 0.0042); curve(NM, NSP - 1, ex, ey, ez, tx, ty, tz, 0.0, 0.0, 0.7, 1, 0.0042, 0.0034); }
-      for (let i = 0; i < NSP; i++) SPG[i] *= ign;
-      lx = tx; ly = ty - 0.02; lz = tz + 0.01; li = (0.32 + 0.1 * Math.sin(T * 23)) * ign;
-      k.light(0, lx, ly, lz, WARM, li * 0.9 * lo, 0.9);
-      k.light(1, ex - 0.35, ey + 0.9, ez + 0.6, MOON, 0.55 * ign * lo, 3);
-      k.flare(tx, ty, tz, 0.035, K.saffHi, 0.9 * ign, 0); if (!post) k.flare(tx, ty, tz, 0.08, K.saffDim, 0.8 * ign, 0);
-      const thr = k.pulse(TIP_IN, 0.04, 0.35); if (thr > 0) k.flare(ex, ey, ez + 0.01, 0.05, K.glare, 0.9 * thr, 0.6);
-      k.motes(18, ex - 0.25, ey - 0.75, ez - 0.25, ex + 0.25, ey + 0.4, ez + 0.25, K.saffHi, 0.32 * ign, 0.006, 0.02, 5);
-      // the camera: macro, the eye face on, a slow push; the focus racks from the tip to the eye as it arrives
-      const push = k.ease.out(clamp(T / CUT1, 0, 1)) * 0.1;
-      cam.at(ex + 0.12, ey - 0.98 + push, ez - 0.03, ex + 0.004, ey, ez - 0.02, 0.05, 24).handheld(0.003, 0.8);
-      const rack = k.ease.io(sm(0.5, 0.82, T)); lens.focus(lerp(tx, ex, rack), lerp(ty, ey, rack), lerp(tz, ez, rack), 3, 0.022);
-      lens.exposure(Math.min(1, 0.15 + T / 0.3));
-      k.vig(0.55); k.gate(0.11);
+      const ex = NP[3], ey = NP[4], ez = NP[5], tu = clamp(T / TIP_IN, 0, 1), te = k.ease.io(tu) * 0.7 + tu * 0.3;
+      let tx, ty, tz;   // the tip: from the lower left of the foreground, through the eye along +y, on beyond it
+      if (T < TIP_IN) { tx = lerp(ex + 0.045, ex, te); ty = lerp(ey - 0.9, ey, te); tz = lerp(ez - 0.1, ez, te) + Math.sin(te * PI) * 0.025; }
+      else { const v = k.ease.out(clamp((T - TIP_IN) / 0.54, 0, 1)); tx = ex + v * 0.015; ty = ey + v * 0.3; tz = ez - v * v * 0.07; }
+      const fx = ex - 0.3, fy = ey - 1.75, fz = ez - 0.45;   // the far end, behind the lens
+      if (T < TIP_IN) { curve(0, NSP - 1, fx, fy, fz, tx, ty, tz, 0.05, 0.03, 0, 0, 0.0028, 0.0025); heat(NSP - 1, 0.035, 0.9 * ign, 0.02); }
+      else { curve(0, NM, fx, fy, fz, ex, ey, ez, 0.04, 0.02, 0, 0, 0.0028, 0.0028); curve(NM, NSP - 1, ex, ey, ez, tx, ty, tz, 0, 0, 0, 0, 0.0028, 0.0024); heat(NSP - 1, 0.035, 0.9, 0.02); }
+      // light 0 is the tip's own light; light 1 the cold moon behind the needle
+      k.light(0, tx + 0.012, ty - 0.03, tz + 0.012, WARM, (0.09 + 0.02 * Math.sin(T * 23)) * ign * lo, 0.7);
+      k.light(1, ex - 0.4, ey + 0.8, ez + 0.7, MOON, 0.45 * ign * lo, 3);
+      ndl.uEnv.value = 0.35 + 0.65 * k.ease.io(sm(0.35, TIP_IN, T)); ndl.uWarmDir.value.set(-0.5, -0.15, 0.85);
+      k.flare(tx, ty, tz, 0.011, K.saffHi, 0.6 * ign, 0); if (!post) k.flare(tx, ty, tz, 0.035, K.saffDim, 0.8 * ign, 0);
+      // the cut end of the thread: a few fibres splayed from it, catching its light
+      { const dx = tx - SPX[NSP - 3], dy = ty - SPY[NSP - 3], dz = tz - SPZ[NSP - 3], dl = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+        for (let f = 0; f < 4; f++) { const a = f * 1.7 + 0.4, sx = Math.cos(a) * 0.006, sz = Math.sin(a) * 0.006, L = 0.012 + 0.006 * hash(f * 3.1);
+          k.thread(tx, ty, tz, tx + dx / dl * L + sx, ty + dy / dl * L, tz + dz / dl * L + sz, 0.0011, K.saffHi, 0.85 * ign, 1, 0, true); } }
+      const thr = k.pulse(TIP_IN, 0.03, 0.3); if (thr > 0) k.flare(ex, ey, ez + 0.012, 0.03, K.glare, 0.8 * thr, 0.5);
+      k.motes(16, ex - 0.22, ey - 0.6, ez - 0.32, ex + 0.22, ey + 0.5, ez + 0.2, K.saffHi, 0.28 * ign, 0.004, 0.015, 5);
+      // the camera: macro, the eye face on in the upper third, a slow push; the focus racks from the tip to the eye
+      const push = k.ease.out(clamp(T / CUT1, 0, 1)) * 0.12;
+      cam.at(ex + 0.1, ey - 1.62 + push, ez - 0.08, ex + 0.003, ey, ez - 0.07, 0.04, 17).handheld(0.0025, 0.8);
+      const rack = k.ease.io(sm(0.46, 0.8, T)); lens.focus(lerp(tx, ex, rack), lerp(ty, ey, rack), lerp(tz, ez, rack), 3, 0.024);
+      lens.exposure(Math.min(1, 0.2 + T / 0.25));
+      k.vig(0.6); k.gate(0.11);
     } else {
       // ---- after the cut: the dive, the sewing, the pull, the snap
       front(T);
       const ax0 = -0.5, ay0 = 0.45, az0 = 0.74;   // the needle's lean while it sews: head back and away, across the low camera's view
-      let px, py, pz, ax = ax0, ay = ay0, az = az0, spin = 0.9, clip = 0;
-      let anx = FR[3], any = FR[4], anz = 0.004, arc = 0.1, bow = 0.04, tens = 0, ancG = 0.3;
+      let px, py, pz, ax = ax0, ay = ay0, az = az0, spin = 0.9;
+      let anx = FR[3], any = FR[4], anz = 0.004, arc = 0.1, bow = 0.04, tens = 0;
       if (T < SEW0) {   // the dive: from over the first stitch, point first, through the cloth
         const d = k.ease.in2(clamp((T - CUT1) / (PIERCE - CUT1), 0, 1)), out = k.ease.out(clamp((T - PIERCE - 0.04) / (SEW0 - PIERCE - 0.04), 0, 1));
         const lean = k.ease.io(clamp((T - CUT1) / 0.3, 0, 1));
         ax = lerp(0.002, ax0, lean); ay = lerp(0, ay0, lean); az = lerp(1, az0, lean);
-        px = F0x - 0.02; py = F0y + 0.02; pz = lerp(0.3, -0.42, d) + out * 0.3;
-        anx = F0x; any = F0y; arc = 0.25; ancG = T >= PIERCE ? 0.5 : 0;
+        px = F0x - 0.02; py = F0y + 0.02; pz = lerp(0.45, -0.42, d) + out * 0.28;
+        anx = F0x; any = F0y; arc = 0.25;
       } else if (T < PULL0) {   // sewing: the point works along the front, dipping through the cloth; between letters it hops
         const bob = Math.abs(Math.sin((T - SEW0) * PI * 9.5)), hop = FR[2];
         px = FR[0] + 0.05; py = FR[1] - 0.04; pz = hop > 0.001 ? 0.05 + hop * 1.2 : -0.18 + 0.26 * bob;
-        arc = 0.12 + hop * 0.9; bow = 0.06;
-      } else {          // the pull: up and away to the right; the thread goes taut; then it snaps and the needle is flung out
+        arc = 0.34 + hop * 0.9; bow = -0.22;
+      } else {          // the pull: up toward the lens and away; the thread goes taut; then it snaps and the needle is flung out
         const pu = k.ease.out(clamp((T - PULL0) / (HIT - PULL0), 0, 1)), fl = hit ? T - HIT : 0;
         anx = LX1[NL - 1] + 0.02; any = (LYT[NL - 1] + LYB[NL - 1]) * 0.5 + 0.05;
-        px = anx + 0.1 + pu * 1.35 + fl * 9; py = any + pu * 0.5 + fl * 6; pz = 0.1 + pu * 1.45 + fl * 7;
+        px = anx + 0.05 - pu * 0.7 - fl * 6; py = any + pu * 1.0 + fl * 8; pz = 0.1 + pu * 2.2 + fl * 9;
         const dx = px - anx, dy = py - any, dz = pz - anz; ax = lerp(ax0, dx, pu); ay = lerp(ay0, dy, pu); az = lerp(az0, dz, pu); spin = 0.9 + fl * 30;
-        tens = pu; arc = lerp(0.2, 0, pu) + (hit ? 0 : Math.sin(T * 90) * 0.012 * pu); bow = 0;
+        tens = pu; arc = lerp(0.2, 0, pu) + (hit ? 0 : Math.sin(T * 90) * 0.01 * pu); bow = 0;
       }
-      needle(k, px, py, pz, ax, ay, az, spin, clip);
+      needle(k, px, py, pz, ax, ay, az, spin, 0);
       const ex = NP[3], ey = NP[4], ez = NP[5];
-      // the thread: from the last stitch (or, before the first, from the hole) up to the eye, and the tail beyond it
+      // the thread: from the last stitch (before the first, up out of the picture) to the eye, and the tail beyond it
       const tl = 0.3, gl = hit ? Math.max(0, 1 - after * 3) : 1;
       if (!hit) {
-        if (T < PIERCE) {   // before the first stitch it leads up out of the picture
-          curve(0, NM, ex - 1.6, ey - 0.4, ez + 2.4, ex, ey, ez, 0.0, 0.25, 0.25, 0.9, 0.0042, 0.0042);
-        } else curve(0, NM, anx, any, anz, ex, ey, ez, arc, bow, ancG + tens * 0.8, 1, 0.0042, 0.0042);
-        curve(NM, NSP - 1, ex, ey, ez, ex - ax * 0.05 + 0.02, ey - ay * 0.05 - 0.04, ez - tl, 0, 0.02, 0.8, 0.25, 0.0042, 0.0036);
+        if (T < PIERCE) curve(0, NM, ex - 1.6, ey - 0.4, ez + 2.4, ex, ey, ez, 0.0, 0.25, 0, 0, 0.0028, 0.0028);
+        else curve(0, NM, anx, any, anz, ex, ey, ez, arc, bow, 0, 0, 0.0028, 0.0028);
+        curve(NM, NSP - 1, ex, ey, ez, ex - ax * 0.05 + 0.02, ey - ay * 0.05 - 0.04, ez - tl, 0, 0.02, 0, 0, 0.0028, 0.0025);
+        heat(NM, 0.45, 1.6, 0.3 + 0.6 * tens);
       } else {   // snapped: the loose end whips after the needle
         const w = Math.min(1, after * 5), wx = lerp(anx, ex - 0.6, w), wy = lerp(any, ey - 0.4, w), wz = lerp(anz, ez - 0.5, w);
-        curve(0, NM, wx, wy, wz, ex, ey, ez, 0.3 * Math.sin(after * 30) * (1 - w), 0.2 * Math.sin(after * 22), gl, gl, 0.0042, 0.0042);
-        curve(NM, NSP - 1, ex, ey, ez, ex + 0.02, ey - 0.06, ez - tl, 0, 0, gl, gl * 0.3, 0.0042, 0.0036);
+        curve(0, NM, wx, wy, wz, ex, ey, ez, 0.3 * Math.sin(after * 30) * (1 - w), 0.2 * Math.sin(after * 22), 0, 0, 0.0028, 0.0028);
+        curve(NM, NSP - 1, ex, ey, ez, ex + 0.02, ey - 0.06, ez - tl, 0, 0, 0, 0, 0.0028, 0.0025);
+        heat(NM, 0.3, 1.3 * gl, 0.1 * gl);
       }
-      // the light rides at the eye, a little down the thread toward the cloth
-      lx = lerp(ex, px, 0.5); ly = lerp(ey, py, 0.5); lz = Math.max(0.12, lerp(ez, pz, 0.45)); li = hit ? Math.max(0, 1 - after * 4) : 1;
-      const flick = 0.9 + 0.1 * Math.sin(T * 31) * Math.sin(T * 7.3);
-      const lp = T < SEW0 ? 4 : 6.5 + tens * 4;
-      k.light(0, lx, ly, lz, WARM, lp * li * flick * lo, 2.4 + tens * 1.4);
-      k.pool(lx, ly, 1.0 + lz * 1.6, K.saff, 0.14 * li * Math.min(1, 1.2 - lz * 0.3));
-      const moon = hit ? Math.max(0, 1 - after * 2.5) : 1;
-      k.light(1, -5, 17, 7, MOON, 16 * moon * lo, 26);
-      if (li > 0.01) { k.flare(ex, ey, ez, 0.12, K.saffHi, 0.75 * li, 0); if (!post) k.flare(ex, ey, ez, 0.3, K.saffDim, 0.6 * li, 0); }
-      // the pierce: light bursts out of the hole
-      const pk = k.pulse(PIERCE, 0.02, 0.3); if (pk > 0) { k.flare(F0x, F0y, 0.04, 0.4 + 0.5 * pk, K.saffHi, pk, 0.8); k.pool(F0x, F0y, 1.6, K.saff, 0.35 * pk); }
+      ga = gl;
+      // the light rides at the eye, a little off the steel toward the lens, so the needle takes a glint
+      const li = hit ? Math.max(0, 1 - after * 4) : 1, flick = 0.92 + 0.08 * Math.sin(T * 31) * Math.sin(T * 7.3);
+      const dv = T < SEW0 ? 1 : 0, lx = lerp(ex + 0.05, px, dv * 0.6), ly = lerp(ey - 0.12, py, dv * 0.6), lz = Math.max(0.16, lerp(ez - 0.1, pz + 0.25, dv * 0.6));
+      const lp = (dv ? 0.6 : 1.9 + tens * 2.2) * li * flick * lo;
+      k.light(0, lx, ly, lz, WARM, lp, dv ? 2.6 : 2.2 + tens * 1.2);
+      if (li > 0.01) k.pool(lx, ly, 0.4 + lz * 0.7, K.saff, (dv ? 0.02 : 0.03) * li);
+      const moon = (hit ? Math.max(0, 1 - after * 2.5) : 1) * (0.7 + 0.3 * sm(2.2, 3.6, T));
+      k.light(1, -4.5, 15.5, 6.5, MOON, 85 * moon * lo, 26);
+      ndl.uEnv.value = 1; ndl.uWarmDir.value.set(0.55, -0.1, 0.83);
+      if (li > 0.01) { k.flare(ex, ey, ez, 0.07, K.saffHi, 0.6 * li, 0); if (!post) k.flare(ex, ey, ez, 0.22, K.saffDim, 0.6 * li, 0); }
+      // the pierce: a breath of light out of the hole
+      const pk = k.pulse(PIERCE, 0.02, 0.28); if (pk > 0) { k.flare(F0x, F0y, 0.03, post ? 0.16 + 0.12 * pk : 0.03 + 0.02 * pk, K.saffHi, 0.8 * pk, post ? 0.4 : 1.2); k.pool(F0x, F0y, 0.9, K.saff, 0.12 * pk); }
       // the stitches: a wave of light runs back along the name as it is pulled tight; at the snap, all of it flares
-      u.uWK.value = tens > 0 && !hit ? 1.6 * tens : 0; u.uWX.value = lerp(PL.wx1 + 1, PL.wx0 - 1, k.ease.in2(tens));
-      u.uHot.value = hit ? 2.6 * Math.exp(-after * 5.5) + 0.1 * Math.exp(-after * 1.2) : tens * 0.35;
+      u.uWK.value = tens > 0 && !hit ? 0.9 * tens : 0; u.uWX.value = lerp(PL.wx1 + 1, PL.wx0 - 1, k.ease.in2(tens));
+      u.uHot.value = (hit ? 2.4 * Math.exp(-after * 5) + 0.08 * Math.exp(-after * 1.2) : tens * 0.22) * (post ? 1 : 0.75); if (post) u.uGlow.value.set(1.5, 0.72, 0.2); else u.uGlow.value.set(0.85, 0.6, 0.36);
       // the cloth: puckered toward the pulling needle, and the ring the snap sends out over it
-      if (tens > 0.02 && !hit) cloth.pull(anx + 0.15, any, 0.18 * tens, 0.06 * tens, 0.55).bulge(anx + 0.2, any, 0.45, 0.06 * tens);
-      if (hit && after < 0.9) cloth.wave((PL.wx0 + PL.wx1) * 0.5, PL.wy, 0.5 + after * 15, 0.16 * (1 - after / 0.9), 0.8);
+      if (tens > 0.02 && !hit) cloth.pull(anx + 0.15, any, 0.14 * tens, 0.1 * tens, 0.55).bulge(anx + 0.15, any + 0.05, 0.4, 0.07 * tens);
+      if (hit && after < 0.9) cloth.wave((PL.wx0 + PL.wx1) * 0.5, PL.wy, 0.5 + after * 15, 0.14 * (1 - after / 0.9), 0.8);
 
-      // ---- the camera: the dive shot, then one crane up to the play camera
-      if (T < PULL0 + 0.1) {
-        const tx = lerp(F0x, FR[0], T < SEW0 ? 0 : 0.85), ty = lerp(F0y, FR[1], T < SEW0 ? 0 : 0.85);
-        const near = k.ease.out(clamp((T - CUT1) / 0.6, 0, 1));
-        cam.orbit(tx + 0.06, ty + 0.05, 0.22, lerp(1.9, 1.6, near), 1.2, -0.62, 0.04, 34).handheld(0.008, 1);
-        cam.mark().home().mix(k.ease.io(sm(SEW0 + 0.1, PULL0 + 0.05, T)));
-        cam.handheld(lerp(0.008, 0, sm(3.4, 4.0, T)), 1);
+      // ---- the camera: the dive shot, then one crane from table level up to the play camera. Distance moves in log space, so
+      // the rise keeps accelerating; the camera tracks the needle until the name is mostly sewn, then settles on the middle.
+      if (T < PULL0 + 0.06) {
+        const near = k.ease.io(clamp((T - CUT1) / 0.55, 0, 1)), e = sm(SEW0 + 0.05, PULL0 + 0.04, T), e2 = e * e * (1.6 - 0.6 * e);
+        const trk = T < SEW0 ? 1 : 1 - sm(0.45, 1, e2), nx = T < SEW0 ? F0x : FR[0], ny = T < SEW0 ? F0y : FR[1];
+        const d0 = lerp(2.7, 1.35, near), dist = Math.exp(lerp(Math.log(d0), Math.log(r.dist), Math.pow(e2, 1.25)));
+        cam.orbit(lerp(0, nx + 0.05, trk), lerp(CY + 0.2, ny + 0.05, trk), lerp(0.75, 0.2, near) * (1 - e2), dist, lerp(1.22, 0.2, Math.pow(e2, 0.8)), lerp(-0.62, 0, e2), 0.04 * (1 - e2), lerp(34, k.c.fov0, e2)).handheld(0.008 * (1 - e2), 1);
+        cam.mark().home().mix(sm(0.82, 1, e2));
       } else cam.home();
       // the lens: focus with the needle, opening to deep focus as the camera rises
-      const deep = sm(2.6, 3.9, T);
-      if (deep < 1) lens.focus(T < SEW0 ? F0x : px, T < SEW0 ? F0y : py, T < SEW0 ? 0.15 : Math.max(0.05, pz), 2.2 * (1 - deep), 0.016);
+      const deep = sm(2.7, 3.9, T);
+      if (deep < 1) lens.focus(T < SEW0 ? F0x : px, T < SEW0 ? F0y : py, T < SEW0 ? 0.12 : Math.max(0.04, pz), 2.2 * (1 - deep), 0.016);
       k.vig(0.5 * (1 - sm(3.5, 4.4, T)));
       k.gate(0.11 * (1 - k.ease.io(sm(3.0, 4.0, T))));
-      if (T < SEW0 + 0.2) k.motes(14, F0x - 1, F0y - 1.2, 0.05, F0x + 1, F0y + 1, 0.9, K.saffHi, 0.3, 0.012, 0.05, 9);
+      if (T < SEW0 + 0.25) k.motes(14, F0x - 1, F0y - 1.2, 0.05, F0x + 1, F0y + 1, 0.9, K.saffHi, 0.25, 0.012, 0.05, 9);
       // the hit
       if (hit) {
-        const h = Math.exp(-after * 6), w = Math.exp(-after * 3.2), wcx = (PL.wx0 + PL.wx1) * 0.5;
-        lens.flash(HOT, 1.25 * h); lens.streak(1.3 * h, K.saff, 2.2, 1); lens.fringe(1.4 * h);
-        if (after < 0.7) lens.rays(wcx, PL.wy, 0.05, 0.9 * w, WARM, 0.7, 1.4);
-        if (after < 0.9) k.motes(26, PL.wx0, PL.wy - 1.2, 0.1, PL.wx1, PL.wy + 1.6, 1.2, K.saffHi, 0.5 * w, 0.03, 0.6, 13);
+        const h = Math.exp(-after * 7), w = Math.exp(-after * 3.5);
+        lens.exposure(1 + 0.8 * h); lens.streak(1.1 * h, K.saff, 1.5, 1); lens.fringe(1.0 * h);
+        if (after < 1.0) k.motes(26, PL.wx0, PL.wy - 1.2, 0.1, PL.wx1, PL.wy + 1.6, 1.2, K.saffHi, 0.45 * w, 0.03, 0.6, 13);
       }
     }
     // the thread's tube
     tube();
     // the thread as a glowing line too, for when it is thinner than a pixel (and the only glow on the low tier)
     const rp = k.rope(0);
-    for (let i = 0; i < NSP && i < 32; i++) { const j = Math.min(NSP - 1, Math.round(i * (NSP - 1) / 31)); rp.pin(i, SPX[j], SPY[j], SPZ[j] + 0.002); }
-    const ga = T < CUT1 ? 0 : hit ? Math.max(0, 1 - after * 3) : 1;
-    if (ga > 0) { rp.draw(0.03, K.saff, 0.5 * ga, 0, true, 0, 22); rp.draw(0.05, K.saffHi, 0.6 * ga, 0, true, 22, 31); }
+    for (let i = 0; i < 32; i++) { const j = Math.min(NSP - 1, Math.round(i * (NSP - 1) / 31)); rp.pin(i, SPX[j], SPY[j], SPZ[j] + 0.002); }
+    const wide = lerp(0.35, 1, sm(2.3, 3.4, T)), rw = lerp(0.012, 0.03, sm(2.0, 3.4, T));
+    if (ga > 0) { rp.draw(rw, K.saff, 0.7 * ga * wide, 0, true, 0, 24); rp.draw(rw * 1.3, K.saffHi, 0.8 * ga * wide, 0, true, 24, 31); }
   }
 
   /* The two films share draw(); `M` says where each starts in the entrance's time and when it hands over to the page. */
@@ -488,20 +496,20 @@ vUvS = aUv;`);
         place(k); buildDom(k);
         if (STITCH.u) { STITCH.u.uT.value = -1; STITCH.u.uHot.value = 0; STITCH.u.uWK.value = 0; }
       },
-      frame(k, t, dt) { draw(k, t + T0, dt, M); },
+      frame(k, t, dt) { draw(k, t + T0, dt, M); if (T0 > 0 && t < 0.2) k.lens.exposure(Math.min(1, 0.15 + t / 0.2)); },   // the short cut rises out of black
       teardown(k) { hideDom(); QS.revealed = false; if (STITCH.u) { STITCH.u.uT.value = -1; STITCH.u.uHot.value = 0; STITCH.u.uWK.value = 0; } }
     };
   }
 
   /* What the lead is asked to make. at: film seconds (the kit plays them on the film clock). The slow motion of the pull (film
-     4.36 to 4.62 at 0.35x) adds 0.46 s, so after it real time runs 0.46 s behind film time plus: the hit is film 4.62 = real
-     5.06; the page fades in at real 6.5; the end is real 7.06. */
+     4.33 to 4.63, 0.35x at its depth) adds 0.43 s: the hit is film 4.62 = real 5.05; the page fades in at real 6.32; the end
+     is real 6.88. Before 4.33 film and real seconds are the same. */
   const SND = {
     title_glint:  { at: 0.05, len: 1.4, gain: 0.5, desc: 'Extreme close-up of a steel needle catching the light: a tiny high metallic shimmer, like a fingertip ringing a fine wire, airy and soft, fading over 1.4 s' },
     title_thread: { at: 0.62, len: 0.9, gain: 0.7, desc: 'A thread drawn through the eye of a needle, very close: a soft silky friction that rises for 0.2 s, a tiny bright tick at 0.2 s as it passes through the eye, then a smooth whisper of thread sliding on, fading by 0.9 s' },
     title_pierce: { at: PIERCE, len: 0.7, gain: 0.85, desc: 'A sharp needle pushed through taut canvas, close and dry: a short fibrous creak for 0.05 s, then a soft deep "thup" as it pops through, with a breath of air after it' },
-    title_sew:    { at: SEW0, len: 2.3, gain: 0.7, desc: 'Hand sewing at speed, close: quick soft pulls of thread through cloth ("zip"), one for each letter, twelve in all and faster and faster, at about 0, 0.44, 0.67, 0.85, 0.99, 1.16, 1.38, 1.58, 1.73, 1.86, 1.99, 2.10 s, each with a faint glassy sparkle on top, dry, no reverb' },
-    title_pull:   { at: PULL0, len: 1.0, gain: 0.8, desc: 'A long thread pulled taut, very close: a slow creak of stretching fibre rising in pitch and tension over 0.9 s, trembling at the end, cut off at 0.94 s' },
+    title_sew:    { at: SEW0, len: 2.3, gain: 0.7, desc: 'Hand sewing at speed, close: quick soft pulls of thread through cloth ("zip"), one for each letter, twelve in all and faster and faster, at 0, 0.44, 0.67, 0.85, 0.99, 1.15, 1.37, 1.57, 1.72, 1.85, 1.98, 2.09 s, each with a faint glassy sparkle on top, dry, no reverb' },
+    title_pull:   { at: PULL0, len: 1.0, gain: 0.8, desc: 'A long thread pulled taut, very close: a slow creak of stretching fibre rising in pitch and tension, trembling at the end, cut off dead at 0.96 s (the snap lands there)' },
     title_snap:   { at: HIT, len: 1.3, gain: 1, desc: 'The thread snapping when pulled tight: one sharp bright "tick-twang" at the very start, with a short metallic ring and a soft whoosh of the loose end whipping away, fading over 1.3 s' },
     title_settle: { at: HIT + 0.08, len: 2.0, gain: 0.45, desc: 'Fine dust and fibres settling in a quiet room after a sudden release: a soft airy hush with faint glittering ticks, fading slowly to nothing over 2 s' }
   };
@@ -512,19 +520,19 @@ vUvS = aUv;`);
     beats: { eye: [0, CUT1, 'out'], dive: [CUT1, SEW0, 'in2'], sew: [SEW0, SEW1, 'lin'], pull: [PULL0, HIT, 'out'], hit: [HIT, HIT + 0.3, 'out'],
       settle: [HIT + 0.3, HIT + 0.78, 'io'], rest: [HIT + 0.78, REVEAL, 'lin'], reveal: [REVEAL, LEN, 'io'] },
     ramp: [[4.33, 1], [4.38, 0.35], [4.58, 0.35], [4.63, 1]],
-    music: { name: 'title_sting', len: 7.4, gain: 0.95, desc: 'Title music for String Theory, a stitched-cloth arcade game: the first thing a player hears. Instrumental. Starts at once, with no silence: a soft breath of high strings and one clear bowed-glass note that hangs (0 to 1.3 s), a small shimmer as a thread passes through a needle\'s eye at 0.82 s. At 1.70 s a low soft pizzicato thump. From 1.86 s a run of twelve plucked notes (harp or celesta over pizzicato strings), one for each letter of the name, rising up a scale and coming faster and faster: at about 1.86, 2.30, 2.53, 2.71, 2.85, 3.02, 3.24, 3.44, 3.59, 3.72, 3.85, 3.96 s. From 4.0 s a rising string tremolo and a held breath, tightening like a thread pulled taut, swelling to 5.06 s. THE HIT at 5.06 s: one big bright full-orchestra chord, low drum and brass under a ringing harp glissando and a cymbal, the moment the name is complete. It blooms and settles into a warm, hopeful held chord with a soft choir pad, decaying gently from 6.0 s to silence at 7.4 s, ending calm under the title page. Cinematic, wondrous, hand-made, not bombastic; a little magic' },
+    music: { name: 'title_sting', len: 7.4, gain: 0.95, desc: 'Title music for String Theory, a stitched-cloth arcade game: the first thing a player hears. Instrumental. Starts at once, with no silence: a soft breath of high strings and one clear bowed-glass note that hangs (0 to 1.3 s), a small shimmer as a thread passes through a needle\'s eye at 0.82 s. At 1.70 s a low soft pizzicato thump. From 1.86 s a run of twelve plucked notes (harp or celesta over pizzicato strings), one for each letter of the name, rising up a scale and coming faster and faster: at 1.86, 2.30, 2.53, 2.71, 2.85, 3.01, 3.23, 3.43, 3.58, 3.71, 3.84, 3.95 s. From 4.09 s a rising string tremolo and a held breath, tightening like a thread pulled taut, swelling to 5.05 s. THE HIT at 5.05 s: one big bright full-orchestra chord, low drum and brass under a ringing harp glissando and a cymbal, the moment the name is complete. It blooms and settles into a warm, hopeful held chord with a soft choir pad, decaying gently from 5.9 s to silence at 7.4 s, ending calm under the title page (the page is fully up at 6.9 s). Cinematic, wondrous, hand-made, not bombastic; a little magic' },
     sounds: SND,
     buzz: [[PIERCE, 14], [HIT, [40, 30, 90]]]
   });
-  /* The short cut: the entrance from film 3.70 (so the hit is at 0.92 of its own film seconds, real 1.14 after its slow
-     motion; the page fades in at 1.87 of film, the end is 2.42 of film, 2.64 real). */
+  /* The short cut: the entrance from film 3.70 (so the hit is at 0.92 of its own film seconds, real 1.02 after its lighter
+     slow motion; the page fades in at film 1.87, real 1.97; the end is film 2.42, real 2.52). */
   const SIG = film({
     off: SIG_OFF, len: SIG_REVEAL + 0.55 - SIG_OFF, key: 0.5, reveal: SIG_REVEAL,
     sheet: [0.05, 0.25, 0.45, 0.62, 0.8, 0.95, 1.05, 1.3, 1.6, 1.9, 2.1, 2.35],
     beats: { sew: [0, SEW1 - SIG_OFF, 'lin'], pull: [PULL0 - SIG_OFF, HIT - SIG_OFF, 'out'], hit: [HIT - SIG_OFF, HIT - SIG_OFF + 0.3, 'out'],
       settle: [HIT - SIG_OFF + 0.3, HIT - SIG_OFF + 0.78, 'io'], reveal: [SIG_REVEAL - SIG_OFF, SIG_REVEAL + 0.55 - SIG_OFF, 'io'] },
     ramp: [[4.45 - SIG_OFF, 1], [4.49 - SIG_OFF, 0.55], [4.58 - SIG_OFF, 0.55], [4.63 - SIG_OFF, 1]],
-    music: { name: 'title_sting_short', len: 3.2, gain: 0.95, desc: 'The short version of the title music, for every launch after the first. Instrumental. Starts at once on the last four rising plucks of the full version (harp or celesta over pizzicato) at 0, 0.13, 0.26, 0.37 s; from 0.42 s a quick rising string tremolo, tightening; THE HIT at 1.14 s, the same big bright orchestral chord, harp glissando and cymbal as the full version; it settles into the same warm held chord and fades to silence by 3.2 s' },
+    music: { name: 'title_sting_short', len: 3.2, gain: 0.95, desc: 'The short version of the title music, for every launch after the first. Instrumental. Starts at once (out of a breath of silence 0.1 s long) on the last three rising plucks of the full version (harp or celesta over pizzicato) at 0.0, 0.13, 0.25 s; from 0.39 s a quick rising string tremolo, tightening; THE HIT at 1.02 s, the same big bright orchestral chord, harp glissando and cymbal as the full version; it settles into the same warm held chord and fades to silence by 3.2 s (the page is fully up at 2.5 s)' },
     sounds: { title_pull: later(SND.title_pull, SIG_OFF), title_snap: later(SND.title_snap, SIG_OFF), title_settle: later(SND.title_settle, SIG_OFF) },
     buzz: [[HIT - SIG_OFF, [40, 30, 90]]]
   });

@@ -116,39 +116,44 @@ void main(){
   // =====================================================================================================================
   //  The entrance: "Eclipse"
   // =====================================================================================================================
-  /* ENTRANCE "Eclipse"  len 9.8 s  key 8.05 (the still)  lights 3
+  /* ENTRANCE "Eclipse"  len 9.8 s  key 7.2 (the still)  lights 3
      idea:     his swarm eclipses a sun of gold stitches; in the dark he takes its light, bead by bead, for his crown, and is
                there, crowned, against its return.
-     camera:   orbit and crane: a crane up from the hem to face the sun, an orbit round it as the swarm closes in, locked face
-               on for totality, a slow orbit and rise round the crown as it forms, a crane down under him for the reveal; the
-               iris opens on the sun, frames the totality, and closes on his eyes.
+     camera:   orbit and crane: a pull back and crane down from a macro of the sun's stitches to a low wide of it over the cloth,
+               an orbit round it as the swarm closes in, locked face on for totality, an orbit and rise that pushes in to the
+               crown as it forms and on to his eyes, a pull back and crane down under him for the reveal; the iris opens on the
+               sun, frames the totality, and closes on his eyes.
      colour:   gold (the sun, the corona, the jewels), madder (the prominences, the eyes, the fill on his swarm), the royal cloth
      rhythm:   a slow rise, a gathering storm, a crack of light, silence; 1, 2, 3, 4, a seam of gold, the eyes; the full build
      handover: the iris closes on his eyes (8.6-9.05); CUT under the black to the play camera; the iris opens from his eyes on
                the fight as it starts (he is on his throne at k.c.hx, k.c.hy, court pose, house lights up).
 
      beat     film s      shot (camera, lens)                                what we see                                     light                               sound / buzz
-     dark     0-0.6       black; the gate opens; the iris a pinhole          nothing; a far-off murmur of wings              none                                king_hush 0, sting (organ pedal)
-     sun      0.5-2.3     low at the hem, looking up the cloth; one long     the iris opens on a sun of gold stitches        the sun (light 0) rakes the         king_sun 0.5
-                          crane up and round to face it; focus on the sun    over the cloth's edge; six moths cross it,      creased cloth; gold pool
-                                                                             black against it
-     swarm    2.3-4.05    an orbit round the sun, closing in; foreground     the swarm pours in from every side and packs    the sun, dimming as it is covered   king_swarm 2.3
-                          moths soft                                         into a black disc that slides over the sun
-     beads    4.05-4.3    face on, still                                     the last crescent breaks into beads             the beads                           king_beads 4.05
-     ring     4.27        FREEZE 0.35 s on the diamond ring; streak           one blazing bead on the limb                    a flash                             king_diamond 4.27, buzz
-     total    4.31-5.0    face on; the iris closes to frame the totality;    totality: a corona of gold threads, madder      the corona only; a faint madder     king_corona 4.32
-                          rays stream out from behind the moon               prominences, stars come out in the cloth        fill on the swarm (light 2)
-     crown    5.0-7.4     the iris opens; a slow orbit and rise toward the   four beads are drawn off the limb on threads   each jewel carries light 1 as it    king_jewel 5.25 5.8 6.3 6.75,
-                          crown                                              of light, one by one, and set on four points;   flies; their glow                   buzz each; king_eyes 7.0
-                                                                             a seam of gold joins them (6.95); two madder
-                                                                             eyes open under them (7.0, 7.12)
-     reveal   7.42-8.6    slow motion 0.45x; a crane down under him; rays    the sun breaks out behind him (7.42); the       the sun behind (light 0), a gold    king_unveil 7.42, buzz;
-                          through his wings; a ring runs out on the cloth    swarm bursts outward and he is there, crowned,  key from the front (light 2);       title 7.75
-                                                                             wings across the sun, taking his colours        house lights half up
-     iris     8.6-9.05    the iris closes on his eyes                        black but for his eyes                          as before                           king_iris 8.6
+     dark     0-0.6       black; the gate opens; the iris a pinhole          nothing                                         none                                sting (organ pedal) 0
+     sun      0.5-2.3     macro on the sun's satin stitches as the iris      a sun of gold satin stitch, then the whole of   the sun (light 0) on the creased    king_sun 0.5
+                          opens; one long pull back, down and round to a     it over the cloth; six moths cross it, black    cloth; gold pool
+                          low wide; focus on the sun
+     swarm    2.3-4.05    an orbit round the sun, closing in; foreground     the swarm pours in from every side and packs    the sun, dimming as it is covered   king_gather 2.3
+                          moths soft; the cloth's edge flagged black         into a black moon ringed with moths that
+                                                                             slides over the sun
+     beads    4.05-4.27   face on, still                                     the last crescent breaks into beads             the beads                           king_diamond 4.05
+     ring     4.27        FREEZE 0.35 s on the diamond ring; streak          one blazing bead on the limb                    the bead                            (its flash), buzz
+     total    4.31-5.0    face on; the iris closes to frame the totality;    totality: a corona of gold threads with a       the corona only; a faint madder     king_corona 4.32
+                          rays stream out from behind the moon               madder rim of prominences                       fill on the swarm (light 2)
+     crown    5.0-7.4     the iris opens; an orbit left and up (5.0-5.75),   four beads drawn off the rim on threads of      each jewel carries light 1 as it    king_setjewel 4.83 5.38 5.88 6.33
+                          then a push in to the crown (6.45) and on to his   light, one by one, set on his four crown        flies; their glow                   (each lands 0.42 later), buzz x4;
+                          face (7.05)                                        points (5.25, 5.8, 6.3, 6.75); a seam of gold                                       king_eyes 7.0
+                                                                             joins them (6.95); two madder eyes open under
+                                                                             them (7.0, 7.12)
+     reveal   7.42-8.6    slow motion 0.45x; a pull back and crane down      the sun breaks out behind him, the moon         the sun behind (light 0), a gold    king_unveil 7.42, buzz;
+                          under him; rays through his stitches; a ring       shrinks away and the swarm bursts outward;      key from the front (light 2)        title 7.75
+                          runs out on the cloth                              he is there, crowned, black against the sun,
+                                                                             taking his colours
+     iris     8.6-9.05    the iris closes on his eyes                        black but for his eyes and the title            as before                           king_iris 8.6
      open     9.05-9.8    CUT under the black to the play camera; the iris  the fight: he sits on his throne, the court      house lights up                     buzz 9.05
                           opens from his eyes; the gate opens
-     still (reduced motion): 8.05, the reveal: him crowned against the sun, the swarm bursting off him, under the title. */
+     still (reduced motion): 7.2, close on the crowned eclipse: four jewels on the black, his two eyes open under them, the corona
+     streaming round, under the title. */
   const SUN_DY = 0.35, SR = 2.35, SZ = 0.42, MR = SR + 0.14, MZ = 0.9;      // the sun: centre above his, radius, height off the cloth; the moon: radius, height
   const E_SWARM = 2.3, E_TOT = 4.36, E_DIAMOND = 4.27, E_REVEAL = 7.42, E_IRIS = 8.6, E_CUT = 9.05;
   const JT = [5.25, 5.8, 6.3, 6.75], JFLY = 0.42, SEAM = 6.95, EYES = [7.0, 7.12];
@@ -194,7 +199,7 @@ void main(){
   }
 
   const ECLIPSE = {
-    kit: true, len: 9.8, key: 8.05, lights: 3,
+    kit: true, len: 9.8, key: 7.2, lights: 3,
     sheet: [0.9, 1.9, 2.9, 3.6, 4.2, 4.27, 4.7, 5.6, 6.6, 7.15, 8.05, 9.5],
     beats: {
       dark:   [0, 0.6, 'out'],
@@ -213,18 +218,16 @@ void main(){
       '@keyframes mk-crown{0%{opacity:0;transform:translateY(-.7em) scale(.5);color:#FFF4D6;text-shadow:0 0 .7em #E3A93C,0 0 .15em #FFF4D6;filter:blur(2px) brightness(2.2)}' +
       '35%{opacity:1;transform:translateY(.05em) scale(1.06);color:#F6D48A;text-shadow:0 0 .45em #E3A93C,0 .055em 0 #A82A33;filter:brightness(1.4)}65%{transform:none;filter:none}100%{}}',
     /* The sting is one file from film 0 and is not slowed, so its times are real seconds: the freeze on the diamond ring adds
-       0.35 s and the reveal's slow motion 0.53 s. Film 4.27 (the diamond ring) is real 4.27; the jewels 5.25 / 5.8 / 6.3 / 6.75
-       are real 5.6 / 6.15 / 6.65 / 7.1; the seam 6.95 is real 7.3; the reveal 7.42 real 7.77; the iris 8.6 real 9.48; the cut
-       9.05 real 9.93; the end 10.68. */
-    music: { name: 'king_in_sting', len: 11.5, gain: 1, desc: 'Entrance sting for the Moth King, the last boss: an eclipse and a coronation, the biggest piece of music in the game. Instrumental, full orchestra and organ. From 0 s a deep organ pedal note alone, very quiet. At 0.5 s high strings fade in on a warm open fifth as a golden sun appears, glowing and noble. From 2.3 s the strings begin to churn and climb in tremolo, low brass and timpani rolls growing underneath, darker and darker, a storm gathering for 1.9 s; at 4.27 s everything cuts off on one piercing high bell-like note and silence. From 4.4 s a cold, vast, still chord of high divided strings and celesta, hushed, holding. Four rising strikes of brass, timpani and a struck bell at 5.6, 6.15, 6.65 and 7.1 s, each a step higher and bigger than the last; a quick ascending harp sweep at 7.3 s and a low ominous two-note horn figure at 7.35 s. At 7.77 s the full orchestra and organ explode into a huge majestic minor-key chord with choir-like brass and cymbals, swelling for 1.7 s; at 9.48 s it drops away to one sustained low note and a deep boom at 9.93 s, then a regal final chord rings out from 9.93 s and fades by 11.5 s' },
+       0.35 s and the reveal's slow motion 0.59 s. Film 4.27 (the diamond ring) is real 4.27; the jewels 5.25 / 5.8 / 6.3 / 6.75
+       are real 5.6 / 6.15 / 6.65 / 7.1; the seam 6.95 is real 7.3; the reveal 7.42 real 7.77; the title 7.75 real 8.47; the iris
+       8.6 real 9.54; the cut 9.05 real 9.99; the end 10.74. */
+    music: { name: 'king_in_sting', len: 11.5, gain: 1, desc: 'Entrance sting for the Moth King, the last boss: an eclipse and a coronation, the biggest piece of music in the game. Instrumental, full orchestra and organ. From 0 s a deep organ pedal note alone, very quiet. At 0.5 s high strings fade in on a warm open fifth as a golden sun appears, glowing and noble. From 2.3 s the strings begin to churn and climb in tremolo, low brass and timpani rolls growing underneath, darker and darker, a storm gathering for 1.9 s; at 4.27 s everything cuts off on one piercing high bell-like note and silence. From 4.4 s a cold, vast, still chord of high divided strings and celesta, hushed, holding. Four rising strikes of brass, timpani and a struck bell at 5.6, 6.15, 6.65 and 7.1 s, each a step higher and bigger than the last; a quick ascending harp sweep at 7.3 s and a low ominous two-note horn figure at 7.35 s. At 7.77 s the full orchestra and organ explode into a huge majestic minor-key chord with choir-like brass and cymbals, swelling for 1.75 s; at 9.54 s it drops away to one sustained low note and a deep boom at 9.99 s, then a regal final chord rings out from 9.99 s and fades by 11.5 s' },
     sounds: {
-      king_hush:    { at: 0, len: 2.2, gain: 0.5, desc: 'Out of silence, very far away, the murmur of a vast swarm of moths: a soft papery flutter like wind through dry leaves, almost below hearing, rising a little and settling by 2.2 s' },
       king_sun:     { at: 0.5, len: 2.0, gain: 0.55, desc: 'A great sun appearing: a warm, bright, airy shimmer swelling over 0.6 s, like light itself humming, with a faint high glassy ring on top; it holds, glowing, and thins away by 2 s. Not musical notes' },
-      king_swarm:   { at: E_SWARM, len: 2.0, gain: 0.95, desc: 'Thousands of moths pouring in from every side: a storm of fluttering wings that starts thin and far, spirals closer and thicker, a deep whirling roar building for 1.9 s, then cut off dead at 1.97 s' },
-      king_beads:   { at: 4.05, len: 0.3, gain: 0.6, desc: 'The last beads of sunlight going out: five tiny bright crystalline pings in a quick falling run over a quarter of a second, each softer than the last' },
-      king_diamond: { at: E_DIAMOND, len: 1.0, gain: 1, desc: 'The diamond ring of an eclipse: a single piercing flash of light as sound, a brilliant pure crystal tone with a sharp bright attack and a deep sub-bass drop under it, held frozen for a third of a second, then sucked away to nothing by 0.6 s' },
+      king_gather:  { at: E_SWARM, len: 2.0, gain: 0.95, desc: 'Thousands of moths pouring in from every side: a storm of fluttering wings that starts thin and far, spirals closer and thicker, a deep whirling roar building for 1.9 s, then cut off dead at 1.97 s' },
+      king_diamond: { at: 4.05, len: 1.2, gain: 1, desc: 'The last of the sun going out in an eclipse: five tiny bright crystalline pings in a quick run over 0.2 s, each softer than the last, then at 0.22 s a single piercing flash of light as sound, a brilliant pure crystal tone with a sharp bright attack and a deep sub-bass drop under it, held frozen for a third of a second, then sucked away to nothing by 0.8 s' },
       king_corona:  { at: E_DIAMOND + 0.05, len: 2.8, gain: 0.6, desc: 'Totality: a cold, vast, still shimmer, like wet fingertips on a hundred glass rims at once, very high and airy, with a faint deep wind under it; it swells for 0.6 s and holds, eerie and beautiful, fading by 2.8 s' },
-      king_jewel:   { at: JT, len: 0.9, gain: 0.85, desc: 'A jewel pulled out of a ring of light on a thread and set in a crown: a quick rising taut zing of a thread drawn tight over 0.4 s, then a bright metallic click of a gem locking into a gold setting at 0.42 s, with a clear chime ringing after it' },
+      king_setjewel: { at: [JT[0] - JFLY, JT[1] - JFLY, JT[2] - JFLY, JT[3] - JFLY], len: 0.9, gain: 0.85, desc: 'A jewel pulled out of a ring of light on a thread and set in a crown: a quick rising taut zing of a thread drawn tight over 0.4 s, then a bright metallic click of a gem locking into a gold setting at 0.42 s, with a clear chime ringing after it' },
       king_eyes:    { at: EYES[0], len: 0.8, gain: 0.6, desc: 'Two eyes opening in the dark, one then the other 0.12 s apart: each a low, slow breath and a soft ember crackle, intimate and threatening' },
       king_unveil:  { at: E_REVEAL, len: 2.2, gain: 1, desc: 'An eclipse ending as a vast swarm bursts apart: a blinding rush of light like a huge whoosh of air drawn in, then at 0.1 s an explosion of thousands of wings scattering outward in every direction, heavy and slowed down, rolling away by 2.2 s' },
       king_iris:    { at: E_IRIS, len: 1.2, gain: 0.7, desc: 'An old camera iris closing: a smooth metallic whirr of overlapping metal leaves sliding shut for 0.45 s, ending in a soft deep boom, then a short hush' }
@@ -349,8 +352,8 @@ void main(){
         const s = 0.24 * (u < 1 ? 0.6 + 0.4 * u : 1), spin = u < 1 ? t * 9 : 0.3 * Math.sin(t * 1.3 + j);
         placeJewel(jw.children[j], JP[0], JP[1], JP[2], s, 1.25, spin, 0.3 * Math.sin(t * 0.9 + j));
         const land = k.pulse(JT[j], 0.03, 0.5), gl = u < 1 ? 1 : 0.4 + 0.6 * land + 0.15 * Math.sin(t * 3 + j * 2);
-        r.spr.add(JP[0], JP[1], JP[2] + 0.12, (u < 1 ? 0.55 : 0.42 + 0.7 * land), K.saffHi, 0.55 * gl * (1 - 0.6 * reveal), 0);
-        r.spr.add(JP[0], JP[1], JP[2] + 0.14, 0.18 + 0.22 * land, K.glare, gl, 1, t + j);
+        r.spr.add(JP[0], JP[1], JP[2] + 0.12, (u < 1 ? 0.4 : 0.42 + 0.7 * land), K.saffHi, (u < 1 ? 0.4 : 0.55) * gl * (1 - 0.6 * reveal), 0);
+        r.spr.add(JP[0], JP[1], JP[2] + 0.14, 0.14 + 0.26 * land, K.glare, gl * (u < 1 ? 1 : 0.4 + 0.6 * land), land > 0.05 || u < 1 ? 1 : 0, 0.6 + j * 0.4);   // a star as it flies and as it is set, then a plain point
         if (u < 1) {   // the thread of light it is drawn on, from the limb
           const a = JA[j]; k.thread(SX + Math.cos(a) * SR * 1.03, SY + Math.sin(a) * SR * 1.03, SZ + 0.1, JP[0], JP[1], JP[2], 0.03, K.saffHi, 0.8, 7, 0, true);
           r.spr.add(SX + Math.cos(a) * SR * 1.03, SY + Math.sin(a) * SR * 1.03, SZ + 0.12, 0.7 * (1 - u), MADDER, 0.6 * (1 - u), 0);
@@ -410,10 +413,10 @@ void main(){
      idea:     the last jewel of his crown falls in silence and rings on the floor; his swarm breaks past the lens, and behind
                it the sun comes up over the edge of the cloth; the frayed world mends in the morning light.
      camera:   a crane down with the falling jewel (focus racks from him to it); a cut on the impact to the floor, an orbit round
-               the jewel as it spins down; held as the swarm breaks over us; one long crane up and back to a wide of the whole
+               the jewel as it rocks to rest; held as the swarm breaks over us; one long crane up and back to a wide of the whole
                frame for the mending, settling into the play camera.
      colour:   madder dawn going to gold, the jewel's madder and gold, then daylight on his royal cloth
-     rhythm:   a crack; silence (a slow fall); RING, ring-ring, a spin down; hush; a roar of wings; sunrise; the mending; day
+     rhythm:   a crack; silence (a slow fall); RING, ring-ring, the ring held; hush; a roar of wings; sunrise; the mending; day
      ending:   the play camera on the whole, still, lit cloth, house lights up, nothing of his left: the ending film starts there
                (the sun he rose behind is off the top of the picture, at x -1.2 beyond the top rail).
 
@@ -423,11 +426,11 @@ void main(){
      fall     0.4-1.45    CUT: close on the jewel, falling, the camera         the jewel tumbles down the dark cloth, its     the jewel's own glow (light 0)      (silence) king_fall 0.42
                           craning down with it; slow motion 0.35x; focus       light running over the weave; behind it his    lighting the cloth as it passes
                           racks from his eyes to the jewel (0.5-0.85)          dark shape, eyes dimming
-     ring     1.45-2.5    CUT on the impact: on the floor, the cloth a plain;  it rings, bounces twice, spins down like a      the jewel                           king_ring 1.45, buzz x3
-                          an orbit round it; macro focus                       coin; a ring runs out through the cloth
+     ring     1.45-2.5    CUT on the impact: on the floor, the cloth a plain;  it rings, bounces twice and rocks to rest on   the jewel                           king_ring 1.45, buzz x3
+                          an orbit round it; macro focus                       its point; a ring runs out through the cloth
      hush     2.5-2.9     held                                                 still; far up the cloth his eyes flare          the jewel, his eyes                 (silence)
-     break    2.9-4.4     held, rising a little; handheld; the focus opens     he bursts into his swarm, which races down     a madder dawn behind the swarm      king_burst 2.9, king_rush 3.15,
-                                                                               the cloth at us and past the lens, black        (light 2) beyond the cloth's edge   buzz
+     break    2.9-4.4     held, rising a little; handheld; the focus comes     he bursts into his swarm, which races down     a madder dawn behind the swarm      king_burst 2.9, king_rush 3.15,
+                          forward to meet the swarm, then back             the cloth at us and past the lens, black        (light 2) beyond the cloth's edge   buzz
                                                                                against the dawn
      sunrise  4.3-5.5     held; the sun comes up behind the rail (holdout);    the sun rises over the edge of the cloth,      the sun (light 1) rakes the cloth   king_dawn 4.3, buzz
                           rays through the last moths; a streak at first light madder, then gold; the jewel catches the    from the far end
@@ -455,8 +458,8 @@ void main(){
       if (t < D_B1) z += 0.34 * Math.sin(PI * (t - D_LAND) / (D_B1 - D_LAND));
       else if (t < D_B2) z += 0.11 * Math.sin(PI * (t - D_B1) / (D_B2 - D_B1));
       if (t < D_B2) { rx = PI / 2 + 0.9 * (1 - (t - D_LAND) / (D_B2 - D_LAND)); ry = (t - D_LAND) * 9; }
-      else if (t < D_SPIN) { const u = (t - D_B2) / (D_SPIN - D_B2), tilt = 0.5 * Math.pow(1 - u, 1.15), ph = 5 * u + 24 * u * u * u; rx = PI / 2 + tilt * Math.cos(ph); ry = tilt * Math.sin(ph); rz = 0.4 + ph * 0.5; z += 0.05 * tilt; }
-      else rz = 0.4 + 14.5; }
+      else if (t < D_SPIN) { const a = t - D_B2, rock = 0.42 * Math.exp(-a * 4.2) * Math.sin(a * 21); rx = PI / 2 + rock; ry = 0.3 * rock; rz = 0.4; z += 0.04 * Math.abs(rock); }   // it rocks on its point, ringing, and is still
+      else rz = 0.4; }
     DJ[0] = x; DJ[1] = y; DJ[2] = z; DJ[3] = rx; DJ[4] = ry; DJ[5] = rz;
   }
   /* The grazing shot on the floor, looking up the cloth past the jewel, toward the edge the sun will come up behind. */
@@ -479,7 +482,7 @@ void main(){
 
   const DAYBREAK = {
     kit: true, len: 8.9, key: 4.9, lights: 3,
-    sheet: [0.2, 0.62, 1.1, 1.5, 2.05, 2.95, 3.6, 4.05, 4.6, 5.2, 6.6, 8.6],
+    sheet: [0.3, 0.62, 1.1, 1.5, 2.05, 2.95, 3.6, 3.88, 4.6, 5.2, 6.6, 8.6],
     beats: {
       strike:  [0, D_CUT, 'out'],
       fall:    [D_CUT, D_LAND, 'in2'],
@@ -496,16 +499,16 @@ void main(){
     css: '.fk-t.i-mkdawn .fk-n span.on{animation:mk-dawn 1s ease-out both}.i-mkdawn .fk-rule{border-top-color:#E3A93C}' +
       '@keyframes mk-dawn{0%{opacity:0;color:#7A1D27;transform:translateY(.4em);filter:blur(3px)}30%{opacity:1;color:#CF4A4E;text-shadow:0 0 .55em #CF4A4E}' +
       '65%{color:#F6D48A;text-shadow:0 0 .45em #E3A93C,0 .055em 0 #A82A33;transform:none;filter:none}100%{}}',
-    /* The sting is one file from film 0 and is not slowed: the fall's slow motion adds 2.55 s. Film 0.4 (the cut to the fall)
-       is real 0.6; the landing 1.45 is real 3.6; the burst 2.9 real 5.05; the sunrise 4.3 real 6.45; the crane up 5.5 real
-       7.65; the mending 6.1 real 8.25; the title 7.4 real 9.55; the end 8.9 real 11.05. */
-    music: { name: 'king_down_sting', len: 12.5, gain: 0.9, desc: 'Death sting for the Moth King, the last boss, and the start of the game\'s ending. Instrumental. One huge low orchestral hit with a cymbal at 0 s, cut off dead at 0.45 s; then true silence (the sound of the jewel falling carries the moment alone) until 3.6 s. From 3.6 s a single very soft high sustained violin note, like the ring of the jewel turned into music, held. At 5.05 s a deep low swell of strings and timpani rising fast, a storm of motion with driving low strings, building for 1.4 s; at 6.45 s it breaks into the sunrise: a broad, warm, radiant major-key theme for full orchestra, horns and strings soaring, a choir-like organ under it, rising in waves; at 8.25 s a sparkling harp and celesta run over it as the world mends; it settles into a calm, golden, open major chord at 9.55 s and holds, glowing, to 12.5 s, ready to lead into the ending music' },
+    /* The sting is one file from film 0 and is not slowed: the strike and the fall in slow motion add 2.45 s. Film 0.4 (the cut
+       to the fall) is real 0.94; the landing 1.45 is real 3.89; the burst 2.9 real 5.35; the sunrise 4.3 real 6.75; the crane up
+       5.5 real 7.95; the mending 6.1 real 8.55; the title 7.4 real 9.85; the end 8.9 real 11.35. */
+    music: { name: 'king_down_sting', len: 12.5, gain: 0.9, desc: 'Death sting for the Moth King, the last boss, and the start of the game\'s ending. Instrumental. One huge low orchestral hit with a cymbal at 0 s, cut off dead at 0.45 s; then true silence (the sound of the jewel falling carries the moment alone) until 3.89 s. From 3.89 s a single very soft high sustained violin note, like the ring of the jewel turned into music, held. At 5.35 s a deep low swell of strings and timpani rising fast, a storm of motion with driving low strings, building for 1.4 s; at 6.75 s it breaks into the sunrise: a broad, warm, radiant major-key theme for full orchestra, horns and strings soaring, a choir-like organ under it, rising in waves; at 8.55 s a sparkling harp and celesta run over it as the world mends; it settles into a calm, golden, open major chord at 9.85 s and holds, glowing, to 12.5 s, ready to lead into the ending music' },
     sounds: {
       king_crack: { at: 0.02, len: 0.6, gain: 1, desc: 'A crown jewel struck from its setting: a sharp bright crystalline crack and a tiny metal ping as it pops loose, then all sound sucked away into silence by 0.45 s, as if the air were pulled out of the room' },
       king_fall:  { at: D_CUT + 0.02, len: 3.2, gain: 0.3, desc: 'Almost silence: a jewel falling through a dark empty hall in slow motion. Only a faint high airy whistle as it tumbles, turning over slowly about three times a second, and the softest glassy shimmer, barely there, for 3 s' },
-      king_ring:  { at: D_LAND, len: 3.0, gain: 1, desc: 'A jewel landing on a hard floor in an empty hall: a clear bright clink, two smaller bounces at 0.17 and 0.27 s, then it spins down like a coin on a table, a ringing wobble that gets faster and higher and stops dead at 0.97 s, leaving one pure ringing tone that fades slowly to silence by 3 s' },
+      king_ring:  { at: D_LAND, len: 3.0, gain: 1, desc: 'A jewel landing on a hard floor in an empty hall: a clear bright clink, two smaller bounces at 0.18 and 0.28 s, then one pure high ringing tone, like a struck crystal glass, that trembles a little as the jewel rocks to rest (the tremble gone by 0.9 s) and fades slowly to silence by 3 s' },
       king_burst: { at: D_BURST, len: 1.0, gain: 0.9, desc: 'A body bursting into thousands of moths far away: a deep soft whump and a sudden explosion of wings, a dry papery flurry' },
-      king_rush:  { at: D_BURST + 0.25, len: 2.4, gain: 1, desc: 'A huge swarm of moths racing straight at the listener and past: a roaring rush of thousands of wings growing from far to deafening close over 0.9 s, passing by on every side at 1.0 s with a gust of air, then sweeping away behind and fading by 2.4 s' },
+      king_rush:  { at: D_BURST + 0.25, len: 2.4, gain: 1, desc: 'A huge swarm of moths racing straight at the listener and past: a roaring rush of thousands of wings growing from far to deafening close over 0.6 s, passing by on every side from 0.6 to 1.0 s with a gust of air, then sweeping away behind and fading by 2.4 s' },
       king_dawn:  { at: D_SUN, len: 3.0, gain: 0.8, desc: 'The sun rising: a deep warm hum of light swelling slowly, with a bright bell-like glint at 0.15 s as the first ray strikes and a long airy shimmer that blooms and settles by 3 s. Glowing and gentle, not musical notes' },
       king_mend:  { at: D_MEND - 0.05, len: 1.6, gain: 0.6, desc: 'A torn world sewing itself back together: hundreds of needles zipping through cloth and threads drawn tight, soft and quick, a rising patter of little plucks and zips over 1.2 s that settles into a contented soft hush by 1.6 s' }
     },
@@ -556,9 +559,10 @@ void main(){
 
       // ---- light
       const day = k.ease.io(k.span(D_RISE, D_MENDED));
-      if (t < D_CUT) k.dark(lerp(c.d0, 0.9, k.ease.out(k.span(0, D_CUT))), 0);
-      else if (t < D_SUN) k.dark(1, 1);
-      else k.dark(lerp(1, 0, day), lerp(1, 0, k.ease.io(k.span(D_RISE, D_WIDE))));
+      const rm = k.reduce ? 0.62 : 1;   // reduced motion: the camera is held at the play camera, so the house lights stay a little up
+      if (t < D_CUT) k.dark(lerp(c.d0, 0.9 * rm, k.ease.out(k.span(0, D_CUT))), 0);
+      else if (t < D_SUN) k.dark(rm, k.reduce ? 0 : 1);
+      else k.dark(lerp(rm, 0, day), k.reduce ? 0 : lerp(1, 0, k.ease.io(k.span(D_RISE, D_WIDE))));
       k.vig(home ? 0.2 * (1 - k.span(D_HOME, 8.5)) : 0.5 - 0.3 * day);
       if (t > D_CUT && t < D_RISE) k.quiet();
       // light 0: the jewel's own glow, falling and lying on the floor; it flares at the strike and as the first ray catches it
@@ -623,8 +627,8 @@ void main(){
         if (c.arenaO.inset > 0.02) for (let sd = -1; sd <= 1; sd += 2) { k.thread(sd * fx, fy, 0.08, sd * fx, H, 0.08, 0.07, K.saffHi, 0.85 * a, 2, 0, true);
           for (let i = 0; i < 4; i++) { const ny = lerp(fy, H, (mend * 1.9 + i / 4 + (sd > 0 ? 0.12 : 0)) % 1); r.spr.add(sd * fx, ny, 0.15, 0.55, K.glare, a, 1, t * 7 + i); } } }
 
-      // ---- the lens
-      if (t >= D_CUT && t < D_RISE) {
+      // ---- the lens (none of it under reduced motion: it is focused for shots the held camera does not take)
+      if (t >= D_CUT && t < D_RISE && !k.reduce) {
         if (!onFloor) { const rk = k.ease.io(k.span(0.5, 0.85)); lens.focus(lerp(hx, DJ[0], rk), lerp(ey, DJ[1], rk), lerp(1.3, DJ[2], rk), 1.6, 0.016); }
         else if (t < D_BURST + 0.3) lens.focus(jx, jy, 0.15, 2.6, 0.018);
         else { const pull = k.ease.io(k.span(D_BURST + 0.3, D_BURST + 0.8)), fd = lerp(Math.sqrt((DCAM[0] - jx) * (DCAM[0] - jx) + (DCAM[1] - jy) * (DCAM[1] - jy) + DCAM[2] * DCAM[2]), 3.2, pull * (1 - k.ease.io(k.span(D_SUN - 0.2, D_SUN + 0.4))));   // the focus comes forward to meet the swarm, then back to the jewel

@@ -288,7 +288,7 @@ vec3 tubeMove(out vec3 nrm) {
 
   const ENTRANCE = {
     kit: true, len: 7.6, key: 5.62, lights: 3,
-    sheet: [0.95, 1.3, 1.78, 2.4, 2.86, 3.3, 3.72, 4.1, 4.5, 4.94, 5.62, 6.95],
+    sheet: [0.95, 1.3, 1.78, 2.4, 2.86, 3.3, 3.72, 4.32, 4.62, 4.96, 5.62, 6.95],
     beats: {
       dark:  [0, 0.45, 'out'],
       tug:   [0.45, RIP, 'io'],
@@ -305,7 +305,7 @@ vec3 tubeMove(out vec3 nrm) {
     /* cam.shot keys, authored round the running end in world units (carried to it with ox, oy, oz): [u, camera x y z, target x y z, roll, fov] */
     shots: {
       chaseA: [[0, 1.8, -3.6, 2.9, -0.2, 1.0, 0.0, 0.04, 40], [0.45, 1.5, -3.9, 2.6, -0.1, 1.2, 0.0, -0.03, 44], [1, 1.3, -4.2, 2.35, -0.1, 1.5, 0.1, 0.05, 48]],
-      chaseB: [[0, 1.4, 4.2, 2.4, -0.2, -1.6, 0.0, 0.07, 44], [0.5, 1.1, 3.7, 2.1, -0.3, -1.9, 0.0, -0.03, 48], [1, 0.9, 3.2, 1.9, -0.3, -2.2, 0.0, -0.08, 50]]
+      chaseB: [[0, 1.2, 3.7, 3.4, -0.2, -1.2, 0.0, 0.07, 46], [0.5, 1.0, 3.3, 3.1, -0.3, -1.4, 0.0, -0.03, 48], [1, 0.8, 3.0, 2.9, -0.3, -1.6, 0.0, -0.08, 50]]
     },
     title: { at: 5.62, iv: 0.05, in: 'unrpull', pos: 'low', to: 7.3 },
     css: '.fk-t.i-unrpull .fk-n span.on{animation:unr-pull .5s cubic-bezier(.2,.9,.25,1) both;transform-origin:50% 100%}.fk-t.i-unrpull .fk-rule{border-top-color:#A3AEC6}' +
@@ -356,7 +356,7 @@ vec3 tubeMove(out vec3 nrm) {
       if (pre) {   // lying up the knit from the loose end, lifting as it is tugged; the first two points the tail hanging off the hem
         if (j === 0) { x = ex - 0.32; y = -0.62 + 0.25 * tug; z = -0.25 + 0.2 * tug; }
         else if (j === 1) { x = ex - 0.1; y = -0.2 + 0.12 * tug; z = 0.02 + 0.08 * tug; }
-        else { const yy = (j - 2) * (j - 2) * 0.065 + 0.15, s = yy / 30; x = endX(yy) + 0.25 * (1 - tug) * Math.sin(yy * 1.3); y = yy; z = 0.2 + tug * 0.3 * Math.sin(PI * Math.min(1, yy / 14)) + 0.02 * (1 - tug) * Math.sin(yy * 5);
+        else { const yy = (j - 2) * (j - 2) * 0.065 + 0.15; x = endX(yy) + 0.25 * (1 - tug) * Math.sin(yy * 1.3); y = yy; z = 0.2 + tug * 0.6 * Math.sin(PI * Math.min(1, yy / 10)) + 0.02 * (1 - tug) * Math.sin(yy * 5);
           if (yy > 16) { const u = sm(16, 30, yy); x = lerp(x, MX, u); y = lerp(y, MY, u); z = lerp(z, MZ, u); } }
       } else {
         const s = (j / 23) * (j / 23), l = s * Lm, kink = 0.13 * Math.exp(-l / 0.9);
@@ -382,7 +382,7 @@ vec3 tubeMove(out vec3 nrm) {
     let row0 = 0;
     if (pre) {   // macro at the hem, low: the cast-on edge, the loose end, the knit raking away up into the dark
       const cr = k.ease.io(k.span(0.4, RIP));
-      cam.at(wx + 0.7 - 0.2 * cr, SY - 2.0 + 0.3 * cr, SZ + 2.7 - 0.25 * cr, wx - 0.05, SY + 0.9, SZ, 0.03, 38);
+      cam.at(wx + 0.6 - 0.2 * cr, SY - 2.5 + 0.3 * cr, SZ + 2.4 - 0.25 * cr, wx - 0.05, SY + 0.3, SZ, 0.03, 38);
       lens.focus(wx - 0.05, SY + 0.1, SZ + 0.15, 1.0, 0.012);
       row0 = -4;
     } else if (shotA) {   // behind it, carried by it
@@ -438,8 +438,8 @@ vec3 tubeMove(out vec3 nrm) {
     if (shotC || shotW) {   // its hooks: steel, on green arms out of its sides; hand over hand they haul the yarn into its mouth
       for (let sd = -1, i = 0; sd <= 1; sd += 2, i++) {
         const ph = (t * 2.6 + i * 0.5) % 1, up = ph < 0.62 ? eio(ph / 0.62) : 1 - eio((ph - 0.62) / 0.38);
-        const s = lerp(0.72, 0.96, up), j = s * 23, j0 = Math.min(22, Math.floor(j)), f = j - j0;
-        const hx = lerp(YP[j0 * 3], YP[j0 * 3 + 3], f) + sd * 0.12, hy = lerp(YP[j0 * 3 + 1], YP[j0 * 3 + 4], f), hz = lerp(YP[j0 * 3 + 2], YP[j0 * 3 + 5], f) + 0.05;
+        const s = lerp(0.82, 0.97, up), j = s * 23, j0 = Math.min(22, Math.floor(j)), f = j - j0;
+        const hx = lerp(YP[j0 * 3], YP[j0 * 3 + 3], f) + sd * (0.55 + 0.35 * (1 - up)), hy = lerp(YP[j0 * 3 + 1], YP[j0 * 3 + 4], f), hz = lerp(YP[j0 * 3 + 2], YP[j0 * 3 + 5], f) + 0.05;
         const ax = MX + sd * 2.9, ay = SY + MY - 0.4, az = SZ + MZ + 0.4;
         aimHook(k.prop(i ? 'hookR' : 'hookL'), hx, hy, hz, hx - ax, hy - ay, hz - az, sd * 0.4);
         const arm = k.prop(i ? 'armR' : 'armL'), P = arm.userData.P, AU = arm.userData.U; AU.uN.value = 6; AU.uRad.value.set(0.14, 0.75, 0.6, 1);
@@ -598,7 +598,7 @@ vec3 tubeMove(out vec3 nrm) {
     const r = k.r, dir = SS[4]; r.xs.emit(x, y, z + 0.05, dir * rnd(2.5, 5), rnd(-0.3, 0.3), -0.6, rnd(0.25, 0.45), rnd(0.55, 0.8), rgb, 0.12, rnd(0, 6), rnd(-1, 1), rnd(-2, 2), 0, 3, 0, 0.5, 0);
   }
   const DSTEPS = [
-    [0.03, k => { const r = k.r, K = k.K, c = k.c, my = c.hy + SOFT; r.shake = Math.max(r.shake, 0.35); r.strands(c.hx, my, [PAL.linen, PAL.green, PAL.steel], 14, 1.6); r.glints(c.hx, my, 1.4, 10, K.steelHi, 3, 0.3, 0.5); r.hitStop(0.05, 0.3); }],
+    [0.03, k => { const r = k.r, K = k.K, c = k.c, my = c.hy + SOFT; r.shake = Math.max(r.shake, 0.35); for (let i = 0, n = r.n(14); i < n; i++) r.lint.emit(c.hx + rnd(-0.6, 0.6), my + rnd(-0.3, 0.3), 1.3, rnd(-2, 2), rnd(-2.5, 0.5), rnd(0.5, 2), rnd(0.5, 0.9), rnd(0.03, 0.06), i % 2 ? K.linen : K.mist, 0.8, 6, 2, 1.2, undefined, rnd(-4, 4), 0); r.glints(c.hx, my, 1.4, 10, K.steelHi, 3, 0.3, 0.5); r.hitStop(0.05, 0.3); }],
     [SPILL + 0.05, k => { const r = k.r, K = k.K; r.shake = Math.max(r.shake, 0.3); for (let i = 0, n = r.n(22); i < n; i++) r.curls.emit(rnd(-6.8, 6.8), B + rnd(0, 0.6), 0.2, rnd(-1, 1), rnd(-0.5, 2), rnd(1, 3), rnd(0.8, 1.4), 0.3, i % 2 ? K.patch : K.mist, 0.1, rnd(0, 6), rnd(-6, 6), rnd(-3, 3), -8, 1.5, 0.6, 1); }],
     [PEND, k => { const r = k.r, K = k.K; r.glints(PX0, B + 0.4, 0.4, 8, K.madderHi, 2.4, 0.25, 0.5); r.shake = Math.max(r.shake, 0.1); }]
   ];
@@ -608,7 +608,7 @@ vec3 tubeMove(out vec3 nrm) {
 
   const DEATH = {
     kit: true, len: 6.3, key: 2.6, lights: 3,
-    sheet: [0.25, 0.8, 1.02, 1.5, 1.95, 2.3, 2.75, 3.3, 3.9, 4.65, 5.25, 6.2],
+    sheet: [0.25, 0.85, 1.15, 1.5, 1.95, 2.3, 2.72, 3.37, 3.87, 4.62, 5.25, 6.2],
     beats: {
       choke:  [0, SPILL, 'out'],
       spill:  [SPILL, T_IN, 'in2'],
@@ -675,7 +675,7 @@ vec3 tubeMove(out vec3 nrm) {
     if (lurch > 0) { cam.mark(); cam.at(0.5, SY + SPC - 0.2, SZ + 2.0, 0.2, SY + SPC - 1.6, SZ - 3.5, -0.1, 64).mix(lurch); cam.motion(0.7); }
     cam.full(1); lens.focus(ex, SY + ey, SZ + 0.2, 0.6, 0.012);
     const kx = ex - 3.4, ky = SY + ey - 3.6, kz = SZ + 1.5;
-    k.light(0, kx, ky, kz, STEEL, 34 * lo, 8.5); k.light(1, ex + 0.3, SY + ey - 0.5, SZ + 1.0, STEEL_HI, 1.4 * lo, 3.4);
+    k.light(0, kx, ky, kz, STEEL, 34 * lo, 8.5); k.light(1, ex + 0.3, SY + ey - 0.5, SZ + 1.0, STEEL_HI, 1.4 * lo, 3.4); k.light(2, -1.5, SY + SPC - 2.5, SZ + 0.9, STEEL, 9 * lo * (1 - lurch), 5.5);
     const sky = k.prop('sky'); sky.position.set(0, SY + 12, SZ);
     const fl = k.prop('floor'); fl.position.set(0, SY + 12, SZ - 0.75); fl.scale.set(300, 300, 1);
     const knit = k.prop('knit'), U = knit.userData.U; knit.position.set(0, SY, SZ);
@@ -714,11 +714,11 @@ vec3 tubeMove(out vec3 nrm) {
       const fy = Math.max(B + 0.6, fell), u = k.span(RUN, PEND);
       cam.at(3.6, fy - 4.4, 5.6, -0.4, fy + 1.0, 0, 0.05 * Math.sin(t * 2.3), 46).mark();
       if (t < RUN + 0.25) { cam.mark(); cam.fov = 44; cam.orbit(bx, by - 0.9, 0.6, cam.fit(6.4, 6.4) * 0.92, 0.6, 0.12, 0); cam.mix(1 - k.ease.io(k.span(RUN, RUN + 0.25))); cam.motion(0.6); }
-      if (t > PEND - 0.1) { cam.mark(); cam.at(PX0 + 2.0, B - 1.3, 2.8, PX0 + 0.3, B + 0.7, 0, 0.02, 40); cam.mix(k.ease.io(k.span(PEND - 0.1, PEND + 0.22))); }
+      if (t > PEND - 0.1) { cam.mark(); cam.at(PX0 + 2.1, B - 1.5, 3.1, PX0 + 0.3, B + 0.9, 0, 0.02, 40); cam.mix(k.ease.io(k.span(PEND - 0.1, PEND + 0.22))); }
       cam.handheld(0.04 * (1 - u * 0.5), 1.8); cam.motion(0.3); cam.full(1);
       if (t > PEND) lens.focus(PX0, B + 0.45, 0.1, 0.5, 0.01);
     } else {   // home
-      cam.at(PX0 + 2.0, B - 1.3, 2.8, PX0 + 0.3, B + 0.7, 0, 0.02, 40).mark(); cam.home().mix(k.ease.io(k.span(4.8, 5.6)));
+      cam.at(PX0 + 2.1, B - 1.5, 3.1, PX0 + 0.3, B + 0.9, 0, 0.02, 40).mark(); cam.home().mix(k.ease.io(k.span(4.8, 5.6)));
       cam.full(1 - k.ease.io(k.span(4.8, 5.5)));
     }
 
@@ -732,7 +732,7 @@ vec3 tubeMove(out vec3 nrm) {
     else { const back = sm(RUN, PEND, t); dk = 0.88 - 0.33 * back; pitch = 0.45 - 0.35 * back; }
     if (t < 5.8) k.dark(dk * (1 - houseUp), pitch * (1 - houseUp)); else k.dark(0, 0);
     k.vig(0.45 * (1 - houseUp)); if (!home) k.quiet(true, t > SPILL);
-    if (t < SPILL + 0.3) k.light(2, bx, my - 0.3, 2.2, MOUTH, 30 * choke * lo, 8);
+    if (t < SPILL || (k.reduce && t < SPILL + 0.3)) k.light(2, bx, my - 0.3, 2.2, MOUTH, 30 * choke * lo, 8);
     if (t >= SPILL && t < T_IN && k.reduce) k.light(1, 0.3, Math.max(ey, B) + 2.2, 2.6, STEEL, 34 * lo, 9);
     else if (t >= T_IN && t < RUN + 0.3) k.light(1, bx + 1.5, by + 2.2, 4.0, STEEL, 26 * (1 - sm(RUN, RUN + 0.3, t)) * lo, 10);
     if (inPass) { const on = sm(0, 0.05, spp) * sm(1, 0.95, spp), lx = clamp(sx + dir * 1.4, -8, 8); k.light(0, lx, sy - 0.3, 1.9, STEEL_HI, (si < NBIND ? 22 : 15) * on * lo, 7.5); }
@@ -807,7 +807,7 @@ vec3 tubeMove(out vec3 nrm) {
     }
     // ---- the tie: a knot pulled tight where the loose end was
     if (t > PEND - 0.05 && t < 5.9) { const kt = k.ease.back(k.span(PEND, PEND + 0.25)), kl = WC, a = 1 - sm(5.3, 5.9, t); WC[0] = K.madder[0] * 0.8; WC[1] = K.madder[1] * 0.8; WC[2] = K.madder[2] * 0.8;
-      if (a > 0.02) { c.ball(PX0, B + 0.45, 0.1, 0.22 * kt * a, 0.18 * kt * a, 0.14 * kt * a, 0.3, kl, 0, 0.05); k.thread(PX0 - 0.75 * kt, B + 0.05, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); k.thread(PX0 + 0.6 * kt, B + 0.2, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); } }
+      if (a > 0.02) { c.ball(PX0, B + 0.45, 0.1, 0.15 * kt * a, 0.12 * kt * a, 0.1 * kt * a, 0.3, kl, 0, 0.05); c.ball(PX0 + 0.12, B + 0.52, 0.12, 0.1 * kt * a, 0.09 * kt * a, 0.08 * kt * a, 1.1, kl, 0, 0.05); c.ball(PX0 - 0.11, B + 0.38, 0.11, 0.1 * kt * a, 0.08 * kt * a, 0.08 * kt * a, -0.6, kl, 0, 0.05); k.thread(PX0 - 0.75 * kt, B + 0.05, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); k.thread(PX0 + 0.6 * kt, B + 0.2, 0.04, PX0, B + 0.45, 0.08, 0.07, kl, a, 1, 0.05); } }
 
     let bt = 0; for (let i = 0; i < NBIND; i++) bt = Math.max(bt, k.pulse(PT[i] + PD[i], 0.015, 0.22));
     const ch = k.pulse(0.03, 0.03, 0.4), sp0 = k.pulse(SPILL, 0.02, 0.3);
