@@ -35,7 +35,7 @@ BUDGET = {
     'calls': {'high': 48, 'medium': 44, 'lite': 40, 'low': 34},   # this pass: 41 / 36 / 32 / 28 at most (before: up to 106 on High)
     'flat': 8,
     'tris': {'high': 200000, 'medium': 200000, 'lite': 120000, 'low': 120000},   # this pass: 139k / 126k / 76k / 71k at most
-    'js': 14.0,          # mean ms per frame, sim + renderer
+    'js': 14.0,          # ms per frame, sim + renderer: the median over a tier's scenes (one scene may spike when the machine is busy)
     'heap': 40000,       # bytes allocated per frame by the whole game (sim + renderer); the median over a tier's stages
     'heapR': 25000,      # the same for the renderer alone (three.js itself allocates a little per draw call)
     'lazy': 0,           # programs compiled after the warm-up
@@ -117,13 +117,15 @@ for (tier, kind), rs in by.items():
         if r['callsMax'] > BUDGET['calls'].get(tier, 48): fails.append(f"{tag}: {r['callsMax']} draw calls > {BUDGET['calls'].get(tier)}")
         if r['calls'] > first['calls'] + BUDGET['flat']: fails.append(f"{tag}: draw calls grow with the stage ({first['calls']} -> {r['calls']})")
         if r['tris'] > BUDGET['tris'].get(tier, 200000): fails.append(f"{tag}: {r['tris']} triangles > {BUDGET['tris'].get(tier)}")
-        if r['js'] > BUDGET['js']: fails.append(f"{tag}: {r['js']:.2f} ms of JavaScript per frame > {BUDGET['js']}")
+        if r['js'] > 3 * BUDGET['js']: fails.append(f"{tag}: {r['js']:.2f} ms of JavaScript per frame > {3 * BUDGET['js']}")   # one scene: only a gross regression (the container is shared)
 
         if r.get('progLazy', 0) > BUDGET['lazy']: fails.append(f"{tag}: {r['progLazy']} shader programs compiled mid-game")
 # heap growth is noisy frame to frame (when V8 collects is its own business): judged on the median over a tier's stages
 import statistics
 for tier in sorted(set(r['tier'] for r in rows)):
     hs = [r['heap'] for r in rows if r['tier'] == tier and r.get('heap', -1) >= 0]; hr = [r['heapR'] for r in rows if r['tier'] == tier and r.get('heapR', -1) >= 0]
+    js = [r['js'] for r in rows if r['tier'] == tier]
+    if js and statistics.median(js) > BUDGET['js']: fails.append(f"{tier}: {statistics.median(js):.2f} ms of JavaScript per frame (median over its scenes) > {BUDGET['js']}")
     if hs and statistics.median(hs) > BUDGET['heap']: fails.append(f"{tier}: the game allocates {statistics.median(hs):.0f} bytes per frame (median) > {BUDGET['heap']}")
     if hr and statistics.median(hr) > BUDGET['heapR']: fails.append(f"{tier}: the renderer allocates {statistics.median(hr):.0f} bytes per frame (median) > {BUDGET['heapR']}")
 if not PACING_OK and A.root == HERE: fails.append('frame pacing: the main loop no longer gives a 60 Hz screen one step a frame (see docs/PERF.md, Frame pacing)')

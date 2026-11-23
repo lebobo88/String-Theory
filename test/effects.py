@@ -42,7 +42,7 @@ PROBE = r"""() => {
     film: !!(r.cine && r.cine.active), corpse: !!r.corpse, t: r.time });
   P.live = live;
   // the test draws only the frames it looks at (software WebGL is slow); every frame is still simulated, batched and counted
-  const rr = r.render.bind(r); r.render = function () { P.frames++; if (ui.shown === 'tally') P.sheetFrames++; if (r.rockets.length > P.maxRockets) P.maxRockets = r.rockets.length;
+  const rr = r.render.bind(r); r.render = function () { P.frames++; if (ui.shown === 'tally' || ui.shown === 'victory') P.sheetFrames++; if (r.rockets.length > P.maxRockets) P.maxRockets = r.rockets.length;
     const pk = P.peak; if (r.glow && r.glow.top > pk.glow) pk.glow = r.glow.top; if (r.trA && r.trA.n > pk.strips) pk.strips = r.trA.n; if (r.spr && r.spr.n > pk.sprites) pk.sprites = r.spr.n;
     if (window.__skipDraw) return; const out = rr(); if (r.stats.calls > pk.calls) pk.calls = r.stats.calls; return out; };
   const tl = ui.tally.bind(ui); ui.tally = function (res, pk) { if (!P.sheet) P.sheet = live(); return tl(res, pk); };
@@ -131,7 +131,7 @@ def run_case(b, base, case, size, quality, fails, notes, reduced=False):
     t = 0.0; up_at = None; first_sheet = None; last = None; frames_at_up = None; rocket_seen = 0
     while t < 22.0:
         fast(200); t += 0.2; s = st(); rocket_seen = max(rocket_seen, s['live']['rockets'])
-        up = s['shown'] == 'tally'
+        up = s['shown'] in ('tally', 'victory')   # after the last boss the results are the victory sheet (src/ui.js)
         if up and up_at is None: up_at = t; first_sheet = s; frames_at_up = s['frames']
         snap(f"+{t:.1f}s" + (' sheet' if up else '') + (f" r{s['live']['rockets']}" if s['live']['rockets'] else '') + (' film' if s['live']['film'] else ''))
         last = s

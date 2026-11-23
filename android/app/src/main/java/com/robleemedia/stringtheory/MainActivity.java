@@ -18,6 +18,16 @@ public class MainActivity extends BridgeActivity {
         // The game steps 60 times a second. On 90Hz and 120Hz screens ask for 60 so every drawn frame is a new one and the phone runs cooler.
         WindowManager.LayoutParams lp = getWindow().getAttributes();
         lp.preferredRefreshRate = 60f;
+        // preferredRefreshRate is only a hint; also pick the display mode at this resolution that runs closest to 60 Hz.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            android.view.Display d = getWindowManager().getDefaultDisplay();
+            android.view.Display.Mode cur = d.getMode(), best = null;
+            for (android.view.Display.Mode m : d.getSupportedModes()) {
+                if (m.getPhysicalWidth() != cur.getPhysicalWidth() || m.getPhysicalHeight() != cur.getPhysicalHeight()) continue;
+                if (best == null || Math.abs(m.getRefreshRate() - 60f) < Math.abs(best.getRefreshRate() - 60f)) best = m;
+            }
+            if (best != null) lp.preferredDisplayModeId = best.getModeId();
+        }
         getWindow().setAttributes(lp);
         hideSystemBars();
         // Back (button or gesture) goes to the game first: it skips a film, pauses a flight, closes a sheet or steps back a screen.

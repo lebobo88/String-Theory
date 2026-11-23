@@ -1,0 +1,56 @@
+# film sounds generated, flow EtrDipq3TbcHBCGx7I3X (name generation_id keep_seconds level)
+wick_in_sting xHPZ1PNxgcuIWcU6S7bl 8.8 stereo   # take A
+wick_in_sting_b AxlhJ318umbmIhUT2Knt 8.8 stereo # take B
+wick_scratch dKdmoXNz1Wgn4Pf3T5ab 1.9
+wick_catch XEXRTFOd49Xw4nc9FYrE 1.1
+wick_fuse QGgIzS3Oz1LK6dm7BJr9 0.5
+wick_swing NLXvzBgr4P75SgsgYMVq 1.5 level
+wick_eyes SM8UDDyAiVu3mNOwgyF4 0.7
+wick_whiteout QQR8cmmMCylXL8oC5FKJ 1.8 level
+wick_brand waiBqUhAhFzRwosC0Xi5 1.3
+wick_gasp xdK2y1JgaRQLCBQLGEpY 1.8 level
+wick_melt YfcaHIPtEkNNBFlo0dOR 2.4 level
+wick_gutter jMci4LVCCzn4F0XjDKoW 0.5
+wick_drown ZfdP2gBQaY1qjoDiaS4T 1.4 level
+wick_smoke GNA0UhsZMLjYOfqq125a 1.8 level
+wick_choke jt6DtuxgPGAFVvf0bBa8 0.7
+wick_breaker zGjPr8tLM94dH3sypItO 1.1
+wick_down_sting OzLJMUrzxma9v3LsHaXG 8.8 stereo   # take A
+wick_down_sting_b s790Fctb12q4qwj1XYgG 8.8 stereo # take B
+tinea_weave KK2kL9pjX7yo8EorAzFh 2.4 level
+tinea_breath P4OHeIBbSHZ8UQbablsq 0.9
+tinea_feel jlXjuuirUPq9ScLvFIb4 1.3
+tinea_snap ShCoG6lMqQFqexOtszpI 0.7
+tinea_unzip pppKIzf2R0oVgvW6lHuS 0.5
+tinea_burst prGq4fajEgVs1OgjpQDQ 2.3 level
+tinea_settle iaTqsWNWA8OpnE5BbkBE 2.6 level
+tinea_still ittfKirmiYQx1qod8gxo 1.3
+tinea_hours 5GxdVYgVU5AUI4aeW2e6 3.4 level
+tinea_nibble bTHJKGCcFv5Pzk4D9F0C 3.0 level
+tinea_frost Ov5Wt5qlY8GD7IZCUyOq 3.0 level
+tinea_sag VPZHpQE0E5eCE66DfXZm 1.4
+tinea_lamp x2lyjrYyxS3cpheMNTz6 2.0 level
+tinea_wing p6KWemXTWlhw820ydK4G 1.7
+tinea_in_sting ubEjAe9pRoT4lIWqpPiA 9.2 stereo   # take A
+tinea_in_sting_b hFE8WL5Izp4205Ofpzve 9.2 stereo # take B
+tinea_out_sting 94LRGnm78wBfWTHpXw0g 7.2 stereo   # take A
+tinea_out_sting_b BaAnfGxHdYAdNO2ACvGE 7.2 stereo # take B
+lappet_draught LKCKvrpiOYFUDPX3PXnj 2.2 level
+lappet_shaft ciagCts31YPXHnVUzrT7 1.8 level
+lappet_pass NNJL2nJ3T2KR9pac1VZR 1.9 level
+lappet_flutter VO6Aqdzz9OlfQo3TwtTQ 1.0
+lappet_land d4QP6mzZqPhK93eIhTHM 0.9
+lappet_stir ROOe6JVEBIe9WF6qtS4y 0.35
+lappet_crack h1Zsw1PwGu3acP5O1DQO 1.5
+lappet_wings t0OgmjQE1NWIvb9grOEs 1.8 level
+lappet_snap UtmWa9TxBtMxPaK691Iw 0.8
+lappet_wither Cf0Fy4uv1wS6ecHkXJ7N 1.3
+lappet_gale eGYureUMjcUiPWG4pUMm 4.2 level
+lappet_strip Hw24M3X1M2ZfYmjh15xS 1.1
+lappet_veins maKOpU07l67MoMqXeKru 1.0
+lappet_last MT2kwuQY34Cz86CKQK7c 1.3
+lappet_still ffooCbluPGws7GenRoIc 2.0 level
+lappet_in_sting 8aFDAITlT3F3gXH0wifv 9.6 stereo   # take A
+lappet_in_sting_b a5ZNQCshaSrud5WKJYc8 9.6 stereo # take B
+lappet_down_sting V2mUVtcvpQutOrWvrKdC 7.4 stereo   # take A
+lappet_down_sting_b 0XbNGMtQ46typxK0fnfJ 7.4 stereo # take B

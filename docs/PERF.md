@@ -50,7 +50,7 @@ Measured on wave 3 and the boss of every stage, on a fixed seed, at 412x915.
 | Draw calls per frame, phone High | 48; a late stage within 8 of stage 1 | 41 | 104 (stage 5 wave) |
 | Draw calls, phone Medium / Light / Low | 44 / 40 / 34 | 36 / 32 / 28 | Light 56 |
 | Triangles per frame, High and Medium / Light and Low | 200k / 120k | 139k / 76k | 143k / 58k |
-| JavaScript per frame (sim + renderer), mean | 14 ms in the test container | under 5 ms | the same |
+| JavaScript per frame (sim + renderer), median over a tier's scenes | 14 ms in the test container | about 2 ms | the same |
 | Heap allocated per frame, median over a tier's scenes: whole game / renderer alone | 40 KB / 25 KB | 17 KB / 12 KB | 14 KB / 17 KB |
 | Shader programs compiled after the loading screen | 0 | 0 | 26 |
 

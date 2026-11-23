@@ -304,9 +304,10 @@ void main(){
                            falls from it, the two crossing shafts go out      4.52; the falling ember is the last
      dark      4.55-5.25   black; the ember dies (4.85); CUT under the        none                                    (silence)
                            black to the play camera (4.95), body gone
-     breakers  5.25-6.45   the play camera, still                            three banks of tungsten (lights 0-2)    wick_breaker x4, buzz x4
-                           (title 5.3, its letters flicker on like bulbs)     clunk on down the cloth: 5.25, 5.55,    (sting: a chord on each,
-                                                                              5.85; the whole house 6.2               the last full)
+     breakers  5.25-6.45   the play camera, still; three black bands over     the house lights under the bands; a     wick_breaker x4, buzz x4
+                           the cloth lift one by one, top, middle, bottom     brief amber light warms each bank as    (sting: a chord on each,
+                           (title 5.3, its letters flicker on like bulbs)     it lifts (lights 0-2); the whole house  the last full)
+                                                                              to full at 6.2
      out       6.45-6.9    the play camera; the cloth calm, lit, whole        the house lights, fully up
      reduced motion: the camera stays at the play camera; the same story plays on the cloth, without the flashes. */
   const LZD = 1.3, CEIL = LANTERN_Y + 0.62;                // the lanterns as the fight hangs them; where rising smoke meets the rail and spreads
