@@ -7,6 +7,12 @@
   const HW = T.fieldW / 2, H = T.fieldH, PY = T.playerY, BOT = T.fieldBot || 0;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const ROWS_Y = [16.4, 15.2, 14.0, 12.8, 11.6];
+  /* Celebrations get their own time: how long the cloth is held clear, in seconds, before the stage's results are worked out.
+     bonus = the fireworks after a perfect bonus wave; boss = the flourish after a boss's death film; last = after the final boss. */
+  const CELEBRATE = { bonus: 3.9, boss: 2.8, last: 3.9 };
+  /* Hit-stop: on a heavy kill the whole cloth runs at STOP_RATE for a few frames. Never when ST.reducedMotion is set (the drawing
+     side sets it from the system setting). Inputs still land: time crawls, it does not stop. */
+  const STOP_RATE = 0.08, STOP_GAP = 0.3;
 
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -48,6 +54,7 @@
       this.enemies = []; this.shots = []; this.eshots = []; this.drops = []; this.hazards = []; this.nets = []; this.zones = [];
       this.props = []; this.arena = { floor: 0, inset: 0 }; this.dark = 0; this.pull = null; this.suck = null; this.propSlow = 1; this.bobbinLock = null;
       this.boss = null; this.sampler = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
+      this.bossDown = false; this.stopT = 0; this.stopAt = -9; this.wall = 0;
     }
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
       const old = this.d.ply; this.d = ST.derive(this.p);
@@ -182,6 +189,8 @@
       this.events.length = 0;
       if (this.phase === 'idle' || this.phase === 'done') return;
       dt = Math.min(dt, 0.05);
+      this.wall += dt;
+      if (this.stopT > 0) { this.stopT -= dt; dt *= STOP_RATE; }   // hit-stop: a heavy kill holds the moment
       this.t += dt;
       for (const k in this.fx) if (this.fx[k] > 0) { this.fx[k] = Math.max(0, this.fx[k] - dt); if (this.fx[k] === 0) this.fxUp[k] = false; }
       if (this.freezeT > 0) this.freezeT = Math.max(0, this.freezeT - dt);
@@ -201,7 +210,12 @@
 
       if (this.phase === 'play') {
         const fieldEmpty = this.enemies.length === 0 && !this.boss;
-        if (fieldEmpty) { this.phase = 'clear'; this.phaseT = 1.6; this.eshots.length = 0; this.nets.length = 0; this.hazards.length = 0; this.zones.length = 0; }
+        if (fieldEmpty) {
+          this.phase = 'clear'; this.phaseT = 1.6; this.eshots.length = 0; this.nets.length = 0; this.hazards.length = 0; this.zones.length = 0; this.stopT = 0;
+          // a perfect bonus wave and a beaten boss are celebrated before the results come up
+          const sm = this.sampler;
+          if (sm && sm.hit >= sm.total) this.celebrate('bonus'); else if (this.bossDown) this.celebrate(this.panel === C.PANELS.length - 1 ? 'last' : 'boss');
+        }
       } else if (this.phase === 'clear') {
         this.phaseT -= dt;
         if (this.phaseT <= 0 && this.drops.length === 0) this.finishStage();
@@ -209,6 +223,19 @@
         this.phaseT -= dt;
         if (this.phaseT <= 0) this.finishSnap();
       }
+    }
+
+    /* Hold the cleared cloth for a celebration and tell the drawing side: { t: 'celebrate', kind: 'bonus' | 'boss', secs, last }.
+       (The length is `secs`: `t` is every event's name.) */
+    celebrate(kind) {
+      const last = kind === 'last', secs = ST.reducedMotion ? Math.min(2.8, CELEBRATE[kind]) : CELEBRATE[kind];   // the calm version is shorter
+      this.phaseT = Math.max(this.phaseT, secs);
+      this.emit('celebrate', { kind: last ? 'boss' : kind, secs, last, x: this.downX || 0, y: this.downY === undefined ? 12 : this.downY, sprite: this.downSprite || null });
+    }
+    /* Ask for a hit-stop of `sec` seconds of real time. At most one every STOP_GAP seconds, so a chain of kills cannot make the game crawl. */
+    stop(sec) {
+      if (ST.reducedMotion || this.phase !== 'play' || this.wall - this.stopAt < STOP_GAP) return false;
+      this.stopAt = this.wall; this.stopT = Math.max(this.stopT, sec); return true;
     }
 
     // ---------- player ----------
@@ -474,7 +501,10 @@
       if (e.type === 'spinner' && diving && e.escorts && e.escorts.some(x => !x.dead)) pts = def.ptsEscort;
       pts *= this.mode.pay; this.stitches += Math.round(pts * mult);
       this.p.codex.moths[e.type] = (this.p.codex.moths[e.type] || 0) + 1;
-      this.emit('kill', { x: e.x, y: e.y, type: e.type, pts: Math.round(pts * mult), mult });
+      // weight: 2 = a squad leader or the toughest moths, 1 = anything that takes two hits. Heavy kills hold the moment for a few frames.
+      const big = tracing ? 0 : e.type === 'spinner' || def.hp >= 3 ? 2 : def.hp >= 1.5 ? 1 : 0;
+      const held = big ? this.stop(big > 1 ? 0.085 : 0.05) : false;
+      this.emit('kill', { x: e.x, y: e.y, type: e.type, pts: Math.round(pts * mult), mult, big, held });
       // drops
       const dust = Math.max(1, Math.round(def.dust * (1 + (mult - 1) * T.comboCoin) * (this.fx.gold > 0 ? (this.fxUp.gold ? 3 : 2) : 1) * (m.dust || 1) * this.mode.pay));
       if (this.fx.bobbin > 0 && this.fxUp.bobbin) this.fx.bobbin = Math.min(this.charmDur('bobbin'), this.fx.bobbin + 0.5);   // Overdrive: kills keep it going
@@ -618,7 +648,7 @@
     }
     launch(e, formed) {
       const mark = this.armed.chalk > 0;
-      const wind = mark ? 1.0 : (this.p.pattern.chalkline ? 0.4 : 0.12);
+      const wind = mark ? 1.0 : (this.p.pattern.chalkline ? 0.5 : 0.3);   // every dive is announced: the moth rears back before it goes
       const go = (x, next) => { x.state = 'windup'; x.t = wind; x.next = next; x.vx = 0; x.mark = (mark || this.p.pattern.chalkline) ? { strong: mark } : null; };
       if (mark) { this.armed.chalk--; }
       if (e.type === 'wick') { go(e, 'coal'); }
@@ -636,7 +666,7 @@
       this.emit('dive', { type: e.type });
     }
     spawnExtra(type) {
-      if (type === 'hawk') this.spawn('hawk', { x: clamp(this.player.x + this.rr(-2.5, 2.5), -HW + 1, HW - 1), y: H + 1, state: 'strafe', shotT: 0.4 });
+      if (type === 'hawk') this.spawn('hawk', { x: clamp(this.player.x + this.rr(-2.5, 2.5), -HW + 1, HW - 1), y: H + 3.6, state: 'strafe', shotT: 0.4 });   // from well above the cloth: its column is marked before it arrives
       else { const dir = this.rand() < 0.5 ? -1 : 1; this.spawn('looper', { x: -dir * (HW + 1), y: 9, by: this.rr(8.2, 10.4), dir, state: 'loop', t: 0, shotT: 1 }); }
     }
     capture(e) {
@@ -884,6 +914,7 @@
       this.stitches += Math.round(def.pts * this.mode.pay);
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
       this.emit('keeperdown', { id: b.id, name: def.name, sprite: def.sprite, x: b.x, y: b.y });
+      this.bossDown = true; this.downX = b.x; this.downY = b.y; this.downSprite = def.sprite; this.stopT = 0;
       for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay / 3));
       this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay) });
       const open = def.charts.filter(id => !p.charts[id]);

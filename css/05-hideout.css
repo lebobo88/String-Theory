@@ -1,0 +1,234 @@
+
+/* ============ 7 · the hideout: one frame for every tab ============
+   Rows, top to bottom: header · tabs · strip · list · details · footer. Every row has a size that does not depend on what is
+   in it (a token, or the space left over), so the frame is the same on every tab; only what sits inside the slots changes.
+   tools/audit.py checks it: each [data-anchor] must be at the same pixel rectangle on every tab, at every size. */
+.hem { width: min(100%, var(--hem-w)); height: min(100%, var(--hem-h)); padding: var(--hem-pad); display: flex; flex-direction: column; gap: var(--hem-gap); isolation: isolate; }
+.hem > header { flex: none; min-height: var(--hem-head); display: flex; justify-content: space-between; align-items: center; gap: var(--sp-12); padding-bottom: var(--sp-6); border-bottom: var(--ln-2) dashed var(--ink); min-width: 0; }
+.hem > header > div:first-child { min-width: 0; display: flex; align-items: baseline; gap: var(--sp-16); }
+.hem > header h2 { white-space: nowrap; }
+.hem > header .sub { white-space: nowrap; overflow: hidden; min-width: 0; }
+.hem > header .purse { flex-wrap: nowrap; flex: none; }
+.hem > footer { flex: none; height: var(--hem-foot); display: flex; justify-content: space-between; align-items: flex-end; gap: var(--sp-8); border-top: var(--ln-2) dashed var(--ink); }
+.hem.shop { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--hem-head) var(--hem-tabs) var(--hem-strip) minmax(0, 1fr) var(--hem-foot); }
+.shop > * { min-width: 0; min-height: 0; }
+.shop > header, .shop > footer { height: auto; min-height: 0; }
+/* tabs: six equal columns here; on a phone each takes its word's width plus an equal share of what is left */
+.shop > .tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--sp-4); }
+.shop .tabb { min-height: 0; padding: var(--sp-4) var(--sp-12); }
+/* ---- the strip: your ship's four numbers, each with what the chosen thing would make it. On Perks and Collection the same slot holds a two-way switch. ---- */
+.strip { display: grid; }
+.shipstrip, .pseg { display: grid; background: var(--pat-cloth), var(--coverlet); color: var(--linen); border: var(--ln-2) solid var(--brass); min-width: 0; min-height: 0; }
+.shipstrip { grid-template-columns: minmax(0, 1.2fr) repeat(4, minmax(0, 1fr)); }
+.shipstrip > div { position: relative; min-width: 0; padding: 0 var(--sp-12); border-left: var(--ln) dashed var(--dot); display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; align-content: center; align-items: baseline; gap: 0 var(--sp-8); }
+.shipstrip > div:first-child { border-left: 0; }
+.shipstrip .k { grid-column: 1 / -1; font: 700 var(--t-floor)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; color: var(--mist-hi); white-space: nowrap; }
+.shipstrip .v { font: 600 var(--t-lg)/var(--lh-tight) var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shipstrip .d { font: 600 var(--t-body)/var(--lh-tight) var(--mono); font-style: normal; font-variant-numeric: tabular-nums; color: var(--leaf-hi); white-space: nowrap; }
+.shipstrip .d.down { color: var(--madder-hi); }
+.shipstrip .d:empty { display: none; }
+.shipstrip .chg { background: color-mix(in srgb, var(--mist) 14%, transparent); } .shipstrip .chg .k { color: var(--linen); }
+.shipstrip .who { display: flex; align-items: center; gap: var(--sp-8); }
+.shipstrip .who > span { display: flex; flex-direction: column; min-width: 0; }
+.shipstrip .who b { font: 700 var(--t-md)/var(--lh-tight) var(--text); white-space: nowrap; }
+.shipstrip .stitch { position: absolute; left: var(--sp-8); right: var(--sp-8); bottom: var(--sp-2); height: 0; border-top: var(--ln-2) dashed var(--leaf-hi); transform-origin: 0 50%; transform: scaleX(0); opacity: 0; pointer-events: none; }
+.pseg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.shop .pseg .tabb { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-8); padding: 0 var(--sp-16); background: transparent; border: 0; border-left: var(--ln) dashed var(--dot); color: var(--linen); }
+.shop .pseg .tabb:first-child { border-left: 0; }
+.shop .pseg .tabb span { font: 600 var(--t-cap)/1 var(--mono); color: var(--mist-hi); white-space: nowrap; }
+.shop .pseg .tabb.on { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 var(--ln-2) var(--coverlet), inset 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron); }
+.shop .pseg .tabb.on span { color: var(--ink-2); }
+
+/* ---- the list: always the same rectangle, ruled into the same rows ---- */
+.station { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); gap: var(--hem-gap); }
+.larea { position: relative; min-width: 0; min-height: 0; overflow: hidden; display: grid; }
+.larea > * { min-width: 0; min-height: 0; }
+.list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); gap: var(--list-gap); }
+.card, .ghost { min-width: 0; min-height: 0; border: var(--ln) dotted var(--rule); }
+.ghost { opacity: .5; }
+.card { display: grid; grid-template-columns: var(--card-ic) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--sp-8); padding: var(--sp-2) var(--sp-8); background: var(--paper); color: var(--ink); text-align: left; width: 100%; transition: transform var(--dur-1) var(--ease); }
+.card.sel { background: var(--cream); border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; }
+/* locked: not faded (it must still be read), set back on the bare sheet with its picture greyed */
+.card.lock { background: transparent; } .card.lock .cic { filter: grayscale(1); opacity: .5; } .card.lock.sel { background: var(--paper); }
+.card:disabled { opacity: .5; }
+.cic { grid-row: 1 / 3; display: inline-flex; justify-content: center; align-items: center; align-self: center; }
+.cic .ic { max-width: 100%; height: auto; }
+.cname { align-self: end; font: 700 var(--t-md)/var(--lh-tight) var(--text); white-space: nowrap; overflow: hidden; }
+.cname.fit-1 { font-size: var(--t-body); } .cname.fit-2 { font-size: var(--t-sm); } .cname.fit-3 { font-size: var(--t-floor); }
+.cmeta { align-self: start; font: 400 var(--t-cap)/var(--lh-snug) var(--text); color: var(--ink-2); white-space: nowrap; overflow: hidden; display: flex; align-items: center; gap: var(--sp-6); padding-top: var(--sp-2); }
+.cmeta s { color: var(--ink-2); }
+.lv { font: 600 var(--t-md)/1 var(--mono); color: var(--madder-ink); }
+/* perks: five rows of three, each row unlocking left to right */
+.sampler { display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: var(--list-gap); }
+.srow { display: grid; grid-template-columns: 5em repeat(3, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
+.srow .eyebrow, .urow .eyebrow { align-self: center; overflow-wrap: anywhere; }
+.node { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-8); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; gap: var(--sp-2); transition: transform var(--dur-1) var(--ease); }
+.node b { font: 700 var(--t-sm)/var(--lh-tight) var(--text); }
+.node span { font: 600 var(--t-floor)/1 var(--mono); color: var(--ink-2); white-space: nowrap; }
+.node.done { border: var(--ln) solid var(--madder); } .node.done span { color: var(--madder-ink); }
+.node.lock { background: transparent; border-style: dotted; }
+.node.sel, .utile.sel { background: var(--cream); border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; }
+/* power-up upgrades: three rows of picture tiles */
+.ugrid { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--list-gap); }
+.urow { display: grid; grid-template-columns: 5em repeat(4, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
+.utile { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-4); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); text-align: center; transition: transform var(--dur-1) var(--ease); }
+.utile .ic { flex: none; width: var(--tile-ic); height: var(--tile-ic); }
+.utile .un { font: 700 var(--t-floor)/1.1 var(--text); hyphens: manual; -webkit-hyphens: manual; }
+.utile > span { font: 600 var(--t-floor)/1 var(--mono); color: var(--ink-2); white-space: nowrap; }
+.utile.own { border: var(--ln) solid var(--madder); } .utile.own > span { color: var(--madder-ink); }
+.utile.lock { background: transparent; border-style: dotted; } .utile.lock .ic { filter: grayscale(1); opacity: .5; }
+/* collection: specimens pinned to the cloth. Bosses wear a brass frame. */
+.album { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: var(--list-gap); }
+.tile { min-width: 0; min-height: 0; padding: var(--sp-2); background: var(--pat-cloth), var(--coverlet); color: var(--linen); border: var(--ln) solid transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); text-align: center; transition: transform var(--dur-1) var(--ease); }
+.tile .ic { width: calc(var(--tile-ic) + var(--sp-8)); height: var(--tile-ic); }
+.tile .tn { font: 700 var(--t-floor)/1.1 var(--text); }
+.tile.unseen { background: var(--coverlet); } .tile.unseen .ic { filter: brightness(0) opacity(.45); } .tile.unseen .tn { font-weight: 400; color: var(--mist-hi); }
+.tile.boss { box-shadow: inset 0 0 0 var(--ln-2) var(--brass); }
+.tile.sel { border: var(--ln-2) solid var(--saffron); box-shadow: 0 0 0 var(--ln-2) var(--coverlet) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.album .ghost { border-color: var(--rule); }
+
+/* ---- the details: one panel, the same slots for everything. Picture, name and kind; what it does and what changes; the price on the button, always in the same corner. ---- */
+.detail { min-width: 0; min-height: 0; overflow: hidden; background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--ink); padding: var(--d-pad); display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--ctl); gap: var(--d-gap); }
+.dhead { display: grid; grid-template-columns: var(--d-pic) minmax(0, 1fr); gap: var(--sp-12); min-height: 0; }
+.dpic { width: var(--d-pic); height: var(--d-pic); background: var(--pat-cloth), var(--coverlet); color: var(--saffron-lit); border: var(--ln-2) solid var(--brass); display: grid; place-items: center; overflow: hidden; }
+.dpic .ic { width: 64%; height: auto; max-height: 84%; }
+.dpic.unseen .ic { filter: brightness(0) opacity(.45); }
+.dpic .spool { width: 42%; height: 58%; }
+.dpic .lvpic { font: 400 var(--d-lg)/1 var(--display); color: var(--saffron-lit); }
+.dtitle { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: var(--sp-2); }
+.dname { font: 400 var(--d-lg)/1 var(--display); white-space: nowrap; overflow: hidden; flex: none; line-height: var(--d-name); height: var(--d-name); }   /* one line box whatever size the name is fitted to, so the name's slot never moves */
+.dname.fit-1 { font-size: var(--d-md); } .dname.fit-2 { font-size: var(--d-sm); } .dname.fit-3 { font-size: var(--d-xs); } .dname.fit-4 { font-size: var(--t-md); }
+.dkick { font: 700 var(--t-cap)/var(--lh-tight) var(--text); color: var(--ink-2); white-space: nowrap; overflow: hidden; }
+.dkick.fit-1 { font-size: var(--t-floor); letter-spacing: -.01em; }
+.dbody { min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--sp-6); font: 400 var(--t-md)/var(--lh-snug) var(--text); }
+.dbody.fit-1 { font-size: var(--t-body); } .dbody.fit-2 { font-size: var(--t-sm); } .dbody.fit-3, .dbody.fit-4 { font-size: var(--t-floor); gap: var(--sp-2); }
+.dbody.fit-4 .opt { display: none; }
+.dbody p { font: inherit; }
+.dcmp { display: flex; flex-direction: column; gap: var(--sp-4); }
+.dcmp > div { padding-top: var(--sp-4); border-top: var(--ln) dotted var(--rule); }
+.dbody.fit-3 .dcmp > div, .dbody.fit-4 .dcmp > div { padding-top: var(--sp-2); }
+.dcmp dt { display: inline; font-weight: 700; color: var(--madder-ink); margin-right: var(--sp-4); }
+.dcmp dd { display: inline; }
+.dcmp .was dt { color: var(--ink-2); }
+.dact { display: grid; grid-template-columns: minmax(0, 1fr) var(--buy-w); gap: var(--sp-8); align-items: stretch; min-height: 0; }
+.dleft { min-width: 0; min-height: 0; overflow: hidden; display: flex; align-items: center; gap: var(--sp-6); font: 400 var(--t-cap)/var(--lh-snug) var(--text); color: var(--ink-2); }
+.dleft b { color: var(--ink); } .dleft em { font-style: normal; color: var(--leaf-ink); font-weight: 700; }
+.dleft.fit-1 { font-size: var(--t-floor); line-height: var(--lh-tight); }
+.dbuy { display: grid; min-width: 0; min-height: 0; }
+.dbuy > * { min-width: 0; min-height: 0; }
+.btn.buy { flex-direction: column; gap: var(--sp-2); padding: 0 var(--sp-8); min-height: 0; }
+.buy .bl { display: flex; align-items: center; justify-content: center; gap: var(--sp-8); white-space: nowrap; }
+.buy .bh { font: 400 var(--t-floor)/1.1 var(--text); white-space: nowrap; }
+.buy.fit-1 .bl { font-size: var(--t-body); gap: var(--sp-4); } .buy.fit-2 .bl { font-size: var(--t-sm); gap: var(--sp-4); } .buy.fit-2 .bh, .buy.fit-1 .bh, .buy.fit-3 .bh { letter-spacing: -.01em; }
+/* the last step: the label and its price at the floor size, the price tag drawn tighter (large text in a narrow buy slot) */
+.buy.fit-3 .bl { font-size: var(--t-floor); gap: var(--sp-4); } .buy.fit-3 .tag.sm { font-size: var(--t-floor); padding: 0 var(--sp-4) 0 var(--sp-12); gap: var(--sp-2); } .buy.fit-3 .tag.sm .ic { width: var(--sp-12); }
+.stamp { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); border: var(--ln) dashed var(--rule); color: var(--saffron-ink); text-align: center; padding: 0 var(--sp-8); }
+.stamp b { font: 700 var(--t-body)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; white-space: nowrap; }
+.stamp span { font: 400 var(--t-floor)/1.1 var(--text); color: var(--ink-2); white-space: nowrap; }
+.stamp.none { color: var(--ink-2); }
+/* which weapon goes where: a two-way choice, inked in for the one in use */
+.equip { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sp-4); width: 100%; height: 100%; }
+.equip > span { font: 700 var(--t-floor)/var(--lh-tight) var(--text); color: var(--ink-2); padding-right: var(--sp-2); }
+.dleft.fit-1 .equip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .dleft.fit-1 .equip > span { display: none; }   /* no room for the words: the group's own label says it */
+.eq { min-width: var(--tap); min-height: var(--tap); height: 100%; padding: 0 var(--sp-4); background: transparent; color: var(--ink); border: var(--ln) dashed var(--ink-2); font: 700 var(--t-sm)/1 var(--text); transition: transform var(--dur-1) var(--ease); }
+.eq.on { background: var(--ink); color: var(--paper); border: var(--ln) solid var(--ink); }
+.eq:disabled:not(.on) { opacity: .45; }
+/* your three item slots, with the thing you are about to buy sewn in where it will go */
+.trayrow { display: flex; gap: var(--sp-6); align-items: center; height: 100%; }
+.trayrow > span:first-child { font: 700 var(--t-floor)/var(--lh-tight) var(--text); color: var(--ink-2); }
+.tslot { position: relative; width: var(--sp-40); height: var(--sp-40); flex: none; border: var(--ln) dashed var(--ink-2); background: var(--linen); display: inline-flex; align-items: center; justify-content: center; }
+.tslot .ic { width: 70%; height: auto; }
+.tslot em { position: absolute; top: 0; right: var(--sp-2); font: 600 var(--t-floor)/1 var(--mono); font-style: normal; color: var(--ink); }
+.tslot.new { border: var(--ln-2) solid var(--leaf); } .tslot.new .ic { opacity: .55; }
+.lvrow { display: flex; flex-direction: column; gap: var(--sp-4); justify-content: center; }
+
+/* ---- UPRIGHT: list above, details below; the details and the list are rows of the same grid as everything else ---- */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .hem { height: 100%; }
+  .hem > header .sub { display: none; }
+  .hem.shop { grid-template-rows: var(--hem-head) var(--hem-tabs) var(--hem-strip) minmax(0, 1fr) var(--hem-detail) var(--hem-foot); }
+  .station { display: contents; }
+  .shop > .tabs { display: flex; gap: var(--sp-2); }
+  .shop .tabb { flex: 1 1 auto; min-width: var(--tap); padding: 0 var(--sp-2); align-items: center; justify-content: center; }
+  .shop .tabb b { font-size: var(--t-floor); white-space: nowrap; } .shop .tabs .tabb span { display: none; }
+  .shipstrip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .shipstrip .who { display: none; }
+  /* each number keeps three fixed lines: its name, its value, and under it either a row of needle holes or what the chosen thing would make it */
+  .shipstrip > div { padding: 0 var(--sp-4) 0 var(--sp-6); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto var(--sp-12); gap: 0; } .shipstrip > div:nth-child(2) { border-left: 0; }
+  .shipstrip .k { letter-spacing: 0; }
+  .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-floor); line-height: 1; display: block; }
+  .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
+  .shipstrip .unit { display: none; }
+  .shop .pseg .tabb { padding: 0 var(--sp-12); } .shop .pseg .tabb b { font-size: var(--t-body); }
+  .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
+  .cname { font-size: var(--t-body); }
+  .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); letter-spacing: -.01em; }
+  .dname { font-size: var(--d-md); } .dname.fit-1 { font-size: var(--d-sm); } .dname.fit-2 { font-size: var(--d-xs); } .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
+  .dpic .lvpic { font-size: var(--d-xs); }
+  .btn.buy .bl { font-size: var(--t-body); }
+  .trayrow > span:first-child { display: none; }
+  html.text-large .equip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } html.text-large .equip > span { display: none; }
+}
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint SHORT */
+  .hem > header { padding-bottom: 0; }
+  .hem > header h2 { font-size: var(--d-xs); }
+  .hem > header .tag { height: var(--sp-20); font-size: var(--t-floor); padding: 0 var(--sp-8) 0 var(--sp-16); clip-path: polygon(var(--sp-8) 0, 100% 0, 100% 100%, var(--sp-8) 100%, 0 50%); }
+  .hem > footer { align-items: flex-end; }
+  .hem > footer .btn, .route .routego .btn { min-height: var(--tap); }
+  .shipstrip .v { font-size: var(--t-body); }
+  .card { padding: 0 var(--sp-6); gap: 0 var(--sp-6); }
+  .cmeta { padding-top: 0; }
+  .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
+  .dhead { gap: var(--sp-8); }
+  .dname { font-size: var(--d-sm); } .dname.fit-1 { font-size: var(--d-xs); } .dname.fit-2, .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
+  .dbody { font-size: var(--t-floor); gap: var(--sp-2); } .dbody.fit-1, .dbody.fit-2, .dbody.fit-3 { font-size: var(--t-floor); }
+  .dbody.fit-1 .opt, .dbody.fit-2 .opt, .dbody.fit-3 .opt { display: none; }
+  .dcmp { gap: var(--sp-2); } .dcmp > div { padding-top: 1px; }
+  .dbody.fit-4 { line-height: 1.25; }
+  .detail { grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--tap); }
+  .tslot { width: var(--sp-32); height: var(--sp-32); }
+  .utile { gap: 0; padding: var(--sp-2); }
+}
+@media (min-width: 600px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint TABLET */
+  .shop .tabb b { font-size: var(--t-md); }
+  .shipstrip > div { padding: 0 var(--sp-12); grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; gap: 0 var(--sp-8); }
+  .shipstrip .v { font-size: var(--d-xs); } .shipstrip .d { font-size: var(--t-md); display: inline; } .shipstrip .d:empty { display: none; } .shipstrip .unit { display: inline; }
+  .trayrow > span:first-child { display: inline; }
+  .album { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+  .cname { font-size: var(--t-lg); } .cmeta { font-size: var(--t-body); }
+  .node b { font-size: var(--t-md); } .node span, .utile > span, .utile .un, .tile .tn { font-size: var(--t-body); }
+  .dname { font-size: var(--d-xl); } .dname.fit-1 { font-size: var(--d-lg); } .dname.fit-2 { font-size: var(--d-md); } .dname.fit-3 { font-size: var(--d-sm); }
+  .dbody { font-size: var(--t-md); } .dkick, .dleft { font-size: var(--t-body); }
+  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(4, minmax(0, 1fr)); }
+}
+/* ---- SIDEWAYS: tabs down the side; list and details side by side ---- */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .hem { width: 100%; height: 100%; }
+  .hem > header .sub { display: none; }
+  .hem.shop { grid-template-columns: var(--rail) minmax(0, 1fr); grid-template-rows: var(--hem-strip) minmax(0, 1fr) var(--hem-foot); grid-template-areas: "tabs strip" "tabs station" "purse foot"; gap: var(--hem-gap) var(--sp-8); }
+  .shop > header { grid-area: purse; border: 0; padding: 0; align-items: flex-end; }
+  .shop > header > div:first-child { display: none; }
+  .shop > header .purse { flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+  .shop > header .tag { height: var(--sp-20); font-size: var(--t-sm); }
+  .shop > .tabs { grid-area: tabs; display: grid; grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); grid-auto-columns: auto; gap: var(--sp-4); }
+  .shop .tabb { padding: 0 var(--sp-8); } .shop .tabb b { font-size: var(--t-body); } .shop .tabs .tabb span { display: none; }
+  .shop > .strip { grid-area: strip; }
+  .shipstrip > div { padding: 0 var(--sp-8); } .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-floor); } .shipstrip .who b { font-size: var(--t-body); }
+  .shop > .station { grid-area: station; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--sp-8); }
+  .shop > footer { grid-area: foot; border: 0; align-items: flex-end; }
+  .shop > footer .btn { min-height: var(--tap); }
+  .card { padding: 0 var(--sp-6); } .cname { font-size: var(--t-body); } .cmeta { padding-top: 0; }
+  .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); }
+  .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
+  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
+  .utile .un { display: none; }
+  .dpic .lvpic { font-size: var(--d-xs); }
+  .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }
+  .detail { grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--tap); }
+  .dname { font-size: var(--d-sm); } .dname.fit-1 { font-size: var(--d-xs); } .dname.fit-2, .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
+  .dbody { font-size: var(--t-sm); gap: var(--sp-4); } .dbody.fit-1 { font-size: var(--t-cap); } .dbody.fit-2, .dbody.fit-3 { font-size: var(--t-floor); }
+  .btn.buy { padding: 0 var(--sp-4); } .btn.buy .bl { font-size: var(--t-body); gap: var(--sp-4); }
+  .tslot { width: var(--sp-32); height: var(--sp-32); } .trayrow > span:first-child { display: none; }
+}

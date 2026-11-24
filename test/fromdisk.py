@@ -3,6 +3,8 @@ Checks the game boots, recorded audio loads and plays, and the hideout panel kee
 Run: python3 test/fromdisk.py"""
 import sys, os
 from playwright.sync_api import sync_playwright
+# the title film (src/films/title.js) plays at each launch with the page hidden under it: a player taps to skip it, so does the test
+SKIP_FILM = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => { if (window.ST && ST.Cine && ST.Cine.active && ST.Cine.active()) ST.Cine.skip(); r(); })))"
 root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 target = sys.argv[1] if len(sys.argv) > 1 else 'index.html'
 fails = []
@@ -12,8 +14,10 @@ with sync_playwright() as pw:
         pg = b.new_page(viewport=vp); errs = []
         pg.on('pageerror', lambda e: errs.append(str(e)))
         pg.route('**/*', lambda r: r.continue_() if r.request.url.startswith('file:') else r.abort())
-        pg.goto('file://' + root + '/' + target); pg.wait_for_selector('.wordmark', timeout=60000)
+        pg.goto('file://' + root + '/' + target); pg.wait_for_selector('.wordmark', timeout=60000); pg.evaluate(SKIP_FILM)
         pg.click('text=Play'); pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run')
+        faces = pg.evaluate("Promise.all(['400 20px \"Jacquard 24\"', '700 16px \"Atkinson Hyperlegible Next\"', '600 16px \"Atkinson Hyperlegible Mono\"'].map(f => document.fonts.load(f))).then(r => r.every(x => x.length === 1 && x[0].status === 'loaded'))")
+        if not faces: fails.append(f'{name}: the game\'s typefaces did not load from fonts/')
         # every sound whose file is in audio/ must load (the list grows with the game, so it is read from the page)
         refs = pg.evaluate("Object.entries(ST.AUDIO.sfx).map(([k, v]) => [k, v[0]]).concat(Object.entries(ST.AUDIO.music).map(([k, v]) => ['music:' + k, v[0]]))")
         want = [k for k, f in refs if os.path.exists(os.path.join(root, 'audio', f))]

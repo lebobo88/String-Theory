@@ -1,0 +1,121 @@
+
+/* ============ 8 · route map and records ============ */
+.routewrap { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: var(--sp-16); }
+.routewrap > * { min-height: 0; min-width: 0; }
+.hem .routelist, .hem .routego { display: none; }
+.mapside { display: flex; flex-direction: column; }
+.routemap { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--sp-8); background: var(--pat-cloth), var(--coverlet); padding: var(--sp-16) var(--sp-12); align-items: center; }
+.rcol { display: flex; flex-direction: column; gap: var(--sp-12); align-items: center; }
+.rcol .eyebrow { color: var(--mist-hi); }
+.rcol.future .ptile i { opacity: .5; }
+.ptile { width: 100%; max-width: 120px; background: transparent; border: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-6); align-items: center; color: var(--linen); transition: transform var(--dur-1) var(--ease); } /* atelier-ignore: component width */
+.rcard { padding: 0; background: var(--linen); color: var(--ink); border: 0; }   /* the phone layout styles it; elsewhere it is not shown */
+.ptile i, .rcard i { display: block; border: var(--ln-2) dashed var(--mist); background-color: var(--patch); }
+.ptile i { width: 100%; aspect-ratio: 1; }
+.ptile b { font: 700 var(--t-cap)/var(--lh-tight) var(--text); text-align: center; }
+.ptile.open i { border-color: var(--linen); } .ptile.flown i { border: var(--ln-2) solid var(--madder-lit); }
+.ptile.sel i { border: var(--ln-2) solid var(--saffron); outline: var(--ln-2) solid var(--saffron); outline-offset: var(--ln-3); }
+.hemline { background: var(--umber); color: var(--linen); text-align: center; padding: var(--sp-8); font: 700 var(--t-cap)/var(--lh-tight) var(--text); }
+.rdetail, .rstats { background: var(--paper); padding: var(--sp-16); border: var(--ln) dashed var(--ink); display: flex; flex-direction: column; gap: var(--sp-8); overflow: hidden; }
+.rdetail h3 { font: 400 var(--d-lg)/1 var(--display); }
+.rdetail p { font: 400 var(--t-md)/var(--lh-read) var(--text); }
+.rdetail .tally dd { font: 400 var(--t-body)/var(--lh-snug) var(--text); max-width: 62%; }
+.rdetail .tally .mark dt, .rdetail .tally .mark dd { color: var(--saffron-ink); font-weight: 700; }
+.rdetail .btn { margin-top: auto; align-self: flex-start; }
+/* the patches of the Coverlet, each drawn in its own stitch */
+.art-selvage i { background-image: linear-gradient(90deg, transparent 18%, var(--linen) 18% 21%, transparent 21%), repeating-linear-gradient(0deg, transparent 0 7px, color-mix(in srgb, var(--linen) 25%, transparent) 7px 8px); } /* atelier-ignore: artwork */
+.art-holes i { background-image: radial-gradient(circle at 30% 35%, var(--night) 0 12%, transparent 13%), radial-gradient(circle at 68% 60%, var(--night) 0 16%, transparent 17%), radial-gradient(circle at 40% 78%, var(--night) 0 8%, transparent 9%); }
+.art-darn i { background-image: repeating-linear-gradient(0deg, color-mix(in srgb, var(--linen) 50%, transparent) 0 2px, transparent 2px 7px), repeating-linear-gradient(90deg, color-mix(in srgb, var(--madder) 70%, transparent) 0 2px, transparent 2px 7px); } /* atelier-ignore: artwork */
+.art-boro i { background-image: linear-gradient(var(--coverlet), var(--coverlet)), linear-gradient(var(--night), var(--night)); background-size: 55% 50%, 50% 55%; background-position: 15% 20%, 80% 78%; background-repeat: no-repeat; }
+.art-eyes i { background-image: radial-gradient(circle at 30% 50%, var(--cream) 0 9%, var(--madder) 10% 27%, transparent 28%), radial-gradient(circle at 70% 50%, var(--cream) 0 9%, var(--madder) 10% 27%, transparent 28%); }
+.art-lines i { background-image: repeating-linear-gradient(0deg, transparent 0 12px, var(--saffron) 12px 14px); background-size: 60% 100%; background-position: center; background-repeat: no-repeat; } /* atelier-ignore: artwork */
+.art-fringe i { background-image: linear-gradient(var(--linen) 0 22%, transparent 22%), repeating-linear-gradient(90deg, var(--linen) 0 2px, transparent 2px 9px); background-size: 100% 100%, 100% 75%; background-repeat: no-repeat; } /* atelier-ignore: artwork */
+
+/* ---- records ---- */
+.seg { display: none; }
+.records .tabs.shipf { flex: none; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.records .shipf .tabb b { font-size: var(--t-body); }
+.tablewrap { overflow: hidden; }
+.ledger { width: 100%; border-collapse: collapse; background: var(--paper); }
+.ledger th { font: 700 var(--t-cap)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; color: var(--ink-2); text-align: left; padding: var(--sp-8); border-bottom: var(--ln-2) dashed var(--ink); }
+.ledger td { padding: var(--sp-8); border-bottom: var(--ln) dotted var(--rule); font: 400 var(--t-body)/var(--lh-snug) var(--text); }
+.ledger td.mono { font: 600 var(--t-body)/var(--lh-snug) var(--mono); }
+.ledger tr.me td { background: color-mix(in srgb, var(--saffron) 18%, var(--paper)); } .ledger td.won { color: var(--saffron-ink); font-weight: 700; }
+.ledger td.none { color: var(--ink-2); }
+.rstats .tally > div { min-height: var(--sp-32); padding: var(--sp-2) 0; }
+
+/* ---- UPRIGHT: the run as a list from top to bottom; this stage's choices as full-width cards ---- */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .route .mapside, .route .rdetail { display: none; }
+  .route .routewrap { display: block; overflow: hidden; }
+  .route .routelist { display: flex; flex-direction: column; gap: var(--sp-6); height: 100%; }
+  .route .routego { display: flex; align-items: flex-end; } .route .routego .btn { flex: 1; } .route .routego .small { display: none; }
+  .rl { position: relative; background: var(--paper); border: var(--ln) dashed var(--rule); padding: var(--sp-8) var(--sp-12); display: flex; flex-direction: column; gap: var(--sp-2); align-items: stretch; text-align: left; }
+  .rl:not(:last-child)::after { content: ''; position: absolute; left: var(--sp-24); bottom: calc(var(--sp-6) * -1 - var(--ln)); height: var(--sp-6); border-left: var(--ln-2) dashed var(--madder); }
+  .rlh { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-8); width: 100%; }
+  .rlh b { font: 400 var(--d-xs)/1 var(--display); } .rlh span { font: 400 var(--t-sm)/var(--lh-tight) var(--text); color: var(--ink-2); text-align: right; }
+  .rlc { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--ink-2); }
+  .rl.done { border: var(--ln) solid var(--madder); flex-direction: row; align-items: center; gap: var(--sp-12); padding: var(--sp-4) var(--sp-12); }
+  .rl.done .rlh { width: auto; } .rl.done .rlh span { display: none; } .rl.done .rlc { color: var(--madder-ink); font-weight: 700; }
+  .rl.future { background: transparent; padding: var(--sp-4) var(--sp-12); justify-content: center; }
+  /* this stage takes the room it needs; the stages before and after share what is left in equal steps, so the run reads as an even column */
+  .rl.done, .rl.future { flex: 1 1 0; }
+  .rl.cur { flex: none; border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; padding: var(--sp-12); gap: var(--sp-6); justify-content: center; }
+  .rl.cur .rlh b { font-size: var(--d-sm); }
+  .rl.cur .rhint { font: 700 var(--t-sm)/var(--lh-tight) var(--text); color: var(--ink-2); }
+  .rcard { display: flex; gap: var(--sp-12); align-items: center; width: 100%; padding: var(--sp-8); background: var(--linen); border: var(--ln) dashed var(--ink-2); text-align: left; color: var(--ink); transition: transform var(--dur-1) var(--ease); }
+  .rcard i { flex: none; width: var(--sp-48); height: var(--sp-48); }
+  .rcard.sel { border: var(--ln-2) solid var(--saffron-ink); background: var(--cream); box-shadow: 0 0 0 var(--ln-3) var(--saffron) inset; } .rcard.sel i { border: var(--ln-2) solid var(--saffron); }
+  .rct { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+  .rct b { font: 700 var(--t-md)/var(--lh-tight) var(--text); } .rct span { font: 400 var(--t-sm)/var(--lh-snug) var(--text); color: var(--ink-2); }
+  .rct .foes { color: var(--ink); }
+  .rct em { font: 700 var(--t-sm)/var(--lh-snug) var(--text); font-style: normal; color: var(--saffron-ink); } .rct em.none { color: var(--ink-2); font-weight: 400; }
+  /* records: runs or stats, one at a time; each run is two lines */
+  .seg { display: flex; gap: var(--sp-4); }
+  .records .routewrap { display: block; overflow: hidden; }
+  .records.lv-runs .rstats, .records.lv-stats .tablewrap, .records.lv-stats .shipf { display: none; }
+  .records .shipf .tabb b { font-size: var(--t-floor); white-space: nowrap; } .records .shipf .tabb { padding: 0 var(--sp-2); }
+  .ledger, .ledger tbody { display: block; }
+  .ledger tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; padding: var(--sp-6) var(--sp-8); border-bottom: var(--ln) dotted var(--rule); }
+  .ledger tr:first-child { display: none; } .ledger td { border: 0; padding: 0; } .ledger td:nth-child(1), .ledger td:nth-child(6) { display: none; }
+  .ledger td:nth-child(2) { font-weight: 700; font-size: var(--t-md); } .ledger td:nth-child(4) { text-align: right; font-size: var(--t-md); } .ledger td:nth-child(3) { color: var(--ink-2); font-size: var(--t-sm); } .ledger td:nth-child(5) { text-align: right; font-size: var(--t-sm); }
+  .ledger td[colspan] { display: block; grid-column: 1 / -1; }
+  .rstats { height: 100%; }
+}
+@media (max-height: 700px) and (max-width: 599px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SHORT phones. Stages already cleared or still ahead sit two to a row, so the route never scrolls */
+  .route .routelist { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(min-content, 1fr); gap: var(--sp-4); }
+  .rl.cur { grid-column: 1 / -1; padding: var(--sp-8); gap: var(--sp-4); }
+  .rl::after { display: none; }
+  .rl.done, .rl.future { flex-direction: row; align-items: center; gap: var(--sp-8); padding: var(--sp-2) var(--sp-8); min-width: 0; }
+  .rl.done .rlh, .rl.future .rlh { width: auto; flex: none; } .rl.future .rlh span, .rl.done .cl { display: none; }
+  .rl.future { flex-direction: column; align-items: flex-start; justify-content: center; gap: 0; } .rl.future .rlc { font-size: var(--t-floor); line-height: var(--lh-tight); }
+  .rl.done .rlh b, .rl.future .rlh b { font: 700 var(--t-body)/var(--lh-tight) var(--text); }
+  .rl.done .rlc { font-size: var(--t-floor); line-height: var(--lh-tight); min-width: 0; }
+  .rcard { padding: var(--sp-6) var(--sp-8); gap: var(--sp-8); } .rcard i { width: var(--sp-40); height: var(--sp-40); }
+  .rct b { font-size: var(--t-body); } .rct span, .rct em { font-size: var(--t-floor); line-height: var(--lh-snug); }
+}
+@media (min-width: 600px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint TABLET */
+  .route .routego .small { display: inline; } .route .routego .btn { flex: none; min-width: 50%; margin-left: auto; }
+  .rl { padding: var(--sp-12) var(--sp-16); } .rlh b { font-size: var(--d-md); } .rl.cur .rlh b { font-size: var(--d-lg); }
+  .rcard { padding: var(--sp-16); } .rcard i { width: var(--sp-64); height: var(--sp-64); } .rct b { font-size: var(--t-lg); } .rct span, .rct em { font-size: var(--t-md); }
+  .records .shipf .tabb b { font-size: var(--t-body); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .route > header, .records > header { padding-bottom: var(--sp-2); }
+  .route .routewrap { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: var(--sp-8); }
+  .route .routemap { padding: var(--sp-8) var(--sp-6); gap: var(--sp-4); } .route .rcol { gap: var(--sp-6); }
+  .route .ptile i { max-width: var(--sp-48); } .route .ptile b { font-size: var(--t-floor); } .route .hemline { padding: var(--sp-4); }
+  .rdetail { padding: var(--sp-8) var(--sp-12); gap: var(--sp-4); } .rdetail h3 { font-size: var(--d-sm); } .rdetail p { font-size: var(--t-sm); line-height: var(--lh-snug); }
+  .rdetail .tally > div { min-height: 0; padding: var(--sp-2) 0; } .rdetail .tally dt, .rdetail .tally dd { font-size: var(--t-sm); }
+  .rdetail .btn { min-height: var(--tap); }
+  /* records: the Back button joins the header; stats in two columns */
+  .hem.records { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: var(--hem-head) auto minmax(0, 1fr); grid-template-areas: "head foot" "tabs tabs" "wrap wrap"; gap: var(--sp-6) var(--sp-12); }
+  .records > header { grid-area: head; } .records > .tabs { grid-area: tabs; } .records > .routewrap { grid-area: wrap; gap: var(--sp-8); }
+  .records > footer { grid-area: foot; border: 0; height: auto; align-self: center; } .records > footer > span { display: none; } .records > footer .btn { min-height: var(--tap); }
+  .records .tabs.shipf { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: var(--sp-2); } .records .shipf .tabb { padding: 0 var(--sp-2); } .records .shipf .tabb b { font-size: var(--t-floor); }
+  .records .ledger td, .records .ledger th { padding: var(--sp-4) var(--sp-8); }
+  .rstats { padding: var(--sp-8) var(--sp-12); }
+  .rstats .tally { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--sp-16); }
+  .rstats .tally > div { min-height: 0; } .rstats .tally dt { font-size: var(--t-sm); } .rstats .tally dd { font-size: var(--t-body); }
+  .rstats.fit-1 { gap: var(--sp-4); } .rstats.fit-1 .tally dt, .rstats.fit-1 .tally dd { font-size: var(--t-floor); line-height: var(--lh-tight); }
+}

@@ -2,10 +2,18 @@
 Run: python3 test/smoke.py   (needs playwright + a Chrome at /usr/bin/google-chrome)"""
 import json, subprocess, sys, time, os, socket
 from playwright.sync_api import sync_playwright
+# the title film (src/films/title.js) plays at each launch with the page hidden under it: a player taps to skip it, so does the test
+SKIP_FILM = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(() => { if (window.ST && ST.Cine && ST.Cine.active && ST.Cine.active()) ST.Cine.skip(); r(); })))"
 root = os.path.join(os.path.dirname(__file__), '..')
 target = sys.argv[1] if len(sys.argv) > 1 else 'index.html'
-# a free port of our own: other test runs share this machine, and a clash would load their server's pages
-_s = socket.socket(); _s.bind(('127.0.0.1', 0)); PORT = _s.getsockname()[1]; _s.close()
+# a free port of our own (8820-8829): other test runs share this machine, and a clash would load their server's pages
+def free_port(lo=8820, hi=8829):
+    for p in range(lo, hi + 1):
+        s_ = socket.socket()
+        try: s_.bind(('127.0.0.1', p)); s_.close(); return p
+        except OSError: s_.close()
+    s_ = socket.socket(); s_.bind(('127.0.0.1', 0)); p = s_.getsockname()[1]; s_.close(); return p
+PORT = free_port()
 srv = subprocess.Popen([sys.executable, '-m', 'http.server', str(PORT), '--bind', '127.0.0.1'], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(1); errors = []
 try:
@@ -17,7 +25,7 @@ try:
             pg.on('console', lambda m: errors.append('console: ' + m.text) if m.type == 'error' and 'ERR_' not in m.text and 'Failed to load resource' not in m.text else None)
             pg.route('**/*', lambda r: r.continue_() if '127.0.0.1' in r.request.url else r.abort())
             pg.add_init_script(path=os.path.join(root, 'test', 'three-stub.js'))
-            pg.goto(f'http://127.0.0.1:{PORT}/' + target); pg.wait_for_selector('.wordmark')
+            pg.goto(f'http://127.0.0.1:{PORT}/' + target); pg.wait_for_selector('.wordmark'); pg.evaluate(SKIP_FILM)
             pg.screenshot(path=f'/tmp/st-{name}-title.png')
             pg.click('text=Play'); pg.wait_for_selector('.pockets'); pg.screenshot(path=f'/tmp/st-{name}-pockets.png')
             assert pg.locator('.pcard.empty').count() == 3, 'three empty pockets'
@@ -62,7 +70,7 @@ try:
             pg.keyboard.press('Escape'); pg.wait_for_selector('text=Paused'); pg.click('text=Resume')
             # closing and reopening mid-run: the run is offered again at the same stage
             pg.evaluate("() => { clearInterval(window.__bot); const s = ST.game.sim; s.stitches = 777; }"); pg.evaluate("() => ST.game.keep('stage')")
-            pg.reload(); pg.wait_for_selector('.wordmark'); pg.click('text=Play'); pg.click('.pcard:not(.empty)'); pg.click('.btn:has-text("Load")')
+            pg.reload(); pg.wait_for_selector('.wordmark'); pg.evaluate(SKIP_FILM); pg.click('text=Play'); pg.click('.pcard:not(.empty)'); pg.click('.btn:has-text("Load")')
             pg.wait_for_selector('text=Continue run'); pg.screenshot(path=f'/tmp/st-{name}-continue.png'); pg.click('text=Continue run'); pg.wait_for_function('ST.game.state === "flight"')
             assert pg.evaluate('ST.game.sim.stitches') == 777 and pg.evaluate('ST.game.sim.panel') == 0 and pg.evaluate('ST.game.sim.row') == 0, 'run resumed'
             pg.evaluate("""() => { window.__bot = setInterval(() => { const g = ST.game, s = g.sim; if (!s || g.state !== 'flight') return; s.player.invuln = 1; s.d.dmg = 40;
@@ -102,7 +110,7 @@ try:
             pg.wait_for_selector('.hem'); pg.click('text=Main menu'); pg.click('.btn:has-text("Records")'); pg.wait_for_selector('.ledger'); pg.screenshot(path=f'/tmp/st-{name}-ledger.png')
             assert pg.locator('.ledger td.won').count() == 1, 'the mended Night is in the Ledger'
             pg.click('.tabb:has-text("Sharps")'); pg.click('.btn:has-text("Back")')
-            pg.reload(); pg.wait_for_selector('.wordmark'); pg.click('text=Play')
+            pg.reload(); pg.wait_for_selector('.wordmark'); pg.evaluate(SKIP_FILM); pg.click('text=Play')
             assert pg.locator('.pcard:not(.empty)').count() == 1 and 'Wren' in pg.inner_text('.pcard.sel'), 'pocket survives a reload'
             pg.click('text=Copy to empty slot'); assert pg.locator('.pcard:not(.empty)').count() == 2, 'copy to empty'
             pg.click('.btn:has-text("Delete")'); pg.click('text=Tap again'); assert pg.locator('.pcard:not(.empty)').count() == 1, 'unpick'

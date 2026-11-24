@@ -1,0 +1,99 @@
+
+/* ---- layout tokens per screen shape. Four shapes:
+   UPRIGHT  phones and tablets held upright, and narrow windows        (the block below)
+   SHORT    upright and no taller than 700                             (the smallest phones)
+   TABLET   upright and at least 600 wide
+   SIDEWAYS a phone held sideways (no taller than 500)
+   Everything else is the wide layout above. ---- */
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { :root { /* atelier-ignore: breakpoint UPRIGHT */
+  --ov-pad: var(--sp-8);
+  --sheet-pad: var(--sp-20);
+  --status-h: 52px;                /* atelier-ignore: token */
+  --hud-top: calc(60px + var(--safe-t));    /* atelier-ignore: token. Status row and its margin */
+  --hud-bot: calc(116px + var(--safe-b));   /* atelier-ignore: token. Power-ups, special and item slots */
+  --slot-w: 56px;                  /* atelier-ignore: token */
+  --slot-h: 64px;                  /* atelier-ignore: token */
+  --badge-h: 34px;                 /* atelier-ignore: token */
+  --hem-pad: var(--sp-12);
+  --hem-gap: var(--sp-8);
+  --hem-head: 36px;                /* atelier-ignore: token */
+  --hem-tabs: 48px;                /* atelier-ignore: token */
+  --hem-strip: 48px;               /* atelier-ignore: token */
+  --hem-foot: 56px;                /* atelier-ignore: token */
+  /* the list keeps five rows of at least 48; the details take the rest, between 190 and 300 */
+  --hem-detail: clamp(190px, calc(100vh - 560px - var(--safe-t) - var(--safe-b)), 300px);   /* atelier-ignore: token */
+  --list-gap: var(--sp-6);
+  --d-pad: var(--sp-12);
+  --d-gap: var(--sp-8);
+  --d-pic: 48px;                   /* atelier-ignore: token */
+  --d-name: 28px;                  /* atelier-ignore: token */
+  --buy-w: 156px;                  /* atelier-ignore: token */
+  --card-ic: var(--sp-32);
+  --tile-ic: var(--sp-32);
+} }
+@media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { :root { /* atelier-ignore: breakpoint SHORT */
+  --ov-pad: var(--sp-4);
+  --sheet-pad: var(--sp-12);
+  /* what is left of a short screen once a status bar or gesture bar has taken its share: the hideout closes its own gaps up by as much (down to 616) */
+  --room: calc(100vh - max(var(--safe-t), var(--sp-4)) - max(var(--safe-b), var(--sp-4)));
+  --hud-top: calc(58px + var(--safe-t));    /* atelier-ignore: token */
+  --hud-bot: calc(102px + var(--safe-b));   /* atelier-ignore: token */
+  --slot-w: 52px;                  /* atelier-ignore: token */
+  --slot-h: 58px;                  /* atelier-ignore: token */
+  --badge-h: 30px;                 /* atelier-ignore: token */
+  --hem-pad: clamp(var(--sp-4), calc((var(--room) - 620px) / 2), var(--sp-6));     /* atelier-ignore: token */
+  --hem-gap: clamp(var(--sp-2), calc((var(--room) - 612px) / 5), var(--sp-4));     /* atelier-ignore: token */
+  --hem-head: clamp(24px, calc(var(--room) - 604px), 28px);                         /* atelier-ignore: token */
+  --hem-tabs: 44px;                /* atelier-ignore: token */
+  --hem-strip: 48px;               /* atelier-ignore: token */
+  --hem-foot: clamp(46px, calc(var(--room) - 582px), 50px);                         /* atelier-ignore: token */
+  --hem-detail: 182px;             /* atelier-ignore: token */
+  --list-gap: var(--sp-2);
+  --d-pad: var(--sp-4);
+  --d-gap: var(--sp-4);
+  --d-pic: 40px;                   /* atelier-ignore: token */
+  --d-name: 24px;                  /* atelier-ignore: token */
+  --buy-w: 148px;                  /* atelier-ignore: token */
+  --tile-ic: var(--sp-24);
+} }
+@media (min-width: 600px) and (max-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint TABLET */
+  --ov-pad: var(--sp-16);
+  --sheet-pad: var(--sp-24);
+  --slot-w: 64px;                  /* atelier-ignore: token */
+  --hem-pad: var(--sp-16);
+  --hem-gap: var(--sp-12);
+  --hem-head: 48px;                /* atelier-ignore: token */
+  --hem-tabs: 56px;                /* atelier-ignore: token */
+  --hem-strip: 56px;               /* atelier-ignore: token */
+  --hem-foot: 64px;                /* atelier-ignore: token */
+  --hem-detail: clamp(300px, 32vh, 400px);  /* atelier-ignore: token */
+  --list-gap: var(--sp-8);
+  --d-pad: var(--sp-16);
+  --d-gap: var(--sp-12);
+  --d-pic: 72px;                   /* atelier-ignore: token */
+  --d-name: 48px;                  /* atelier-ignore: token */
+  --buy-w: 220px;                  /* atelier-ignore: token */
+  --card-ic: var(--sp-48);
+  --tile-ic: var(--sp-48);
+} }
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint SIDEWAYS */
+  --ov-pad: var(--sp-6);
+  --sheet-pad: var(--sp-12);
+  --hud-side: 150px;               /* atelier-ignore: token */
+  --slot-w: 52px;                  /* atelier-ignore: token */
+  --slot-h: 52px;                  /* atelier-ignore: token */
+  --hem-pad: var(--sp-6);
+  --hem-gap: var(--sp-6);
+  --hem-head: 32px;                /* atelier-ignore: token */
+  --hem-tabs: 44px;                /* atelier-ignore: token */
+  --hem-strip: 48px;               /* atelier-ignore: token */
+  --hem-foot: 48px;                /* atelier-ignore: token */
+  --list-gap: var(--sp-4);
+  --d-pad: var(--sp-8);
+  --d-gap: var(--sp-6);
+  --d-pic: 40px;                   /* atelier-ignore: token */
+  --d-name: 24px;                  /* atelier-ignore: token */
+  --buy-w: 148px;                  /* atelier-ignore: token */
+  --card-ic: var(--sp-32);
+  --tile-ic: var(--sp-24);
+} }

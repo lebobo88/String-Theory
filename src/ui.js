@@ -1,5 +1,5 @@
-/* String Theory — DOM interface: HUD, the Hem and its stations, tallies, pause.
-   Talks to the game through a small controller object (see main.js). */
+/* String Theory — DOM interface: HUD, the Hem and its stations, results, game over, victory, settings, pause.
+   Talks to the game through a small controller object (see main.js). Every size, colour and space lives in style.css as a token. */
 (function (ST) {
   'use strict';
   const C = ST.content, PAL = C.PAL, S = ST.shop;
@@ -31,8 +31,11 @@
     const s = C.SPRITES[name]; h = s ? stitched(s.rows, tint ? Object.assign({}, s.pal, { G: tint }) : s.pal, px) : '';
     if (ICONS.size < 400) ICONS.set(key, h); return h;
   }
-  const dustTag = n => `<span class="tag">${icon('dust', 20)}<b>${num(n)}</b></span>`;
-  const silkTag = n => `<span class="tag silk">${icon('silk', 26)}<b>${num(n)}</b></span>`;
+  /* A price tag: coin or gem, then the number. size 'sm' is the small tag inside lists and buttons; count marks the number for a results sheet's count-up. */
+  const dustTag = (n, size, count) => `<span class="tag ${size || ''}">${icon('dust', 20)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> coins</span></span>`;
+  const silkTag = (n, size, count) => `<span class="tag silk ${size || ''}">${icon('silk', 26)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> gems</span></span>`;
+  /* "becomes": a stitched arrow between a number now and the number after. Drawn, so it never depends on a typeface having the glyph. */
+  const ARROW = '<svg class="arr" viewBox="0 0 12 9" aria-hidden="true" focusable="false"><path d="M0 4.5h9M6 1l4 3.5L6 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const pips = (n, max) => { let h = '<span class="pips">'; for (let i = 0; i < max; i++) h += `<i class="${i < n ? 'on' : ''}"></i>`; return h + '</span>'; };
 
   /* Power-ups in flight: each its own small counted chart (a = its colour, b = paper). Items reuse their shop sprite. */
@@ -97,7 +100,7 @@
   const attr = (el, a, v) => { const k = '_a' + a; if (el && el[k] !== v) { el[k] = v; el.setAttribute(a, v); } };
 
   /* Sounds by action: tabs flick, equipping seats a spool, everything else is a soft tap. Items and the special make their own sound in play. */
-  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
+  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
 
   class UI {
     constructor(ctl) {
@@ -106,29 +109,56 @@
       this.cache = {};
       const o = this.el.overlay;
       o.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (b && !b.disabled) { this.pressEl = b; this.act(b.dataset.act, b.dataset.arg); } });
+      o.addEventListener('pointerdown', () => this.finishStitch(), true);   // a touch anywhere finishes a results sheet's count-up at once
       o.addEventListener('input', e => { if (e.target.dataset && e.target.dataset.set) this.slide(e.target, false); });
       o.addEventListener('change', e => { if (e.target.dataset && e.target.dataset.set) this.slide(e.target, true); });
       for (const k of ['tray', 'mtop']) if (this.el[k]) this.el[k].addEventListener('pointerdown', e => { const b = e.target.closest('[data-act]'); if (b) { e.preventDefault(); this.act(b.dataset.act, b.dataset.arg); } });
       // one sound per press: a press that already made a sound (the controller's own start sound, a purchase) makes no second one
       if (typeof ctl.sfx === 'function') { const f = ctl.sfx; ctl.sfx = (n, ...r) => { if (this.pressing) { if (/^ui_/.test(n) && this.played) return; this.played = true; } return f.call(ctl, n, ...r); }; }
-      window.addEventListener('resize', () => { this.coachAt = null; });
+      // fixed slots are fitted again when the window changes or the game's own typefaces arrive
+      let raf = 0; const refit = () => { if (raf) return; raf = requestAnimationFrame(() => { raf = 0; if (this.open) this.fit(this.el.overlay); }); };
+      window.addEventListener('resize', refit);
+      if (document.fonts && document.fonts.load) {   // fetch every face now, so no screen is first drawn in a stand-in and then jumps
+        for (const f of ['400 16px "Jacquard 24"', '400 16px "Atkinson Hyperlegible Next"', '500 16px "Atkinson Hyperlegible Next"', '700 16px "Atkinson Hyperlegible Next"', '800 16px "Atkinson Hyperlegible Next"', '400 16px "Atkinson Hyperlegible Mono"', '600 16px "Atkinson Hyperlegible Mono"']) document.fonts.load(f).then(refit, () => {});
+        if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', refit);
+      }
+      // a results sheet shown during a celebration waits; when the celebration ends it rises and its numbers count up
+      if (window.MutationObserver) new MutationObserver(() => { if (!document.body.classList.contains('celebrating') && this.stitchWait) this.stitchOn(); }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
       this.tab = 'spool'; this.sel = {}; this.setTab = 'sound';
     }
     get p() { return this.ctl.profile; }
     snd(n) { if (this.ctl.sfx) this.ctl.sfx(n); }
     set(key, html) { if (this.cache[key] !== html) { this.cache[key] = html; this.el[key].innerHTML = html; } }
+    /* Settings that are the page's own business: text size, and which hand holds the phone. */
+    prefs() {
+      const st = (this.p && this.p.settings) || {};
+      document.documentElement.classList.toggle('text-large', st.textSize === 'large');
+      document.body.classList.toggle('lefty', !!st.leftHand);
+    }
     show(html, cls, key) {
-      const o = this.el.overlay, sel = '.station, .station > *, .routewrap, .routewrap > *, .tabs, .sheet, .setlist';
-      // re-rendering the same screen (picking an item, buying) must not jump the scroll position
-      const keep = key && key === this.shown ? [...o.querySelectorAll(sel)].map(e => [e.scrollTop, e.scrollLeft]) : null;
-      const screen = (key || cls || '').split(':')[0] + '|' + (key ? '' : html.length), was = this.screen;
-      this.shown = key || null; this.screen = screen;
-      o.className = 'overlay on ' + (cls || ''); o.innerHTML = html; document.body.classList.add('sheeted');
-      if (keep) [...o.querySelectorAll(sel)].forEach((e, i) => { if (keep[i]) { e.scrollTop = keep[i][0]; e.scrollLeft = keep[i][1]; } });
-      else { const t = o.querySelector('.tabb.on'); if (t && t.scrollIntoView) t.scrollIntoView({ block: 'nearest', inline: 'center' }); }
-      const f = o.querySelector('[data-focus]'); if (f) f.focus({ preventScroll: true });
-      const name = screen.split('|')[0];   // pause comes up at once: it is a stop, not a change of scene
-      if (was !== undefined && name !== (was || '').split('|')[0] && name !== 'pause') this.wipe();
+      const o = this.el.overlay;
+      const screen = (key || cls || '').split(':')[0] + '|' + (key ? '' : html.length), was = this.screen, same = key && key === this.shown;
+      // a re-render of the same screen (picking an item, buying) keeps the keyboard where it was
+      const a = same && document.activeElement && o.contains(document.activeElement) ? document.activeElement : null, fa = a && a.dataset.act, fg = a && a.dataset.arg;
+      this.shown = key || null; this.screen = screen; this.stitchWait = false;
+      this.prefs();
+      o.className = 'overlay on ' + (cls || ''); o.innerHTML = html; document.body.classList.add('sheeted'); document.body.classList.toggle('resulting', /\bres\b/.test(cls || ''));
+      const h = o.querySelector('h1, h2'); o.setAttribute('role', 'dialog'); o.setAttribute('aria-modal', 'true'); o.setAttribute('aria-label', h ? h.textContent : 'Menu');
+      this.fit(o);
+      let f = null; if (fa) f = [...o.querySelectorAll('[data-act]')].find(b => b.dataset.act === fa && b.dataset.arg === fg && !b.disabled) || null;
+      f = f || o.querySelector('[data-focus]'); if (f) f.focus({ preventScroll: true });
+      const name = screen.split('|')[0];   // pause and results come up on their own terms: one is a stop, the other rises
+      if (was !== undefined && name !== (was || '').split('|')[0] && !/\bveil\b/.test(cls || '')) this.wipe();
+    }
+    /* Fixed slots fit their text. An element marked data-fit="n" is stepped through up to n smaller settings (the fit-1 … fit-n
+       classes in style.css: the next sizes down the type ramp, never under 12px; the last step may drop an optional line)
+       until its text sits inside its box. Nothing is ever cut off mid-word: tools/audit.py fails any slot that still overflows. */
+    fit(root) {
+      for (const el of root.querySelectorAll('[data-fit]')) {
+        const max = +el.dataset.fit || 3; let i = 0;
+        el.classList.remove('fit-1', 'fit-2', 'fit-3', 'fit-4');
+        while (i < max && (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)) { if (i) el.classList.remove('fit-' + i); i++; el.classList.add('fit-' + i); }
+      }
     }
     /* Between screens a length of linen is drawn off to the side, its hem stitched, uncovering the new screen. It never takes a click. */
     wipe() {
@@ -136,9 +166,9 @@
       if (this.wipeA) this.wipeA.cancel();
       const o = this.el.overlay.firstElementChild;
       this.wipeA = w.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(0)', opacity: 1, offset: 0.08 }, { transform: 'translateX(104%)', opacity: 1 }], { duration: 320, easing: 'cubic-bezier(.6,0,.3,1)' });
-      if (o) o.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 260, easing: 'ease-out' });
+      if (o) o.animate([{ opacity: 0.4 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
     }
-    hide() { this.el.overlay.className = 'overlay'; this.el.overlay.innerHTML = ''; document.body.classList.remove('sheeted'); this.shown = null; this.screen = 'flight'; }
+    hide() { const o = this.el.overlay; o.className = 'overlay'; o.innerHTML = ''; o.removeAttribute('role'); o.removeAttribute('aria-modal'); o.removeAttribute('aria-label'); document.body.classList.remove('sheeted', 'resulting'); this.shown = null; this.screen = 'flight'; this.stitchWait = false; }
     get open() { return this.el.overlay.classList.contains('on'); }
     act(a, arg) {
       this.pressing = true; this.played = false;
@@ -157,6 +187,7 @@
         case 'tab': this.tab = arg; this.hem(); break;
         case 'pick': this.sel[this.selKey()] = arg; this.hem(); break;
         case 'pview': this.patView = arg === 'ups' ? 'ups' : 'perks'; this.hem(); break;
+        case 'bview': this.bookView = arg === 'foes' ? 'foes' : 'charts'; this.hem(); break;
         case 'buy': this.buy(arg); break;
         case 'nope': this.snd('ui_fail'); this.shake(); break;
         case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
@@ -166,8 +197,9 @@
         case 'pocket': c.takePocket(arg); if (!this.played) this.snd('ui_fail'); break;
         case 'resume': c.resume(); break;
         case 'abandon': c.abandon(); break;
-        case 'toggle': { const def = arg === 'liftSlow' || arg === 'haptics'; st[arg] = !(def ? st[arg] !== false : st[arg]); c.saved(); c.applySettings(); this.hand();
+        case 'toggle': { const def = arg === 'liftSlow' || arg === 'haptics'; st[arg] = !(def ? st[arg] !== false : st[arg]); c.saved(); c.applySettings(); this.prefs();
           if (arg === 'haptics' && st.haptics && c.buzz) c.buzz(20); this.settings(); break; }
+        case 'textsize': st.textSize = st.textSize === 'large' ? 'normal' : 'large'; c.saved(); c.applySettings(); this.settings(); break;
         case 'settings': this.settings(); break;
         case 'stab': this.setTab = arg; this.settings(); break;
         case 'back': if (c.state === 'paused') this.pause(); else this.menu(); break;
@@ -187,44 +219,84 @@
         case 'gfx': { const o = ['auto', 'low', 'lite', 'medium', 'high']; st.graphics = o[(o.indexOf(st.graphics || 'auto') + 1) % o.length]; c.saved(); c.applySettings(); this.settings(); break; }
         case 'ctl': st.controls = st.controls === 'follow' ? 'drag' : 'follow'; c.saved(); c.applySettings(); this.settings(); break;
         case 'pause': c.pause(); break;
+        case 'perf': if (ST.Perf && typeof ST.Perf.open === 'function') ST.Perf.open(); break;
       }
     }
+    /* Android's back button (and Esc on a menu). Closes the topmost thing and returns true; returns false only where there is
+       nothing left to close (the title or the main menu), so the app can go to the background. Flight, pause and films are the
+       controller's own business and it deals with them before calling this. One sound a press, like any other. */
+    back() {
+      const pv = ST.Perf && ST.Perf.view;   // "Test this phone" (src/perf.js) sits over everything: it closes first
+      if (pv && pv.el && pv.el.style.display !== 'none' && typeof pv.close === 'function') { pv.close(); this.snd('ui_tap'); return true; }
+      if (!this.open) return false;
+      this.pressing = true; this.played = false; let ok = true;
+      try { ok = this.goBack(); } finally { this.pressing = false; }
+      if (ok && !this.played) this.snd('ui_tap');
+      this.played = false; return ok;
+    }
+    goBack() {
+      const c = this.ctl, name = (this.shown || '').split(':')[0];
+      switch (name) {
+        case 'title': case 'fail': return false;
+        case 'menu': if (this.newArm) { this.newArm = false; this.menu(); return true; } return false;
+        case 'settings': if (c.state === 'paused') this.pause(); else this.menu(); return true;
+        case 'pause': c.resume(); return true;
+        case 'how': case 'ledger': c.toTitle(); return true;
+        case 'pockets': if (this.unpickArm >= 0) { this.unpickArm = -1; this.pockets(); } else if (c.slot >= 0) c.toTitle(); else this.title(); return true;
+        case 'route': if (c.midNight && c.sim) { c.state = 'hem'; this.hem(); } else c.openHem(false); return true;   // mid-run: the same visit, so "one per visit" still holds
+        case 'hem':   // a second view steps back to the first; then out to the main menu (a run in progress stays saved there as Continue run)
+          if (this.tab === 'pattern' && this.patView === 'ups') { this.patView = 'perks'; this.hem(); }
+          else if (this.tab === 'book' && this.bookView === 'foes') { this.bookView = 'charts'; this.hem(); }
+          else c.toTitle();
+          return true;
+        case 'tally': case 'gameover': case 'victory': c.continueNight(); return true;
+      }
+      return false;
+    }
     /* The left-handed layout: item slots, special and pause move to the other side. Only phone layouts read the class. */
-    hand() { document.body.classList.toggle('lefty', !!(this.p && this.p.settings && this.p.settings.leftHand)); }
+    hand() { this.prefs(); }
 
     // ---------- title, pockets, main menu ----------
+    /* The title screen is plain DOM and stands on its own. If a 3D title film is registered (ST.Cine.has('title'), src/films/title.js)
+       it plays once per launch over the cloth: src/cine.js hides this page while it runs and a tap skips it; when it ends the page
+       fades in. No film, a film that will not start, or "remove animations": the page is simply there. */
     title() {
-      this.show(`<div class="title">
-        <div class="eyebrow">A yarn-stitched arcade shooter</div>
-        <h1 class="wordmark">String Theory</h1>
+      this.show(`<div class="title cover">
+        <h1 class="wordmark">String Theory</h1><div class="thr" aria-hidden="true"></div>
+        <p class="tagline">A yarn-stitched arcade shooter</p>
         <p class="lede">Fly your needle ship, shoot down the moth swarm, beat the bosses, and spend what you earn on new weapons, ships and upgrades.</p>
         <div class="stack"><button class="btn primary" data-act="pockets" data-focus>Play</button></div></div>`, 'night', 'title');
+      if (this.titleFilmed || calm() || !(ST.Cine && ST.Cine.has && ST.Cine.has('title'))) return;
+      this.titleFilmed = true;   // once a launch: coming back to this screen later shows it at once
+      // the controller may still be being built (the first title is drawn from its constructor): start on the next frame
+      const go = () => { if (this.shown !== 'title') return; try { let seen = false; try { seen = localStorage.getItem('st.titleSeen') === '1'; localStorage.setItem('st.titleSeen', '1'); } catch (e) { /* no storage: always the full film */ } ST.Cine.play('title', { short: seen }); } catch (e) { try { ST.Cine.stop(); } catch (e2) { /* nothing to stop */ } document.body.classList.remove('stc-on', 'stc-solo'); } };   // a film that fails leaves the page standing
+      if (window.requestAnimationFrame) requestAnimationFrame(go); else go();
     }
     pockets() {
       const c = this.ctl, slots = c.store.slots();
       if (this.pk === undefined || this.pk < 0) this.pk = c.slot >= 0 ? c.slot : c.store.last();
       const nN = Object.keys(C.NEEDLES).length, nP = Object.keys(C.PATTERN.nodes).length;
-      const cards = slots.map((p, i) => p ? `<button class="pcard ${i === this.pk ? 'sel' : ''}" data-act="pk" data-arg="${i}">
+      const cards = slots.map((p, i) => p ? `<button class="pcard ${i === this.pk ? 'sel' : ''}" data-act="pk" data-arg="${i}" aria-pressed="${i === this.pk}">
           <b class="pname">${esc(p.mender)}</b><span>${p.stats.mended} runs completed</span>
           <span class="pneedles">${Object.keys(C.NEEDLES).filter(n => p.needles[n]).map(n => icon(n, 18)).join('')}</span>
           <dl><div><dt>Gems</dt><dd>${num(p.silk)}</dd></div><div><dt>Coins</dt><dd>${num(p.dust)}</dd></div><div><dt>Best score</dt><dd>${num(p.stats.bestNight)}</dd></div>
           <div><dt>Ships</dt><dd>${Object.keys(p.needles).length} of ${nN}</dd></div><div><dt>Perks</dt><dd>${Object.keys(p.pattern).length} of ${nP}</dd></div></dl></button>`
-        : `<button class="pcard empty ${i === this.pk ? 'sel' : ''}" data-act="pk" data-arg="${i}">${icon('sharps', 26)}<b class="pname">Empty slot</b><span>Start a new game</span></button>`).join('');
+        : `<button class="pcard empty ${i === this.pk ? 'sel' : ''}" data-act="pk" data-arg="${i}" aria-pressed="${i === this.pk}">${icon('sharps', 26)}<b class="pname">Empty slot</b><span>Start a new game</span></button>`).join('');
       const cur = slots[this.pk], hasEmpty = slots.some(x => !x);
       const actions = cur ? `<button class="btn primary" data-act="open" data-focus>Load</button>
           <button class="btn" data-act="copy" ${hasEmpty ? '' : 'disabled'}>Copy to empty slot</button>
           <button class="btn danger" data-act="unpick">${this.unpickArm === this.pk ? 'Tap again to delete ' + esc(cur.mender) : 'Delete'}</button>`
         : `<label class="namer"><span class="eyebrow">Player name</span><input id="mender" maxlength="14" value="Player" autocomplete="off"></label><button class="btn primary" data-act="open" data-focus>Start a new game</button>`;
-      this.show(`<div class="sheet wide saves"><div class="eyebrow">Save slots</div><h2>Choose a save</h2>
+      this.show(`<div class="sheet wide saves"><div class="rhead"><h2>Choose a save</h2><p class="sub">Three slots. Each keeps its own coins, gems and everything bought.</p></div>
         <div class="pockets">${cards}</div><div class="row">${actions}</div>
-        <p class="dim small">Records keep every finished run, even from deleted saves.</p></div>`, 'paper', 'pockets');
+        <p class="note">Records keep every finished run, even from deleted saves.</p></div>`, 'paper', 'pockets');
     }
     menu() {
       const p = this.p, st = p.settings;
       this.show(`<div class="title menu">
-        <div class="mhead"><div class="eyebrow">Playing as ${esc(p.mender)}</div>
-        <h1 class="wordmark">String Theory</h1>
-        <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}<span class="mono dim">Best score ${num(p.stats.bestNight)} · Runs ${p.stats.nights} · completed ${p.stats.mended}</span></div></div>
+        <div class="mhead"><h1 class="wordmark">String Theory</h1>
+        <div class="who">Playing as <b>${esc(p.mender)}</b></div>
+        <div class="purse">${dustTag(p.dust)}${silkTag(p.silk)}<span class="mono dim">Best score ${num(p.stats.bestNight)} · Runs ${p.stats.nights} · completed ${p.stats.mended}</span></div></div>
         <div class="stack">
           ${p.run ? `<button class="btn primary" data-act="resumerun" data-focus>Continue run · ${esc(C.PANELS[Math.min(C.PANELS.length - 1, p.run.panel)].name)}</button>
           <button class="btn" data-act="begin">${this.newArm ? 'Tap again: the run in progress is dropped' : 'Start a new run'}</button>` : '<button class="btn primary" data-act="begin" data-focus>Start run</button>'}
@@ -233,7 +305,7 @@
           <button class="btn" data-act="how">How to play</button>
           <button class="btn" data-act="pockets">Change save</button>
         </div>
-        <div class="row small mchips">
+        <div class="row mchips">
           <button class="chip" data-act="settings">Settings</button>
           <button class="chip" data-act="mode">Difficulty: ${C.MODES[ST.modeUnlocked(p, st.mode) ? st.mode : 'normal'].name}${Object.keys(C.MODES).some(k => !ST.modeUnlocked(p, k)) ? ' (finish a run to unlock harder)' : ''}</button>
         </div></div>`, 'night', 'menu');
@@ -253,18 +325,17 @@
         const boss = esc(C.KEEPERS[pn.keeper].name), head = `<div class="rlh"><b>${esc(pn.name)}</b><span>Boss: ${boss}</span></div>`;
         if (i < cur) return `<li class="rl done">${head}<div class="rlc"><span class="cl">Cleared · </span>${esc(C.PATCHES[flownAt(i)].name)}</div></li>`;
         if (i > cur) return `<li class="rl future">${head}<div class="rlc">${pn.patches.map(id => esc(C.PATCHES[id].name)).join(' or ')}</div></li>`;
-        return `<li class="rl cur">${head}<div class="eyebrow">${opts.length > 1 ? 'You are here · choose your route' : 'You are here · only one route'}</div>${pn.patches.map(id => { const pt = C.PATCHES[id];
+        return `<li class="rl cur">${head}<div class="rhint">${opts.length > 1 ? 'You are here. Choose your route.' : 'You are here. Only one route.'}</div>${pn.patches.map(id => { const pt = C.PATCHES[id];
           return `<button class="rcard art-${pt.art} ${id === this.patchSel ? 'sel' : ''}" data-act="patch" data-arg="${id}" aria-pressed="${id === this.patchSel}"><i></i><span class="rct"><b>${esc(pt.name)}</b><span>${esc(pt.desc)}</span>${pt.foes ? `<span class="foes">Enemies: ${esc(pt.foes)}</span>` : ''}${pt.mark ? `<em>Bonus: ${esc(pt.mark)}</em>` : '<em class="none">No bonus</em>'}</span></button>`; }).join('')}</li>`;
       }).join('');
       const pt = C.PATCHES[this.patchSel], k = C.KEEPERS[C.PANELS[cur].keeper];
-      this.show(`<div class="hem route"><header><div><div class="eyebrow">${C.PANELS[cur].name} of ${C.PANELS.length}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</div><h2>Route map</h2></div></header>
+      this.show(`<div class="hem route"><header><div><h2>Route map</h2><span class="sub">${C.PANELS[cur].name} of ${C.PANELS.length}${sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''}</span></div></header>
         <div class="routewrap"><div class="mapside"><div class="routemap">${cols}</div><div class="hemline">You visit the hideout after every stage</div></div>
         <ol class="routelist">${list}</ol>
-        <div class="detail"><div class="eyebrow">${C.PANELS[cur].name} · ${opts.length > 1 ? 'choose your route' : 'only one route'}</div><h3>${esc(pt.name)}</h3><p>${esc(pt.desc)}</p>
-          <dl class="tally"><div><dt>Waves</dt><dd>3 waves · Bonus wave · Boss</dd></div><div><dt>Boss</dt><dd>${esc(k.name)}</dd></div>${pt.foes ? `<div><dt>Enemies</dt><dd class="foes">${esc(pt.foes)}</dd></div>` : ''}${pt.mark ? `<div><dt class="mark">Bonus</dt><dd class="mark">${esc(pt.mark)}</dd></div>` : ''}</dl>
-          <div class="buyrow"><button class="btn primary" data-act="fly" data-arg="${this.patchSel}" data-focus>Go</button></div></div></div>
+        <div class="rdetail"><h3>${esc(pt.name)}</h3><p class="sub">${C.PANELS[cur].name} · ${opts.length > 1 ? 'choose your route' : 'only one route'}</p><p>${esc(pt.desc)}</p>
+          <dl class="tally"><div><dt>Waves</dt><dd>3 waves · Bonus wave · Boss</dd></div><div><dt>Boss</dt><dd>${esc(k.name)}</dd></div>${pt.foes ? `<div><dt>Enemies</dt><dd>${esc(pt.foes)}</dd></div>` : ''}${pt.mark ? `<div class="mark"><dt>Bonus</dt><dd>${esc(pt.mark)}</dd></div>` : ''}</dl>
+          <button class="btn primary" data-act="fly" data-arg="${this.patchSel}" data-focus>Go</button></div></div>
         <footer class="routego"><span class="dim small">3 waves · bonus wave · boss</span><button class="btn primary" data-act="fly" data-arg="${this.patchSel}">Go · ${esc(pt.name)}</button></footer></div>`, 'paper', 'route:' + cur);
-      if (this.routeAt !== cur) { this.routeAt = cur; const el = this.el.overlay.querySelector('.rl.cur'); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' }); }
     }
 
     // ---------- the Ledger ----------
@@ -273,14 +344,14 @@
       const rows = c.store.ledger().filter(r => f === 'all' || r.needle === f).slice(0, 12);
       const tabs = [['all', 'All ships']].concat(Object.keys(C.NEEDLES).map(n => [n, C.NEEDLES[n].name]));
       const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
-        : '<tr><td colspan="6" class="dim">No runs on record yet.</td></tr>';
+        : '<tr><td colspan="6" class="none">No runs on record yet.</td></tr>';
       const marks = [['Perfect bonus waves', p.stats.perfectSamplers || 0]].concat(Object.keys(C.KEEPERS).map(id => [C.KEEPERS[id].name + ' defeated', p.codex.keepers[id] || 0]), [['Longest twin-ship streak', (p.stats.longestDouble || 0) + ' waves']]);
       const view = this.ledgerView === 'stats' ? 'stats' : 'runs';
-      this.show(`<div class="hem records lv-${view}"><header><div><div class="eyebrow">High scores</div><h2>Records</h2></div>
-          <div class="seg"><button class="tabb ${view === 'runs' ? 'on' : ''}" data-act="lview" data-arg="runs"><b>Runs</b></button><button class="tabb ${view === 'stats' ? 'on' : ''}" data-act="lview" data-arg="stats"><b>Your stats</b></button></div></header>
-        <nav class="tabs shipf">${tabs.map(t => `<button class="tabb ${t[0] === f ? 'on' : ''}" data-act="ledger" data-arg="${t[0]}"><b>${t[1]}</b></button>`).join('')}</nav>
+      this.show(`<div class="hem records lv-${view}"><header><div><h2>Records</h2><span class="sub">High scores</span></div>
+          <div class="seg"><button class="tabb ${view === 'runs' ? 'on' : ''}" data-act="lview" data-arg="runs" aria-pressed="${view === 'runs'}"><b>Runs</b></button><button class="tabb ${view === 'stats' ? 'on' : ''}" data-act="lview" data-arg="stats" aria-pressed="${view === 'stats'}"><b>Your stats</b></button></div></header>
+        <nav class="tabs shipf" aria-label="Ship">${tabs.map(t => `<button class="tabb ${t[0] === f ? 'on' : ''}" data-act="ledger" data-arg="${t[0]}" aria-pressed="${t[0] === f}"><b>${t[1]}</b></button>`).join('')}</nav>
         <div class="routewrap"><div class="tablewrap"><table class="ledger"><tr><th>#</th><th>Player</th><th>Ship</th><th>Score</th><th>Reached</th><th>Date</th></tr>${body}</table></div>
-        <div class="detail"><div class="eyebrow">${esc(p.mender)}'s stats</div><dl class="tally">${marks.map(m => `<div><dt>${esc(m[0])}</dt><dd>${m[1]}</dd></div>`).join('')}</dl></div></div>
+        <div class="rstats" data-fit="1"><div class="eyebrow">${esc(p.mender)}'s stats</div><dl class="tally">${marks.map(m => `<div><dt>${esc(m[0])}</dt><dd>${m[1]}</dd></div>`).join('')}</dl></div></div>
         <footer><span></span><button class="btn primary" data-act="title" data-focus>Back</button></footer></div>`, 'paper', 'ledger');
     }
     how() {
@@ -289,7 +360,7 @@
           ['Special', 'Graze bullets to fill the bar, then tap with a second finger'], ['Items', 'Tap an item slot'], ['Pause', 'The button in the corner']]
         : [['Move', '<kbd>←</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>→</kbd> or <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, or drag'], ['Dash', '<kbd>Shift</kbd>'], ['Slow time', 'Hold <kbd>F</kbd>'], ['Special', 'Graze bullets to fill the bar, then <kbd>E</kbd>'],
           ['Items', '<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>'], ['Pause', '<kbd>Esc</kbd>']];
-      this.show(`<div class="sheet howto"><div class="hhead"><div class="eyebrow">Controls</div><h2>How to play</h2></div>
+      this.show(`<div class="sheet howto"><div class="hhead"><h2>How to play</h2></div>
         <div class="how">${rows.map(r => `<div><b>${r[0]}</b><span>${r[1]}</span></div>`).join('')}</div>
         <div class="hprose"><p><b>Two weapons, always firing.</b> Your lead weapon fires from the ship. Your second fires from the bobbin trailing on its thread: hold still to stack both on one target, sweep to spread them. A target hit by both takes 25% more.</p>
         <p>A run is eight stages: three waves, a bonus wave, then a boss. Between stages you shop in the hideout and pick your route.</p>
@@ -298,6 +369,9 @@
     }
 
     // ---------- the Hem ----------
+    /* One frame for every tab: header, tabs, strip, list, details, footer. Each of those is a slot of fixed size (style.css,
+       section 7); a tab only changes what is inside the list and the details. A change of tab stitches the new contents in;
+       the frame itself never moves. */
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
       const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use'],
@@ -305,170 +379,201 @@
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared · next: ${C.PANELS[c.sim.panel].name}` : 'Between runs · everything you buy is saved';
       this.preview = null;
-      const body = this['st_' + this.tab]();
-      this.show(`<div class="hem shop">
-        <header><div><div class="eyebrow">${esc(sub)}</div><h2>Hideout</h2></div>
-          <div class="row purse">${dustTag(p.dust)}${silkTag(p.silk)}</div></header>
-        <nav class="tabs">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
-        ${this.tab === 'pattern' ? this.perkSeg() : this.shipStrip()}
-        <div class="station st-${this.tab}${this.tab === 'pattern' && this.patView === 'ups' ? ' st-ups' : ''}">${body}</div>
-        <footer><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End run' : 'Main menu'}</button>
+      const view = this.selKey(), body = this['st_' + this.tab](), selNow = view + '/' + body.sel;
+      const strip = this.tab === 'pattern' ? this.perkSeg() : this.tab === 'book' ? this.bookSeg() : this.shipStrip();
+      const lint = [[12, 19, 0], [31, 26, -7], [52, 22, -13], [68, 29, -3], [86, 24, -17]].map(l => `<i class="lint" style="--x:${l[0]}%;--t:${l[1]}s;--d:${l[2]}s"></i>`).join('');
+      this.show(`<div class="hem shop"><div class="amb" aria-hidden="true"><i class="lamp"></i>${lint}<span class="strand"><i></i></span></div>
+        <header data-anchor="header"><div><h2>Hideout</h2><span class="sub">${esc(sub)}</span></div>
+          <div class="purse">${dustTag(p.dust)}${silkTag(p.silk)}</div></header>
+        <nav class="tabs" data-anchor="tabs" aria-label="Hideout">${tabs.map(t => `<button class="tabb ${t[0] === this.tab ? 'on' : ''}" data-act="tab" data-arg="${t[0]}" aria-pressed="${t[0] === this.tab}"><b>${t[1]}</b><span>${t[2]}</span></button>`).join('')}</nav>
+        <div class="strip" data-anchor="strip">${strip}</div>
+        <div class="station st-${this.tab} sv-${view}"><div class="larea" data-anchor="list">${body.list}</div>${body.detail}</div>
+        <footer data-anchor="footer"><button class="btn" data-act="${mid ? 'abandon' : 'title'}">${mid ? 'End run' : 'Main menu'}</button>
           <button class="btn primary" data-act="depart">${mid ? 'Continue run' : this.p.run ? 'Start a new run' : 'Start run'}</button></footer></div>`, 'paper', 'hem:' + this.tab);
+      // content only: a new tab or view stitches its list and details in; a new pick fades the details
+      const o = this.el.overlay, was = this.hemView, wasSel = this.hemSel; this.hemView = view; this.hemSel = selNow;
+      if (!calm() && was) {
+        if (was !== view) for (const e of o.querySelectorAll('.larea > *, .detail > *')) e.classList.add('swapin');
+        else if (wasSel !== selNow) for (const e of o.querySelectorAll('.detail > *')) e.classList.add('fadein');
+      }
     }
-    /* Which selection a pick belongs to: the Perks tab holds two views, perks and power-up upgrades. */
-    selKey() { return this.tab === 'pattern' && this.patView === 'ups' ? 'ups' : this.tab; }
-    /* On the Perks tab the stats strip gives its row to a switch between the perks and the power-up upgrades, both bought with gems. */
+    /* Which selection a pick belongs to: the Perks and Collection tabs each hold two views. */
+    selKey() { return this.tab === 'pattern' && this.patView === 'ups' ? 'ups' : this.tab === 'book' && this.bookView === 'foes' ? 'foes' : this.tab; }
+    /* A two-way switch in the strip's slot, for the tabs that hold two views. */
+    seg(act, label, opts, cur) {
+      return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b><span>${o[2]} of ${o[3]}</span></button>`).join('')}</nav>`;
+    }
     perkSeg() {
-      const p = this.p, v = this.patView === 'ups' ? 'ups' : 'perks';
-      const nP = Object.keys(C.PATTERN.nodes), nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
-      const b = (id, name, got, all) => `<button class="tabb ${v === id ? 'on' : ''}" role="tab" aria-selected="${v === id}" data-act="pview" data-arg="${id}"><b>${name}</b><span class="mono">${got} of ${all}</span></button>`;
-      return `<nav class="pseg" role="tablist" aria-label="Bought with gems">${b('perks', 'Perks', nP.filter(k => p.pattern[k]).length, nP.length)}${b('ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length)}</nav>`;
+      const p = this.p, nP = Object.keys(C.PATTERN.nodes), nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
+      return this.seg('pview', 'Bought with gems', [['perks', 'Perks', nP.filter(k => p.pattern[k]).length, nP.length], ['ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length]], this.patView === 'ups' ? 'ups' : 'perks');
+    }
+    bookSeg() {
+      const p = this.p, ch = Object.keys(C.CHARTS), mo = Object.keys(C.MOTHS), ke = Object.keys(C.KEEPERS);
+      return this.seg('bview', 'Collection', [['charts', 'Blueprints', ch.filter(k => p.charts[k]).length, ch.length],
+        ['foes', 'Enemies', mo.filter(k => p.codex.moths[k]).length + ke.filter(k => p.codex.keepers[k]).length, mo.length + ke.length]], this.bookView === 'foes' ? 'foes' : 'charts');
     }
     /* The four numbers a purchase can move, for the ship and weapon in hand. */
     flight(p) {
       const d = ST.derive(p), id = p.threads[p.thread] ? p.thread : 'running', w = p.threads[id] || 1;
       return { dmg: d.dmg, rate: d.fireMul / C.THREADS[id].rate[w - 1], ply: d.ply, speed: d.speed };
     }
-    /* Always on screen in the hideout: what you fly now, and in green or red what the selected thing would change. */
+    /* Always in the strip's slot: what you fly now, and beside each number what the selected thing would make it. */
     shipStrip() {
       const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null;
-      const cell = (lab, k, dp, unit) => { const ch = b && Math.abs(b[k] - a[k]) > 1e-6;
-        return `<div class="${ch ? 'chg' : ''}" data-k="${k}" data-dp="${dp}" data-unit="${unit || ''}"><span>${lab}</span><b class="mono">${a[k].toFixed(dp)}${unit || ''}</b>${ch ? `<em class="mono ${b[k] > a[k] ? 'up' : 'down'}">→ ${b[k].toFixed(dp)}</em>` : ''}<i class="stitch" aria-hidden="true"></i></div>`; };
-      return `<div class="shipstrip" aria-label="Your ship's stats"><div class="who">${icon(p.needle, 24)}<span><i>Your ship</i><b>${esc(C.NEEDLES[p.needle].name)}</b></span></div>
+      const cell = (lab, k, dp, unit) => { const ch = b && Math.abs(b[k] - a[k]) > 1e-6, u = unit ? `<span class="unit">${unit}</span>` : '';
+        return `<div class="${ch ? 'chg' : ''}" data-k="${k}" data-dp="${dp}"><span class="k">${lab}</span><b class="v"><span class="n">${a[k].toFixed(dp)}</span>${u}</b><em class="d ${ch ? (b[k] > a[k] ? 'up' : 'down') : ''}">${ch ? `${ARROW}<span class="sr">becomes </span>${b[k].toFixed(dp)}` : ''}</em><i class="stitch" aria-hidden="true"></i></div>`; };
+      return `<div class="shipstrip" role="group" aria-label="Your ship's numbers"><div class="who">${icon(p.needle, 24)}<span><span class="k">Your ship</span><b>${esc(C.NEEDLES[p.needle].name)}</b></span></div>
         ${cell('Damage', 'dmg', 2)}${cell('Fire rate', 'rate', 1, '/s')}${cell('Shield', 'ply', 0)}${cell('Speed', 'speed', 1)}</div>`;
     }
     clone() { return JSON.parse(JSON.stringify(this.p)); }
-    stateLine(st, cur) {
+    /* Why a thing cannot be bought yet, in a few words: it sits under the price on the button. */
+    whyNot(st, cur) {
       const unit = cur === 'silk' ? 'gems' : 'coins', have = this.p[cur];
-      if (st.why === 'sealed') return '<span class="state sealed">Locked · find its blueprint</span>';
-      if (st.why === 'locked') return '<span class="state sealed">Unlock the one before it first</span>';
-      if (st.why === 'short') return `<span class="state short">Need ${num(st.price - have)} more ${unit}</span>`;
-      if (st.why === 'full') return '<span class="state short">Item slots full</span>';
-      if (st.why === 'visit') return '<span class="state short">One per visit</span>';
-      if (st.why === 'owned') return '<span class="state own">Owned</span>';
+      if (st.why === 'sealed') return 'Needs its blueprint';
+      if (st.why === 'locked') return 'Needs the one before';
+      if (st.why === 'short') return `Need ${num(st.price - have)} more ${unit}`;
+      if (st.why === 'full') return 'Item slots are full';
+      if (st.why === 'visit') return 'One per visit';
+      if (st.why === 'tier') return `Buy ${st.left} more in ${st.row || 'the row above'}`;
       return '';
     }
-    priceTag(st, cur) { return st.price !== undefined ? (cur === 'silk' ? silkTag(st.price) : dustTag(st.price)) : ''; }
-    /* A purchase that cannot happen yet still answers a press: a muted button with the price, a dull sound and a shake. */
-    nope(st, cur, label) {
-      if (!st || st.ok || !st.why || st.why === 'owned' || st.why === 'maxed') return '';
-      const price = st.price !== undefined ? ` · ${num(st.price)}${cur === 'silk' ? ' gems' : ''}` : '';
-      return `<button class="btn nope" data-act="nope" aria-disabled="true">${label || 'Buy'}${price}</button>`;
+    /* The buy slot: always the same corner of the details. A button with the price when you can buy; the same button, muted, saying
+       what is missing when you cannot (it still answers a press); a stitched stamp when there is nothing to buy. */
+    buyBtn(st, cur, label, arg, hint) {
+      const tag = st.price !== undefined ? (cur === 'silk' ? silkTag(st.price, 'sm') : dustTag(st.price, 'sm')) : '';
+      if (st.ok) return `<button class="btn primary buy" data-act="buy" data-arg="${arg}" data-fit="3"><span class="bl">${label}${tag}</span>${hint ? `<span class="bh">${hint}</span>` : ''}</button>`;
+      return `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}${tag}</span><span class="bh">${this.whyNot(st, cur)}</span></button>`;
     }
-    list(items, selId) { return `<div class="list">${items.map(i => `<button class="card ${i.id === selId ? 'sel' : ''} ${i.dim ? 'dim' : ''}" data-act="pick" data-arg="${i.id}"><span class="cic">${i.icon || ''}</span><span class="cname">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('')}</div>`; }
+    stamp(head, sub, none) { return `<div class="stamp ${none ? 'none' : ''}"><b>${head}</b>${sub ? `<span>${sub}</span>` : ''}</div>`; }
+    list(items, selId) {
+      let h = items.map(i => `<button class="card ${i.id === selId ? 'sel' : ''} ${i.lock ? 'lock' : ''}" data-act="pick" data-arg="${i.id}" aria-pressed="${i.id === selId}"><span class="cic">${i.icon || ''}</span><span class="cname" data-fit="3">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('');
+      for (let i = items.length; i < 10; i++) h += '<span class="ghost" aria-hidden="true"></span>';
+      return `<div class="list">${h}</div>`;
+    }
+    /* The details panel. Fixed slots, top to bottom: picture, name and kind; what it does and what changes (rows of "label: text");
+       then what you have on the left and the buy slot on the right. */
     detail(o) {
-      return `<div class="detail"><div class="eyebrow">${esc(o.kicker || '')}</div><h3>${esc(o.name)}</h3><p>${esc(o.desc)}</p>${o.extra || ''}
-        <div class="buyrow">${o.state || ''}${o.buttons || ''}</div>${o.quote ? `<p class="quote">“${esc(o.quote)}”</p>` : ''}</div>`;
+      const rows = (o.rows || []).filter(Boolean);
+      return `<section class="detail" data-anchor="detail" aria-label="Details">
+        <div class="dhead"><span class="dpic ${o.picCls || ''}" data-anchor="pic" aria-hidden="true">${o.pic || ''}</span>
+          <div class="dtitle"><h3 class="dname" data-anchor="name" data-fit="4">${esc(o.name)}</h3><div class="dkick" data-fit="1">${o.kick || ''}</div></div></div>
+        <div class="dbody" data-anchor="body" data-fit="4">${o.desc ? `<p class="ddesc">${esc(o.desc)}</p>` : ''}${rows.length ? `<dl class="dcmp">${rows.map(r => `<div class="${r.cls || ''}${r.opt ? ' opt' : ''}"><dt>${r.k}</dt><dd>${r.v}</dd></div>`).join('')}</dl>` : ''}</div>
+        <div class="dact"><div class="dleft" data-anchor="have" data-fit="1">${o.left || ''}</div><div class="dbuy" data-anchor="buy">${o.buy || ''}</div></div></section>`;
     }
     st_spool() {
       const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
       const owned = ids.filter(id => p.threads[id]), second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : owned.find(id => id !== p.thread) || null;
       const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
-        return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, dim: st.why === 'sealed',
-          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · Lv ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price) }; });
+        return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, lock: st.why === 'sealed',
+          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · level ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price, 'sm') }; });
       const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
-      const weights = `<ol class="weights">${t.weights.map((d, i) => `<li class="${i < w ? 'on' : ''}${i === w ? ' next' : ''}"><b>${ROMAN[i + 1]}</b> ${esc(d)}${i > 0 ? ` <span class="mono dim">+${C.WEIGHT_COST[i]}</span>` : ''}</li>`).join('')}</ol>`;
-      let btn = '';
-      if (st.ok) btn += `<button class="btn primary" data-act="buy" data-arg="thread:${sel}">${st.why === 'buy' ? 'Buy' : 'Upgrade to level ' + ROMAN[st.next]} · ${num(st.price)}</button>`;
-      else btn += this.nope(st, 'dust', w ? 'Upgrade' : 'Buy');
-      if (w && p.thread !== sel) btn += `<button class="btn" data-act="wind" data-arg="${sel}">Set as lead</button>`;
-      if (w && p.thread !== sel && second !== sel) btn += `<button class="btn" data-act="wind2" data-arg="${sel}">Put on bobbin</button>`;
       const dd = ST.derive(p), L = t.lv[Math.max(1, w) - 1], per = dd.dmg * L.dmg, shots = L.n + (L.mid ? 1 : 0);
-      const role = p.thread === sel ? 'Your lead weapon: fires from the ship.' : second === sel ? 'On your bobbin: fires from the spool that trails your ship, at 60% damage.' : w ? 'Owned, not in use.' : '';
-      const wstat = `<div class="wstat"><span>Best at <b>${esc(t.job)}</b></span><span>${shots} ${shots > 1 ? 'shots' : 'shot'} × <b class="mono">${per.toFixed(2)}</b></span><span><b class="mono">${(dd.fireMul / L.rate).toFixed(1)}</b> a second</span></div>${role ? `<p class="role">${role}</p>` : ''}`;
+      const fires = `${shots} ${shots > 1 ? 'shots' : 'shot'} of <b class="mono">${per.toFixed(2)}</b>, <b class="mono">${(dd.fireMul / L.rate).toFixed(1)}</b> a second`;
+      const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Its blueprint is dropped by: ${esc(C.CHARTS[t.chart].from)}.` }]
+        : w ? [{ k: 'Now', v: `Level ${ROMAN[w]}. ${esc(t.weights[w - 1])}.`, cls: 'was', opt: true }, w < 3 ? { k: 'Next', v: `Level ${ROMAN[w + 1]}. ${esc(t.weights[w])}.` } : { k: 'Level III', v: 'Fully upgraded.' }]
+          : [{ k: 'Level I', v: esc(t.weights[0]) + '.' }];
+      const lead = p.thread === sel, bob = second === sel;
+      const left = w ? `<div class="equip" role="group" aria-label="Use this weapon as"><span>Use as</span>
+          <button class="eq ${lead ? 'on' : ''}" ${lead ? 'disabled' : `data-act="wind" data-arg="${sel}"`} aria-pressed="${lead}">Lead</button>
+          <button class="eq ${bob ? 'on' : ''}" ${bob || lead ? 'disabled' : `data-act="wind2" data-arg="${sel}"`} aria-pressed="${bob}">Bobbin</button></div>`
+        : `<span>${fires}</span>`;
+      const buy = st.ok ? this.buyBtn(st, 'dust', st.why === 'buy' ? 'Buy' : 'Upgrade', 'thread:' + sel, st.why === 'buy' ? '' : 'to level ' + ROMAN[st.next])
+        : st.why === 'owned' ? this.stamp('Max level', 'Level III') : this.buyBtn(st, 'dust', w ? 'Upgrade' : 'Buy');
       if (st.ok || (w && p.thread !== sel)) { const q = this.clone(); q.thread = sel; q.threads[sel] = p.thread === sel || !w ? (st.ok ? st.next || 1 : w) : w; this.preview = q; }
-      return this.list(items, sel) + this.detail({ kicker: 'Weapon · bought with coins, kept forever', name: t.name, desc: t.desc, extra: wstat + weights,
-        state: this.stateLine(st, 'dust'), buttons: btn, quote: '' });
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<i class="spool" style="--c:${t.color}"></i>`, name: t.name,
+        kick: 'Weapon · ' + esc(t.job.toLowerCase()) + (lead ? ' · your lead' : bob ? ' · on your bobbin' : ''), desc: t.desc, rows, left, buy }) };
     }
     st_bench() {
       const p = this.p, ids = Object.keys(C.TEMPERS), sel = this.sel.bench && C.TEMPERS[this.sel.bench] ? this.sel.bench : 'point';
       const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
-        return { id, name: t.name, icon: `<b class="lv mono">${lv}/${t.max}</b>`, meta: lv >= t.max ? 'Maxed' : st.why === 'sealed' ? 'Level IV locked' : dustTag(st.price) }; });
-      const t = C.TEMPERS[sel], st = S.temperState(p, sel);
-      const lvNow = p.tempers[sel], stats = `<div class="lvrow"><span class="eyebrow">Level ${lvNow} of ${t.max}</span>${pips(lvNow, t.max)}</div>`;
-      if (lvNow < t.max) { const q = this.clone(); q.tempers[sel] = lvNow + 1; this.preview = q; }
-      return this.list(items, sel) + this.detail({ kicker: 'Upgrade · permanent, applies to every ship', name: t.name + ' ' + ROMAN[Math.min(t.max, p.tempers[sel] + 1)], desc: t.desc + '.', extra: stats,
-        state: this.stateLine(st, 'dust'),
-        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="temper:${sel}">Upgrade · ${num(st.price)}</button>` : lvNow < t.max ? this.nope(st, 'dust', 'Upgrade') : '',
-        quote: '' });
+        return { id, name: t.name, icon: `<b class="lv">${lv}/${t.max}</b>`, meta: lv >= t.max ? 'Max level' : st.why === 'sealed' ? 'Level IV locked' : dustTag(st.price, 'sm') }; });
+      const t = C.TEMPERS[sel], st = S.temperState(p, sel), lv = p.tempers[sel], next = Math.min(t.max, lv + 1);
+      let move = '';
+      if (lv < t.max) { const q = this.clone(); q.tempers[sel] = lv + 1; this.preview = q; const a = this.flight(p), b = this.flight(q);
+        for (const [k, lab, dp] of [['dmg', 'damage', 2], ['rate', 'shots a second', 1], ['ply', 'shield', 0], ['speed', 'speed', 1]]) if (Math.abs(b[k] - a[k]) > 1e-6) move = `: ${lab} ${a[k].toFixed(dp)} ${ARROW} <b>${b[k].toFixed(dp)}</b>`; }
+      const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Level ${ROMAN[next]} needs a blueprint, dropped by: ${esc(C.CHARTS.bp_gilt.from)}.` }]
+        : lv < t.max ? [{ k: 'Next', v: `Level ${ROMAN[next]}${move}.` }] : [{ k: 'Level ' + ROMAN[lv], v: 'Fully upgraded.' }];
+      let marks = '<span class="pips">'; for (let i = 0; i < t.max; i++) marks += `<i class="${i < lv ? 'on' : i === lv && st.ok ? 'next' : ''}"></i>`; marks += '</span>';
+      const buy = st.ok ? this.buyBtn(st, 'dust', 'Upgrade', 'temper:' + sel, 'to level ' + ROMAN[next]) : lv >= t.max ? this.stamp('Max level', 'Level ' + ROMAN[lv]) : this.buyBtn(st, 'dust', 'Upgrade');
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<b class="lvpic">${ROMAN[next]}</b>`, name: t.name, kick: 'Upgrade · every ship, for good',
+        desc: t.desc + '.', rows, left: `<div class="lvrow"><span>Level <b>${lv}</b> of ${t.max}</span>${marks}</div>`, buy }) };
     }
     st_notions() {
       const p = this.p, ids = Object.keys(C.NOTIONS), sel = this.sel.notions && C.NOTIONS[this.sel.notions] ? this.sel.notions : 'thimble', visit = this.ctl.visit;
       const items = ids.map(id => { const n = C.NOTIONS[id], st = S.notionState(p, id, visit), price = S.notionPrice(p, id), have = S.trayCount(p, id);
-        return { id, name: n.name, icon: icon(n.sprite, 30), dim: st.why === 'sealed',
-          meta: st.why === 'sealed' ? 'Locked' : dustTag(price) + (price < n.price ? ` <s class="mono dim">${n.price}</s>` : '') + (have ? ` <span class="mono">×${have}</span>` : '') }; });
-      const n = C.NOTIONS[sel], st = S.notionState(p, sel, visit);
-      const tray = `<div class="trayrow"><span class="eyebrow">Your item slots</span>${[0, 1, 2].map(i => { const s = p.tray[i]; return `<span class="slot">${s ? icon(C.NOTIONS[s.id].sprite, 30) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></span>`; }).join('')}</div>`;
-      return this.list(items, sel) + this.detail({ kicker: 'Item · single use, three slots', name: n.name, desc: n.desc, extra: tray,
-        state: this.stateLine(st, 'dust'),
-        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="notion:${sel}">Buy · ${num(st.price)}</button>` : this.nope(st, 'dust'),
-        quote: '' });
+        return { id, name: n.name, icon: icon(n.sprite, 30), lock: st.why === 'sealed',
+          meta: st.why === 'sealed' ? 'Locked' : dustTag(price, 'sm') + (have ? ` <span class="mono">×${have}</span>` : '') }; });
+      const n = C.NOTIONS[sel], st = S.notionState(p, sel, visit), cap = p.pattern.deep ? 2 : 1, price = S.notionPrice(p, sel);
+      // your three slots, with the thing about to be bought sewn in where it will go
+      let at = -1; if (st.ok) { at = p.tray.findIndex(s => s.id === sel && s.n < cap); if (at < 0) at = p.tray.length; }
+      const tray = `<div class="trayrow" role="img" aria-label="Your item slots: ${p.tray.map(s => C.NOTIONS[s.id].name + (s.n > 1 ? ' times ' + s.n : '')).join(', ') || 'empty'}"><span>Slots</span>${[0, 1, 2].map(i => { const s = p.tray[i], nw = i === at, id = s ? s.id : nw ? sel : null, cnt = (s ? s.n : 0) + (nw ? 1 : 0);
+        return `<span class="tslot ${nw ? 'new' : ''}">${id ? icon(C.NOTIONS[id].sprite, 26) + (cnt > 1 ? `<em>×${cnt}</em>` : '') : ''}</span>`; }).join('')}</div>`;
+      const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Its blueprint is dropped by: ${esc(C.CHARTS[n.chart].from)}.` }] : price < n.price ? [{ k: 'Discount', v: `${price} coins, down from ${n.price}.`, opt: true }] : [];
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: icon(n.sprite, 40), name: n.name, kick: 'Item · single use' + (n.perVisit ? ' · one per visit' : ''),
+        desc: n.desc, rows, left: tray, buy: this.buyBtn(st, 'dust', 'Buy', 'notion:' + sel) }) };
     }
     st_case() {
       const p = this.p, ids = Object.keys(C.NEEDLES), sel = this.sel.case && C.NEEDLES[this.sel.case] ? this.sel.case : p.needle;
       const items = ids.map(id => { const n = C.NEEDLES[id], st = S.needleState(p, id);
-        return { id, name: n.name, icon: icon(id, 26), dim: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price) }; });
-      const n = C.NEEDLES[sel], st = S.needleState(p, sel), base = C.NEEDLES.sharps;
-      const stats = `<div class="stats">${['ply', 'pace', 'eye', 'point'].map(k => { const dv = n[k] - base[k]; return `<div><span>${STAT[k]}</span>${pips(n[k], 5)}<em class="mono">${dv ? (dv > 0 ? '+' : '') + dv : ''}</em></div>`; }).join('')}</div><div class="eyebrow cmp">Compared with the starter ship</div>`;
-      let btn = st.ok ? `<button class="btn primary" data-act="buy" data-arg="needle:${sel}">Buy for ${st.price} gems</button>` : p.needles[sel] ? '' : this.nope(st, 'silk');
-      if (p.needles[sel] && p.needle !== sel) btn += `<button class="btn primary" data-act="takeup" data-arg="${sel}">Fly this ship</button>`;
+        return { id, name: n.name, icon: icon(id, 26), lock: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price, 'sm') }; });
+      const n = C.NEEDLES[sel], st = S.needleState(p, sel), own = !!p.needles[sel];
+      const left = st.why === 'sealed' ? `<span>Blueprint dropped by: <b>${esc(C.CHARTS[n.chart].from)}</b></span>`
+        : `<span>Shield <b>${n.ply}</b> · Speed <b>${n.pace}</b> · Fire rate <b>${n.eye}</b> · Damage <b>${n.point}</b></span>`;
+      const buy = st.ok ? this.buyBtn(st, 'silk', 'Buy', 'needle:' + sel) : own ? (p.needle === sel ? this.stamp('Flying', 'Your ship')
+        : `<button class="btn primary buy" data-act="takeup" data-arg="${sel}"><span class="bl">Fly this ship</span></button>`) : this.buyBtn(st, 'silk', 'Buy');
       if (sel !== p.needle) { const q = this.clone(); q.needle = sel; this.preview = q; }
-      const sealed = st.why === 'sealed' ? `<p class="state sealed">${esc(n.name)} is locked until you find its blueprint. Dropped by: ${esc(C.CHARTS[n.chart].from)}.</p>` : '';
-      return this.list(items, sel) + this.detail({ kicker: 'Ship · bought with gems, kept forever', name: n.name, desc: n.trait + ': ' + n.traitDesc, extra: `<p class="role"><b>Special · ${esc(n.special)}:</b> ${esc(n.specialDesc)}</p>` + stats + sealed,
-        state: st.why === 'sealed' ? '' : this.stateLine(st, 'silk'), buttons: btn,
-        quote: '' });
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: icon(sel, 40), name: n.name, kick: 'Ship · ' + esc(n.trait.toLowerCase()),
+        desc: n.traitDesc, rows: [{ k: 'Special: ' + esc(n.special), v: esc(n.specialDesc) }], left, buy }) };
     }
     st_pattern() {
       if (this.patView === 'ups') return this.st_ups();
       const p = this.p, all = C.PATTERN.nodes, sel = this.sel.pattern && all[this.sel.pattern] ? this.sel.pattern : 'steady';
-      const done = Object.keys(all).filter(k => p.pattern[k]).length;
       const grid = `<div class="sampler">${C.PATTERN.rows.map(r => `<div class="srow"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
-        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Unlocked' : all[id].cost + ' gems'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
-      const n = all[sel], st = S.patternState(p, sel);
+        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Unlocked' : all[id].cost + ' gems'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
+      const n = all[sel], st = S.patternState(p, sel), ri = C.PATTERN.rows.findIndex(r => r.nodes.includes(sel)), row = C.PATTERN.rows[ri];
       // a perk that moves one of the ship's numbers shows it, before and after
       let moved = ''; if (!p.pattern[sel]) { const q = this.clone(); q.pattern[sel] = true; const a = this.flight(p), b = this.flight(q);
-        for (const [k, lab, dp, unit] of [['dmg', 'Damage', 2, ''], ['rate', 'Fire rate', 1, '/s'], ['ply', 'Shield', 0, ''], ['speed', 'Speed', 1, '']]) if (Math.abs(b[k] - a[k]) > 1e-6) moved += `<span>${lab} <b class="mono">${a[k].toFixed(dp)}${unit}</b> <em class="mono up">→ ${b[k].toFixed(dp)}${unit}</em></span>`; }
-      return grid + this.detail({ kicker: `Perk · ${done} of ${Object.keys(all).length} unlocked`, name: n.name, desc: n.desc,
-        extra: (moved ? `<p class="pmove">${moved}</p>` : '') + '<p class="dim pnote">Permanent. Applies to every run and every ship.</p>',
-        state: st.why === 'owned' ? '<span class="state own">Unlocked</span>' : this.stateLine(st, 'silk'),
-        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="pattern:${sel}">Unlock · ${st.price} gems</button>` : this.nope(st, 'silk', 'Unlock'),
-        quote: '' });
+        for (const [k, lab, dp, unit] of [['dmg', 'Damage', 2, ''], ['rate', 'Fire rate', 1, '/s'], ['ply', 'Shield', 0, ''], ['speed', 'Speed', 1, '']]) if (Math.abs(b[k] - a[k]) > 1e-6) moved += `<span>${lab} <b class="mono">${a[k].toFixed(dp)}${unit}</b> ${ARROW} <em class="mono">${b[k].toFixed(dp)}${unit}</em></span>`; }
+      const pic = [icon(p.needle, 40), icon('dish', 40), icon('dust', 40), icon('thimble', 40), icon('charm', 40)][ri] || icon('charm', 40);
+      const buy = st.ok ? this.buyBtn(st, 'silk', 'Unlock', 'pattern:' + sel) : st.why === 'owned' ? this.stamp('Unlocked', 'For good') : this.buyBtn(st, 'silk', 'Unlock');
+      return { sel, list: grid, detail: this.detail({ pic, name: n.name, kick: 'Perk · ' + esc(row.name.toLowerCase()) + ' row', desc: n.desc,
+        left: moved || '<span>For good. Every ship, every run.</span>', buy }) };
     }
     /* Power-up upgrades: each power-up that drops in flight has one stronger form, bought once with gems. Three rows; a row opens
-       once two from the row before it are owned. Picture tiles, the details docked below with the power-up as it is now and after. */
+       once two from the row before it are owned. The details set the power-up as it is now against what it becomes. */
     st_ups() {
       const p = this.p, ids = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
       const sel = this.sel.ups && C.CHARMS[this.sel.ups] && C.CHARMS[this.sel.ups].up ? this.sel.ups : ids.find(id => C.CHARMS[id].up.tier === 0);
-      const lasts = (c, id) => c.dur ? c.dur + ' s' : id === 'twin' ? 'until hit' : 'instant';
+      const lasts = (c, id) => c.dur ? c.dur + ' seconds' : id === 'twin' ? 'until hit' : 'at once';
       const rows = C.CHARM_TIERS.map((tr, t) => { const left = S.charmTierLeft(p, t);
         return `<div class="urow"><span class="eyebrow">${esc(tr.name)}</span>${ids.filter(id => C.CHARMS[id].up.tier === t).sort((a, b) => C.CHARMS[a].up.cost - C.CHARMS[b].up.cost).map(id => { const u = C.CHARMS[id].up, st = S.charmUpState(p, id), own = st.why === 'owned';
-          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${esc(u.name).replace(/([A-Za-z]{6})([A-Za-z]{4,})/g, '$1&shy;$2')}</b><span class="mono">${own ? 'Owned' : u.cost + ' gems'}</span></button>`; }).join('')}</div>`; }).join('');
+          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${esc(u.name).replace(/([A-Za-z]{6})([A-Za-z]{4,})/g, '$1&shy;$2')}</b><span>${own ? 'Owned' : u.cost + ' gems'}</span></button>`; }).join('')}</div>`; }).join('');
       const c = C.CHARMS[sel], u = c.up, st = S.charmUpState(p, sel), own = st.why === 'owned';
-      const cmp = `<div class="ucmp"><div class="${own ? 'was' : 'now'}">${pwIcon(sel === 'twin' ? '_d' : sel, 24)}<span><b>${own ? 'Was' : 'Now'} · ${esc(c.name)}</b><em class="mono">${lasts(c, sel)}</em><span>${esc(c.desc)}</span></span></div>
-        <div class="${own ? 'now' : 'next'}">${pwIcon(sel + '+', 24)}<span><b>${own ? 'Now' : 'Upgraded'} · ${esc(u.name)}</b><em class="mono${u.dur !== c.dur ? ' up' : ''}">${lasts(u, sel)}</em><span>${esc(u.desc)}</span></span></div></div>`;
-      const tierLine = st.why === 'tier' ? `<span class="state sealed">Buy ${st.left} more from ${esc(C.CHARM_TIERS[u.tier - 1].name.toLowerCase())} first</span>` : '';
-      const done = ids.filter(id => (p.charmUps || {})[id]).length;
-      return `<div class="ugrid">${rows}</div>` + this.detail({ kicker: `Power-up upgrade · ${done} of ${ids.length} bought`, name: u.name,
-        desc: own ? 'Every ' + c.name + ' that drops is now upgraded to ' + u.name + '.' : 'From now on, every ' + c.name + ' that drops is upgraded to ' + u.name + '.', extra: cmp,
-        state: own ? '<span class="state own">Owned</span>' : tierLine || this.stateLine(st, 'silk'),
-        buttons: st.ok ? `<button class="btn primary" data-act="buy" data-arg="charmup:${sel}">Upgrade · ${st.price} gems</button>` : own ? '' : this.nope(st, 'silk', 'Upgrade'),
-        quote: '' });
+      if (st.why === 'tier') st.row = C.CHARM_TIERS[u.tier - 1].name.toLowerCase();
+      const cmp = [{ k: (own ? 'Was' : 'Now') + ': ' + esc(c.name), v: esc(c.desc), cls: 'was' }, { k: (own ? 'Now' : 'After') + ': ' + esc(u.name), v: esc(u.desc) }];
+      const buy = st.ok ? this.buyBtn(st, 'silk', 'Upgrade', 'charmup:' + sel) : own ? this.stamp('Owned', 'For good') : this.buyBtn(st, 'silk', 'Upgrade');
+      return { sel, list: `<div class="ugrid">${rows}</div>`, detail: this.detail({ pic: pwIcon(sel + '+', 40), name: u.name,
+        kick: 'Power-up upgrade · ' + (u.dur !== c.dur && c.dur && u.dur ? `${c.dur} ${ARROW} ${u.dur} seconds` : 'lasts ' + lasts(u, sel)), rows: cmp,
+        left: `<span>${own ? 'Every' : 'Turns every'} <b>${esc(c.name)}</b> ${own ? 'is now' : 'into'} <b>${esc(u.name)}</b>.</span>`, buy }) };
     }
+    /* The collection, in two views: blueprints by name, then enemies and bosses as pictures (bosses wear a brass frame). */
     st_book() {
-      const p = this.p, all = [];
-      for (const id of Object.keys(C.CHARTS)) { const c = C.CHARTS[id], got = !!p.charts[id];
-        all.push({ id: 'c:' + id, grp: 0, got, ic: icon('chart', 30), name: got ? c.name : 'Not yet found', kicker: 'Blueprint', desc: got ? 'Unlocks ' + c.unseals + '.' : 'Dropped by ' + c.from + '.' }); }
-      for (const id of Object.keys(C.MOTHS)) { const m = C.MOTHS[id], n = p.codex.moths[id] || 0;
-        all.push({ id: 'm:' + id, grp: 1, got: n > 0, ic: icon(m.sprite, 34), name: n ? m.name : 'Not yet seen', kicker: 'Enemy', desc: n ? m.note + ' Destroyed: ' + num(n) + '.' : 'You have not met this one yet.' }); }
-      for (const id of Object.keys(C.KEEPERS)) { const k = C.KEEPERS[id], n = p.codex.keepers[id] || 0;
-        all.push({ id: 'k:' + id, grp: 2, got: n > 0, ic: icon(k.sprite, 40), name: n ? k.name : 'Not yet defeated', kicker: 'Boss', desc: n ? 'Weak spot: ' + k.softName + '. Defeated: ' + n + '.' : 'Beat this boss to add it to your collection.' }); }
-      const sel = all.find(x => x.id === this.sel.book) || all.find(x => x.got) || all[0];
-      const cnt = g => { const xs = all.filter(x => x.grp === g); return xs.filter(x => x.got).length + ' of ' + xs.length; };
-      // blueprints, then enemies and bosses in one run of tiles (bosses carry a frame), so short phones need no scrolling
-      const tile = x => `<button class="tile ${x.got ? '' : 'unseen'} ${x.grp === 2 ? 'boss' : ''} ${x === sel ? 'sel' : ''}" data-act="pick" data-arg="${x.id}" aria-label="${esc(x.kicker + ': ' + x.name)}">${x.ic}</button>`;
-      const grid = `<div class="album"><div class="eyebrow">Blueprints · ${cnt(0)}</div><div class="tiles">${all.filter(x => x.grp === 0).map(tile).join('')}</div>
-        <div class="eyebrow">Enemies · ${cnt(1)} <span class="sep">and</span> bosses · ${cnt(2)}</div><div class="tiles">${all.filter(x => x.grp > 0).map(tile).join('')}</div></div>`;
-      return grid + this.detail({ kicker: sel.kicker, name: sel.name, desc: sel.desc });
+      const p = this.p, foes = this.bookView === 'foes', all = [];
+      if (!foes) for (const id of Object.keys(C.CHARTS)) { const c = C.CHARTS[id], got = !!p.charts[id], short = c.name.replace(/ blueprint$/i, '');
+        all.push({ id: 'c:' + id, got, tile: `<b class="tn">${esc(short)}</b>`, label: c.name + (got ? ', found' : ', not found yet'), pic: icon('chart', 40), name: c.name, kick: 'Blueprint · ' + (got ? 'found' : 'not found yet'),
+          desc: 'Unlocks ' + c.unseals + '.', rows: [{ k: 'Dropped by', v: esc(c.from) + '.' }], stamp: got ? this.stamp('Found') : this.stamp('Not found', '', true) }); }
+      else {
+        for (const id of Object.keys(C.MOTHS)) { const m = C.MOTHS[id], n = p.codex.moths[id] || 0;
+          all.push({ id: 'm:' + id, got: n > 0, tile: icon(m.sprite, 34), label: 'Enemy: ' + (n ? m.name : 'not yet seen'), pic: icon(m.sprite, 40), name: n ? m.name : 'Not yet seen', kick: 'Enemy',
+            desc: n ? m.note : 'You have not met this one yet.', left: n ? `<span>Destroyed: <b class="mono">${num(n)}</b></span>` : '', stamp: n ? this.stamp('Seen') : this.stamp('Not seen', '', true) }); }
+        all.push(null);   // one empty cell, so the bosses start a row of their own
+        for (const id of Object.keys(C.KEEPERS)) { const k = C.KEEPERS[id], n = p.codex.keepers[id] || 0, at = C.PANELS.findIndex(pn => pn.keeper === id);
+          all.push({ id: 'k:' + id, got: n > 0, boss: true, tile: icon(k.sprite, 40), label: 'Boss: ' + (n ? k.name : 'not yet defeated'), pic: icon(k.sprite, 44), name: n ? k.name : 'Not yet defeated', kick: 'Boss' + (at >= 0 ? ' · ' + esc(C.PANELS[at].name.toLowerCase()) : ''),
+            desc: n ? 'Weak spot: ' + k.softName + '.' : 'Beat this boss to add it to your collection.', left: n ? `<span>Defeated: <b class="mono">${num(n)}</b></span>` : '', stamp: n ? this.stamp('Defeated') : this.stamp('Not beaten', '', true) }); }
+      }
+      const real = all.filter(Boolean), sel = real.find(x => x.id === this.sel[foes ? 'foes' : 'book']) || real.find(x => x.got) || real[0];
+      const grid = `<div class="album ${foes ? 'foes' : 'charts'}">${all.map(x => x ? `<button class="tile ${x.got ? '' : 'unseen'} ${x.boss ? 'boss' : ''} ${x === sel ? 'sel' : ''}" data-act="pick" data-arg="${x.id}" aria-pressed="${x === sel}" aria-label="${esc(x.label)}">${x.tile}</button>` : '<span class="ghost" aria-hidden="true"></span>').join('')}</div>`;
+      return { sel: sel.id, list: grid, detail: this.detail({ pic: sel.pic, picCls: sel.got || !foes ? '' : 'unseen', name: sel.name, kick: sel.kick, desc: sel.desc, rows: sel.rows, left: sel.left || '', buy: sel.stamp }) };
     }
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p, before = this.flight(p), d0 = p.dust, s0 = p.silk;
@@ -488,19 +593,19 @@
     celebrate(before, d0, s0, from) {
       const o = this.el.overlay, p = this.p, after = this.flight(p);
       if (calm()) return;
-      const count = (el, a, b, dp, unit, ms) => { const t0 = performance.now();
-        const step = t => { const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3); if (!el.isConnected) return; el.textContent = (a + (b - a) * e).toFixed(dp).replace(/\B(?=(\d{3})+(?!\d))/g, dp ? '' : ' ') + unit; if (k < 1) requestAnimationFrame(step); };
+      const count = (el, a, b, dp, ms) => { const t0 = performance.now();
+        const step = t => { const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3); if (!el.isConnected) return; el.textContent = dp ? (a + (b - a) * e).toFixed(dp) : num(a + (b - a) * e); if (k < 1) requestAnimationFrame(step); };
         requestAnimationFrame(step); };
       for (const k of Object.keys(after)) {
         if (Math.abs(after[k] - before[k]) < 1e-6) continue;
         const cell = o.querySelector(`.shipstrip [data-k="${k}"]`); if (!cell) continue;
-        const b = cell.querySelector('b'), st = cell.querySelector('.stitch');
-        count(b, before[k], after[k], +cell.dataset.dp, cell.dataset.unit, 420);
+        const b = cell.querySelector('.n'), st = cell.querySelector('.stitch'), dp = +cell.dataset.dp;
+        if (dp) count(b, before[k], after[k], dp, 420); else b.textContent = after[k].toFixed(0);
         if (st) st.animate([{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(1)', opacity: 1, offset: 0.6 }, { transform: 'scaleX(1)', opacity: 0 }], { duration: 580, easing: 'ease-out' });
-        cell.animate([{ backgroundColor: 'rgba(143,224,160,.28)' }, { backgroundColor: 'rgba(143,224,160,0)' }], { duration: 560, easing: 'ease-out' });
+        cell.animate([{ backgroundColor: 'rgba(169,232,182,.28)' }, { backgroundColor: 'rgba(169,232,182,0)' }], { duration: 560, easing: 'ease-out' });
       }
       const silk = p.silk < s0, purse = o.querySelector(silk ? '.hem header .tag.silk' : '.hem header .tag:not(.silk)');
-      if (purse) { const b = purse.querySelector('b'); count(b, silk ? s0 : d0, silk ? p.silk : p.dust, 0, '', 420); }
+      if (purse) { const b = purse.querySelector('b'); count(b, silk ? s0 : d0, silk ? p.silk : p.dust, 0, 420); }
       const fl = this.el.flyers; if (!purse || !fl || !from) return;
       const a = purse.getBoundingClientRect(), x0 = a.left + 14, y0 = a.top + a.height / 2, x1 = from.left + from.width / 2, y1 = from.top + from.height / 2;
       for (let i = 0; i < 5; i++) {
@@ -513,47 +618,101 @@
       }
     }
     shake() {
-      if (calm()) return; const o = this.el.overlay, t = o.querySelector('.detail .state') || o.querySelector('.detail .btn.nope');
+      if (calm()) return; const t = this.el.overlay.querySelector('.detail .btn.nope');
       if (t) t.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(0)' }], { duration: 280 });
     }
 
-    // ---------- tallies ----------
+    // ---------- results ----------
+    /* A results sheet rises into place and its lines are stitched on one at a time, each number counting up as its line lands.
+       A touch anywhere finishes it at once. If the page still carries body.celebrating (fireworks, a boss's death) the sheet
+       waits out of sight, and all of this starts when the celebration lets go. */
+    rowsHtml(rows) { return `<dl class="tally stitchin">${rows.map((r, i) => `<div class="${r[2] || ''}" style="--i:${i}"><dt>${r[0]}</dt><dd${r[3] ? ' class="txt"' : ''}>${r[1]}</dd></div>`).join('')}</dl>`; }
+    stitchOn() {
+      const o = this.el.overlay, list = o.querySelector('.stitchin'); this.stitchWait = false; if (!list) return;
+      if (document.body.classList.contains('celebrating')) { this.stitchWait = true; return; }
+      if (calm()) return;
+      const jobs = this.stitching = [];
+      [...list.children].forEach((row, i) => { for (const b of row.querySelectorAll('[data-n]')) { const to = +b.dataset.n; if (!(to > 0)) continue; jobs.push({ b, to, t0: 260 + i * 90 }); b.textContent = '0'; } });
+      const start = performance.now(), step = t => {
+        if (this.stitching !== jobs) return; let live = false;
+        for (const j of jobs) { const k = Math.max(0, Math.min(1, (t - start - j.t0) / 420)), e = 1 - Math.pow(1 - k, 3); if (!j.b.isConnected) continue; j.b.textContent = num(j.to * e); if (k < 1) live = true; }
+        if (live) requestAnimationFrame(step); else this.stitching = null;
+      };
+      requestAnimationFrame(step);
+    }
+    finishStitch() {
+      const jobs = this.stitching; if (!jobs) return; this.stitching = null;
+      for (const j of jobs) if (j.b.isConnected) j.b.textContent = num(j.to);
+      const s = this.el.overlay.firstElementChild; if (s) s.classList.add('done-now');
+    }
     tally(res, pocket) {
+      if (res.last) return this.victory(res);
       const info = res.info, keeper = res.keeper;
-      const title = keeper ? (res.last ? 'Run complete' : info.panelName + ' cleared') : res.sampler ? 'Bonus wave · ' + res.sampler.hit + ' of ' + res.sampler.total : 'Wave cleared';
-      const anyBonus = res.bonuses.length > 0;
-      const rows = [['Score', num(res.stitches)], ['Best combo', '×' + res.bestCombo], ['Coins picked up', dustTag(res.dust)], ['Gems picked up', silkTag(res.silk)]]
-        .concat(res.bonuses.map(b => ['Bonus: ' + b.name, (b.stitches ? '+' + num(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust) : '+' + silkTag(b.silk))]))
-        .concat(anyBonus ? [['<b>Total this ' + (keeper ? 'fight' : 'wave') + '</b>', dustTag(res.dustAll) + ' ' + silkTag(res.silkAll)]] : [])
-        .concat(keeper ? [['Earned this run so far', dustTag(res.nightDust) + ' ' + silkTag(res.nightSilk)]] : [])
-        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name)]));
+      const title = keeper ? info.panelName + ' cleared' : res.sampler ? 'Bonus wave · ' + res.sampler.hit + ' of ' + res.sampler.total : 'Wave cleared';
+      const anyBonus = res.bonuses.length > 0, n = v => `<span data-n="${v}">${num(v)}</span>`;
+      const rows = [['Score', n(res.stitches)], ['Best combo', '×' + n(res.bestCombo)], ['Coins picked up', dustTag(res.dust, '', 1)], ['Gems picked up', silkTag(res.silk, '', 1)]]
+        .concat(res.bonuses.map(b => ['Bonus: ' + esc(b.name), (b.stitches ? '+' + n(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust, '', 1) : '+' + silkTag(b.silk, '', 1))]))
+        .concat(anyBonus ? [['Total this ' + (keeper ? 'fight' : 'wave'), dustTag(res.dustAll, '', 1) + ' ' + silkTag(res.silkAll, '', 1), 'total']] : [])
+        .concat(keeper ? [['Earned this run so far', dustTag(res.nightDust, '', 1) + ' ' + silkTag(res.nightSilk, '', 1)]] : [])
+        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]));
       const next = keeper ? 'To the hideout' : ({ row: 'Next wave', sampler: 'Bonus wave', keeper: 'Fight the boss' })[C.STAGES[info.row + 1]];
       let pk = '';
-      if (pocket && pocket.length) pk = `<div class="pocket"><div class="eyebrow">Quick shop · buy one item, or keep your coins</div><div class="pk">${pocket.map(id => { const n = C.NOTIONS[id], st = S.notionState(this.p, id, null);
-        return `<button class="card" data-act="pocket" data-arg="${id}" ${st.ok ? '' : 'disabled'}><span class="cic">${icon(n.sprite, 30)}</span><span class="cname">${esc(n.name)}</span><span class="cmeta">${esc(n.desc)}</span><span>${dustTag(S.notionPrice(this.p, id))} ${st.ok ? '' : this.stateLine(st, 'dust')}</span></button>`; }).join('')}</div></div>`;
-      const s = this.ctl.sim, sum = res.last ? `<p class="lede">All eight stages cleared and every boss defeated. Final score ${num(s.stitches)}${s.newBest ? ', a new best' : ''}.</p>` : '';
-      this.show(`<div class="sheet result ${pk ? 'withpk' : ''}"><div class="rhead"><div class="eyebrow">${esc(info.panelName)} · ${esc(info.label)}</div><h2>${esc(title)}</h2>${sum}</div>
-        <dl class="tally">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>${pk}
-        <div class="row"><button class="btn primary" data-act="continue" data-focus>${next}</button></div></div>`, 'paper', 'tally');
+      if (pocket && pocket.length) pk = `<div class="pocket"><div class="phead">Quick shop: buy one item, or keep your coins</div><div class="pk">${pocket.map(id => { const it = C.NOTIONS[id], st = S.notionState(this.p, id, null);
+        return `<button class="card" data-act="pocket" data-arg="${id}" ${st.ok ? '' : 'disabled'}><span class="cic">${icon(it.sprite, 30)}</span><span class="cname">${esc(it.name)}</span><span class="cmeta">${esc(it.desc)}</span><span>${dustTag(S.notionPrice(this.p, id), 'sm')}${st.ok ? '' : `<span class="why">${this.whyNot(st, 'dust')}</span>`}</span></button>`; }).join('')}</div></div>`;
+      const fresh = this.shown !== 'tally';   // buying from the quick shop redraws the sheet: it must not rise and count again
+      this.show(`<div class="sheet result ${pk ? 'withpk' : ''} ${fresh ? 'rise' : 'done-now'}" data-fit="3"><div class="rhead"><h2>${esc(title)}</h2><p class="sub">${esc(info.panelName)} · ${esc(info.label)}</p></div>
+        ${this.rowsHtml(rows)}${pk}
+        <div class="row"><button class="btn primary" data-act="continue" data-focus>${next}</button></div></div>`, 'paper veil res', 'tally');
+      if (fresh) this.stitchOn();
     }
+    /* Game over: the cloth itself, framed, with the thread that held the ship snapped across the top. */
     snapped(res) {
-      const rows = [['Score', num(res.stitches)], ['Coins earned this run', dustTag(res.dust)], ['Gems earned this run', silkTag(res.silk)], ['Best combo', '×' + res.bestCombo]];
-      if (res.sweep) rows.push(['Coin Exchange', '+' + silkTag(res.sweep)]);
-      res.charts.forEach(c => rows.push(['Blueprint found', esc(C.CHARTS[c].name)]));
-      this.show(`<div class="sheet result"><div class="rhead"><div class="eyebrow">${esc(res.info.panelName)} · ${esc(res.info.label)}</div><h2 class="madder">Game over</h2>
-        <p class="lede">You keep every coin, gem and blueprint you collected. Spend them in the hideout and try again.</p></div>
-        <dl class="tally">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>
-        <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button></div></div>`, 'paper', 'gameover');
+      const n = v => `<span data-n="${v}">${num(v)}</span>`;
+      const rows = [['Coins earned this run', dustTag(res.dust, '', 1)], ['Gems earned this run', silkTag(res.silk, '', 1)], ['Best combo', '×' + n(res.bestCombo)]];
+      if (res.sweep) rows.push(['Coin Exchange', '+' + silkTag(res.sweep, '', 1)]);
+      (res.charts || []).forEach(c => rows.push(['Blueprint found', esc(C.CHARTS[c].name), '', 1]));
+      this.show(`<div class="sheet finale over rise" data-fit="3">
+        <svg class="snap" viewBox="0 0 320 24" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="holes" d="M118 12H202"/><path class="l" d="M2 12H96Q112 12 118 21"/><path class="r" d="M318 12H224Q208 12 202 4"/></svg>
+        <h1>Game over</h1><p class="fsub">${esc(res.info.panelName)} · ${esc(res.info.label)}</p>
+        <div class="fscore"><span class="lab">Score</span><b class="score">${num(res.stitches)}</b>${res.newBest ? '<em>A new best</em>' : ''}</div>
+        ${this.rowsHtml(rows)}
+        <p class="fnote">You keep every coin, gem and blueprint you collected. Spend them in the hideout and try again.</p>
+        <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button><button class="btn" data-act="begin">Try again</button></div></div>`, 'night veil res', 'gameover');
+      this.stitchOn();
+    }
+    /* Victory, after the last boss: the eight bosses crossed off in red thread, the run's numbers, and the credits. */
+    victory(res, filmed) {
+      // ---- the ending film (src/films/ending.js) plays first, guarded as title() guards the title film. The page comes up when the
+      // film lets it in (it lifts body.stc-solo under its closing gold, as the title film does) or when it ends or is skipped.
+      // No film, "reduce motion", or a film that will not start: the page at once.
+      if (!filmed && !calm() && ST.Cine && ST.Cine.has && ST.Cine.has('ending')) {
+        let on = false; try { on = ST.Cine.play('ending'); } catch (e) { try { ST.Cine.stop(); } catch (e2) { /* nothing to stop */ } document.body.classList.remove('stc-on', 'stc-solo'); }
+        if (on) { const wait = () => { if (this.ctl.state !== 'tally') return; if (ST.Cine.active() && document.body.classList.contains('stc-solo')) { requestAnimationFrame(wait); return; } this.victory(res, true); }; requestAnimationFrame(wait); return; }
+      }
+      // ---- /ending film
+      const s = this.ctl.sim || {}, p = this.p, n = v => `<span data-n="${v}">${num(v)}</span>`, mode = s.modeId || 'normal';
+      const nextMode = Object.keys(C.MODES).find(k => C.MODES[k].need === mode), firstWin = nextMode && (p.stats['won_' + mode] || 0) === 1;
+      const rows = [['Coins earned this run', dustTag(res.nightDust || 0, '', 1)], ['Gems earned this run', silkTag(res.nightSilk || 0, '', 1)], ['Best combo', '×' + n(res.bestCombo || 0)]]
+        .concat((res.charts || []).map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
+        .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : []);
+      this.show(`<div class="sheet finale won rise" data-fit="3">
+        <div class="trophies" role="img" aria-label="All eight bosses defeated">${C.PANELS.map((pn, i) => `<span style="--i:${i}">${icon(C.KEEPERS[pn.keeper].sprite, 30)}</span>`).join('')}</div>
+        <h1>Run complete</h1><p class="fsub">All eight stages cleared. Every boss defeated.</p>
+        <div class="fscore"><span class="lab">Final score${mode !== 'normal' && s.mode ? ' · ' + esc(s.mode.name) : ''}</span><b class="score">${num(s.stitches !== undefined ? s.stitches : res.stitches)}</b>${s.newBest ? '<em>A new best</em>' : ''}</div>
+        ${this.rowsHtml(rows)}
+        <dl class="credits" aria-label="Credits"><div><dt>Design and direction</dt><dd>Rob Lee</dd></div><div><dt>Built with</dt><dd>Claude</dd></div><div><dt>Music and sound</dt><dd>made with ElevenLabs</dd></div></dl>
+        <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button></div></div>`, 'night veil res', 'victory');
+      this.stitchOn();
     }
     pause() {
-      this.show(`<div class="sheet narrow"><div class="eyebrow">Paused</div><h2>Paused</h2>
+      this.show(`<div class="sheet narrow"><div class="rhead"><h2>Paused</h2><p class="sub">Your run waits here.</p></div>
         <div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
           <button class="btn" data-act="settings">Settings</button>
-          <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper', 'pause');
+          <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper veil', 'pause');
     }
     /* Settings in three short tabs, so the sheet fits a phone without scrolling. Volumes are threads with a button to drag. */
     settings() {
-      const st = Object.assign({ liftSlow: true, controls: 'drag', haptics: true, musicVol: 0.6, sfxVol: 0.8, leftHand: false }, this.p.settings);
+      const st = Object.assign({ liftSlow: true, controls: 'drag', haptics: true, musicVol: 0.6, sfxVol: 0.8, leftHand: false, textSize: 'normal', cbShots: false }, this.p.settings);
       for (const k of ['musicVol', 'sfxVol']) if (typeof st[k] !== 'number') st[k] = k === 'musicVol' ? 0.6 : 0.8;
       const tab = ['sound', 'controls', 'display'].indexOf(this.setTab) >= 0 ? this.setTab : 'sound';
       const row = (k, name, note) => `<button class="setrow" data-act="toggle" data-arg="${k}" role="switch" aria-checked="${!!st[k]}"><span><b>${name}</b><span>${note}</span></span><i class="sw ${st[k] ? 'on' : ''}">${st[k] ? 'On' : 'Off'}</i></button>`;
@@ -567,13 +726,16 @@
           ? cyc('ctl', 'Steering', st.controls === 'follow' ? 'The ship flies to your finger' : 'The ship moves as far as your finger moves', st.controls === 'follow' ? 'Follow' : 'Drag')
             + row('autofire', 'Auto-fire', 'Fire without holding a button') + row('liftSlow', 'Lift to slow', 'Time slows when you take your finger off')
             + row('leftHand', 'Left-handed', 'On phones: item slots, special and pause move to the left')
-          : cyc('gfx', 'Graphics', ({ auto: 'The game picks, and adjusts while you play', low: 'Fastest: no glow, no shadows', lite: 'Glow, no shadows', medium: 'Glow, shadows, lens effects', high: 'Everything, at full sharpness' })[st.graphics || 'auto'], ({ auto: 'Auto', low: 'Low', lite: 'Light', medium: 'Medium', high: 'High' })[st.graphics || 'auto'])
-            + row('shadows', 'Shadows', 'Turn off if the game runs slowly') + row('showFps', 'Frame rate readout', 'Shows frames a second and where the time goes');
+          : cyc('textsize', 'Text size', 'Larger words in menus and in flight', st.textSize === 'large' ? 'Large' : 'Normal')
+            + row('cbShots', 'Colour-blind-safe shots', 'Enemy shots become bright hollow diamonds')
+            + cyc('gfx', 'Graphics', ({ auto: 'The game picks, and adjusts while you play', low: 'Fastest: no glow, no shadows', lite: 'Glow, no shadows', medium: 'Glow, shadows, lens effects', high: 'Everything, at full sharpness' })[st.graphics || 'auto'], ({ auto: 'Auto', low: 'Low', lite: 'Light', medium: 'Medium', high: 'High' })[st.graphics || 'auto'])
+            + row('shadows', 'Shadows', 'Turn off if the game runs slowly') + row('showFps', 'Frame rate readout', 'Frames a second and where the time goes')
+            + (ST.Perf && typeof ST.Perf.open === 'function' ? cyc('perf', 'Test this phone', 'Plays a short reel and measures the frame rate', 'Start') : '');   // src/perf.js, when it is in the build
       const tabs = [['sound', 'Sound'], ['controls', 'Controls'], ['display', 'Display']];
-      this.show(`<div class="sheet narrow settings"><div class="shead"><div class="eyebrow">Saved with your game</div><h2>Settings</h2></div>
-        <nav class="stabs" role="tablist">${tabs.map(t => `<button class="tabb ${t[0] === tab ? 'on' : ''}" role="tab" aria-selected="${t[0] === tab}" data-act="stab" data-arg="${t[0]}"><b>${t[1]}</b></button>`).join('')}</nav>
+      this.show(`<div class="sheet narrow settings"><div class="shead rhead"><h2>Settings</h2><p class="sub">Saved with your game</p></div>
+        <nav class="stabs" aria-label="Settings">${tabs.map(t => `<button class="tabb ${t[0] === tab ? 'on' : ''}" aria-pressed="${t[0] === tab}" data-act="stab" data-arg="${t[0]}"><b>${t[1]}</b></button>`).join('')}</nav>
         <div class="setlist">${body}</div>
-        <div class="row sfoot"><button class="btn primary" data-act="back" data-focus>Back</button></div></div>`, 'paper', 'settings:' + tab);
+        <div class="row sfoot"><button class="btn primary" data-act="back" data-focus>Back</button></div></div>`, 'paper' + (this.ctl.state === 'paused' ? ' veil' : ''), 'settings:' + tab);
     }
     /* A volume thread moved: live while dragging, saved when let go. */
     slide(t, done) {
@@ -592,20 +754,22 @@
       E.hudL.innerHTML = `<div class="wm">String Theory</div><div class="lab">Score</div><div class="dscore">${woundHtml()}</div>
         <div class="crow">${ctagHtml}<span class="cn mono"></span></div>
         <div class="lab">Best</div><div class="mono big hbest"></div>
-        <div class="lab">Progress</div><div class="hchart"></div><div class="dim small hstage"></div>
+        <div class="lab">Progress</div><div class="hchart" aria-hidden="true"></div><div class="hstage"></div>
         <hr><div class="hthreads"></div>`;
       E.hudR.innerHTML = `<div class="lab">Lives</div><div class="rpins"></div><div class="mono rspares"></div>
         <div class="lab rplylab"></div><div class="rply"></div>
         <div class="lab">Coins</div><div class="cur">${icon('dust', 30)}<b class="mono big rdust"></b></div>
         <div class="lab">Gems</div><div class="cur">${icon('silk', 36)}<b class="mono big rsilk"></b></div>
         <div class="lab">Ship</div><div class="rship"></div>`;
-      E.mtop.innerHTML = `<div class="mpanel"><div class="mcol l"><span class="mlives"></span><span class="mply"></span></div>
+      E.mtop.innerHTML = `<div class="mpanel"><div class="mcol l"><span class="mlives" role="img"></span><span class="mply" role="img"></span></div>
         <div class="mcol c"><span class="mlab"></span><span class="mscore">${woundHtml()}${ctagHtml}</span></div>
         <div class="mcol r"><span class="tag">${icon('dust', 20)}<b class="mdust"></b></span><span class="tag silk">${icon('silk', 26)}<b class="msilk"></b></span></div>
         <button class="mpause" data-act="pause" aria-label="Pause"><i></i><i></i></button></div>`;
       E.tray.innerHTML = `<div class="meters"><button class="sp" data-act="special"><span class="spn"></span><i class="fill"></i></button>
         <div class="mm"><div class="fo" role="img" aria-label="Slow time"><span>Slow</span><b class="bar"><i></i></b></div><div class="da" role="img"><span>Dash</span><b class="dp"></b></div></div></div>
         <div class="lab">Items</div><div class="slots"></div>`;
+      // boss health or the bonus count: a name and a line of thread set straight on the cloth, nothing behind them
+      E.bossbar.setAttribute('role', 'img');
       E.bossbar.innerHTML = '<div class="bb"><b></b><span></span><div class="seam"><i></i></div></div>';
       E.mfx.innerHTML = '';
       const wound = r => { const w = q(r, '.wound'); return { score: q(w, '.score'), turns: [...w.querySelectorAll('.t')], n: 0 }; };
@@ -613,7 +777,7 @@
       H.M = { wound: wound(E.mtop), tag: q(E.mtop, '.ctag'), mul: q(E.mtop, '.cmul'), drain: q(E.mtop, '.cdr i'), lab: q(E.mtop, '.mlab'), lives: q(E.mtop, '.mlives'), ply: q(E.mtop, '.mply'), dust: q(E.mtop, '.mdust'), silk: q(E.mtop, '.msilk') };
       H.R = { pins: q(E.hudR, '.rpins'), spares: q(E.hudR, '.rspares'), plylab: q(E.hudR, '.rplylab'), ply: q(E.hudR, '.rply'), dust: q(E.hudR, '.rdust'), silk: q(E.hudR, '.rsilk'), ship: q(E.hudR, '.rship') };
       H.T = { sp: q(E.tray, '.sp'), spn: q(E.tray, '.spn'), spf: q(E.tray, '.sp .fill'), fo: q(E.tray, '.fo'), fof: q(E.tray, '.fo .bar i'), da: q(E.tray, '.da'), dp: q(E.tray, '.dp'), slots: q(E.tray, '.slots') };
-      H.B = { b: q(E.bossbar, 'b'), s: q(E.bossbar, 'span'), i: q(E.bossbar, '.seam i') };
+      H.B = { box: q(E.bossbar, '.bb'), b: q(E.bossbar, 'b'), s: q(E.bossbar, 'span'), i: q(E.bossbar, '.seam i') };
       H.pw = {}; this.fxMax = {}; this.lastMult = 1; this.lastCombo = 0;
     }
     /* Turns of thread go on one at a time as the multiplier grows; when the combo drops they snap and fall away. */
@@ -661,7 +825,7 @@
       put(H.R.pins, pins); txt(H.R.spares, String(sim.spares)); txt(H.R.plylab, 'Shield · ' + pl.ply + ' of ' + d.ply + (low ? ' · low' : '')); put(H.R.ply, ply);
       txt(H.R.dust, num(p.dust)); txt(H.R.silk, num(p.silk));
       put(H.R.ship, `<div class="thread">${icon(p.needle, 22)}<div><b>${esc(C.NEEDLES[p.needle].name)}</b><span>${esc(C.NEEDLES[p.needle].trait)}</span></div></div>`);
-      const lives = sim.spares > 3 ? icon(p.needle, 14) + `<b class="mono">×${sim.spares}</b>` : icon(p.needle, 14).repeat(sim.spares) || '<b class="mono dim">0</b>';
+      const lives = sim.spares > 3 ? icon(p.needle, 14) + `<b class="mono">×${sim.spares}</b>` : icon(p.needle, 14).repeat(sim.spares) || '<b class="mono">0</b>';
       put(H.M.lives, lives); attr(H.M.lives, 'aria-label', 'Lives: ' + sim.spares);
       put(H.M.ply, ply); attr(H.M.ply, 'aria-label', 'Shield: ' + pl.ply + ' of ' + d.ply);
       txt(H.M.lab, info.panelName + ' · ' + (info.kind === 'keeper' ? 'Boss' : info.kind === 'sampler' ? 'Bonus' : info.label));
@@ -680,12 +844,13 @@
       const tk = p.tray.map(s => s ? s.id + s.n : '-').join();
       if (T.slots._k !== tk) T.slots._k = tk, put(T.slots, [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) + (s.n > 1 ? ', ' + s.n + ' left' : '') : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('')
         + '<button class="slot txt pz" data-act="pause" aria-label="Pause"><span class="pzi"><i></i><i></i></span><span class="pzt">Pause</span><kbd>Esc</kbd></button>');
-      // ---- boss or bonus wave ----
+      // ---- boss or bonus wave: lettering and a thread on the cloth ----
       const b = sim.boss, sm = sim.sampler, B = H.B;
-      flag(this.el.bossbar, 'on', !!(sm || b));
-      if (sm) { txt(B.b, 'Bonus wave · ' + sm.hit + ' of ' + sm.total); txt(B.s, 'They never shoot back. Get them all.'); bar(B.i, sm.hit / sm.total); }
-      else if (b) { txt(B.b, b.def.name); txt(B.s, 'Phase ' + b.phase + ' · ' + b.def.phaseTag[b.phase - 1] + (b.def.chews ? (b.open ? ' · mouth open: shoot it' : ' · mouth shut') : '')); bar(B.i, b.hp / b.maxHp); }
-      if (this.coachT && !this.coachAt) this.placeCoach();
+      flag(this.el.bossbar, 'on', !!(sm || b)); flag(B.box, 'bonus', !!sm);
+      const bossing = !!(sm || b); if (this.bossing !== bossing) { this.bossing = bossing; document.body.classList.toggle('bossing', bossing); }   // notices move down past the boss's name
+      if (sm) { txt(B.b, 'Bonus wave'); txt(B.s, sm.hit + ' of ' + sm.total); bar(B.i, sm.hit / sm.total); attr(this.el.bossbar, 'aria-label', 'Bonus wave: ' + sm.hit + ' of ' + sm.total); }
+      else if (b) { txt(B.b, b.def.name); txt(B.s, 'Phase ' + b.phase + ' · ' + b.def.phaseTag[b.phase - 1] + (b.def.chews ? (b.open ? ' · mouth open: shoot it' : ' · mouth shut') : '')); bar(B.i, b.hp / b.maxHp);
+        attr(this.el.bossbar, 'aria-label', b.def.name + ': ' + Math.round(100 * b.hp / b.maxHp) + '% health'); }
     }
     powerups(want) {
       const box = this.el.mfx, have = this.h.pw, keep = {};
@@ -695,38 +860,27 @@
         const max = this.fxMax[k] = Math.max(this.fxMax[k] || 0, secs || 0);
         if (!w) {
           const el = document.createElement('span'); el.className = isUp(k) ? 'pw up' : 'pw'; el.setAttribute('role', 'img'); el.style.setProperty('--c', pwCol(k));
-          el.innerHTML = `${pwIcon(k, 20)}<span class="pn" aria-hidden="true">${esc(pwName(k))}</span><b class="ps mono" aria-hidden="true"></b><em class="mono" aria-hidden="true"></em><i class="pt" aria-hidden="true"><i></i></i>`;
+          el.innerHTML = `${pwIcon(k, 20)}<span class="pn" aria-hidden="true">${esc(pwName(k))}</span><b class="ps" aria-hidden="true"></b><em aria-hidden="true"></em><i class="pt" aria-hidden="true"><i></i></i>`;
           box.appendChild(el); w = have[k] = { el, ps: el.querySelector('.ps'), em: el.querySelector('em'), fill: el.querySelector('.pt i') };
           if (!calm()) el.animate([{ transform: 'scale(.4)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 220, easing: 'cubic-bezier(.2,1.5,.4,1)' });
         }
         const s = Math.ceil(secs || 0), name = pwName(k);
-        txt(w.ps, secs ? s + 's' : n ? '\u00d7' + n : '');
+        txt(w.ps, secs ? s + 's' : n ? '×' + n : '');
         txt(w.em, n ? '×' + n : '');
         bar(w.fill, secs ? secs / (max || 1) : 1);
         attr(w.el, 'aria-label', secs ? `${name}, ${s} seconds left` : k === '_t' ? 'Thimble: the next hit is blocked' : k === '_p' ? 'Safety Pin: the next capture beam is blocked' : k === '_c' ? `Dive warnings: ${n} left` : name);
       }
       for (const k of Object.keys(have)) if (!keep[k]) { have[k].el.remove(); delete have[k]; delete this.fxMax[k]; }
     }
-    /* One persistent tutorial prompt in flight. It sits on the cloth above the ship's reach, so it never covers the ship,
-       the status row, the meters or the item slots; it steps aside while a banner shows. */
+    /* One persistent tutorial prompt in flight: two lines set on the cloth just under the status row (style.css keeps it there, and
+       off the cloth altogether on a phone held sideways). No box; it lets touches through and steps aside while a banner shows. */
     coach(title, sub) {
       const el = this.el.coach; if (!el) return;
       if (!title) { if (this.coachT) { this.coachT = null; el.className = ''; el.innerHTML = ''; } return; }
-      if (title === this.coachT && sub === this.coachS) { if (!this.coachAt) this.placeCoach(); return; }
+      if (title === this.coachT && sub === this.coachS) return;
       this.coachT = title; this.coachS = sub;
       el.innerHTML = `<b>${esc(title)}</b>${sub ? `<span>${esc(sub)}</span>` : ''}`; el.className = 'on';
-      this.placeCoach();
-      if (!calm()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220 });
-    }
-    placeCoach() {
-      const el = this.el.coach, r = this.ctl.renderer, f = this.el.field, cv = this.ctl.canvas || document.getElementById('cloth');
-      if (!el || !f || !cv || !r || !r.project) return;
-      if (getComputedStyle(el).position === 'fixed') { this.coachAt = 1; return; }
-      const T = C.TUNING, fr = f.getBoundingClientRect(), cr = cv.getBoundingClientRect();
-      if (!cr.height) return;
-      const reach = r.project(0, T.playerY + T.roam + 1.5).y - fr.top;   // the highest the ship can fly, plus its own height
-      const h = el.offsetHeight, top = Math.max(cr.top - fr.top + 52, Math.min(reach - h - 12, cr.top - fr.top + cr.height * 0.5 - h));
-      el.style.top = Math.round(top) + 'px'; this.coachAt = 1;
+      if (!calm()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200 });
     }
     /* Frame-rate readout (Settings): frames a second, quality tier, sharpness, and milliseconds per frame for game logic, HUD and drawing.
        It sits in the playfield's lower left corner, clear of every button, and lets touches through. */
@@ -735,15 +889,17 @@
       if (!el) { el = this.fpsEl = document.createElement('div'); el.id = 'fps'; (this.el.field || document.body).appendChild(el); }
       el.style.display = 'block'; el.textContent = n + ' fps · ' + q + ' · ' + pr.toFixed(2) + 'x\ngame ' + sim.toFixed(1) + ' · hud ' + hud.toFixed(1) + ' · draw ' + draw.toFixed(1) + ' ms';
     }
-    hudVisible(on) { document.body.classList.toggle('flying', on); this.hand(); if (on) this.coachAt = null; else this.coach(null); }
+    hudVisible(on) { document.body.classList.toggle('flying', on); this.prefs(); if (!on) { this.coach(null); this.bossing = false; document.body.classList.remove('bossing'); } }
     banner(big, small, ms) {
       const b = this.el.banner; b.innerHTML = `<div class="rib"><span>${esc(small || '')}</span><b>${esc(big)}</b></div>`; b.className = 'on';
       clearTimeout(this.bt); this.bt = setTimeout(() => { b.className = ''; }, ms || 1700);
     }
     toast(head, body) {
       const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<b>${esc(head)}</b><span>${esc(body || '')}</span>`;
-      this.el.toasts.appendChild(t); setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => t.remove(), 3100);
-      while (this.el.toasts.children.length > 3) this.el.toasts.firstChild.remove();
+      const box = this.el.toasts, B = document.body.classList, gone = () => { if (!box.children.length) B.remove('toasting'); };
+      box.appendChild(t); B.add('toasting');   // on a phone a notice takes the lesson prompt's place for as long as it shows
+      setTimeout(() => t.classList.add('out'), 2600); setTimeout(() => { t.remove(); gone(); }, 3100);
+      while (box.children.length > 3) box.firstChild.remove();
     }
     floater(pt, text, cls) {
       const f = document.createElement('span'); f.className = 'fl ' + (cls || ''); f.textContent = text; f.style.left = pt.x + 'px'; f.style.top = pt.y + 'px';

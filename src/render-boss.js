@@ -146,9 +146,13 @@
   P.bfMarks = function (sprites, x, y, r, n, size, rgb, a, kind, rot0, z) {
     for (let k = 0; k < n; k++) { const an = rot0 + k / n * TAU; sprites.add(x + Math.cos(an) * r, y + Math.sin(an) * r, z, size, rgb, a, kind, an + PI / 4); }
   };
-  P.bfBlink = function (p) {   // basting blinks faster as the warning runs out; 0..1 progress through the warning (one shared result: read it before the next call)
-    const o = this.bf.bl, wk = p.warn0 > 0 ? clamp(1 - p.warn / p.warn0, 0, 1) : 1;
-    o.wk = wk; o.on = Math.sin(this.time * (7 + wk * 24)) > -0.3 ? 1 : 0.45; return o;
+  /* How far a warning has run (wk 0..1), how bright its basting is now (on 0.45..1) and how far into its last quarter it is
+     (hot 0..1: the commit, when it no longer pulses and burns steady). It pulses, never strobes: 3 to 8 times a second,
+     smooth, so a large warning is safe to look at. One shared result: read it before the next call. */
+  P.bfBlink = function (p) {
+    const o = this.bf.bl, wk = p.warn0 > 0 ? clamp(1 - p.warn / p.warn0, 0, 1) : 1, hot = clamp((wk - 0.72) / 0.2, 0, 1);
+    o.wk = wk; o.hot = hot; o.ph = (o.ph || 0); const f = 3 + 5 * wk; o.ph = this.time * f * TAU;
+    o.on = hot > 0 ? 0.72 + 0.28 * hot : 0.72 + 0.28 * Math.sin(o.ph); return o;
   };
   /* Remaining hp as a ring of X-stitches: one is unpicked for every share of damage taken. */
   P.bfHp = function (p, x, y, r, z) {
@@ -163,28 +167,48 @@
   P.bfFlash = function (p) { return p.flash > 0 ? Math.min(1, p.flash * 10) : 0; };
 
   // ---------- warnings: basting tacked onto the cloth ----------
+  /* Every boss warning says three things at a glance: where (the shape, tacked out in basting), when (a front that fills
+     the shape as the warning runs, and in its last quarter the basting stops pulsing and burns steady and hot: it is about
+     to land) and, for lanes and cones, which way (chevrons marching along it). Bright cream instead of red with the
+     colour-blind-safe setting. */
   P.bfWarn = function (p, v) {
-    const K = this.bf.K, bl = this.bfBlink(p), t = this.time;
+    const K = this.bf.K, bl = this.bfBlink(p), t = this.time, wk = bl.wk, hot = bl.hot, cb = this.cb;
+    const line = cb ? K.tack : hot > 0 ? K.bastHot : K.bast, dim = cb ? K.linen : K.bastDim, fill = (0.08 + 0.16 * wk + 0.22 * hot) * bl.on;
     if (p.shape === 'seg') {
-      const w = Math.max(0.08, (p.w || 0.25) * 0.5);
-      this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, 0.085, K.bast, 0.95 * bl.on, 2);
-      this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.06, w * 3, K.bastDim, (0.12 + 0.2 * bl.wk) * bl.on, 0);
-      this.spr.add(p.x, p.y, 0.3, 0.5, K.tack, 0.8 * bl.on, 5, 0); this.spr.add(p.x2, p.y2, 0.3, 0.5, K.tack, 0.8 * bl.on, 5, 0);
+      const dx = p.x2 - p.x, dy = p.y2 - p.y, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len, w = Math.max(0.08, (p.w || 0.25) * 0.5), th = Math.atan2(ux, -uy);
+      if (w > 0.22) { const nx = -uy * w, ny = ux * w;   // a lane: both edges basted
+        this.bfLine(this.trN, p.x + nx, p.y + ny, p.x2 + nx, p.y2 + ny, 0.05, 0.075, line, 0.95 * bl.on, 2);
+        this.bfLine(this.trN, p.x - nx, p.y - ny, p.x2 - nx, p.y2 - ny, 0.05, 0.075, line, 0.95 * bl.on, 2);
+      } else this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.05, 0.085, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.06, w * 2.4, dim, fill, 0);
+      const fx = p.x + dx * wk, fy = p.y + dy * wk;   // the front: how much of the warning has run
+      this.bfLine(this.trA, p.x, p.y, fx, fy, 0.07, Math.min(0.22, w * 0.7), line, 0.35 + 0.4 * hot, 0); this.spr.add(fx, fy, 0.32, 0.55 + 0.3 * hot, line, 0.85, 0);
+      const n = Math.max(1, Math.min(6, Math.floor(len / 1.6)));
+      for (let k = 0; k < n; k++) { const u = ((k + 0.5) / n + t * 0.55) % 1, a = Math.sin(u * PI); this.spr.add(p.x + dx * u, p.y + dy * u, 0.3, Math.min(0.8, 0.45 + w), line, (0.3 + 0.5 * wk) * a, 13, th); }
+      this.spr.add(p.x, p.y, 0.3, 0.5, K.tack, 0.85, 5, 0); this.spr.add(p.x2, p.y2, 0.3, 0.5 + 0.25 * hot, K.tack, 0.85, 5, 0);
     } else if (p.shape === 'row') {
-      const h = p.h || 0.6, x1 = p.x1 === undefined ? -HW : p.x1, x2 = p.x2 === undefined ? HW : p.x2;
-      this.bfLine(this.trN, x1, p.y + h / 2, x2, p.y + h / 2, 0.05, 0.08, K.bast, 0.9 * bl.on, 2);
-      this.bfLine(this.trN, x1, p.y - h / 2, x2, p.y - h / 2, 0.05, 0.08, K.bast, 0.9 * bl.on, 2);
-      this.bfLine(this.trA, x1, p.y, x2, p.y, 0.05, h, K.bastDim, (0.06 + 0.22 * bl.wk) * bl.on, 0);
-      for (let x = x1 + 0.55; x < x2; x += 1.1) this.spr.add(x, p.y, 0.25, Math.min(0.55, h * 0.8), K.tack, 0.55 * bl.on, 5, 0);
+      const h = p.h || 0.6, x1 = p.x1 === undefined ? -HW : p.x1, x2 = p.x2 === undefined ? HW : p.x2, xf = x1 + (x2 - x1) * wk;
+      this.bfLine(this.trN, x1, p.y + h / 2, x2, p.y + h / 2, 0.05, 0.08, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trN, x1, p.y - h / 2, x2, p.y - h / 2, 0.05, 0.08, line, 0.95 * bl.on, 2);
+      this.bfLine(this.trA, x1, p.y, x2, p.y, 0.05, h, dim, fill, 0);
+      this.bfLine(this.trA, x1, p.y, xf, p.y, 0.06, h * 0.55, line, 0.12 + 0.3 * hot, 0);   // the front sweeps along the row
+      this.spr.add(xf, p.y, 0.3, Math.min(0.9, h * 1.1), line, 0.7, 0);
+      for (let x = x1 + 0.55; x < x2; x += 1.1) this.spr.add(x, p.y, 0.25, Math.min(0.55, h * 0.8), K.tack, (0.4 + 0.35 * wk) * bl.on, 5, 0);
     } else if (p.shape === 'cone') {
-      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L0, p.y + Math.sin(a0) * L0, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
-      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L1, p.y + Math.sin(a1) * L1, 0.06, 0.08, K.bast, 0.85 * bl.on, 2);
+      const a0 = p.a - p.half, a1 = p.a + p.half, L = p.len || 10, L0 = clipRay(p.x, p.y, a0, L), L1 = clipRay(p.x, p.y, a1, L), Lm = clipRay(p.x, p.y, p.a, L), th = Math.atan2(Math.cos(p.a), -Math.sin(p.a));
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a0) * L0, p.y + Math.sin(a0) * L0, 0.06, 0.08, line, 0.9 * bl.on, 2);
+      this.bfLine(this.trN, p.x, p.y, p.x + Math.cos(a1) * L1, p.y + Math.sin(a1) * L1, 0.06, 0.08, line, 0.9 * bl.on, 2);
+      for (let k = 1; k < 4; k++) { const a = a0 + (a1 - a0) * k / 4, Lk = clipRay(p.x, p.y, a, L); this.bfLine(this.trA, p.x, p.y, p.x + Math.cos(a) * Lk, p.y + Math.sin(a) * Lk, 0.06, 0.05 + 0.06 * hot, dim, fill * 1.4, 0); }
+      const R = Math.min(L0, L1, Lm) * wk;   // the front: an arc of basting travelling out from the source
+      if (R > 0.3) { const n = 6; for (let k = 0; k < n; k++) { const b0 = a0 + (a1 - a0) * k / n, b1 = a0 + (a1 - a0) * (k + 1) / n; this.bfLine(this.trN, p.x + Math.cos(b0) * R, p.y + Math.sin(b0) * R, p.x + Math.cos(b1) * R, p.y + Math.sin(b1) * R, 0.07, 0.07, line, 0.8, 2); } }
+      for (let k = 0; k < 3; k++) { const u = ((k + 0.5) / 3 + t * 0.5) % 1, d = Lm * (0.15 + 0.75 * u); this.spr.add(p.x + Math.cos(p.a) * d, p.y + Math.sin(p.a) * d, 0.3, 0.7, line, (0.3 + 0.5 * wk) * Math.sin(u * PI), 13, th); }
+      this.spr.add(p.x, p.y, 0.32, 0.7 + 0.4 * hot, line, 0.9, 0);
     } else {
       const r = p.r || 0.5;
-      this.spr.add(p.x, p.y, 0.3, r * 2.5, K.bast, 0.85 * bl.on, 7, t * 0.8 + v.seed * 6);
-      this.spr.add(p.x, p.y, 0.3, r * 2 * (1 + (1 - bl.wk) * 1.3), K.bastDim, 0.55 * bl.wk, 3);
-      this.spr.add(p.x, p.y, 0.3, Math.min(0.7, r), K.tack, 0.7 * bl.on, 5, 0);
+      this.spr.add(p.x, p.y, 0.3, r * 2.5, line, 0.85 * bl.on, 7, t * 0.8 + v.seed * 6);
+      this.spr.add(p.x, p.y, 0.3, r * 2 * (1 + (1 - wk) * 1.3), line, 0.4 + 0.5 * wk, 10, t * 2);   // a danger rim drawing tight
+      this.spr.add(p.x, p.y, 0.28, r * 2 * Math.max(0.15, wk), dim, fill * 1.6, 9);                 // and the ground it will take filling in
+      this.spr.add(p.x, p.y, 0.3, Math.min(0.7, r), K.tack, 0.8 * bl.on, 5, 0);
     }
   };
 
@@ -1135,18 +1159,21 @@
   P.bfCues = CUE;
 
   // ---------- darkness ----------
-  /* The lights go down: the lamp and hemisphere dim and the cloth's glow fades. Additive light (shots, thread, lamps, eyes) still reads. */
-  P.bfSetDark = function (k) {
+  /* The lights go down: the lamp and hemisphere dim and the cloth's glow fades. Additive light (shots, thread, lamps, eyes) still reads.
+     k = 1 is the darkest a fight gets: a little of the lamp and of the cloth's own glow is left, so the board can be read.
+     pitch (films only, 0..1) takes that remainder away as well: at 1 the only light is what a film brings. */
+  P.bfSetDark = function (k, pitch) {
     const bf = this.bfEnsure(), T = this.T; let L = bf.lights;
     if (!L) {
       let hemi = null; for (const o of this.scene.children) if (o.isHemisphereLight) hemi = o;
-      L = bf.lights = { hemi, hemiI: hemi ? hemi.intensity : 0, sunI: this.sun.intensity, bg: new T.Color(PAL.night), bgD: new T.Color('#010205'), glare: this.clothU.uGlare.value.clone(), back: this.clothU.uBack.value.clone(), k: -1 };
+      L = bf.lights = { hemi, hemiI: hemi ? hemi.intensity : 0, sunI: this.sun.intensity, bg: new T.Color(PAL.night), bgD: new T.Color('#010205'), bgP: new T.Color('#000000'), glare: this.clothU.uGlare.value.clone(), back: this.clothU.uBack.value.clone(), k: -1, p: 0 };
     }
-    k = clamp(k, 0, 1); if (Math.abs(k - L.k) < 0.002) return; L.k = k;
-    if (L.hemi) L.hemi.intensity = L.hemiI * (1 - 0.94 * k);
-    this.sun.intensity = L.sunI * (1 - 0.96 * k);
-    this.scene.background.lerpColors(L.bg, L.bgD, k);
-    this.clothU.uGlare.value.copy(L.glare).multiplyScalar(1 - 0.85 * k); this.clothU.uBack.value.copy(L.back).multiplyScalar(1 - 0.7 * k);
+    k = clamp(k, 0, 1); const p = clamp(pitch || 0, 0, 1); if (Math.abs(k - L.k) < 0.002 && Math.abs(p - L.p) < 0.002 && !(k === 0 && L.k !== 0)) return; L.k = k; L.p = p;   // (0 is always applied exactly: the lights come all the way back)
+    const rest = 1 - p;
+    if (L.hemi) L.hemi.intensity = L.hemiI * (1 - 0.94 * k) * rest;
+    this.sun.intensity = L.sunI * (1 - 0.96 * k) * rest;
+    this.scene.background.lerpColors(L.bg, L.bgD, k); if (p > 0) this.scene.background.lerp(L.bgP, p);
+    this.clothU.uGlare.value.copy(L.glare).multiplyScalar((1 - 0.85 * k) * rest); this.clothU.uBack.value.copy(L.back).multiplyScalar((1 - 0.7 * k) * rest);
   };
   P.bfDarkness = function (sim, dt, fdt) {
     const bf = this.bf, K = bf.K, target = clamp(sim.dark || 0, 0, 1);
@@ -1183,24 +1210,38 @@
     plates(x, y, m, h) { const u = x / m.hx, v = y / m.hy; let best = 99, rank = 0;  // plate by plate
       for (let k = 0; k < PLATES.length; k += 2) { const dx = u - PLATES[k], dy = v - PLATES[k + 1], d = dx * dx + dy * dy; if (d < best) { best = d; rank = k / 2; } }
       return rank + 0.3 + h * 0.4; },
-    burst(x, y, m, h) { const dy = y - m.hy * 0.25; return Math.sqrt(x * x + dy * dy) / Math.max(m.hx, m.hy) + h * 0.25; }   // out from the heart, fast
+    burst(x, y, m, h) { const dy = y - m.hy * 0.25; return Math.sqrt(x * x + dy * dy) / Math.max(m.hx, m.hy) + h * 0.25; },   // out from the heart, fast
+    // orders added for the film kit (sewing things on as well as taking them apart)
+    lr: (x, y, m, h) => (x + m.hx) / (2 * m.hx) + h * 0.05,                           // a needle working left to right, column by column
+    spiral(x, y, m) { const a = Math.atan2(y, x) / TAU + 0.5, rr = Math.sqrt(x * x + y * y) / Math.max(m.hx, m.hy); return Math.floor(rr * 5 + a) + a * 0.2 + rr; },   // wound outward from the middle
+    random: (x, y, m, h) => h                                                        // stitch by stitch in no order at all
   };
+  /* The order functions, by name. A film may add its own before it first uses it:
+       r.bfOrders.zip = (x, y, m, h, c, col, row) => ...   x, y: the stitch's centre in world units from the chart's middle;
+       m: { cell, w, h, cmid, rmid, hx, hy } the chart's measures; h: a hash 0..1 of the stitch; col, row: its place in the chart.
+     Any number will do: orders are rescaled to 0..1. A name ending in '-' is the same order backwards. */
+  P.bfOrders = ORDERS;
   function orderOf(d, x, y, cellO) {
     const m = d.m, col = Math.round(x / m.cell + m.cmid), row = Math.round(y / m.cell + m.rmid), h = hash(col * 31.7 + row * 7.13);
-    return ORDERS[d.kind](x, y, m, h, cellO, col, row);
+    const v = ORDERS[d.base](x, y, m, h, cellO, col, row);
+    return d.inv ? -v : v;
   }
   /* Order data for one boss and kind: its stitches, each one's order 0..1, and the stitches sorted by it (for what flies off). */
-  P.bfOrderData = function (id, kind) {
-    const def = C.KEEPERS[id], key = def.sprite + ':' + def.cell + ':' + kind, cache = this.ordCache || (this.ordCache = {});
+  P.bfOrderData = function (id, kind) { const def = C.KEEPERS[id]; return this.bfOrderSprite(def.sprite, def.cell, kind); };
+  /* The same for any chart in C.SPRITES at any cell size (the film kit sews and unpicks props with it). */
+  P.bfOrderSprite = function (sprite, cell, kind) {
+    const key = sprite + ':' + cell + ':' + kind, cache = this.ordCache || (this.ordCache = {});
     let d = cache[key]; if (d) return d;
-    const sp = C.SPRITES[def.sprite], cell = def.cell, cells = this.cells(def.sprite, cell), n = cells.length;
+    const inv = kind.charAt(kind.length - 1) === '-', base = inv ? kind.slice(0, -1) : kind;
+    if (!ORDERS[base]) throw new Error('no stitch order called "' + base + '"');
+    const sp = C.SPRITES[sprite], cells = this.cells(sprite, cell), n = cells.length;
     const m = { cell, w: sp.w, h: sp.h, cmid: (sp.w - 1) / 2, rmid: (sp.h - 1) / 2, hx: Math.max(cell, (sp.w - 1) / 2 * cell), hy: Math.max(cell, (sp.h - 1) / 2 * cell), eyes: null };
-    if (kind === 'eyes') {   // the eyespots: the glare stitches either side of the body
+    if (base === 'eyes') {   // the eyespots: the glare stitches either side of the body
       let lx = 0, ly = 0, ln = 0, rx = 0, ry = 0, rn = 0; const g = this.lc(PAL.glare);
       for (const c of cells) if (c.rgb === g && Math.abs(c.x) > cell * 2) { if (c.x < 0) { lx += c.x; ly += c.y; ln++; } else { rx += c.x; ry += c.y; rn++; } }
       m.eyes = ln && rn ? [lx / ln, ly / ln, rx / rn, ry / rn] : [-m.hx * 0.55, m.hy * 0.1, m.hx * 0.55, m.hy * 0.1];
     }
-    d = { kind, m, cells, n, ord: new Float32Array(n), idx: new Uint16Array(n), lo: 0, span: 1, geos: {} };
+    d = { kind, base, inv, m, cells, n, ord: new Float32Array(n), idx: new Uint16Array(n), lo: 0, span: 1, geos: {} };
     let lo = 1e9, hi = -1e9;
     for (let i = 0; i < n; i++) { const c = cells[i], v = orderOf(d, c.x, c.y, c); d.ord[i] = v; if (v < lo) lo = v; if (v > hi) hi = v; }
     d.lo = lo; d.span = Math.max(1e-6, hi - lo);
@@ -1209,24 +1250,30 @@
     return (cache[key] = d);
   };
   /* Where a raw order value lands once normalised (films use it to time a step, e.g. "plate 3 is gone"). */
-  P.bfOrderAt = function (d, raw) { return 0.005 + 0.99 * (raw - d.lo) / d.span; };
+  P.bfOrderAt = function (d, raw) { return 0.005 + 0.99 * ((d.inv ? -raw : raw) - d.lo) / d.span; };
   /* Put a boss group's chart meshes onto the order `kind`; returns the order data. bfUnorder puts the chart's own geometry back. */
   P.bfOrdered = function (g, kind) {
     const u = g.userData, d = this.bfOrderData(u.id, kind); if (kind === 'edge') return d;
-    const T = this.T, parts = u.body.userData, cell = d.m.cell, nv = this.geo.leg ? this.geo.leg.attributes.position.count * 2 : 60;
+    return this.bfOrderApply(u.body, d);
+  };
+  /* Put any chart (a group from r.chart) onto the order data d. */
+  P.bfOrderApply = function (chart, d) {
+    const T = this.T, parts = chart.userData, cell = d.m.cell, nv = this.geo.leg ? this.geo.leg.attributes.position.count * 2 : 60, whole = !parts.left;
     for (const part of ['body', 'left', 'right']) {
       const mesh = parts[part]; if (!mesh) continue;
       if (!mesh.userData.g0) mesh.userData.g0 = mesh.geometry;
-      let geo = d.geos[part];
+      const gk = whole ? 'whole' : part;
+      let geo = d.geos[gk];
       if (!geo) {
-        const base = mesh.userData.g0, pa = base.attributes.position, pos = pa.array, n = pa.count, a = new Float32Array(n), piv = part === 'left' ? -1.5 * cell : part === 'right' ? 1.5 * cell : 0;
+        const base = mesh.userData.g0, pa = base.attributes.position, pos = pa.array, n = pa.count, a = new Float32Array(n), piv = whole ? 0 : part === 'left' ? -1.5 * cell : part === 'right' ? 1.5 * cell : 0;
         for (let b0 = 0; b0 < n; b0 += nv) {
           const e = Math.min(n, b0 + nv); let sx = 0, sy = 0;
           for (let i = b0; i < e; i++) { sx += pos[i * 3]; sy += pos[i * 3 + 1]; }
-          const o = clamp(this.bfOrderAt(d, orderOf(d, sx / (e - b0) + piv, sy / (e - b0), base.attributes.aCell ? { o: base.attributes.aCell.array[b0] } : NODATA)), 0, 1);
+          const raw = orderOf(d, sx / (e - b0) + piv, sy / (e - b0), base.attributes.aCell ? { o: base.attributes.aCell.array[b0] } : NODATA);
+          const o = clamp(0.005 + 0.99 * (raw - d.lo) / d.span, 0, 1);
           for (let i = b0; i < e; i++) a[i] = o;
         }
-        geo = d.geos[part] = new T.BufferGeometry();
+        geo = d.geos[gk] = new T.BufferGeometry();
         geo.setAttribute('position', pa); geo.setAttribute('normal', base.attributes.normal); geo.setAttribute('color', base.attributes.color); geo.setAttribute('aCell', new T.BufferAttribute(a, 1));
         if (!base.boundingSphere) base.computeBoundingSphere(); geo.boundingSphere = base.boundingSphere;
       }

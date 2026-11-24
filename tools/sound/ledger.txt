@@ -1,0 +1,191 @@
+# film sounds generated, flow EtrDipq3TbcHBCGx7I3X (name generation_id keep_seconds level)
+wick_in_sting xHPZ1PNxgcuIWcU6S7bl 8.8 stereo   # take A
+wick_in_sting_b AxlhJ318umbmIhUT2Knt 8.8 stereo # take B
+wick_scratch dKdmoXNz1Wgn4Pf3T5ab 1.9
+wick_catch XEXRTFOd49Xw4nc9FYrE 1.1
+wick_fuse QGgIzS3Oz1LK6dm7BJr9 0.5
+wick_swing NLXvzBgr4P75SgsgYMVq 1.5 level
+wick_eyes SM8UDDyAiVu3mNOwgyF4 0.7
+wick_whiteout QQR8cmmMCylXL8oC5FKJ 1.8 level
+wick_brand waiBqUhAhFzRwosC0Xi5 1.3
+wick_gasp xdK2y1JgaRQLCBQLGEpY 1.8 level
+wick_melt YfcaHIPtEkNNBFlo0dOR 2.4 level
+wick_gutter jMci4LVCCzn4F0XjDKoW 0.5
+wick_drown ZfdP2gBQaY1qjoDiaS4T 1.4 level
+wick_smoke GNA0UhsZMLjYOfqq125a 1.8 level
+wick_choke jt6DtuxgPGAFVvf0bBa8 0.7
+wick_breaker zGjPr8tLM94dH3sypItO 1.1
+wick_down_sting OzLJMUrzxma9v3LsHaXG 8.8 stereo   # take A
+wick_down_sting_b s790Fctb12q4qwj1XYgG 8.8 stereo # take B
+tinea_weave KK2kL9pjX7yo8EorAzFh 2.4 level
+tinea_breath P4OHeIBbSHZ8UQbablsq 0.9
+tinea_feel jlXjuuirUPq9ScLvFIb4 1.3
+tinea_snap ShCoG6lMqQFqexOtszpI 0.7
+tinea_unzip pppKIzf2R0oVgvW6lHuS 0.5
+tinea_burst prGq4fajEgVs1OgjpQDQ 2.3 level
+tinea_settle iaTqsWNWA8OpnE5BbkBE 2.6 level
+tinea_still ittfKirmiYQx1qod8gxo 1.3
+tinea_hours 5GxdVYgVU5AUI4aeW2e6 3.4 level
+tinea_nibble bTHJKGCcFv5Pzk4D9F0C 3.0 level
+tinea_frost Ov5Wt5qlY8GD7IZCUyOq 3.0 level
+tinea_sag VPZHpQE0E5eCE66DfXZm 1.4
+tinea_lamp x2lyjrYyxS3cpheMNTz6 2.0 level
+tinea_wing p6KWemXTWlhw820ydK4G 1.7
+tinea_in_sting ubEjAe9pRoT4lIWqpPiA 9.2 stereo   # take A
+tinea_in_sting_b hFE8WL5Izp4205Ofpzve 9.2 stereo # take B
+tinea_out_sting 94LRGnm78wBfWTHpXw0g 7.2 stereo   # take A
+tinea_out_sting_b BaAnfGxHdYAdNO2ACvGE 7.2 stereo # take B
+lappet_draught LKCKvrpiOYFUDPX3PXnj 2.2 level
+lappet_shaft ciagCts31YPXHnVUzrT7 1.8 level
+lappet_pass NNJL2nJ3T2KR9pac1VZR 1.9 level
+lappet_flutter VO6Aqdzz9OlfQo3TwtTQ 1.0
+lappet_land d4QP6mzZqPhK93eIhTHM 0.9
+lappet_stir ROOe6JVEBIe9WF6qtS4y 0.35
+lappet_crack h1Zsw1PwGu3acP5O1DQO 1.5
+lappet_wings t0OgmjQE1NWIvb9grOEs 1.8 level
+lappet_snap UtmWa9TxBtMxPaK691Iw 0.8
+lappet_wither Cf0Fy4uv1wS6ecHkXJ7N 1.3
+lappet_gale eGYureUMjcUiPWG4pUMm 4.2 level
+lappet_strip Hw24M3X1M2ZfYmjh15xS 1.1
+lappet_veins maKOpU07l67MoMqXeKru 1.0
+lappet_last MT2kwuQY34Cz86CKQK7c 1.3
+lappet_still ffooCbluPGws7GenRoIc 2.0 level
+lappet_in_sting 8aFDAITlT3F3gXH0wifv 9.6 stereo   # take A
+lappet_in_sting_b a5ZNQCshaSrud5WKJYc8 9.6 stereo # take B
+lappet_down_sting V2mUVtcvpQutOrWvrKdC 7.4 stereo   # take A
+lappet_down_sting_b 0XbNGMtQ46typxK0fnfJ 7.4 stereo # take B
+atlas_hush xprHhhVrnrqkFp6ieD4s 3.4 level
+atlas_scales lbnHsTI0WSI89AuamxJ0 2.9 level
+atlas_span X2khJdWKFnIMrquOqlw5 1.3
+atlas_open D10SLrer4jL1KNkShaWp 1.1
+atlas_sweep bkhGogCGTOlDuGWpzpge 1.4
+atlas_flare mvpSEWdsc8UTI9AaRLLK 1.6 level
+atlas_blink rXuddQd0NklZzZqSy97F 0.8
+atlas_hit xeAEf9Z9HcHtTxkiIrtI 1.4
+atlas_search 5BCG6tBXNgOcAZo75wBY 1.2
+atlas_lock hoT0V0suHr12ZJQnxYtH 0.9
+atlas_shut PJSTJ5HfsCnmvldK3FIb 0.7
+atlas_dust rqXXf8GhYZp5LfepQgcM 2.4 level
+atlas_settle qwWNCvc77GRLIMym1zsz 1.6 level
+atlas_in_sting aDXsNAPgqfJpvrGVEe74 8.4 stereo   # take A
+atlas_in_sting_b DVcZwPWHleYgf3RULPCF 8.4 stereo # take B
+atlas_down_sting m3Ny3pGfC7pDtGLkCMSi 7.4 stereo   # take A
+atlas_down_sting_b xENKwcni2VWW3bQf8Zb0 7.4 stereo # take B
+beetle_rumble 7Qr0RsI8TZLfjEiWPNFM 1.3
+beetle_pass yQzPasdjxBYYMSSUCXlu 1.0
+beetle_rail 8p6mC4XV0Mkm7mJqihuh 1.4
+beetle_rail_big xsFvvZ8lLw6DQwlcXlvH 2.0 level
+beetle_skid PjfigkfPrZYvIjMdSBjh 1.2
+beetle_slam iveAHnTSP62u4U91SMQT 2.2 level
+beetle_stamp 7GzbUXzZFxtdEGe2TMw7 1.0
+beetle_crack bj0pEffZd6KPfX29DFkw 1.2
+beetle_throw sIHKZBTmGh8kggQLdzJK 1.9 level
+beetle_plate xkUM3IJd2cCEVjnSH9wa 1.6
+beetle_last o8yjtl5ihVxjn8i43WMo 1.4
+beetle_coin PVBpbY4a8KUECahXKuk1 1.5
+beetle_settle SECHE2CMhgnPyiN2Pm2O 1.8 level
+beetle_in_sting iwUsKrGYmr8c3BVjD92M 8.9 stereo   # take A
+beetle_in_sting_b Yfgp2ji0HrU9Aqqjxn62 8.9 stereo # take B
+beetle_down_sting FOPgF2RrbMt4ZjLFQVel 9.2 stereo   # take A
+beetle_down_sting_b FIIoJVBDkjj3YsdlRCDR 9.2 stereo # take B
+empress_moon TJjJRxMl8ActnzRHIqaN 1.6
+empress_drop c9LOD3LsnYhejmlBPDDl 0.9
+empress_taut lbjoOij3vSKPfRNm7tRo 1.6
+empress_pluck 4wHLvf2o2Ghi4NnHip3s 0.8
+empress_catch Ru1KIO1De1w9HlPn73Rd 0.6
+empress_lay TWdZkyWUGUzKSReoxZvB 1.1
+empress_descend Zj9B0QtgkUflD0Jqe3Nh 1.6
+empress_snap 7AwRMie2N0mbS0uamlSA 0.7
+empress_bloom MgcdpHN2gWdYVao57rcd 1.8 level
+empress_crack XXPaPcgKvbNr1XO37rjy 1.6 level
+empress_spin jRt2b9m3Y7aZKui9SJI4 1.9
+empress_cinch wjSZYvsVrHwC8b2CA9iW 0.9
+empress_line jBzHS7Xlws1mrVCcX9HH 0.6
+empress_haul 1avrQznYm4PDXOdHZh1n 0.5
+empress_whoosh K8UmJTWdgdRi5DXGeHKQ 0.9
+empress_letgo Yx5BGm96jOcZHOIfFa04 0.9
+empress_dew CwSLVR0CeMYQYpYN3s7G 2.2   # shared by both films
+empress_still i69b8NHpT01DtpihztrA 1.4
+empress_in_sting MBdJZ5YZzDBd35fRemgS 9.8 stereo   # take A
+empress_in_sting_b ATqP6AqzE3kCpRYj0yVV 9.8 stereo # take B
+empress_down_sting r2IAETAojyk5MnNCRZyM 8.2 stereo   # take A
+empress_down_sting_b DiMaQXFnQisZbduYFomg 8.2 stereo # take B
+king_sun z4toLpJ8OlwxZvByCzJ9 2.0
+king_gather hppMGaQHJ1WXIrzbnZDJ 2.0 level
+king_diamond AuB6cxo0RD3QBItDDWU3 1.2
+king_corona NC8NK72vGTCBav1pWWKg 2.8
+king_setjewel VEYj6ofRb7yTtaxE1P1E 0.9
+king_eyes z5PuOk6FehoTJ9Zydz7y 0.8
+king_unveil Ag6UNJV6ezgKVoZOw1la 2.2 level
+king_iris CrwijuahtFoG98LjIUkr 1.2
+king_crack RITpIq9F3GoPg3Uadrpa 0.6
+king_fall M6qgu3vJrP9a7kWaURDM 3.2
+king_ring icBzXJSkvJxz9Eer30IN 3.0
+king_burst dvdAKHRn4hkc3ESxCJJj 1.0
+king_rush L1ODg8tV2v8fiNj9etyE 2.4 level stereo
+king_dawn I07bwmSvu4kzItoir2zT 3.0
+king_mend QABY1FaUtj4kNdMWZ4jY 1.6
+king_in_sting QCUh4BPyQkZTEinU691P 11.5 stereo   # take A
+king_in_sting_b DPCG2JKkbvHVKzMMr3Hz 11.5 stereo # take B
+king_down_sting mkUatk5f0AcFcWlFroKX 12.5 stereo   # take A
+king_down_sting_b aLkNalJOz6OJEhm3RNi1 12.5 stereo # take B
+unraveller_tug JsycPXgqSBG9S4N3bF9n 0.6
+unraveller_rip BEJgIALkQsT2xSbzZBdj 1.0
+unraveller_run GHbNdWwnF3imB5KRCNMb 3.3
+unraveller_knot nqd4iL4SU7zEWkrXmmSs 1.1
+unraveller_whip x5DHiDaDAE8jFHPnG9W4 0.6
+unraveller_jaws C5GVP0oAaB8safN4DBR1 1.2
+unraveller_gulp OE2tMDeSwUnjkns775OF 0.7
+unraveller_snap fqWQrNDGtTXn4CVl8tx6 1.6
+unraveller_choke X2eCvlWvlHI74rz9toc6 1.6
+unraveller_spill YEXjL8Wi8fuXsEntms4a 1.5 level
+unraveller_shuttle 4b05ZmnWxuoFO5MlWYku 0.7 stereo
+unraveller_beat qJhfivogliQF7GFfRTdc 0.8
+unraveller_bind Y6QBuCK70cy4VmUFGfT2 3.0
+unraveller_loom vs92q3mQFT47ap0dY9K4 1.6
+unraveller_tie 1C45AqWbfExnGz4uhMM1 1.2
+unraveller_rest fKQDuRGegaEKmjVeHpwk 1.8
+unraveller_in_sting 3v3d0TQlOnARkra2GvW0 9.2 stereo   # take A
+unraveller_in_sting_b 9OxqQOZEcBiLR4J3pk7w 9.2 stereo # take B
+unraveller_down_sting rGegnAtrEHdtzkxl7tKa 9.0 stereo   # take A
+unraveller_down_sting_b rex7ub8Yi9Qbskv4EhbF 9.0 stereo # take B
+title_glint 9fGvtTFNTkt8zkrsD2c5 1.4
+title_thread qMp8unNUs6epENoBUMqw 0.9
+title_pierce Oezl3cDohEPVeOu6aP8S 0.7
+title_sew SOkwTJC6xBYBQ2gNc5Zr 2.3
+title_pull SdZFatB0a9xJXM9bPH55 1.0
+title_snap Ze2tkz8tshbIeeIjL6Ju 1.3
+title_settle KafV6Wc1Hz8adl3t2tuv 2.0
+title_sting U6tfWUluYS7T4l4n0aeA 7.4 stereo   # take A
+title_sting_b cSSROloxsXj3nNqxpsNn 7.4 stereo # take B
+title_sting_short MYoQKvDxEfnVyRnXqVYS 3.2 stereo   # take A
+title_sting_short_b DkRLqJhKV96WPUBIkQtZ 3.2 stereo # take B
+# sting picks (imported 2026-11-23; judged from 0.1 s loudness shapes after unpack.py trim against music.desc hit times)
+# wick_in_sting: take A - swells from 1.5 s, first big onset 3.5 s (written 3.36) and loud through the 6.05 chord; B is quiet until 5.0 s and misses the 3.36/4.06/4.56 hits
+# wick_down_sting: take A (weak) - opening swell then dies away near 3.4 s (written stop 3.8); neither take has the four late chords at 6.33-7.28; B is loud straight through to 4.4 s
+# tinea_in_sting: take A - hard hit lands at 6.0-6.2 s (written 6.23) with thumps near 2.0 s; B is one swell peaking 4.8-5.2 s with no 6.23 hit
+# tinea_out_sting: take A - chord at 0, change near 3.4 s (written 3.7), new onset 5.6-6.0 s for the 5.8 chord; B fades out before 5.8
+# lappet_in_sting: take B (weak) - hit onset at 6.0 s (written 5.45) and a natural fade by 9.6 s; A is loud continuously from 0.6 s with no silence, no hit and is cut off mid-music; neither has the 4.7 s silence
+# lappet_down_sting: take A (weak) - pluck at 0 then a late warm chord rising from about 6 s (written 5.41); B is a steady 1 s pulse that matches none of the written beats; neither has the 1.62/2.52 surge
+# atlas_in_sting: take A - loud bloom from 2.4 s (written chord 3.3) through 5.2 s then a slow shimmering decay to 8 s; B blooms at 1.6 s and collapses at 5.3 s
+# atlas_down_sting: take B (weak) - sustains through the 5.62 resolving chord and fades by 7.4 s; A goes silent from 3.7 s so the final chord is missing; neither has the hit at 0.02
+# beetle_in_sting: take A - onsets at 3.5-4.0 s (written 3.86) and 5.8-6.0 s (written 6.03, the biggest), loud to the end; B has one long block from 3.3 s
+# beetle_down_sting: take A - stab at 0, big hit 3.3 s (written 2.06), silence, then chord at 6.6 s (written 7.12) fading by 9.2 s; B is one stab then nothing
+# empress_in_sting: take B - quiet middle, then onset 5.5-6.0 s and loudest at 7.0-7.5 s for the 7.78 chord, fading by 9.8 s; A is busy early and silent from 6.5 s
+# empress_down_sting: take B (weak) - loud 1.6-3.1 s then a drop at 3.2 s (written cut 3.16) and onset 3.8 s for the rising notes; A peaks right where the cut should be; both silent after 5.5 s (no 6.24 chord) and both generations had long quiet lead-ins (A 4.1 s, B 2.5 s trimmed)
+# king_in_sting: take B - loud onset 7.2-7.6 s for the 7.77 explosion, sustained to 9.2 s then fades; A peaks 4.6-6.8 s during the hush and fades during the explosion
+# king_down_sting: take A (weak) - hit at 0 and a late rise near 8.9 s for the sunrise (written 6.75) held to 12.5 s; B is one hit then nothing; neither cuts cleanly at 0.45 s
+# unraveller_in_sting: take A - ostinato pulses from about 1.3-1.7 s (written 1.55), building, loudest 6.5 s (written 6.2); B is silent 0.8-3.2 s then one block
+# unraveller_down_sting: take A - blare 0-1.6 s (written cut 1.3), quiet, then loud 3.9-4.8 s across the 4.02/4.52 hits; B starts late (2.95 s trimmed) and is loud at 1.7-3.2 s
+# title_sting: take B - pluck run starts 1.8 s (written 1.86) and builds to its densest hits at 4.8-5.2 s (written HIT 5.05); A is loudest at 0.5-2.0 s, wrong for the soft opening, and its hit is late (5.2-5.4 s)
+# title_sting_short: take A - onset at 0.9 s (written HIT 1.02) and holds; B fades away by 1.6 s with nothing at 1.02
+ending_morning z9SUW36t2THSLh5q46Qd 2.6
+ending_lift UWNfFf6NcE6FyW400d88 1.4
+ending_sew bqQWJ5zkBfZy5plgsoz8 0.6
+ending_last 77rVB3Qznyy0qBjk8zuB 1.1
+ending_knot btdr9kbFR28Fkekydsyz 1.0
+ending_letters iVAGTS1k0vZfaYyriJq5 1.2
+ending_gold Blugn6BfIXx6mLhDQsfu 2.4
+ending_sting c7ne6om9YWpVVjEfs15Z 15.0 stereo   # take A
+ending_sting_b SAK7VvuflWuTqTQ0mg3W 15.0 stereo # take B
+# ending_sting: take A - onsets at 3.3, 5.0, 5.8 and 6.7 s land on the music-box notes (written 3.15-6.15) and the held eighth note (6.95); B is one flat wall of sound, loudest at the start, with no onsets at all. Both fade from about 7 s, so neither has the 8.4 s opening-out or the 12.1 s swell (A is the better of two weak takes)
