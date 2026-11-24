@@ -2094,9 +2094,13 @@
       if (this.warmedKey === key) { if (onProgress) onProgress(1); return Promise.resolve(); }
       if (this.warming) return this.warming.then(() => this.warmUp(onProgress, quiet));
       const gl = this.gl, sc = this.scene, T = this.T;
+      let filmLights = [];
       this.warming = (async () => {
         try {
           if (this.bakeDirty) this.bakeCloth();
+          // a film's point lights (the title film plays over the warm-up) change every lit program's variant; the game has none, so
+          // they are left out of the warm-up, or the game's own variants would be compiled later, mid-play
+          filmLights = []; sc.traverse(o => { if (o.isPointLight && o.visible) filmLights.push(o); }); for (const L of filmLights) L.visible = false;
           const g = this.warmSet(), ws = this.warmScene || (this.warmScene = new T.Scene());
           ws.add(g); for (const o of this.warmProxies()) ws.add(o);
           if (onProgress) onProgress(0.1);
@@ -2111,7 +2115,7 @@
             sc.add(g); this.warmBatches(true); this.render(); sc.remove(g); this.warmBatches(false); this.render(); ws.add(g);
           }
           this.warmedKey = key; this.warmed = true;
-        } finally { this.warming = null; if (g0(sc, this.warmG)) sc.remove(this.warmG); }
+        } finally { this.warming = null; if (g0(sc, this.warmG)) sc.remove(this.warmG); for (const L of filmLights) L.visible = true; }
         if (onProgress) onProgress(1);
       })();
       return this.warming;

@@ -135,6 +135,10 @@ def run_case(b, base, case, size, quality, fails, notes, reduced=False):
         if up and up_at is None: up_at = t; first_sheet = s; frames_at_up = s['frames']
         snap(f"+{t:.1f}s" + (' sheet' if up else '') + (f" r{s['live']['rockets']}" if s['live']['rockets'] else '') + (' film' if s['live']['film'] else ''))
         last = s
+        # after the last boss the ending film (src/films/ending.js) plays before the victory sheet; test/cine.py covers it, so here
+        # it is skipped, as a tap would, and the clock it took is not counted
+        if not up and pg.evaluate("(() => { const c = ST.game.renderer.cine; return !!(c && c.active && c.id === 'ending'); })()"):
+            snap(f"+{t:.1f}s ending film"); pg.evaluate("ST.Cine.skip()"); tick(100)
         if up_at is not None and t - up_at >= 3.0: break
     probe = pg.evaluate('window.__fx')
     peak = pg.evaluate("window.__fx.peak")
@@ -158,7 +162,8 @@ def run_case(b, base, case, size, quality, fails, notes, reduced=False):
             if not probe['celebrate']: fails.append(f'{name}: the sim sent no celebrate event')
             aft = pg.evaluate("() => { const r = ST.game.renderer; return r.afterglow ? !!r.afterglow() : null; }")
             info['afterglow'] = aft
-            if aft is False: fails.append(f'{name}: no light celebration running around the results sheet')
+            ended = case == 'king' and pg.evaluate("!!(ST.Cine && ST.Cine.has && ST.Cine.has('ending'))")   # after the last boss the ending film closes the celebration itself (src/films/ending.js)
+            if aft is False and not ended: fails.append(f'{name}: no light celebration running around the results sheet')
     if errs: fails.append(f'{name}: page errors {errs[:3]}')
     json.dump(info, open(os.path.join(odir, 'info.json'), 'w'), indent=1)
     notes.append(info)

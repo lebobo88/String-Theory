@@ -436,7 +436,8 @@
     }
     /* A big moment: dip the music under it. */
     duck(sec) { audio.duck = Math.max(audio.duck, sec); }
-    buzz(pattern) { if (this.profile.settings.haptics !== false && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* not allowed here */ } } }
+    buzz(pattern) { const ua = navigator.userActivation; if (ua && !ua.hasBeenActive) return;   // before the first tap the browser refuses (and logs it)
+      if (this.profile.settings.haptics !== false && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) { /* not allowed here */ } } }
     music() {   // pick the track for where the player is
       const s = this.sim, st = this.state;
       const boss = s && s.boss ? (s.panel >= 7 ? 'final' : s.panel >= 4 ? 'boss2' : 'boss') : null;

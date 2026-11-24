@@ -1030,7 +1030,7 @@ void main(){
     hush() {
       for (let i = 0; i < this.handles.length; i++) { const h = this.handles[i]; try { if (h.stop) h.stop(); else if (h.pause) h.pause(); } catch (e) { /* already ended */ } }
       this.handles.length = 0;
-      if (this.buzzed) { this.buzzed = false; try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) { /* not allowed here */ } }
+      if (this.buzzed) { this.buzzed = false; try { const ua = navigator.userActivation; if (navigator.vibrate && !(ua && !ua.hasBeenActive)) navigator.vibrate(0); } catch (e) { /* not allowed here */ } }
     }
 
     // ---------- the frame ----------

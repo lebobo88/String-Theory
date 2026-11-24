@@ -379,6 +379,7 @@ def run(b, vn, mode):
   pg.evaluate("() => { const g = ST.game; g.ui.snapped({stitches:18450,dust:320,silk:3,bestCombo:31,charts:['bp_herringbone'],newBest:true,sweep:3,info:{panelName:'Stage 3',label:'Wave 2'}}); }"); pg.wait_for_timeout(1800); shot('14gameover')
   pg.evaluate("""() => { const g = ST.game; g.sim.stitches = 1284500; g.sim.newBest = true; g.profile.stats.won_normal = 1;
     g.ui.tally({ last: true, keeper: true, stitches: 20000, dust: 60, silk: 25, bestCombo: 142, bonuses: [], charts: ['bp_tapestry'], nightDust: 12340, nightSilk: 171, dustAll: 60, silkAll: 27, info: { panelName: 'Stage 8', label: 'Boss' } }, null); }""")
+  pg.wait_for_timeout(300); pg.evaluate("() => { try { if (ST.Cine.active()) ST.Cine.skip(); } catch (e) { /* no film */ } }")   # the ending film (src/films/ending.js) plays first; a tap skips it
   pg.wait_for_timeout(1900); shot('15victory')
   if mode == 'normal': check('victory names the three credits', pg.evaluate("(() => { const t = document.querySelector('.credits').textContent; return /Rob Lee/.test(t) && /Claude/.test(t) && /ElevenLabs/.test(t); })()"))
   print(tag, 'done', flush=True); pg.close()
