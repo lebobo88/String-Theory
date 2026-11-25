@@ -6,7 +6,9 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+  /* Roman numerals for any level (ship upgrades and weapons have no top level now): ROMAN[7] is 'VII'. Built once up to 120. */
+  const ROMAN = (() => { const out = ['']; for (let n = 1; n <= 120; n++) { let r = '', v = n; for (const [k, t] of [[100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (v >= k) { r += t; v -= k; } out.push(r); } return out; })();
+  const PAT_VIEWS = ['more', 'ups', 'exch'];   // the Perks tab's other views (the first is 'perks')
   const STAT = { ply: 'Shield', pace: 'Speed', eye: 'Fire rate', point: 'Damage' };
   const mq = q => (window.matchMedia ? window.matchMedia(q) : { matches: false });
   const MQ_CALM = mq('(prefers-reduced-motion: reduce)'), MQ_COARSE = mq('(pointer: coarse)');
@@ -185,8 +187,10 @@
         case 'title': c.toTitle(); break;
         case 'depart': if (!c.midNight) this.snd('ui_start'); c.depart(); break;
         case 'tab': this.tab = arg; this.hem(); break;
-        case 'pick': this.sel[this.selKey()] = arg; this.hem(); break;
-        case 'pview': this.patView = arg === 'ups' ? 'ups' : 'perks'; this.hem(); break;
+        case 'pick': if (this.selKey() === 'exch' && /^n:/.test(arg)) this.xn = arg === 'n:max' ? 'max' : +arg.slice(2); else this.sel[this.selKey()] = arg; this.hem(); break;
+        case 'pview': this.patView = ['more', 'ups', 'exch'].indexOf(arg) >= 0 ? arg : 'perks'; this.hem(); break;
+        case 'fray': { const mode = ST.modeUnlocked(this.p, st.mode) ? st.mode : 'normal', top = ST.frayOpen(this.p, mode), now = Math.min(top, st.fray | 0);
+          st.fray = Math.max(0, Math.min(top, now + (arg === 'up' ? 1 : -1))); c.saved(); this.menu(); break; }
         case 'bview': this.bookView = arg === 'foes' ? 'foes' : 'charts'; this.hem(); break;
         case 'buy': this.buy(arg); break;
         case 'nope': this.snd('ui_fail'); this.shake(); break;
@@ -245,7 +249,7 @@
         case 'pockets': if (this.unpickArm >= 0) { this.unpickArm = -1; this.pockets(); } else if (c.slot >= 0) c.toTitle(); else this.title(); return true;
         case 'route': if (c.midNight && c.sim) { c.state = 'hem'; this.hem(); } else c.openHem(false); return true;   // mid-run: the same visit, so "one per visit" still holds
         case 'hem':   // a second view steps back to the first; then out to the main menu (a run in progress stays saved there as Continue run)
-          if (this.tab === 'pattern' && this.patView === 'ups') { this.patView = 'perks'; this.hem(); }
+          if (this.tab === 'pattern' && this.patView !== 'perks') { this.patView = 'perks'; this.hem(); }
           else if (this.tab === 'book' && this.bookView === 'foes') { this.bookView = 'charts'; this.hem(); }
           else c.toTitle();
           return true;
@@ -308,7 +312,17 @@
         <div class="row mchips">
           <button class="chip" data-act="settings">Settings</button>
           <button class="chip" data-act="mode">Difficulty: ${C.MODES[ST.modeUnlocked(p, st.mode) ? st.mode : 'normal'].name}${Object.keys(C.MODES).some(k => !ST.modeUnlocked(p, k)) ? ' (finish a run to unlock harder)' : ''}</button>
+          ${this.frayStepper()}
         </div></div>`, 'night', 'menu');
+    }
+
+    /* The Fray dial: opens for a mode after its first full clear. A compact stepper next to the difficulty: Less, the step, More. */
+    frayStepper() {
+      const p = this.p, top = ST.frayOpen(p, ST.modeUnlocked(p, p.settings.mode) ? p.settings.mode : 'normal'); if (!top) return '';
+      const fs = ST.frayStep(p), pay = Math.round(C.FRAY.pay * fs * 100);
+      return `<span class="fraystep" role="group" aria-label="Fray: ${esc(C.frayLine(fs))}"><button class="chip" data-act="fray" data-arg="down" aria-label="Lower the Fray" ${fs ? '' : 'disabled'}>Less</button>
+        <span class="frayin"><b>Fray ${fs || 'off'}</b><span>${fs ? '+' + pay + '% coins and gems' : 'Harder, pays more'}</span></span>
+        <button class="chip" data-act="fray" data-arg="up" aria-label="Raise the Fray" ${fs < top ? '' : 'disabled'}>More</button></span>`;
     }
 
     // ---------- the Night's route ----------
@@ -343,7 +357,7 @@
       const c = this.ctl, f = this.ledgerFilter || 'all', p = this.p;
       const rows = c.store.ledger().filter(r => f === 'all' || r.needle === f).slice(0, 12);
       const tabs = [['all', 'All ships']].concat(Object.keys(C.NEEDLES).map(n => [n, C.NEEDLES[n].name]));
-      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
+      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + (r.fray ? ', Fray ' + r.fray : '') + ')' : r.fray ? ' (Fray ' + r.fray + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
         : '<tr><td colspan="6" class="none">No runs on record yet.</td></tr>';
       const marks = [['Perfect bonus waves', p.stats.perfectSamplers || 0]].concat(Object.keys(C.KEEPERS).map(id => [C.KEEPERS[id].name + ' defeated', p.codex.keepers[id] || 0]), [['Longest twin-ship streak', (p.stats.longestDouble || 0) + ' waves']]);
       const view = this.ledgerView === 'stats' ? 'stats' : 'runs';
@@ -399,14 +413,16 @@
       }
     }
     /* Which selection a pick belongs to: the Perks and Collection tabs each hold two views. */
-    selKey() { return this.tab === 'pattern' && this.patView === 'ups' ? 'ups' : this.tab === 'book' && this.bookView === 'foes' ? 'foes' : this.tab; }
+    selKey() { return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && this.bookView === 'foes' ? 'foes' : this.tab; }
     /* A two-way switch in the strip's slot, for the tabs that hold two views. */
     seg(act, label, opts, cur) {
-      return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b><span>${o[2]} of ${o[3]}</span></button>`).join('')}</nav>`;
+      return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b>${o[2] === '' ? '' : `<span>${o[2]} of ${o[3]}</span>`}</button>`).join('')}</nav>`;
     }
     perkSeg() {
-      const p = this.p, nP = Object.keys(C.PATTERN.nodes), nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
-      return this.seg('pview', 'Bought with gems', [['perks', 'Perks', nP.filter(k => p.pattern[k]).length, nP.length], ['ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length]], this.patView === 'ups' ? 'ups' : 'perks');
+      const p = this.p, nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up), rowsOf = more => C.PATTERN.rows.filter(r => (r.tier || 0) > 0 === more).reduce((a, r) => a.concat(r.nodes), []);
+      const n1 = rowsOf(false), n2 = rowsOf(true);
+      return this.seg('pview', 'Bought with gems', [['perks', 'Perks', n1.filter(k => p.pattern[k]).length, n1.length], ['more', 'More perks', n2.filter(k => p.pattern[k]).length, n2.length],
+        ['ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length], ['exch', 'Exchange', '', '']], PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : 'perks');
     }
     bookSeg() {
       const p = this.p, ch = Object.keys(C.CHARTS), mo = Object.keys(C.MOTHS), ke = Object.keys(C.KEEPERS);
@@ -452,7 +468,8 @@
     }
     stamp(head, sub, none) { return `<div class="stamp ${none ? 'none' : ''}"><b>${head}</b>${sub ? `<span>${sub}</span>` : ''}</div>`; }
     list(items, selId) {
-      let h = items.map(i => `<button class="card ${i.id === selId ? 'sel' : ''} ${i.lock ? 'lock' : ''}" data-act="pick" data-arg="${i.id}" aria-pressed="${i.id === selId}"><span class="cic">${i.icon || ''}</span><span class="cname" data-fit="3">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('');
+      const on = i => Array.isArray(selId) ? selId.indexOf(i.id) >= 0 : i.id === selId;
+      let h = items.map(i => `<button class="card ${on(i) ? 'sel' : ''} ${i.lock ? 'lock' : ''}" data-act="pick" data-arg="${i.id}" aria-pressed="${on(i)}"><span class="cic">${i.icon || ''}</span><span class="cname" data-fit="3">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('');
       for (let i = items.length; i < 10; i++) h += '<span class="ghost" aria-hidden="true"></span>';
       return `<div class="list">${h}</div>`;
     }
@@ -489,20 +506,28 @@
       return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<i class="spool" style="--c:${t.color}"></i>`, name: t.name,
         kick: 'Weapon · ' + esc(t.job.toLowerCase()) + (lead ? ' · your lead' : bob ? ' · on your bobbin' : ''), desc: t.desc, rows, left, buy }) };
     }
+    /* Ship upgrades have no top level. Names and numbers: the list shows the plain level; the details show it in Roman numerals, with
+       five pips for the stretch you are in (the last one is the next bonus level). */
     st_bench() {
       const p = this.p, ids = Object.keys(C.TEMPERS), sel = this.sel.bench && C.TEMPERS[this.sel.bench] ? this.sel.bench : 'point';
-      const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
-        return { id, name: t.name, icon: `<b class="lv">${lv}/${t.max}</b>`, meta: lv >= t.max ? 'Max level' : st.why === 'sealed' ? 'Level IV locked' : dustTag(st.price, 'sm') }; });
-      const t = C.TEMPERS[sel], st = S.temperState(p, sel), lv = p.tempers[sel], next = Math.min(t.max, lv + 1);
+      const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id] || 0, st = S.temperState(p, id);
+        return { id, name: t.name, icon: `<b class="lv">${lv}</b>`, meta: st.why === 'sealed' ? 'Level ' + ROMAN[lv + 1] + ' locked' : dustTag(st.price, 'sm') }; });
+      const t = C.TEMPERS[sel], st = S.temperState(p, sel), lv = p.tempers[sel] || 0, next = lv + 1;
       let move = '';
-      if (lv < t.max) { const q = this.clone(); q.tempers[sel] = lv + 1; this.preview = q; const a = this.flight(p), b = this.flight(q);
+      { const q = this.clone(); q.tempers[sel] = next; this.preview = q; const a = this.flight(p), b = this.flight(q);
         for (const [k, lab, dp] of [['dmg', 'damage', 2], ['rate', 'shots a second', 1], ['ply', 'shield', 0], ['speed', 'speed', 1]]) if (Math.abs(b[k] - a[k]) > 1e-6) move = `: ${lab} ${a[k].toFixed(dp)} ${ARROW} <b>${b[k].toFixed(dp)}</b>`; }
-      const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Level ${ROMAN[next]} needs a blueprint, dropped by: ${esc(C.CHARTS.bp_gilt.from)}.` }]
-        : lv < t.max ? [{ k: 'Next', v: `Level ${ROMAN[next]}${move}.` }] : [{ k: 'Level ' + ROMAN[lv], v: 'Fully upgraded.' }];
-      let marks = '<span class="pips">'; for (let i = 0; i < t.max; i++) marks += `<i class="${i < lv ? 'on' : i === lv && st.ok ? 'next' : ''}"></i>`; marks += '</span>';
-      const buy = st.ok ? this.buyBtn(st, 'dust', 'Upgrade', 'temper:' + sel, 'to level ' + ROMAN[next]) : lv >= t.max ? this.stamp('Max level', 'Level ' + ROMAN[lv]) : this.buyBtn(st, 'dust', 'Upgrade');
-      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<b class="lvpic">${ROMAN[next]}</b>`, name: t.name, kick: 'Upgrade · every ship, for good',
-        desc: t.desc + '.', rows, left: `<div class="lvrow"><span>Level <b>${lv}</b> of ${t.max}</span>${marks}</div>`, buy }) };
+      const mk = C.temperNextMark(sel, lv), mark = mk ? t.marks[mk] : null, got = Object.keys(t.marks).map(Number).filter(n => n <= lv).length;
+      const rows = (st.why === 'sealed' ? [{ k: 'Locked', v: `Level ${ROMAN[next]} needs a blueprint, dropped by: ${esc(C.CHARTS.bp_gilt.from)}.` }]
+        : [{ k: 'Next', v: `Level ${ROMAN[next]}${move || ': no change to your numbers'}.` }])
+        .concat(next === mk ? [{ k: 'Bonus', v: `${esc(mark.name)}: ${esc(mark.desc)}.` }] : []);
+      const bonus = mk ? `Bonus at ${ROMAN[mk]}` : got ? `${got} bonuses` : '';
+      // five pips: the levels of this stretch (VI to X, XI to XV...); levels I to V are the first stretch
+      const base = Math.floor(Math.max(0, lv - (lv % 5 === 0 && lv > 0 ? 1 : 0)) / 5) * 5, inBlock = lv - base;
+      let marks = '<span class="pips">'; for (let i = 0; i < 5; i++) marks += `<i class="${i < inBlock ? 'on' : i === inBlock && st.ok ? 'next' : ''}"></i>`; marks += '</span>';
+      const buy = st.ok ? this.buyBtn(st, 'dust', 'Upgrade', 'temper:' + sel, 'to level ' + ROMAN[next]) : this.buyBtn(st, 'dust', 'Upgrade');
+      const rn = ROMAN[next], sc = rn.length <= 3 ? 1 : rn.length <= 5 ? 0.7 : 0.5;
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<b class="lvpic"${sc < 1 ? ` style="--k:${sc}"` : ''}>${rn}</b>`, name: t.name, kick: 'Upgrade · every ship, for good',
+        desc: t.desc + '.', rows, left: `<div class="lvrow"><span>Level <b>${lv ? ROMAN[lv] : '0'}</b>${bonus ? ' · ' + bonus : ''}</span>${marks}</div>`, buy }) };
     }
     st_notions() {
       const p = this.p, ids = Object.keys(C.NOTIONS), sel = this.sel.notions && C.NOTIONS[this.sel.notions] ? this.sel.notions : 'thimble', visit = this.ctl.visit;
@@ -534,17 +559,51 @@
     }
     st_pattern() {
       if (this.patView === 'ups') return this.st_ups();
-      const p = this.p, all = C.PATTERN.nodes, sel = this.sel.pattern && all[this.sel.pattern] ? this.sel.pattern : 'steady';
-      const grid = `<div class="sampler">${C.PATTERN.rows.map(r => `<div class="srow"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
-        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Unlocked' : all[id].cost + ' gems'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
-      const n = all[sel], st = S.patternState(p, sel), ri = C.PATTERN.rows.findIndex(r => r.nodes.includes(sel)), row = C.PATTERN.rows[ri];
+      if (this.patView === 'exch') return this.st_exch();
+      const more = this.patView === 'more', key = more ? 'more' : 'pattern', p = this.p, all = C.PATTERN.nodes;
+      const rows = C.PATTERN.rows.filter(r => (r.tier || 0) > 0 === more), ids = rows.reduce((a, r) => a.concat(r.nodes), []);
+      const sel = this.sel[key] && ids.indexOf(this.sel[key]) >= 0 ? this.sel[key] : ids[0];
+      const cols = more ? 4 : 3;
+      const grid = `<div class="sampler">${rows.map(r => `<div class="${more ? 'urow' : 'srow'}"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
+        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' || st.why === 'tier' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? (more ? 'Owned' : 'Unlocked') : more ? all[id].cost + '<span class="sr"> gems</span>' : all[id].cost + ' gems'}</span></button>`; }).join('')
+          + '<span class="ghost" aria-hidden="true"></span>'.repeat(cols - r.nodes.length)}</div>`).join('')}${more ? `<p class="snote">${this.tierNote()}</p>` : ''}</div>`;
+      const n = all[sel], st = S.patternState(p, sel), row = rows.find(r => r.nodes.includes(sel)), ri = C.PATTERN.rows.indexOf(row);
       // a perk that moves one of the ship's numbers shows it, before and after
       let moved = ''; if (!p.pattern[sel]) { const q = this.clone(); q.pattern[sel] = true; const a = this.flight(p), b = this.flight(q);
         for (const [k, lab, dp, unit] of [['dmg', 'Damage', 2, ''], ['rate', 'Fire rate', 1, '/s'], ['ply', 'Shield', 0, ''], ['speed', 'Speed', 1, '']]) if (Math.abs(b[k] - a[k]) > 1e-6) moved += `<span>${lab} <b class="mono">${a[k].toFixed(dp)}${unit}</b> ${ARROW} <em class="mono">${b[k].toFixed(dp)}${unit}</em></span>`; }
-      const pic = [icon(p.needle, 40), icon('dish', 40), icon('dust', 40), icon('thimble', 40), icon('charm', 40)][ri] || icon('charm', 40);
+      const pic = [icon(p.needle, 40), icon('dish', 40), icon('dust', 40), icon('thimble', 40), icon('charm', 40), icon('ripper', 40), icon('chart', 40), icon('silk', 40), icon('thimble', 40)][ri] || icon('charm', 40);
       const buy = st.ok ? this.buyBtn(st, 'silk', 'Unlock', 'pattern:' + sel) : st.why === 'owned' ? this.stamp('Unlocked', 'For good') : this.buyBtn(st, 'silk', 'Unlock');
-      return { sel, list: grid, detail: this.detail({ pic, name: n.name, kick: 'Perk · ' + esc(row.name.toLowerCase()) + ' row', desc: n.desc,
+      return { sel, list: grid, detail: this.detail({ pic, name: n.name, kick: 'Perk · ' + esc(row.name.toLowerCase()) + ' row' + ((row.tier || 0) ? ' · ' + esc(C.PATTERN.tiers[row.tier].name.toLowerCase()) : ''), desc: n.desc,
         left: moved || '<span>For good. Every ship, every run.</span>', buy }) };
+    }
+    /* The note under the second view's rows: what opens the next tier. */
+    tierNote() {
+      const p = this.p, T2 = C.PATTERN.tiers, in1 = S.patternIn(p, 0), in2 = S.patternIn(p, 1);
+      return in1 < T2[1].need ? `The second pattern opens after ${T2[1].need} perks from the first (you have ${in1}).` : in2 < T2[2].need ? `The third pattern opens after ${T2[2].need} perks from the second (you have ${in2}).` : 'Both patterns are open.';
+    }
+    /* The Exchange: coins to gems and back. Pick a way and a size; the rate before and after is on the page before you confirm. */
+    st_exch() {
+      const p = this.p, E = C.EXCH, dir = this.sel.exch === 'sell' ? 'sell' : 'buy', buy = dir === 'buy', c = this.ctl;
+      const sizes = [1, 5, 10, 50];
+      const q = (d, n) => ST.exchangeQuote(p, d, n), one = { buy: q('buy', 1), sell: q('sell', 1) };
+      // "as many as you can": gems you can pay for, or all the gems you hold (never past the limit)
+      let most = 0; if (buy) { let lo = 0, hi = E.maxTrade; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (q('buy', mid).afford) lo = mid; else hi = mid - 1; } most = lo; } else most = Math.min(E.maxTrade, Math.floor(p.silk));
+      const want = this.xn === 'max' ? Math.max(1, most) : sizes.indexOf(this.xn) >= 0 ? this.xn : 10, n = Math.min(want, E.maxTrade);
+      const qt = q(dir, n), coins = v => num(v) + ' coin' + (v === 1 ? '' : 's');
+      const items = [{ id: 'buy', name: 'Buy gems', icon: icon('silk', 26), meta: coins(one.buy.dust) + ' each' }, { id: 'sell', name: 'Sell gems', icon: icon('dust', 26), meta: coins(one.sell.dust) + ' each' }]
+        .concat(sizes.map(k => { const x = q(dir, k); return { id: 'n:' + k, name: k + (k === 1 ? ' gem' : ' gems'), icon: '', meta: coins(x.dust) }; }))
+        .concat([{ id: 'n:max', name: buy ? 'All I can pay for' : 'All my gems', icon: '', meta: most ? most + (most === 1 ? ' gem' : ' gems') : 'None' }]);
+      const sel = ['n:' + (this.xn === 'max' ? 'max' : sizes.indexOf(this.xn) >= 0 ? this.xn : 10), dir];
+      const desc = buy ? `Pay coins for gems. Each gem you buy makes the next one ${Math.round(E.buyStep * 100)}% dearer. The price settles back as you fly and starts fresh each morning.`
+        : `Sell gems for coins. Each gem you sell makes the next one pay ${Math.round(E.sellStep * 100)}% less. The price settles back as you fly and starts fresh each morning.`;
+      const rows = [{ k: 'Price now', v: `${coins(one[dir].dust)} a gem.` }, { k: 'This trade', v: buy ? `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` : `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` },
+        { k: 'After it', v: `${coins(qt.rateAfter)} a gem.` }, { k: 'Round trip', v: 'Always loses coins.', opt: true }];
+      const st = { ok: !!qt.afford && qt.ok, price: buy ? qt.dust : n, why: qt.afford ? 'buy' : 'short' };
+      const label = buy ? 'Buy ' + n + (n === 1 ? ' gem' : ' gems') : 'Sell ' + n + (n === 1 ? ' gem' : ' gems');
+      const btn = st.ok ? `<button class="btn primary buy" data-act="buy" data-arg="exch:${dir}" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'for ' + dustTag(qt.dust, 'sm') : 'for ' + dustTag(qt.dust, 'sm')}</span></button>`
+        : `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'Need ' + num(qt.dust - p.dust) + ' more coins' : 'Need ' + num(n - p.silk) + ' more gems'}</span></button>`;
+      return { sel: dir, list: this.list(items, sel), detail: this.detail({ pic: icon(buy ? 'silk' : 'dust', 40), name: buy ? 'Buy gems' : 'Sell gems', kick: 'Exchange · coins and gems', desc, rows,
+        left: `<span class="xhave">You have ${dustTag(p.dust, 'sm')} ${silkTag(p.silk, 'sm')}</span>`, buy: btn }) };
     }
     /* Power-up upgrades: each power-up that drops in flight has one stronger form, bought once with gems. Three rows; a row opens
        once two from the row before it are owned. The details set the power-up as it is now against what it becomes. */
@@ -584,6 +643,15 @@
     }
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p, before = this.flight(p), d0 = p.dust, s0 = p.silk;
+      if (kind === 'exch') {   // the Exchange: the same trade the page quoted, then the page again with the new rates
+        const dir = id === 'sell' ? 'sell' : 'buy', sizes = [1, 5, 10, 50];
+        let n = sizes.indexOf(this.xn) >= 0 ? this.xn : this.xn === 'max' ? 0 : 10;
+        if (!n) { n = 1; while (n < C.EXCH.maxTrade && (dir === 'buy' ? ST.exchangeQuote(p, 'buy', n + 1).afford : n + 1 <= p.silk)) n++; }
+        const r = this.ctl.exchange(dir, n);
+        if (r.ok) this.toast(dir === 'buy' ? 'Bought gems' : 'Sold gems', n + (n === 1 ? ' gem' : ' gems') + ' for ' + num(r.dust) + ' coins'); else this.snd('ui_fail');
+        this.hem(); if (r.ok) this.celebrate(before, d0, s0, null); else this.shake();
+        return;
+      }
       const from = this.pressEl && this.pressEl.isConnected ? this.pressEl.getBoundingClientRect() : null;
       const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
         : kind === 'charmup' ? S.buyCharmUp(p, id) : S.buyPattern(p, id);
@@ -702,7 +770,8 @@
       const nextMode = Object.keys(C.MODES).find(k => C.MODES[k].need === mode), firstWin = nextMode && (p.stats['won_' + mode] || 0) === 1;
       const rows = [['Coins earned this run', dustTag(res.nightDust || 0, '', 1)], ['Gems earned this run', silkTag(res.nightSilk || 0, '', 1)], ['Best combo', '×' + n(res.bestCombo || 0)]]
         .concat((res.charts || []).map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
-        .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : []);
+        .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : [])
+        .concat(s.frayOpened ? [['Fray ' + s.frayOpened, 'Unlocked', 'total', 1]] : []);
       this.show(`<div class="sheet finale won rise" data-fit="3">
         <div class="trophies" role="img" aria-label="All eight bosses defeated">${C.PANELS.map((pn, i) => `<span style="--i:${i}">${icon(C.KEEPERS[pn.keeper].sprite, 30)}</span>`).join('')}</div>
         <h1>Run complete</h1><p class="fsub">All eight stages cleared. Every boss defeated.</p>
@@ -823,7 +892,7 @@
         put(H.L.chart, `<table class="nchart"><tr><th></th>${C.PANELS.map((_, i) => `<th>${i + 1}</th>`).join('')}</tr>${C.STAGE_LABEL.map((lab, r) => `<tr><th>${lab}</th>${C.PANELS.map((_, pi) => {
           const dn = pi < sim.panel || (pi === sim.panel && r < sim.row) || (done && pi === sim.panel && r === sim.row);
           const cur = !dn && pi === sim.panel && r === sim.row; return `<td class="${dn ? 'done' : cur ? 'cur' : ''}"></td>`; }).join('')}</tr>`).join('')}</table>`); }
-      txt(H.L.stage, info.panelName + ' · ' + info.label + (sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''));
+      txt(H.L.stage, info.panelName + ' · ' + info.label + (sim.modeId !== 'normal' ? ' · ' + sim.mode.name : '') + (sim.fray ? ' · Fray ' + sim.fray : ''));
       const t1 = sim.curThread(), t2 = sim.secondThread(), th = C.THREADS[t1];
       put(H.L.threads, `<div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Lead · level ${ROMAN[p.threads[t1] || 1]}</span></div></div>${t2 ? `<div class="thread"><i class="spool" style="--c:${C.THREADS[t2].color}"></i><div><b>${esc(C.THREADS[t2].name)}</b><span>Bobbin · level ${ROMAN[p.threads[t2]]}</span></div></div>` : ''}`);
       // ---- lives, shield, purse ----

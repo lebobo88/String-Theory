@@ -590,6 +590,10 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .sheet p { font: 400 var(--t-md)/var(--lh-read) var(--text); }
 .sub { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-8); width: min(100%, 320px); } /* atelier-ignore: component width */
+.fraystep { display: inline-flex; align-items: center; gap: var(--sp-6); }
+.fraystep .chip:disabled { opacity: .45; }
+.frayin { display: flex; flex-direction: column; align-items: center; min-width: 0; font: 400 var(--t-cap)/var(--lh-tight) var(--text); color: var(--mist-hi); }
+.frayin b { font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--linen); }
 .row { display: flex; gap: var(--sp-8); flex-wrap: wrap; align-items: center; justify-content: center; }
 
 /* ---- title and main menu ---- */
@@ -754,8 +758,10 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .shipstrip .who > span { display: flex; flex-direction: column; min-width: 0; }
 .shipstrip .who b { font: 700 var(--t-md)/var(--lh-tight) var(--text); white-space: nowrap; }
 .shipstrip .stitch { position: absolute; left: var(--sp-8); right: var(--sp-8); bottom: var(--sp-2); height: 0; border-top: var(--ln-2) dashed var(--leaf-hi); transform-origin: 0 50%; transform: scaleX(0); opacity: 0; pointer-events: none; }
-.pseg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.shop .pseg .tabb { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-8); padding: 0 var(--sp-16); background: transparent; border: 0; border-left: var(--ln) dashed var(--dot); color: var(--linen); }
+.pseg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.snote { grid-row: 5; align-self: center; font: 400 var(--t-cap)/var(--lh-snug) var(--text); color: var(--ink-2); padding: 0 var(--sp-4); }
+.xhave { font: 400 var(--t-body)/var(--lh-snug) var(--text); }
+.shop .pseg .tabb { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: 0 var(--sp-4); background: transparent; border: 0; border-left: var(--ln) dashed var(--dot); color: var(--linen); }
 .shop .pseg .tabb:first-child { border-left: 0; }
 .shop .pseg .tabb span { font: 600 var(--t-cap)/1 var(--mono); color: var(--mist-hi); white-space: nowrap; }
 .shop .pseg .tabb.on { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 var(--ln-2) var(--coverlet), inset 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron); }
@@ -816,7 +822,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .dpic .ic { width: 64%; height: auto; max-height: 84%; }
 .dpic.unseen .ic { filter: brightness(0) opacity(.45); }
 .dpic .spool { width: 42%; height: 58%; }
-.dpic .lvpic { font: 400 var(--d-lg)/1 var(--display); color: var(--saffron-lit); }
+.dpic .lvpic { font: 400 calc(var(--d-lg) * var(--k, 1))/1 var(--display); color: var(--saffron-lit); }
 .dtitle { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: var(--sp-2); }
 .dname { font: 400 var(--d-lg)/1 var(--display); white-space: nowrap; overflow: hidden; flex: none; line-height: var(--d-name); height: var(--d-name); }   /* one line box whatever size the name is fitted to, so the name's slot never moves */
 .dname.fit-1 { font-size: var(--d-md); } .dname.fit-2 { font-size: var(--d-sm); } .dname.fit-3 { font-size: var(--d-xs); } .dname.fit-4 { font-size: var(--t-md); }
@@ -882,14 +888,14 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-body); line-height: 1; display: block; }
   .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
   .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
-  .shop .pseg .tabb { padding: 0 var(--sp-12); } .shop .pseg .tabb b { font-size: var(--t-body); }
+  .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
   .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
   .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .cname { font-size: var(--t-body); }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); letter-spacing: -.01em; }
   .dname { font-size: var(--d-md); } .dname.fit-1 { font-size: var(--d-sm); } .dname.fit-2 { font-size: var(--d-xs); } .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
-  .dpic .lvpic { font-size: var(--d-xs); }
+  .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
   .btn.buy .bl { font-size: var(--t-body); }
   .trayrow > span:first-child { display: none; }
   html.text-large .equip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } html.text-large .equip > span { display: none; }
@@ -950,7 +956,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .utile .un { display: none; }
-  .dpic .lvpic { font-size: var(--d-xs); }
+  .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
   .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }
   .detail { grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--tap); }
   .dname { font-size: var(--d-sm); } .dname.fit-1 { font-size: var(--d-xs); } .dname.fit-2, .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }

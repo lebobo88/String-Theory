@@ -458,13 +458,16 @@
     }
     closeBook() {   // a Night has ended: write it in the Ledger
       const r = this.sim && this.sim.record; if (!r || this.sim.booked) return; this.sim.booked = true;
-      this.store.record({ mender: this.profile.mender, needle: r.needle, stitches: r.stitches, reached: r.reached, won: r.won, date: new Date().toISOString().slice(0, 10) });
+      this.store.record({ mender: this.profile.mender, needle: r.needle, stitches: r.stitches, reached: r.reached, won: r.won, fray: r.fray | 0, date: new Date().toISOString().slice(0, 10) });
     }
 
     // ---------- flow ----------
     toTitle() { this.state = 'title'; this.sim = null; this.midNight = false; this.ui.hudVisible(false); this.renderer.clear(); if (this.slot < 0) this.ui.title(); else this.ui.menu(); }
     toPockets() { this.state = 'title'; this.sim = null; this.ui.hudVisible(false); this.ui.pockets(); }
-    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; this.ui.hudVisible(false); if (mid) this.keep('hem'); this.ui.hem(); }
+    /* The Exchange's overnight reset reads the calendar here, in the shell, and never in the sim. */
+    today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    exchange(dir, n) { ST.exchangeDay(this.profile, this.today()); const r = ST.exchange(this.profile, dir, n); if (r.ok) { this.sfx('buy'); this.saved(); } return r; }
+    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; if (ST.exchangeDay(this.profile, this.today())) this.saved(); this.ui.hudVisible(false); if (mid) this.keep('hem'); this.ui.hem(); }
     keep(at) { this.profile.run = at && this.sim ? this.sim.snapshot(at) : null; this.saved(); }
     continueRun() {
       const snap = this.profile.run; if (!snap) return this.beginNight();

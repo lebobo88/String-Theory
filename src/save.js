@@ -14,7 +14,8 @@
       v: VERSION, mender: 'Mender',
       dust: 0, silk: 0,
       needle: 'sharps', needles: { sharps: true },
-      thread: 'running', thread2: null, threads: { running: 1 },   // id -> weight (1..3)
+      thread: 'running', thread2: null, threads: { running: 1 },   // id -> level (1..10)
+      forks: {},                   // weapon id -> { a, b }: the option chosen at each fork bought (level IV, level VII)
       tempers: { point: 0, eye: 0, ply: 0, pace: 0, magnet: 0, luck: 0 },
       pattern: {},                 // node id -> true
       charmUps: {},                // power-up id -> true: that power-up drops in its upgraded form (C.CHARMS[id].up)
@@ -140,22 +141,54 @@
       if (C.NOTIONS[id].perVisit && visit) visit[id] = true;
       return R(true, 'bought');
     },
+    /* Weapons: buy (coins, or gems for the four newest), then levels II to X (VIII to X also take gems). why: 'buy' | 'weight' | 'owned' | 'sealed' | 'short'. */
     threadState(p, id) {
-      const t = C.THREADS[id], w = p.threads[id] || 0;
+      const t = C.THREADS[id], w = p.threads[id] || 0, top = t.lv.length;
       if (!w) {
         if (!has(p, t.chart)) return R(false, 'sealed');
-        return p.dust >= t.price ? R(true, 'buy', { price: t.price }) : R(false, 'short', { price: t.price });
+        const dust = t.price || 0, silk = t.silk || 0, cur = silk ? 'silk' : 'dust', price = silk || dust;
+        return p.dust >= dust && p.silk >= silk ? R(true, 'buy', { price, cur, dust, silk }) : R(false, 'short', { price, cur, dust, silk });
       }
-      if (w >= 3) return R(false, 'owned');
-      const price = Math.round(C.WEIGHT_COST[w] * bargainMul(p));
-      return p.dust >= price ? R(true, 'weight', { price, next: w + 1 }) : R(false, 'short', { price, next: w + 1 });
+      if (w >= top) return R(false, 'owned');
+      const dust = Math.round((C.WEIGHT_COST[w] || 0) * bargainMul(p)), silk = (C.WEIGHT_SILK && C.WEIGHT_SILK[w]) || 0;
+      const o = { price: dust, cur: 'dust', dust, silk, next: w + 1 };
+      if (p.dust < dust) return R(false, 'short', o);
+      if (p.silk < silk) return R(false, 'short', Object.assign(o, { cur: 'silk', price: silk }));
+      return R(true, 'weight', o);
     },
     buyThread(p, id) {
       const st = shop.threadState(p, id);
       if (!st.ok) return st;
-      p.dust -= st.price;
+      p.dust -= st.dust; p.silk -= st.silk;
       if (st.why === 'buy') { p.threads[id] = 1; shop.wind(p, id); } else p.threads[id] = st.next;
       return R(true, 'bought');
+    },
+    /* Forks: at level IV and level VII a weapon offers two options. The fork is bought once (the first with coins, the second with gems)
+       and the first option is taken; after that either can be chosen in the hideout for nothing (setFork). p.forks[id] = { a, b }. */
+    forkSlot(p, id) {
+      const t = C.THREADS[id], w = p.threads[id] || 0, f = (p.forks && p.forks[id]) || {};
+      return (t.forks || []).findIndex((fk, i) => w >= fk.at && !f[String.fromCharCode(97 + i)]);
+    },
+    forkState(p, id) {
+      const t = C.THREADS[id], w = p.threads[id] || 0, fs = t.forks || [], f = (p.forks && p.forks[id]) || {};
+      if (!w || !fs.length) return R(false, 'none');
+      const i = shop.forkSlot(p, id);
+      if (i < 0) { const next = fs.findIndex((fk, k) => !f[String.fromCharCode(97 + k)]); return next < 0 ? R(false, 'owned') : R(false, 'level', { at: fs[next].at, slot: next }); }
+      const c = C.FORK_COST[i] || C.FORK_COST[C.FORK_COST.length - 1], o = { slot: i, at: fs[i].at, dust: c.dust, silk: c.silk, cur: c.silk ? 'silk' : 'dust', price: c.silk || c.dust };
+      return p.dust >= c.dust && p.silk >= c.silk ? R(true, 'buy', o) : R(false, 'short', o);
+    },
+    buyFork(p, id, opt) {
+      const st = shop.forkState(p, id);
+      if (!st.ok) return st;
+      const fk = C.THREADS[id].forks[st.slot], o = fk.opts.find(x => x.id === opt) || fk.opts[0];
+      p.dust -= st.dust; p.silk -= st.silk;
+      p.forks = p.forks || {}; p.forks[id] = Object.assign({}, p.forks[id], { [String.fromCharCode(97 + st.slot)]: o.id });
+      return R(true, 'bought', { slot: st.slot, opt: o.id });
+    },
+    setFork(p, id, slot, opt) {   // free: switch between the two options of a fork already bought
+      const k = String.fromCharCode(97 + slot), fk = (C.THREADS[id].forks || [])[slot], f = p.forks && p.forks[id];
+      if (!fk || !f || !f[k] || !fk.opts.some(x => x.id === opt)) return false;
+      f[k] = opt; return true;
     },
     wind(p, id) {            // equip; the old thread hangs back on the wall, weight kept
       if (!p.threads[id] || p.thread === id) return;
@@ -197,7 +230,7 @@
       const i = row.nodes.indexOf(id);
       if (i > 0 && !p.pattern[row.nodes[i - 1]]) return R(false, 'locked');
       const left = shop.patternTierLeft(p, row.tier || 0);
-      if (left > 0) return R(false, 'tier', { price: C.PATTERN.nodes[id].cost, left, row: 'the ' + C.PATTERN.tiers[(row.tier || 0) - 1].name.toLowerCase() });
+      if (left > 0) return R(false, 'tier', { price: C.PATTERN.nodes[id].cost, left, row: (row.tier || 0) === 1 ? 'tier one' : 'tier two' });
       const price = C.PATTERN.nodes[id].cost;
       return p.silk >= price ? R(true, 'buy', { price }) : R(false, 'short', { price });
     },

@@ -85,7 +85,8 @@
       if (force) return b.shield && !stunned ? 0.25 : Math.max(1, stunned ? 1.5 : 1);
       if (b.shield && !stunned) return 0;
       if (sc.onDamage && !stunned) { const r = sc.onDamage(this, b, dmg, x, y, src); if (r === 'reflect') return r; if (typeof r === 'number') mul = r; }
-      if (soft && mul > 0 && !stunned) { b.fray += dmg * mul / (b.maxHp * (def.frayAt || 0.12)); if (b.fray >= 1) this.stunBoss(); }
+      { const fw = soft ? this.hitFray : this.hitFrayBody;   // weapons: the hit's own fray factor (weak spot) and body weight, set by sim.js (1 and 0 by default)
+        if (fw > 0 && mul > 0 && !stunned) { b.fray += dmg * mul * fw / (b.maxHp * (def.frayAt || 0.12)) * this.frayGain(); if (b.fray >= 1) this.stunBoss(); } }   // frayGain: Fray Dust (sim.js)
       b.softHit = soft && mul > 0;
       return mul;
     },

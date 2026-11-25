@@ -109,8 +109,8 @@ FIT = r"""(name) => { const out = { name, scroll: [], small: [], tiny: [], clip:
 MEASURE = MEASURE.replace('/*STATCELLS*/', STATCELLS); FIT = FIT.replace('/*STATCELLS*/', STATCELLS)
 RULES = ('scroll', 'small', 'tiny', 'clip', 'overlap', 'trunc', 'cut', 'unsafe')
 VPS = {'phoneS': (360, 640), 'phone': (390, 844), 'pixel': (412, 915), 'tablet': (820, 1180), 'tabletL': (1180, 820), 'phoneL': (844, 390), 'desktop': (1280, 720), 'phoneL2': (915, 412)}
-VIEWS = ['spool', 'bench', 'notions', 'case', 'pattern', 'ups', 'book', 'foes']
-SETVIEW = "t => { const u = ST.game.ui; u.patView = 'perks'; u.bookView = 'charts'; if (t === 'ups') { u.tab = 'pattern'; u.patView = 'ups'; } else if (t === 'foes') { u.tab = 'book'; u.bookView = 'foes'; } else u.tab = t; u.hem(); }"
+VIEWS = ['spool', 'bench', 'notions', 'case', 'pattern', 'more', 'ups', 'exch', 'book', 'foes']
+SETVIEW = "t => { const u = ST.game.ui; u.patView = 'perks'; u.bookView = 'charts'; if (t === 'ups' || t === 'more' || t === 'exch') { u.tab = 'pattern'; u.patView = t; } else if (t === 'foes') { u.tab = 'book'; u.bookView = 'foes'; } else u.tab = t; u.hem(); }"
 SNAP = r"""(args) => { const [base, img, veiled] = args; const c = document.documentElement.cloneNode(true);
   c.querySelectorAll('script, link[rel=preconnect], link[rel=preload], link[href*="fonts.g"]').forEach(s => s.remove());
   const cv = c.querySelector('#cloth'); if (cv) { const im = document.createElement('img'); im.id = 'cloth'; im.alt = ''; im.src = img; cv.replaceWith(im); }
@@ -328,7 +328,7 @@ def run(b, vn, mode):
   if not QUICK and mode != 'safe':
     # every item on every tab, in three states of the save: as it is, rich with every blueprint, and with everything bought
     for state, prep in (('', ''), ('rich', "p.dust = 90000; p.silk = 9000; Object.keys(C.CHARTS).forEach(k => p.charts[k] = true);"),
-                        ('owned', "Object.keys(C.THREADS).forEach(k => p.threads[k] = 3); Object.keys(C.NEEDLES).forEach(k => p.needles[k] = true); Object.keys(C.TEMPERS).forEach(k => p.tempers[k] = C.TEMPERS[k].max); Object.keys(C.PATTERN.nodes).forEach(k => p.pattern[k] = true); Object.keys(C.CHARMS).forEach(k => { if (C.CHARMS[k].up) p.charmUps[k] = true; }); Object.keys(C.MOTHS).forEach(k => p.codex.moths[k] = 1234); Object.keys(C.KEEPERS).forEach(k => p.codex.keepers[k] = 12); p.thread2 = 'backstitch';")):
+                        ('owned', "Object.keys(C.THREADS).forEach(k => p.threads[k] = 3); Object.keys(C.NEEDLES).forEach(k => p.needles[k] = true); Object.keys(C.TEMPERS).forEach(k => p.tempers[k] = 12); Object.keys(C.PATTERN.nodes).forEach(k => p.pattern[k] = true); Object.keys(C.CHARMS).forEach(k => { if (C.CHARMS[k].up) p.charmUps[k] = true; }); Object.keys(C.MOTHS).forEach(k => p.codex.moths[k] = 1234); Object.keys(C.KEEPERS).forEach(k => p.codex.keepers[k] = 12); p.thread2 = 'backstitch';")):
       if prep: pg.evaluate("() => { const p = ST.game.profile, C = ST.content; %s }" % prep)
       for t in VIEWS:
         pg.evaluate(SETVIEW, t)

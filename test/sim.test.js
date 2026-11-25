@@ -31,7 +31,15 @@ for (const c of Object.keys(C.CHARTS)) ok(unsealed.has(c), 'chart unseals someth
   p.dust = 5000; ok(S.buyThread(p, 'backstitch').ok && p.thread === 'backstitch' && p.dust === 4650, 'buy+wind thread');
   ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 2 && p.dust === 4250, 'weight II');
   ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 3 && p.dust === 3350, 'weight III');
-  ok(!S.buyThread(p, 'backstitch').ok, 'weight capped');
+  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 4 && p.dust === 2000, 'weight IV');
+  { const q = JSON.parse(JSON.stringify(p)); q.threads.backstitch = 7; q.dust = 1e6; q.silk = 100; const st = S.threadState(q, 'backstitch');
+    ok(st.why === 'weight' && st.silk === C.WEIGHT_SILK[7] && st.silk > 0, 'level VIII takes gems too'); q.silk = 0; ok(S.threadState(q, 'backstitch').why === 'short', 'level VIII short of gems');
+    q.threads.backstitch = 10; ok(S.threadState(q, 'backstitch').why === 'owned', 'weight capped at X');
+    q.threads.backstitch = 4; q.silk = 100; ok(S.forkState(q, 'backstitch').ok && S.buyFork(q, 'backstitch', 'tight').ok && q.forks.backstitch.a === 'tight', 'buy the level IV fork');
+    ok(S.forkState(q, 'backstitch').why === 'level', 'the second fork waits for level VII'); ok(S.setFork(q, 'backstitch', 0, 'wide') && q.forks.backstitch.a === 'wide', 'switch a fork for free');
+    q.threads.backstitch = 7; const d0 = q.dust, s0 = q.silk; ok(S.buyFork(q, 'backstitch').ok && q.forks.backstitch.b === 'slant' && q.silk === s0 - C.FORK_COST[1].silk && q.dust === d0, 'the second fork takes gems');
+    const old = ST.save.freshProfile(); delete old.forks; old.threads.backstitch = 3; ok(S.forkState(old, 'backstitch').why === 'level' && new ST.Sim(old, 1), 'an old save without forks still works');
+    q.dust = 0; q.silk = 1000; q.charts.bp_daisy = true; ok(S.threadState(q, 'daisy').why === 'buy' && S.buyThread(q, 'daisy').ok && q.silk === 1000 - C.THREADS.daisy.silk, 'new weapons are bought with gems'); }
   for (let i = 0; i < 3; i++) ok(S.buyTemper(p, 'point').ok, 'temper ' + i);
   ok(S.temperState(p, 'point').why === 'sealed', 'tier IV sealed'); p.charts.bp_gilt = true; p.dust = 9000;
   ok(S.buyTemper(p, 'point').ok && ST.derive(p).pierceCase, 'tier IV pierces cases');
@@ -156,7 +164,11 @@ function fly(profile, seed, skill, log) {
   }
   const p = ST.save.freshProfile('t'); ok(!new ST.Sim(p, 1).secondThread(), 'no bobbin weapon with one weapon');
   p.dust = 9999; ST.shop.buyThread(p, 'backstitch'); ok(p.thread === 'backstitch' && p.thread2 === 'running', 'buying a second weapon fills the bobbin');
-  for (const t of Object.values(C.THREADS)) ok(t.lv.length === 3 && t.weights.length === 3 && t.job, 'weapon levels: ' + t.name);
+  for (const [id, t] of Object.entries(C.THREADS)) {
+    ok(t.lv.length === 10 && t.weights.length === 10 && t.job && t.desc, 'weapon levels I to X: ' + t.name);
+    ok(t.forks && t.forks.length === 2 && t.forks[0].at === 4 && t.forks[1].at === 7 && t.forks.every(f => f.opts.length === 2 && f.opts.every(o => o.id && o.name && o.desc)), 'two forks of two: ' + t.name);
+    ok(t.mastery && t.mastery.name && t.pair && C.THREADS[t.pair.with] && C.THREADS[t.pair.with].pair.with === id && C.THREADS[t.pair.with].pair.name === t.pair.name, 'mastery and a matched pairing: ' + t.name);
+  }
 }
 { // power-up upgrades: content, purchase rules, save migration, and what each upgraded form does in flight
   const S = ST.shop, ids = Object.keys(C.CHARMS);
@@ -168,7 +180,7 @@ function fly(profile, seed, skill, log) {
   const cost = t => ids.filter(id => C.CHARMS[id].up.tier === t).map(id => C.CHARMS[id].up.cost);
   ok(Math.max(...cost(0)) < Math.min(...cost(1)) && Math.max(...cost(1)) < Math.min(...cost(2)), 'each row costs more than the one before');
   ok(Math.min(...cost(0)) <= 30, 'the cheapest upgrade is within a first run or two');
-  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1300, 'the full set is a real investment (' + total + ' gems)');
+  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1700, 'the full set is a real investment (' + total + ' gems)');
   ok(C.CHARMS.twin.up.name === 'Triple Ship', 'the twin ship becomes a triple ship');
 
   // purchase rules
@@ -201,7 +213,7 @@ function fly(profile, seed, skill, log) {
   // flight: a quiet test wave with one far-off moth so it never ends
   const bench = (ups, opt) => {
     const q = ST.save.freshProfile(); q.charmUps = {}; for (const id of ups) q.charmUps[id] = true; if (opt) opt(q);
-    const s = new ST.Sim(q, 9); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0;
+    const s = new ST.Sim(q, 9); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0; s.player.bombs = 0;   // no bombs held: a hit lands at once (the last-second save has its own test)
     s.spawn('nibbler', { state: 'form', slot: true, sx: 6.2, sy: 17.8, row: 0, hp: 999 }); return s;
   };
   const step = (s, sec, inp) => { const ev = []; for (let f = 0; f < sec * 60; f++) { s.update(1 / 60, Object.assign({ fire: false, notion: -1, dash: 0, targetX: s.player.x }, inp)); ev.push(...s.events); } return ev; };
@@ -278,12 +290,15 @@ function fly(profile, seed, skill, log) {
     ok(drones(false) === 1 && drones(true) === 2, 'Twin Drones fire two drone shots');
     const s = bench(['drone']); s.charm('drone'); s.p.tray = [{ id: 'drone', n: 1 }]; s.useNotion(0); ok(s.fxUp.drone, 'the Bobbin Drone item does not cancel running Twin Drones');
   }
-  { // Grand Unravel: twice the damage, every enemy shot becomes a coin
+  { // Grand Unravel: bombs you use hit twice as hard and turn every enemy shot into a coin
     const blast = up => { const s = bench(up ? ['bomb'] : []); const e = s.spawn('weevil', { state: 'form', slot: true, sx: 0, sy: 12, row: 2 }); e.hp = 20;
-      for (let i = 0; i < 5; i++) s.eshot('frass', -4 + i * 2, 10, 0, -1); const n0 = s.drops.length; s.charm('bomb'); return { dmg: 20 - e.hp, coins: s.drops.length - n0, left: s.eshots.length }; };
+      for (let i = 0; i < 5; i++) s.eshot('frass', -4 + i * 2, 10, 0, -1); const n0 = s.drops.length; s.player.bombs = 1; s.useBomb(); return { dmg: 20 - e.hp, coins: s.drops.length - n0, left: s.eshots.length, stock: s.player.bombs }; };
     const a = blast(false), b2 = blast(true);
     ok(a.left === 0 && b2.left === 0, 'both forms clear enemy shots');
     ok(Math.abs(b2.dmg - 2 * a.dmg) < 1e-6 && b2.coins === 5 && a.coins === 0, 'Grand Unravel hits twice as hard and turns shots into coins');
+    ok(a.stock === 0, 'using a bomb spends one from the stock');
+    const s = bench([]); s.player.bombs = 1; s.charm('bomb'); ok(s.player.bombs === 2, 'the Bomb power-up adds one to the stock instead of firing');
+    s.charm('bomb'); s.charm('bomb'); ok(s.player.bombs === s.player.bombMax && s.player.bombMax >= 3, 'the stock holds three');
   }
   { // Triple Ship: three ships fire, each hit costs one
     const s = bench(['twin'], q => { q.tempers.ply = 0; }); s.charm('twin'); ok(s.player.wings === 2 && s.player.dual, 'Triple Ship gives two extra ships');
