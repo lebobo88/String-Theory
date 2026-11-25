@@ -13,6 +13,10 @@
 .sheet p { font: 400 var(--t-md)/var(--lh-read) var(--text); }
 .sub { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-8); width: min(100%, 320px); } /* atelier-ignore: component width */
+.fraystep { display: inline-flex; align-items: center; gap: var(--sp-6); }
+.fraystep .chip:disabled { opacity: .45; }
+.frayin { display: flex; flex-direction: column; align-items: center; min-width: 0; font: 400 var(--t-cap)/var(--lh-tight) var(--text); color: var(--mist-hi); }
+.frayin b { font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--linen); }
 .row { display: flex; gap: var(--sp-8); flex-wrap: wrap; align-items: center; justify-content: center; }
 
 /* ---- title and main menu ---- */

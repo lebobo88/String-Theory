@@ -31,7 +31,15 @@ for (const c of Object.keys(C.CHARTS)) ok(unsealed.has(c), 'chart unseals someth
   p.dust = 5000; ok(S.buyThread(p, 'backstitch').ok && p.thread === 'backstitch' && p.dust === 4650, 'buy+wind thread');
   ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 2 && p.dust === 4250, 'weight II');
   ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 3 && p.dust === 3350, 'weight III');
-  ok(!S.buyThread(p, 'backstitch').ok, 'weight capped');
+  ok(S.buyThread(p, 'backstitch').ok && p.threads.backstitch === 4 && p.dust === 2000, 'weight IV');
+  { const q = JSON.parse(JSON.stringify(p)); q.threads.backstitch = 7; q.dust = 1e6; q.silk = 100; const st = S.threadState(q, 'backstitch');
+    ok(st.why === 'weight' && st.silk === C.WEIGHT_SILK[7] && st.silk > 0, 'level VIII takes gems too'); q.silk = 0; ok(S.threadState(q, 'backstitch').why === 'short', 'level VIII short of gems');
+    q.threads.backstitch = 10; ok(S.threadState(q, 'backstitch').why === 'owned', 'weight capped at X');
+    q.threads.backstitch = 4; q.silk = 100; ok(S.forkState(q, 'backstitch').ok && S.buyFork(q, 'backstitch', 'tight').ok && q.forks.backstitch.a === 'tight', 'buy the level IV fork');
+    ok(S.forkState(q, 'backstitch').why === 'level', 'the second fork waits for level VII'); ok(S.setFork(q, 'backstitch', 0, 'wide') && q.forks.backstitch.a === 'wide', 'switch a fork for free');
+    q.threads.backstitch = 7; const d0 = q.dust, s0 = q.silk; ok(S.buyFork(q, 'backstitch').ok && q.forks.backstitch.b === 'slant' && q.silk === s0 - C.FORK_COST[1].silk && q.dust === d0, 'the second fork takes gems');
+    const old = ST.save.freshProfile(); delete old.forks; old.threads.backstitch = 3; ok(S.forkState(old, 'backstitch').why === 'level' && new ST.Sim(old, 1), 'an old save without forks still works');
+    q.dust = 0; q.silk = 1000; q.charts.bp_daisy = true; ok(S.threadState(q, 'daisy').why === 'buy' && S.buyThread(q, 'daisy').ok && q.silk === 1000 - C.THREADS.daisy.silk, 'new weapons are bought with gems'); }
   for (let i = 0; i < 3; i++) ok(S.buyTemper(p, 'point').ok, 'temper ' + i);
   ok(S.temperState(p, 'point').why === 'sealed', 'tier IV sealed'); p.charts.bp_gilt = true; p.dust = 9000;
   ok(S.buyTemper(p, 'point').ok && ST.derive(p).pierceCase, 'tier IV pierces cases');
@@ -114,13 +122,13 @@ function fly(profile, seed, skill, log) {
     for (const ev of sim.events) { seen[ev.t] = (seen[ev.t] || 0) + 1; if (ev.t === 'stageclear') { stages++; if (ev.sampler) samplers.push(ev.sampler); if (ev.last) out = 'won'; else { if (sim.advance() === 'hem') sim.setPatch(C.PANELS[sim.panel].patches.slice(-1)[0]); sim.startStage(); } } }
   }
   ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 8, 'eight bosses defeated');
-  ok(stages === 40, 'forty stages on the chart'); ok(samplers.length === 8 && samplers.every(x => x.total === 40), 'eight bonus waves of 40');
+  ok(stages === 40, 'forty stages on the chart'); ok(samplers.length === 8 && samplers.every(x => x.total === 40 || x.total === 18 || x.total === 24), 'eight bonus waves (40 moths, 18 gold, or 24 threads)');
   ok(p.codex.keepers.greatlappet && p.codex.keepers.greatwick && seen.burn, 'stand-in Keepers fought');
   ok(seen.net && seen.strike && seen.glare && seen.phase >= 12, 'every boss phase seen');
   ok(p.charts.bp_herringbone && p.charts.bp_chain && p.charts.bp_beading, 'Keeper charts found');
   ok(p.stats.mended === 1 && p.silk >= 40, 'night mended, silk banked');
   ok(sim.record && sim.record.reached === 'Run completed', 'ledger record');
-  for (const pat of ['rosette', 'eight', 'wave', 'spiral', 'heart', 'star']) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
+  for (const pat of C.SAMPLER.figures) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
   const r0 = sim.pathPoint('rosette', 0); ok(Math.abs(r0.x - 4.72) < 0.01 && Math.abs(r0.y - 10.33) < 0.01, 'rosette starts at the right lobe tip');
   console.log('samplers:', samplers.map(x => x.hit + '/' + x.total).join(' '), 'perfect', sim.perfectSamplers);
   console.log('god-mode:', { minutes: +(frames / 3600).toFixed(1), stitches: sim.stitches, dust: sim.nightDust, silk: sim.nightSilk, charts: sim.nightCharts });
@@ -156,10 +164,15 @@ function fly(profile, seed, skill, log) {
   }
   const p = ST.save.freshProfile('t'); ok(!new ST.Sim(p, 1).secondThread(), 'no bobbin weapon with one weapon');
   p.dust = 9999; ST.shop.buyThread(p, 'backstitch'); ok(p.thread === 'backstitch' && p.thread2 === 'running', 'buying a second weapon fills the bobbin');
-  for (const t of Object.values(C.THREADS)) ok(t.lv.length === 3 && t.weights.length === 3 && t.job, 'weapon levels: ' + t.name);
+  for (const [id, t] of Object.entries(C.THREADS)) {
+    ok(t.lv.length === 10 && t.weights.length === 10 && t.job && t.desc, 'weapon levels I to X: ' + t.name);
+    ok(t.forks && t.forks.length === 2 && t.forks[0].at === 4 && t.forks[1].at === 7 && t.forks.every(f => f.opts.length === 2 && f.opts.every(o => o.id && o.name && o.desc)), 'two forks of two: ' + t.name);
+    ok(t.mastery && t.mastery.name && t.pair && C.THREADS[t.pair.with] && C.THREADS[t.pair.with].pair.with === id && C.THREADS[t.pair.with].pair.name === t.pair.name, 'mastery and a matched pairing: ' + t.name);
+  }
 }
 { // power-up upgrades: content, purchase rules, save migration, and what each upgraded form does in flight
-  const S = ST.shop, ids = Object.keys(C.CHARMS);
+  const S = ST.shop, allIds = Object.keys(C.CHARMS), ids = allIds.filter(id => C.CHARMS[id].up);
+  ok(allIds.filter(id => !C.CHARMS[id].up).sort().join() === 'mirror,recharge,tack', 'only the three that gain nothing from a gem have no upgrade');
   ok(C.CHARM_TIERS.length === 3 && C.CHARM_TIERS[0].need === 0, 'three rows of power-up upgrades, the first open');
   for (const id of ids) { const c = C.CHARMS[id], u = c.up;
     ok(u && u.name && u.name !== c.name && u.desc && u.desc !== c.desc && typeof u.dur === 'number' && u.cost > 0 && C.CHARM_TIERS[u.tier], 'power-up upgrade defined: ' + id);
@@ -168,7 +181,7 @@ function fly(profile, seed, skill, log) {
   const cost = t => ids.filter(id => C.CHARMS[id].up.tier === t).map(id => C.CHARMS[id].up.cost);
   ok(Math.max(...cost(0)) < Math.min(...cost(1)) && Math.max(...cost(1)) < Math.min(...cost(2)), 'each row costs more than the one before');
   ok(Math.min(...cost(0)) <= 30, 'the cheapest upgrade is within a first run or two');
-  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1300, 'the full set is a real investment (' + total + ' gems)');
+  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1400, 'the full set is a real investment (' + total + ' gems)');
   ok(C.CHARMS.twin.up.name === 'Triple Ship', 'the twin ship becomes a triple ship');
 
   // purchase rules
@@ -201,7 +214,7 @@ function fly(profile, seed, skill, log) {
   // flight: a quiet test wave with one far-off moth so it never ends
   const bench = (ups, opt) => {
     const q = ST.save.freshProfile(); q.charmUps = {}; for (const id of ups) q.charmUps[id] = true; if (opt) opt(q);
-    const s = new ST.Sim(q, 9); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0;
+    const s = new ST.Sim(q, 9); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0; s.player.bombs = 0;   // no bombs held: a hit lands at once (the last-second save has its own test)
     s.spawn('nibbler', { state: 'form', slot: true, sx: 6.2, sy: 17.8, row: 0, hp: 999 }); return s;
   };
   const step = (s, sec, inp) => { const ev = []; for (let f = 0; f < sec * 60; f++) { s.update(1 / 60, Object.assign({ fire: false, notion: -1, dash: 0, targetX: s.player.x }, inp)); ev.push(...s.events); } return ev; };
@@ -278,12 +291,15 @@ function fly(profile, seed, skill, log) {
     ok(drones(false) === 1 && drones(true) === 2, 'Twin Drones fire two drone shots');
     const s = bench(['drone']); s.charm('drone'); s.p.tray = [{ id: 'drone', n: 1 }]; s.useNotion(0); ok(s.fxUp.drone, 'the Bobbin Drone item does not cancel running Twin Drones');
   }
-  { // Grand Unravel: twice the damage, every enemy shot becomes a coin
+  { // Grand Unravel: bombs you use hit twice as hard and turn every enemy shot into a coin
     const blast = up => { const s = bench(up ? ['bomb'] : []); const e = s.spawn('weevil', { state: 'form', slot: true, sx: 0, sy: 12, row: 2 }); e.hp = 20;
-      for (let i = 0; i < 5; i++) s.eshot('frass', -4 + i * 2, 10, 0, -1); const n0 = s.drops.length; s.charm('bomb'); return { dmg: 20 - e.hp, coins: s.drops.length - n0, left: s.eshots.length }; };
+      for (let i = 0; i < 5; i++) s.eshot('frass', -4 + i * 2, 10, 0, -1); const n0 = s.drops.length; s.player.bombs = 1; s.useBomb(); return { dmg: 20 - e.hp, coins: s.drops.length - n0, left: s.eshots.length, stock: s.player.bombs }; };
     const a = blast(false), b2 = blast(true);
     ok(a.left === 0 && b2.left === 0, 'both forms clear enemy shots');
     ok(Math.abs(b2.dmg - 2 * a.dmg) < 1e-6 && b2.coins === 5 && a.coins === 0, 'Grand Unravel hits twice as hard and turns shots into coins');
+    ok(a.stock === 0, 'using a bomb spends one from the stock');
+    const s = bench([]); s.player.bombs = 1; s.charm('bomb'); ok(s.player.bombs === 2, 'the Bomb power-up adds one to the stock instead of firing');
+    s.charm('bomb'); s.charm('bomb'); ok(s.player.bombs === s.player.bombMax && s.player.bombMax >= 3, 'the stock holds three');
   }
   { // Triple Ship: three ships fire, each hit costs one
     const s = bench(['twin'], q => { q.tempers.ply = 0; }); s.charm('twin'); ok(s.player.wings === 2 && s.player.dual, 'Triple Ship gives two extra ships');
@@ -300,6 +316,41 @@ function fly(profile, seed, skill, log) {
     const q = ST.save.freshProfile(); for (const id of all) q.charmUps[id] = true; q.threads = { backstitch: 2, running: 2 }; q.thread = 'backstitch'; q.thread2 = 'running';
     const keep = C.TUNING.charmChance; C.TUNING.charmChance = 0.3; const r = fly(q, 21, true, null); C.TUNING.charmChance = keep;
     ok(r.outcome && r.seen.charm > 20, 'a run with every upgraded power-up ends cleanly (' + r.outcome + ', ' + (r.seen.charm || 0) + ' pickups)');
+  }
+}
+// --- rework: the bomb stock, the last-second save and the loose threads a boss sheds ---
+{
+  const mk = (opt) => { const q = ST.save.freshProfile(); if (opt) opt(q); const s = new ST.Sim(q, 11); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0; s.spawn('nibbler', { state: 'form', slot: true, sx: 6.2, sy: 17.8, row: 0, hp: 999 }); return s; };   // one far-off moth keeps the wave open
+  const go = (s, sec, inp) => { const ev = []; for (let f = 0; f < Math.round(sec * 60); f++) { s.update(1 / 60, Object.assign({ fire: false, notion: -1, dash: 0, targetX: s.player.x }, inp)); ev.push(...s.events); } return ev; };
+  { // the stock: one to start, three at most, a pickup adds one, none held means nothing fires
+    const s = mk(); ok(s.player.bombs === 1 && s.player.bombMax === 3, 'a run starts with one bomb and room for three');
+    s.player.bombs = 3; s.charm('bomb'); ok(s.player.bombs === 3, 'a pickup at a full stock adds none');
+    s.player.bombs = 0; ok(s.useBomb() === false && s.player.bombs === 0, 'with no bomb held the button does nothing');
+    s.player.bombs = 2; ok(s.useBomb() === true && s.player.bombs === 1, 'using a bomb spends one');
+    const q = mk(p => { p.pattern.bombPlus = true; }); go(q, 0.05); ok(q.player.bombMax >= 3, 'a Spare Bomb perk never lowers the ceiling');
+    const t = mk(); t.player.bombs = 1; const ev = []; t.input = {}; ev.push(...go(t, 0.05, { bomb: true })); ok(t.player.bombs === 0 && ev.some(e => e.t === 'bomb'), 'the bomb input fires one bomb and says so');
+    ok(t.player.invuln >= 1.4, 'a bomb keeps the ship safe for about a second and a half');
+    t.eshot('frass', 0, 10, 0, -1); ok(t.eshots.length === 1, 'bench: one shot in the air'); t.player.bombs = 1; t.useBomb(); ok(t.eshots.length === 0, 'a bomb clears the enemy shots');
+  }
+  { // last-second save: with a bomb held a hit waits 0.15 s; a bomb inside the window cancels it, otherwise it lands
+    const s = mk(); s.player.bombs = 1; const ply = s.player.ply;
+    s.hurt(); ok(s.hitBuf > 0 && s.player.ply === ply, 'with a bomb held a hit waits before it lands');
+    const ev = go(s, 0.05, { bomb: true }); ok(s.player.ply === ply && s.player.bombs === 0, 'a bomb inside the window cancels the hit');
+    ok(ev.some(e => e.t === 'bomb' && e.save), 'the bomb event says it was a save');
+    go(s, 0.3); ok(s.player.ply === ply, 'and the cancelled hit does not land later');
+    const u = mk(); u.player.bombs = 1; const ply2 = u.player.ply; u.hurt(); go(u, 0.3); ok(u.player.ply === ply2 - 1 && u.player.bombs === 1, 'with no bomb pressed the hit lands once the window ends and the bomb is kept');
+    const w = mk(); w.player.bombs = 1; w.hurt(); w.hurt(); w.hurt(); go(w, 0.3); ok(w.player.ply === ply2 - 1, 'shots inside the window are the same hit');
+    const x = mk(); x.player.bombs = 0; const ply3 = x.player.ply; x.hurt(); ok(x.player.ply === ply3 - 1, 'with no bomb a hit lands at once');
+    const y = mk(); y.player.bombs = 1; y.player.invuln = 0; y.armed.thimble = 1; y.hurt(); ok(y.hitBuf === 0, 'a thimble takes the hit before any bomb is risked');
+  }
+  { // a boss sheds a loose thread for every tenth of its health taken, nine in all, each a power-up that falls and fades
+    const s = mk(); s.buildKeeper(Object.keys(C.KEEPERS)[0]); const b = s.boss; b.enter = 0; b.shed = 0; s.drops.length = 0; const loose = () => s.drops.filter(d => d.loose).length;
+    s.damageBoss(b.maxHp * 0.05, b.x, true, 'S'); ok(loose() === 0, 'no thread before a tenth is gone');
+    s.damageBoss(b.maxHp * 0.06, b.x, true, 'S'); ok(loose() === 1, 'the first tenth sheds one thread');
+    s.damageBoss(b.maxHp * 0.4, b.x, true, 'S'); ok(loose() === 5 && b.shed === 5, 'a big hit sheds every tenth it crossed');
+    const ev = go(s, 0.02); ok(s.drops.filter(d => d.loose).every(d => d.kind === 'charm' || d.charm), 'every loose thread is a power-up');
+    const d0 = s.drops.find(d => d.loose); ok(d0 && d0.life <= 8, 'a loose thread fades within eight seconds');
+    s.damageBoss(b.maxHp * 0.3, b.x, true, 'S'); s.damageBoss(b.maxHp * 0.1, b.x, true, 'S'); ok(b.shed <= 9, 'nine threads at most, none for the last tenth (it is dead)');
   }
 }
 console.log(fails ? fails + ' FAILED' : 'all checks passed');

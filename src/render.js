@@ -56,7 +56,7 @@
   };
   /* How hard each weapon kicks: [camera, in cloth units; the ship's own recoil]. Light, fast weapons move only the ship. */
   const HOT = { heat: 0.7 };
-  const KICK = { running: [0, 0.8], satin: [0, 0.55], backstitch: [0.014, 1], chain: [0.012, 1], cross: [0.016, 1.05], herringbone: [0.026, 1.2], fan: [0, 0.8], knot: [0.11, 1.7], couching: [0.16, 1.5] };
+  const KICK = { running: [0, 0.8], satin: [0, 0.55], backstitch: [0.014, 1], chain: [0.012, 1], cross: [0.016, 1.05], herringbone: [0.026, 1.2], fan: [0, 0.8], knot: [0.11, 1.7], couching: [0.16, 1.5], daisy: [0, 0.7], feather: [0, 0.6], blanket: [0.01, 0.9], pins: [0.008, 0.8] };
   /* per-frame helpers kept outside the class so no closure is made each frame */
   function unsee(v) { v.seen = false; }
   function dropEnemyView(v, id, map) { if (v.seen) return; if (v.extra) { if (v.extra.cone) this.scene.remove(v.extra.cone); if (v.extra.captive) this.scene.remove(v.extra.captive); } map.delete(id); }
@@ -754,8 +754,13 @@
           }
           case 'patch': this.ring(e.x, e.y, 2, this.lc(PAL.linen, 2), 0.35, 7); this.glints(e.x, e.y, 0.8, 10, this.lc(PAL.linen, 2.2), 4); break;
           case 'repad': this.loop(pl.x, PY, 1.4, PAL.steelHi); break;
-          case 'chain': this.arcs.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0, max: 0.32, side: Math.random() < 0.5 ? -1 : 1 }); this.glints(e.x2, e.y2, 0.8, 5, this.lc(PAL.madderPale, 2.4), 3); break;
+          case 'chain': this.arcs.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0, max: 0.32, side: Math.random() < 0.5 ? -1 : 1 }); this.glints(e.x2, e.y2, 0.8, 5, this.lc(e.live ? PAL.steelHi : PAL.madderPale, 2.4), 3); break;
+          // weapons: a petal takes a bullet, a pin goes into the cloth, a pin comes loose
+          case 'petal': this.glints(e.x, e.y, 0.8, 4, this.lc(PAL.rose, 2.2), 3, 0.3, 0.3); this.ring(e.x, e.y, 0.9, this.lc(PAL.rose, 1.8), 0.2, 10); this.strands(e.x, e.y, LINEN, 2, 0.4); break;
+          case 'pin': this.ring(e.x, e.y, 0.7, this.lc(PAL.violet, 2), 0.18, 7); this.glints(e.x, e.y, 0.6, 2, this.lc(PAL.steelHi, 2), 2, 0.25, 0.25); break;
+          case 'pinloose': if (e.wheel) { this.ring(e.x, e.y, 2.2, this.lc(PAL.violet, 2.2), 0.3, 7); this.glints(e.x, e.y, 0.8, 6, this.lc(PAL.saffron, 2.2), 4); } else this.glints(e.x, e.y, 0.6, 2, this.lc(PAL.violet, 1.6), 2, 0.25, 0.25); break;
           case 'lance': {
+            if (e.glow) { this.lances.push({ x: e.x, y: e.y !== undefined ? e.y : PY + 0.7, w: e.w * 0.7, t: 0, max: 0.22 }); break; }   // Afterglow: the beam's echo, no new jolt
             this.lances.push({ x: e.x, y: e.y !== undefined ? e.y : PY + 0.7, w: e.w, t: 0, max: 0.36 }); const ly = e.y !== undefined ? e.y : PY + 0.7;
             for (let y = ly + 0.3; y < H; y += 0.5) { if (Math.random() > this.q.particles) continue; const s = rnd(2, 6) * (Math.random() < 0.5 ? -1 : 1);
               this.glow.emit(e.x + rnd(-0.1, 0.1) * e.w, y, 0.6, s, rnd(-1, 1), 0, rnd(0.15, 0.35), rnd(0.25, 0.4), this.lc(PAL.steelHi, 2.5), 1, 4, 5, 0.3, Math.atan2(0, s), 0, 0); }
@@ -956,14 +961,8 @@
         if (r.t >= r.life) { L[i] = L[L.length - 1]; L.pop(); this.sfxFree.push(r); continue; }
         const t = r.t;
         if (r.id === 'tie') {
-          const back = clamp((t - 0.2) / 0.42, 0, 1), R = t < 0.2 ? 0.3 + 4.7 * eo(t / 0.2) : 0.35 + 4.65 * (1 - eio(back)), fade = t < 0.64 ? 1 : 1 - (t - 0.64) / 0.14;
-          const cx = r.x + (pl.x - r.x) * back, cy = r.y + (PY + 0.25 - r.y) * back, sp = -t * 6, sa = this.lc(PAL.saffron, 2.2);
-          this.tarc(trA, cx, cy, R, R * 0.96, sp, sp + TAU, 0.6, 0.55, sa, 0.32 * fade, 0.32 * fade, 0, 48);
-          this.tarc(trN, cx, cy, R, R * 0.96, sp, sp + TAU, 0.62, 0.13, this.lc(PAL.saffron, 1.2), 0.95 * fade, 0.95 * fade, 2, 48);
-          const ex = cx + Math.cos(sp) * R, ey = cy + Math.sin(sp) * R * 0.96;   // the two loose ends where the loop closes
-          this.tline(trN, ex, ey, ex + Math.cos(sp - 0.5) * 0.7, ey + Math.sin(sp - 0.5) * 0.7, 0.62, 0.08, this.lc(PAL.saffron, 1.2), fade, 1, 0.08, t * 20, 0.2 * fade);
-          this.spr.add(ex, ey, 0.8, 0.9, this.lc(PAL.glare, 2.6), fade, 1, t * 3);
-          if (t > 0.6 && !r.done) { r.done = 1; const kx = pl.x, ky = PY + 0.3, c = this.lc(PAL.saffron, 2.6);
+          // the ring itself is the 'tie' zone (syncZones), drawn at the real radius; this is the flash it ends on
+          if (t > 0.5 && !r.done) { r.done = 1; const kx = pl.x, ky = PY + 0.3, c = this.lc(PAL.saffron, 2.6);
             this.flare(kx, ky, 1, 1.6, c, 0.16); this.darn(kx, ky, this.lc(PAL.saffron, 1.6), 0.6, 2.5); this.ring(kx, ky, 2, c, 0.3, 7); this.glints(kx, ky, 0.9, 8, c, 4, 0.35, 0.45); this.hitStop(0.04, 0.4); }
         } else if (r.id === 'lasso') {
           const sw = clamp(t / 0.38, 0, 1), a = r.a - TAU * eio(sw), R = r.b + (3.6 - r.b) * Math.min(1, t / 0.08), cx = pl.x, cy = PY + 0.05, fade = t < 0.38 ? 1 : 1 - (t - 0.38) / 0.24;
@@ -1050,6 +1049,24 @@
           }
           if (Math.random() < fdt * 5 * q) this.lint.emit(x0 + rnd(-R, R) * 0.6, y0 + rnd(-R, R) * 0.6, 0.4, rnd(-0.15, 0.15), rnd(-0.15, 0.15), 0, 1.6, 0.4, this.lc(PAL.mist), 0.3, 6, 0, 1.6, undefined, 0.3);
           if (end < 0.4 && !m.done) { m.done = 1; for (let i = 0; i < 8; i++) { const an = i / 8 * TAU; this.fibres(x0 + Math.cos(an) * R * 0.7, y0 + Math.sin(an) * R * 0.7, 0.4, 2, weft, 1.4); } }
+        } else if (z.kind === 'tie') {   // Tie Off: the loop of thread runs out to the real reach of the special, then holds as a knot
+          const R = z.r, fade = z.knot ? Math.min(1, z.life / 0.5) : 1, sp = -age * 6, sa = this.lc(PAL.saffron, 2.2);
+          this.tarc(trA, z.x, z.y, R, R * 0.96, sp, sp + TAU, 0.6, z.knot ? 0.4 : 0.55, sa, 0.3 * fade, 0.3 * fade, 0, 64);
+          this.tarc(trN, z.x, z.y, R, R * 0.96, sp, sp + TAU, 0.62, 0.13, this.lc(PAL.saffron, 1.2), 0.95 * fade, 0.95 * fade, 2, 64);
+          const ex = z.x + Math.cos(sp) * R, ey = z.y + Math.sin(sp) * R * 0.96; this.spr.add(ex, ey, 0.8, 0.9, this.lc(PAL.glare, 2.6), fade, 1, age * 3);
+        } else if (z.kind === 'quilt') {   // Quilt: a ring of patchwork stitching round the ship while it drinks bullets
+          const fade = Math.min(1, z.life / 0.4) * Math.min(1, age / 0.1), cx = sim.player.x, cy = sim.player.y + 0.2, R = z.r * (0.9 + 0.04 * Math.sin(age * 9));
+          this.tarc(trA, cx, cy, R, R, age * 0.8, age * 0.8 + TAU, 0.6, 0.4, this.lc(PAL.steelHi, 1.6), 0.22 * fade, 0.22 * fade, 0, 56);
+          this.tarc(trN, cx, cy, R, R, -age * 0.8, -age * 0.8 + TAU, 0.62, 0.1, this.lc(PAL.paper, 1.4), 0.8 * fade, 0.8 * fade, 2, 56);
+        } else if (z.kind === 'seam') {   // Basting Line on a boss: the thread stays pulled through it, pinning its place for the three seconds it bites
+          const b = sim.boss; if (b) { const fade = Math.min(1, z.life / 0.4) * Math.min(1, age / 0.1), x = b.x + Math.sin(age * 40) * 0.04 * Math.exp(-age * 4), n = 18;
+            for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = x; py[i] = B + (H - B) * u; pz[i] = 0.55; ps[i] = (H - B) * u; }
+            trA.strip(px, py, pz, ps, n, 0.6, 0.6, this.lc(PAL.saffron, 1.8), 0.3 * fade, 0.3 * fade, 0);
+            trN.strip(px, py, pz, ps, n, 0.13, 0.13, this.lc(PAL.brass, 1.4), fade, fade, 1);
+            if (Math.random() < fdt * 20 * q) this.glints(x, b.y + (Math.random() - 0.5) * b.def.halfH * 2, 0.7, 1, this.lc(PAL.saffron, 2.4), 1.5, 0.3, 0.3); }
+        } else if (z.kind === 'lasso') {   // Lasso: the swung loop's reach, a thin ring that shrinks as it lets go
+          const fade = Math.min(1, z.life / 0.3), R = 5.6 * (0.7 + 0.3 * fade), cx = sim.player.x, cy = sim.player.y;
+          this.tarc(trN, cx, cy, R, R, age * 5, age * 5 + TAU, 0.6, 0.08, this.lc(PAL.madderPale, 1.8), 0.5 * fade, 0.5 * fade, 2, 48);
         } else if (z.kind === 'sweep') {   // Loom: a plied thread rail to rail, a shuttle racing along it, the band it has woven trailing behind
           const fade = Math.min(1, z.life / 0.3) * Math.min(1, age / 0.08), y = z.y, n = 24, vib = 0.05 + 0.08 * Math.exp(-age * 5);
           for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = -HW + W * u; py[i] = y + Math.sin(u * Math.PI * 6 + age * 40) * vib * Math.sin(u * Math.PI); pz[i] = 0.55; ps[i] = W * u; }
@@ -1114,6 +1131,25 @@
       this.trN.strip(px, py, pz, ps, n, 0.05, 0.05, hi, 0.95, 0.95, 2);
       this.trA.strip(px, py, pz, ps, n, 0.5, 0.5, this.lc(PAL.steelHi, 1.8), 0.1 + 0.6 * fl, 0.1 + 0.6 * fl, 0);
       this.spr.add(px[0], py[0], z + 0.2, 0.32, hi, 0.9, 5, 0); this.spr.add(px[n - 1], py[n - 1], z + 0.2, 0.32, hi, 0.9, 5, 0);
+    }
+    /* Wave twist marks: an elite moth (a gold hoop with four sparks turning round it), a moth that splits (two pale beads), the convoy's leader (a linen hoop),
+       a gold moth in the gold round (a halo). */
+    twistMark(e, z) {
+      const t = this.time, tw = e.tw, sp = this.spr;
+      if (tw === 'elite') { sp.add(e.x, e.y, z + 0.3, 2.3 + 0.15 * Math.sin(t * 5), this.lc(PAL.saffron, 1.7), 0.8, 7, t * 1.3); sp.add(e.x, e.y, z + 0.1, 1.9, this.lc(PAL.saffron, 1.3), 0.3, 0); for (let k = 0; k < 4; k++) { const a = t * 2.2 + k * 1.5708; sp.add(e.x + Math.cos(a) * 0.85, e.y + Math.sin(a) * 0.85, z + 0.4, 0.3, this.lc(PAL.glare, 2.6), 0.95, 1, a); } }
+      else if (tw === 'split') { const a = Math.sin(t * 3 + e.id) * 0.15; for (let k = -1; k <= 1; k += 2) sp.add(e.x + k * (0.55 + a), e.y + 0.45, z + 0.4, 0.42, this.lc(PAL.paper, 2), 0.95, 0); sp.add(e.x, e.y, z + 0.25, 1.5, this.lc(PAL.paper, 1.2), 0.3, 7, -t); }
+      else if (tw === 'lead') { sp.add(e.x, e.y, z + 0.3, 2.2, this.lc(PAL.linen, 2), 0.7, 7, t); sp.add(e.x, e.y, z + 0.2, 1.4, this.lc(PAL.saffron, 1.4), 0.4, 0); }
+      else if (tw === 'gold') { sp.add(e.x, e.y, z + 0.2, 1.5 + 0.12 * Math.sin(t * 6 + e.id), this.lc(PAL.saffron, 2.2), 0.8, 7, t * 1.5); sp.add(e.x, e.y, z + 0.1, 1.2, this.lc(PAL.saffron, 1.4), 0.22, 0); }
+    }
+    /* The burning thread (a wave twist): a line along the top of the cloth that burns away from the right; a spark runs at its end and it turns red when low. */
+    syncTimer(sim, fdt) {
+      const tm = sim.timer; if (!tm || sim.phase !== 'play' || tm.burned) return;
+      const f = tm.left / tm.total, x0 = -HW + 0.5, x1 = x0 + (2 * HW - 1) * f, y = Math.min(H, this.viewTop) - 0.9, n = 10, px = this.px, py = this.py, pz = this.pz, ps = this.ps;
+      for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = x0 + (x1 - x0) * u; py[i] = y; pz[i] = 0.6; ps[i] = (x1 - x0) * u; }
+      const low = f < 0.25, pulse = low ? 0.6 + 0.4 * Math.sin(this.time * 14) : 1;
+      this.trN.strip(px, py, pz, ps, n, 0.1, 0.1, low ? this.lc(PAL.madderHi, 1.6) : this.lc(PAL.linen), 0.9 * pulse, 0.9 * pulse, 1);
+      this.spr.add(x1, y, 0.8, 0.9 + 0.2 * Math.sin(this.time * 30), this.lc(PAL.saffron, 2.6), 0.95, 1, this.time * 3); this.spr.add(x1, y, 0.7, 1.6, this.lc(PAL.saffron, 1.6), 0.5, 0);
+      if (Math.random() < fdt * 30 * this.q.particles) this.glow.emit(x1, y - 0.1, 0.7, rnd(-0.5, 0.5), rnd(-1.2, -0.4), 0, 0.5, 0.18, this.lc(PAL.saffron, 2.4), 1, 1, 0, 0.2);
     }
     /* Full Sail: a prow of light ahead, a wake of stitches behind, the cloth rippling under the ram. */
     drawRam(pl, fdt) {
@@ -1286,10 +1322,10 @@
         const rot = v.rot = diving ? Math.PI + (e.vx || 0) * 0.12 : (e.type === 'looper' ? (e.dir > 0 ? 0 : Math.PI) : 0);
         const z = 0.35 + (e.state === 'form' ? 0 : 0.5);
         const hurt = e.hurt ? e.hurt / 0.15 : 0, wind = e.state === 'windup', wk = wind ? clamp(1 - e.t / 0.3, 0, 1) : 0;   // wk: the last 0.3 s before it goes
-        const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0);
+        const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0);   // an elite moth is bigger
         const sprite = this.mothSprite(e), noSplit = e.type === 'looper';
         this.compose(e.x, e.y + wk * 0.2, z + wk * 0.25, rot, 0, diving ? -0.25 : wk * 0.4, sx, sy, 1);   // it rears back before it dives
-        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = e.state === 'trace' ? 0.12 : 0, flash = hurt * 0.9;
+        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = (e.state === 'trace' ? (e.gold ? 0.22 : 0.12) : 0) + sim.dark * 0.3, flash = hurt * 0.9;   // (a gold moth glows; in a dim cloth every moth carries a little light)
         this.mothPool(sprite, 'body', noSplit).push(this.M, white, flash, glow, warn);
         if (!noSplit) {
           const a = Math.sin(e.flap) * 0.55 - 0.15, cell = 0.088;
@@ -1311,6 +1347,7 @@
           for (let j = 0; j < 2; j++) { const d = 0.9 + j * 0.5 + 0.3 * wk; this.spr.add(e.x + ux * d, e.y + uy * d, z + 0.55, 0.72, tell, (0.45 + 0.55 * wk) * ((Math.floor(this.time * 10) + j) % 2 ? 1 : 0.45), 13, th); }
         }
         if (e.guard === true) this.guardShield(e, z);
+        if (e.tw) this.twistMark(e, z);
         if (e.type === 'spinner' || e.mark) this.enemyExtras(v, e, sim);
       }
       map.forEach(dropEnemyView, this);
@@ -1382,12 +1419,24 @@
           case 'knot': this.compose(s.x, s.y, 0.6, s.t * 9, 0.4, 0, 1); P.knot.push(this.M, this.lc(PAL.madder), 0, 0.6); break;
           case 'cross': this.compose(s.x, s.y, 0.6, s.t * 12, 0, 0, 1.5); P.xshot.push(this.M, rgb, 0, 0.8); break;
           case 'satin': case 'herringbone': case 'fan': this.compose(s.x, s.y, 0.6, ang, 0, 0, s.kind === 'satin' ? 0.8 : 1, s.kind === 'satin' ? 1.1 : 1.4, 1); P.dash.push(this.M, rgb, 0, glow + 0.2); break;
+          // the four newest weapons: a lazy-daisy loop, a feather with its barbs, a blanket stitch's leg, a pin
+          case 'daisy': if (s.seedling) { this.spr.add(s.x, s.y, 0.62, 0.45, this.lc(PAL.saffron, 2), 0.9, 6, 0, s.id * 0.37); break; }
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.75, 1.7, 0.8); P.link.push(this.M, rgb, 0, glow + 0.35); this.spr.add(s.x, s.y - 0.18, 0.64, 0.32, this.lc(PAL.saffron, 2), 0.8, 9); break;
+          case 'feather': { const k = s.big ? 1.8 : 1, c = Math.cos(ang), sn = Math.sin(ang);
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, k, 1.2 * k, k); P.dash.push(this.M, rgb, 0, glow + 0.2);
+            this.spr.add(s.x + sn * 0.16 * k, s.y - c * 0.16 * k, 0.6, 0.55 * k, this.lc(PAL.teal, 1.8), 0.8, 4, ang + 0.9);
+            this.spr.add(s.x + sn * 0.16 * k, s.y - c * 0.16 * k, 0.6, 0.55 * k, this.lc(PAL.teal, 1.8), 0.8, 4, ang - 0.9); break; }
+          case 'blanket': this.compose(s.x, s.y, 0.6, ang, 0, 0, 1.2, 1.3, 1.2); P.dash.push(this.M, rgb, 0, glow + 0.25);
+            this.spr.add(s.x, s.y, 0.62, 0.7, this.lc(PAL.rust, 1.9), 0.85, 4, ang); break;
+          case 'pins': if (s.pinShot || s.kid) { this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.7, 0.9, 0.7); P.dash.push(this.M, this.lc(PAL.steelHi), 0, glow); break; }
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.8, 2, 0.8); P.dash.push(this.M, this.lc(PAL.steelHi), 0, 0.3); this.spr.add(s.x + Math.sin(ang) * 0.24, s.y - Math.cos(ang) * 0.24, 0.65, 0.5, this.lc(PAL.violet, 1.8), 1, 9); break;
           default: { const c = Math.cos(ang), sn = Math.sin(ang);
             this.compose(s.x - sn * 0.17, s.y + c * 0.17, 0.6, ang, 0, 0, 1); P.dash.push(this.M, rgb, 0, glow);
             this.compose(s.x + sn * 0.17, s.y - c * 0.17, 0.6, ang, 0, 0, 1); P.dash.push(this.M, rgb, 0, glow); }
         }
         this.spr.add(s.x, s.y, 0.8, s.kind === 'knot' ? 1.1 : 0.7, this.lc(col, s.kind === 'knot' ? 2 : 1.6), s.kind === 'satin' ? 0.4 : 0.55, 0);
         if (sign) this.spr.add(s.x, s.y, 0.85, 0.9, this.lc(PAL.saffron, 2.2), 0.7, 1, s.t * 4);   // Signature: every shot gilded
+        else if (s.gold) this.spr.add(s.x, s.y, 0.85, 0.85, this.lc(PAL.saffron, 2.4), 0.75, 8, s.t * 5);   // a mastered weapon's gold shot
         this.shotTrail(v, s.kind, 1, sign);
         if (s.kind === 'knot' && Math.random() < 0.4 * this.q.particles) this.glow.emit(s.x, s.y - 0.2, 0.6, rnd(-0.5, 0.5), -1, 0, 0.35, 0.25, this.lc(PAL.madderPale, 2), 0.8, 1, 0, 0.3);
       }
@@ -1397,10 +1446,33 @@
       for (let i = 1; i < nb; i++) { if (bi[i] - bi[i - 1] !== 1) continue; const dx = bx[i] - bx[i - 1], dy = by[i] - by[i - 1], d = Math.sqrt(dx * dx + dy * dy); if (d > 3.2) continue;
         this.tline(this.trN, bx[i - 1], by[i - 1], bx[i], by[i], 0.62, 0.05, this.lc(PAL.linen), 1 - d / 3.2, 1, 0, 0, undefined, 0.25 * (1 - d / 3.2)); }
     }
+    /* The weapons that live on the cloth between shots: Lazy Daisy's ring of petals (a loop of thread each, the lazy-daisy stitch),
+       Tacking Pins stuck in the cloth, and a knot's echo about to burst. All from the shared pools and sprites: nothing is made here. */
+    syncWeapons(sim) {
+      const P = this.pools, rs = sim.rings, t = this.time;
+      if (rs) for (let q = 0; q < 2; q++) {
+        const R = q ? rs.B : rs.L; if (!R || !R.on) continue;
+        const rgb = this.lc(PAL.rose), all = R.n + R.n2;
+        for (let i = 0; i < all; i++) {
+          const pt = R.p[i], outer = i >= R.n, k = pt.on ? 1 : Math.max(0.15, 1 - pt.re / (R.grow || 1)), sc = (outer ? 0.75 : 1) * k * (q ? 0.8 : 1);
+          this.compose(pt.x, pt.y, 0.62, pt.a - 1.5708, 0, 0, 0.62 * sc, 1.45 * sc, 0.7 * sc); P.link.push(this.M, outer ? this.lc(PAL.madderPale) : rgb, 0, pt.on ? 0.5 : 0.15);
+          if (pt.on && !outer) this.spr.add(pt.x, pt.y, 0.66, 0.42, this.lc(PAL.rose, 1.9), 0.55, 0);
+        }
+      }
+      const ps = sim.tacks;
+      if (ps) for (let i = 0; i < ps.length; i++) {
+        const q = ps[i], fade = q.t < 0.6 ? 0.5 + 0.5 * Math.sin(t * 24) : 1, hot = q.cd > q.every - 0.08;
+        this.compose(q.x, q.y - 0.12, 0.5, 0.25, 0, 0.5, 0.75, 1.5, 0.75); P.dash.push(this.M, this.lc(PAL.steelHi), 0, 0.2);
+        this.spr.add(q.x, q.y + 0.05, 0.66, 0.42, this.lc(PAL.violet, 1.7), fade, 9); if (q.wheel) this.spr.add(q.x, q.y + 0.05, 0.64, 0.62, this.lc(PAL.saffron, 1.6), 0.5 * fade, 10, t * 2);   // mastered: a gold ring round the head
+        if (hot) this.spr.add(q.x, q.y + 0.3, 0.7, 0.6, this.lc(PAL.glare, 2.2), 0.8, 8, t * 6);
+      }
+      const fs = sim.fuses;
+      if (fs) for (let i = 0; i < fs.length; i++) { const f = fs[i]; if (f.kind !== 'knot') continue; const k = 1 - f.t / f.t0; this.spr.add(f.x, f.y, 0.6, f.r * (0.6 + 0.6 * k), this.lc(PAL.madderPale, 2), 0.35 + 0.5 * k, 7, t * 3); }
+    }
     shotTrail(v, kind, fade, sign) {
       if (v.n < 2) return;
       const px = this.px, py = this.py, pz = this.pz, ps = this.ps;
-      const maxL = kind === 'satin' ? 1.1 : kind === 'knot' ? 1.9 : kind === 'chain' ? 1.6 : 1.4;
+      const maxL = kind === 'satin' ? 1.1 : kind === 'knot' ? 1.9 : kind === 'chain' ? 1.6 : kind === 'blanket' ? 4.2 : kind === 'pins' ? 0.8 : 1.4;
       let m = 0, acc = 0;
       for (let i = 0; i < v.n; i++) {   // capped by length, so trails look the same at any frame rate
         px[i] = v.hx[i]; py[i] = v.hy[i]; pz[i] = 0.55; ps[i] = v.hs[i]; m = i + 1;
@@ -1418,6 +1490,10 @@
         case 'knot': for (let i = 0; i < m; i++) { const w = Math.sin(ps[i] * 7) * 0.16 * (i / m); px[i] += w; } A.strip(px, py, pz, ps, m, 0.07, 0.03, this.lc(PAL.madderPale, 2), 0.9 * fade, 0, 1); break;
         case 'cross': A.strip(px, py, pz, ps, m, 0.1, 0.05, this.lc(PAL.blue, 2.2), 0.9 * fade, 0, 1); break;
         case 'satin': A.strip(px, py, pz, ps, m, 0.32, 0.12, this.lc(PAL.green, 1.6), 0.8 * fade, 0, 4); break;
+        case 'daisy': A.strip(px, py, pz, ps, m, 0.16, 0.06, this.lc(PAL.rose, 1.7), 0.8 * fade, 0, 5); break;
+        case 'feather': for (let i = 1; i < m; i++) px[i] += (i % 2 ? 0.09 : -0.09) * (i / m); A.strip(px, py, pz, ps, m, 0.09, 0.04, this.lc(PAL.teal, 1.9), 0.85 * fade, 0, 1); break;
+        case 'blanket': A.strip(px, py, pz, ps, m, 0.2, 0.08, this.lc(PAL.rust, 2), 0.95 * fade, 0, 2); A.strip(px, py, pz, ps, m, 0.45, 0.12, this.lc(PAL.rust, 1.1), 0.25 * fade, 0, 0); break;   // a running line of rust stitches with a soft glow: the loop reads as a drawn line
+        case 'pins': A.strip(px, py, pz, ps, m, 0.05, 0.03, this.lc(PAL.steelHi, 1.5), 0.7 * fade, 0, 2); break;
         default: A.strip(px, py, pz, ps, m, 0.08, 0.04, this.lc(col, 1.5), 0.8 * fade, 0, 2);
       }
     }
@@ -1485,17 +1561,33 @@
             this.spr.add(x, y, z + 0.25, 2.3, this.lc(PAL.saffron, 2.4), 0.85, 7, -t * 1.6);
             for (let k = 0; k < 3; k++) { const a = t * 2.4 + k * TAU / 3; this.spr.add(x + Math.cos(a) * 0.95, y + Math.sin(a) * 0.95, z + 0.3, 0.5, this.lc(PAL.glare, 2.6), 0.95, 1, a); }
           }
+          if (d.loose) {   // shed by a boss: a loose thread trails above it, and it blinks as it is about to go
+            const left = d.life - d.t; if (left < 2.5 && ((left * 6) | 0) % 2) this.spr.add(x, y, z + 0.4, 2.6, this.lc(PAL.paper, 2), 0.5, 3);
+            for (let k = 1; k <= 4; k++) this.spr.add(x + Math.sin(t * 5 + k) * 0.18 * k, y + k * 0.42, z - 0.1, 0.34, this.lc(ch.color, 1.8), 0.8 - k * 0.15, 1, k);
+          }
           hex = d.up ? PAL.saffron : ch.color; size = d.up ? 1.1 : 0.9;
         } else if (d.kind === 'dust') {
           this.compose(x, y, z, 0, d.t * 9 + d.id, 0, 1); this.dropPool('dust', 0.085).push(this.M, this.lc('#FFFFFF'), 0, sim.fx.gold > 0 ? 0.45 : 0.18);
           this.spr.add(x, y, z - 0.1, 0.75, this.lc(PAL.saffron, sim.fx.gold > 0 ? 1.8 : 1), 0.35, 0);
           if (Math.sin(d.t * 9 + d.id) > 0.97) this.spr.add(x + 0.1, y + 0.05, z + 0.2, 0.6, this.lc(PAL.glare, 2.5), 0.9, 1, 0.3);
+        } else if (d.kind === 'thread') {   // the thread round: a length of gold thread, falling. Fly into it.
+          const px = this.px, py = this.py, pz = this.pz, ps = this.ps;
+          for (let i = 0; i < 6; i++) { px[i] = x + Math.sin(t * 7 + i * 0.9 + d.id) * 0.1 * i; py[i] = y + 1.1 - i * 0.4; pz[i] = z; ps[i] = i * 0.4; }
+          this.trN.strip(px, py, pz, ps, 6, 0.1, 0.03, this.lc(PAL.saffron, 1.9), 1, 0.2, 1);
+          this.spr.add(x, y, z, 1.2, this.lc(PAL.glare, 2.4), 0.85, 1, t * 2); this.spr.add(x, y, z - 0.1, 1.7, this.lc(PAL.saffron, 1.4), 0.4, 0);
         } else if (d.kind === 'silk') {
           this.compose(x, y, z, Math.sin(d.t * 1.5) * 0.4, Math.sin(d.t * 3) * 0.5, 0, 1.1); this.dropPool('silk', 0.085).push(this.M, this.lc('#FFFFFF'), 0, 0.3);
           this.spr.add(x, y, z - 0.1, 1.5, this.lc(PAL.paper, 1.2), 0.45, 0);
           this.spr.add(x - 0.25, y + 0.1, z + 0.3, 0.8 + 0.3 * Math.sin(t * 5 + d.id), this.lc(PAL.glare, 2.6), 0.9, 1, t * 1.5);
           this.spr.add(x + 0.3, y - 0.1, z + 0.3, 0.5 + 0.2 * Math.sin(t * 7 + d.id), this.lc(PAL.glare, 2.6), 0.9, 1, -t);
           hex = PAL.paper; size = 0.8;
+        } else if (d.kind === 'find') {   // rework: unique items: a find from an elite moth: a ring of thread turning round a bright knot, in its family's colour
+          const fd = C.FINDS[d.find], col = fd ? C.FIND_FAMILIES[fd.fam].color : PAL.saffron, rare = fd && fd.rar === 'rare';
+          this.compose(x, y, z, Math.sin(d.t * 2) * 0.3, d.t * 2.4, 0, 1.15); this.dropPool('chart', 0.12).push(this.M, this.lc(col), 0, 0.5);
+          this.spr.add(x, y, z - 0.2, 2.2, this.lc(col, 1.5), 0.5 + 0.12 * Math.sin(t * 6), 0);
+          this.spr.add(x, y, z + 0.2, 1.8, this.lc(PAL.glare, 2.2), 0.85, 7, -t * 2);
+          for (let k = 0; k < (rare ? 4 : 3); k++) { const a = t * 2.6 + k * TAU / (rare ? 4 : 3); this.spr.add(x + Math.cos(a) * 0.8, y + Math.sin(a) * 0.8, z + 0.3, 0.45, this.lc(PAL.glare, 2.6), 0.95, 1, a); }
+          hex = col; size = 1.1;
         } else if (d.kind === 'packet') {
           this.compose(x, y, z, Math.sin(d.t * 2) * 0.25, Math.sin(d.t * 3) * 0.5, 0, 1); this.dropPool('packet', 0.085).push(this.M, this.lc('#FFFFFF'), 0, 0.25);
           this.spr.add(x, y, z - 0.1, 1.4, this.lc(PAL.linen, 1.2), 0.45, 0);
@@ -1904,6 +1996,10 @@
         this.tarc(this.trA, pl.x, cy, 1.15, 1.15, Math.PI / 2, a1, 0.9, 0.34, sa, 0.35, 0.35, 0, Math.ceil(40 * f) + 2);
         this.tarc(this.trN, pl.x, cy, 1.15, 1.15, Math.PI / 2, a1, 0.92, 0.08, this.lc(PAL.saffron, 1.3), 0.95, 0.95, 2, Math.ceil(40 * f) + 2);
         this.spr.add(pl.x + Math.cos(a1) * 1.15, cy + Math.sin(a1) * 1.15, 1, 0.8, this.lc(PAL.glare, 2.4), 0.9, 1, this.time * 3); }
+      for (let i = 0; i < sim.pins.length; i++) { const q = sim.pins[i], f = Math.min(1, (q.life - q.t) / 1.2), c = this.lc(PAL.brass, 2.2);   // Tack Trap: a pin standing in the cloth, firing up
+        this.spr.add(q.x, q.y, 0.7, 0.9, c, f, 9); this.spr.add(q.x, q.y, 0.65, 1.7, this.lc(PAL.saffron, 1.6), 0.35 * f, 0, 0);
+        this.tline(this.trN, q.x, q.y - 0.5, q.x, q.y + 0.5, 0.6, 0.08, this.lc(PAL.steelHi, 1.8), f, 1, 0.1, 0, 0); }
+      if (sim.fx.spool > 0) { const cy = PY + 0.25, sa = this.lc(PAL.madderHi, 2); this.tarc(this.trN, pl.x, cy, 1.5, 1.5, this.time * 2, this.time * 2 + TAU * 0.8, 0.9, 0.12, sa, 0.9, 0.9, 2, 28); }   // Tangled Spool: a heavy winding ring
       this.drawDash(pl, fdt);
       if (sim.fx.dish > 0 && Math.random() < fdt * 20 * this.q.particles) { const a = Math.random() * TAU, r = 3.2; this.glow.emit(pl.x + Math.cos(a) * r, PY + Math.sin(a) * r, 0.5, -Math.cos(a) * 9, -Math.sin(a) * 9, 0, 0.32, 0.4, this.lc(PAL.steelHi, 2), 0.8, 4, 0, 0.3, a, 0, 0); }
       // dash after-images
@@ -1952,6 +2048,7 @@
       this.syncBobbins(sim, dt, fdt, alive);
       this.syncEnemies(sim, dt, fdt);
       this.syncShots(sim, dt);
+      this.syncWeapons(sim);
       this.syncEshots(sim, dt);
       this.syncDrops(sim, dt, fdt);
       this.syncHazards(sim, dt, fdt);
@@ -1960,6 +2057,7 @@
       if (this.syncBossFx) this.syncBossFx(sim, dt, fdt, events);   // src/render-boss.js: props, arena, poses
       this.shadowCasters();
       this.syncSamplerPath(sim, fdt);
+      this.syncTimer(sim, fdt);
       this.heat += (((sim.comboMult ? sim.comboMult() : 1) - 1) / 4 - this.heat) * Math.min(1, dt * 2);
       this.slowMo += ((sim.fx.tangle > 0 ? 1 : 0) - this.slowMo) * Math.min(1, dt * 4);
       this.finish(dt, fdt);

@@ -14,7 +14,8 @@
     umber: '#3A2C20', brass: '#9C7A3A', rule: '#B9AE96', dot: '#3D4F86',
     steel: '#A3AEC6', steelDark: '#6B7899', steelHi: '#CBD3E4',
     brown: '#8B7355', darkBrown: '#4B3A2B', tan: '#C9B38C', green: '#6E8B4E',
-    greenPale: '#A9C08A', blue: '#5568A6', knot: '#6E1A24'
+    greenPale: '#A9C08A', blue: '#5568A6', knot: '#6E1A24',
+    rose: '#E6A1B8', teal: '#5FB0A4', rust: '#D9783A', violet: '#9A7AD0'   // the four newest weapons
   };
 
   const spr = (pal, rows) => ({ w: rows[0].length, h: rows.length, pal, rows });
@@ -156,7 +157,7 @@
     greatlappet: { name: 'The Great Lappet', sprite: 'lappet', hp: 150, pts: 2000, silk: 5, dust: 45, cell: 0.3, halfW: 2.2, halfH: 1.8, softY: 0, standIn: true,
       soft: [{ x: 0, r: 0.6 }], softName: 'The pale stripe down her back', move: [4, 0.7, 14.6],
       phases: ['Fires spreads of shots', 'Spawns Lappets that split when destroyed'], phaseTag: ['Spread shots', 'Spawning Lappets'],
-      attacks: [[['fan', 1.6, 4]], [['fan', 2.0, 5], ['spawn', 4.2, 'lappet']]], charts: ['bp_button'] },
+      attacks: [[['fan', 1.6, 4]], [['fan', 2.0, 5], ['spawn', 4.2, 'lappet']]], charts: ['bp_button', 'bp_daisy'] },
     tinea: { name: 'Mother Tinea', sprite: 'tinea', hp: 230, pts: 3000, silk: 5, dust: 60, cell: 0.2, halfW: 2.9, halfH: 2.3, softY: -1.3,
       soft: [{ x: 0, r: 0.75 }], softName: 'Her belly', move: [3.6, 0.6, 14.2],
       phases: ['Spawns Nibblers from her wings', 'Sends a net down the screen with one gap to fly through'], phaseTag: ['Spawning Nibblers', 'Find the gap in the net'],
@@ -164,7 +165,7 @@
     greatwick: { name: 'The Great Wick', sprite: 'wick', hp: 300, pts: 4000, silk: 6, dust: 75, cell: 0.38, halfW: 2.0, halfH: 2.2, softY: -1.6, standIn: true,
       soft: [{ x: 0, r: 0.7 }], softName: 'The fireball it carries', move: [3.4, 0.55, 14.6],
       phases: ['Drops fireballs that leave burning patches', 'Calls in Wicks carrying more fireballs'], phaseTag: ['Fireballs', 'Wicks incoming'],
-      attacks: [[['coal', 1.8], ['fan', 2.6, 3]], [['coal', 2.2], ['fan', 2.2, 5], ['spawn', 3.2, 'wick']]], charts: ['bp_gilt'] },
+      attacks: [[['coal', 1.8], ['fan', 2.6, 3]], [['coal', 2.2], ['fan', 2.2, 5], ['spawn', 3.2, 'wick']]], charts: ['bp_gilt', 'bp_feather'] },
     atlas: { name: 'The Atlas', sprite: 'atlas', hp: 380, pts: 5000, silk: 8, dust: 90, cell: 0.22, halfW: 3.3, halfH: 2.0, softY: 0.4,
       soft: [{ x: -2.0, r: 0.6 }, { x: 2.0, r: 0.6 }], softName: 'The pale spots on her wings', move: [2.6, 0.5, 14.4],
       phases: ['Fires aimed shots from the eyespots on her wings', 'Strikes down whole columns after a warning'], phaseTag: ['Aimed shots', 'Column strikes'],
@@ -184,7 +185,7 @@
     king: { name: 'The Moth King', sprite: 'king', hp: 950, pts: 20000, silk: 25, dust: 250, cell: 0.24, halfW: 3.2, halfH: 2.2, softY: 1.9, added: true,
       soft: [{ x: -0.5, r: 0.45 }, { x: 0.5, r: 0.45 }], softName: 'His eyes, under the crown', move: [3.8, 0.75, 14.2],
       phases: ['Sends his swarm and fires spreads', 'Aimed shots and column strikes', 'Light beams and nets', 'Everything he has'], phaseTag: ['The swarm', 'Aimed fire', 'Beams and nets', 'Last stand'],
-      attacks: [[['spawn', 2.4, 'nibbler'], ['fan', 1.6, 6]], [['aimed', 1.0, 3], ['strike', 2.4], ['spawn', 4.5, 'firefly']], [['glare', 2.8], ['net', 4.4], ['fan', 1.8, 6], ['knot', 2.8]], [['aimed', 1.2, 3], ['ring', 2.4, 14], ['strike', 2.6], ['glare', 3.6], ['spawn', 3.6, 'weevil'], ['pull', 0]]], charts: ['bp_tapestry'] }
+      attacks: [[['spawn', 2.4, 'nibbler'], ['fan', 1.6, 6]], [['aimed', 1.0, 3], ['strike', 2.4], ['spawn', 4.5, 'firefly']], [['glare', 2.8], ['net', 4.4], ['fan', 1.8, 6], ['knot', 2.8]], [['aimed', 1.2, 3], ['ring', 2.4, 14], ['strike', 2.6], ['glare', 3.6], ['spawn', 3.6, 'weevil'], ['pull', 0]]], charts: ['bp_tapestry', 'bp_pins'] }
   };
 
   // ---- A Night: five Panels. Every Panel is Row 1, Row 2, the Sampler, then its Keeper (20 rows on the Night's chart). ----
@@ -245,14 +246,137 @@
     lantern:    { name: 'Lantern Field', art: 'lines',   desc: 'Lit by old lamplight.', mark: 'Power-ups drop twice as often', mods: { charms: 2 } },
     looseend:   { name: 'The Loose End', art: 'fringe',  desc: 'The far edge of the cloth, where the thread hangs free.', mark: '' },
     lining:     { name: 'The Lining',    art: 'lines',   desc: 'Behind the cloth. Quieter, with less to pick up.', mark: 'Fewer enemies per wave; coins are worth 25% less', mods: { thin: 1, dust: 0.75 } },
-    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; gems from the boss are doubled', foes: 'Shield Bugs in every wave. Bring a Cross Stitch, a Knot Bomb or the Wire Laser.', mods: { hp: 1.25, keeperSilkMul: 2, guards: 3 } },
+    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; the Carpet Beetle knocks mothballs loose; gems from the boss are doubled', foes: 'Shield Bugs in every wave. Bring a Cross Stitch, a Knot Bomb or the Wire Laser.', mods: { hp: 1.25, keeperHp: 1, mothballs: true, keeperSilkMul: 2, guards: 3 } },
     silkroad:   { name: 'Silk Road',     art: 'darn',    desc: 'Spinners travel this way in numbers.', mark: 'Spinners always drop a gem', mods: { spinnerSilk: 1 } },
     loom:       { name: 'Loom Shadow',   art: 'boro',    desc: 'The great loom overhead drops what it finds.', mark: 'Power-ups drop twice as often; enemy shots are 20% faster', foes: 'Shield Bugs and fast shots.', mods: { charms: 2, shotSpeed: 1.2, guards: 4 } },
     heart:      { name: 'Heart of the Cloth', art: 'eyes', desc: 'The centre of the Coverlet, and the Moth King\'s court. The final stage.', mark: '' }
   };
 
   // ---- The Sampler: 40 moths trace a pattern and never fire. Stitch them all. ----
-  const SAMPLER = { count: 40, pts: 100, perfectPts: 2400, perfectSilk: 3, gap: 0.3, speed: 0.105, order: ['nibbler', 'nibbler', 'casebearer', 'lappet'] };
+  const SAMPLER = { count: 40, pts: 100, perfectPts: 2400, perfectSilk: 3, gap: 0.3, speed: 0.105, order: ['nibbler', 'nibbler', 'casebearer', 'lappet'],
+    // Rework: waves. 12 figures (sim.pathPoint), three kinds of round, and the moths change by stage (index = stage).
+    // trace: stitch every moth as it flies the figure. gold: only the gold moths count; a plain one breaks the perfect. thread: no moths; catch the falling thread.
+    figures: ['wave', 'eight', 'spiral', 'rosette', 'heart', 'star', 'ring', 'clover', 'trefoil', 'lissa', 'knot3', 'eightv'],
+    figureName: { wave: 'the wave', eight: 'the figure eight', spiral: 'the spiral', rosette: 'the rosette', heart: 'the heart', star: 'the star', ring: 'the ring', clover: 'the clover', trefoil: 'the trefoil', lissa: 'the lissajous', knot3: 'the three-knot', eightv: 'the upright eight' },
+    kinds: { trace: { hint: 'They never shoot back. Get them all.' }, gold: { hint: 'Shoot only the gold moths.' }, thread: { hint: 'Catch the falling thread. Do not shoot.' } },
+    byStage: [ ['nibbler', 'nibbler', 'casebearer', 'lappet'], ['nibbler', 'casebearer', 'lappet', 'hawk'], ['wick', 'nibbler', 'casebearer', 'lappet'], ['hawk', 'nibbler', 'wick', 'casebearer'],
+      ['firefly', 'nibbler', 'casebearer', 'wick'], ['lappet', 'firefly', 'hawk', 'casebearer'], ['firefly', 'wick', 'hawk', 'lappet'], ['spinner', 'firefly', 'hawk', 'wick', 'lappet'] ],
+    thread: { count: 24, gap: 0.45, fall: 1.6, pts: 100 } };
+
+  // ---- Rework: waves. A wave is built from parts, drawn from a shuffled deck per run (Sim.deck): a formation, an entry, twists, and on each
+  // stage's third wave a preview of the boss. All authored; the sim only chooses and places. y runs 9.6 to 16.8 (the top of the cloth is 18.67). ----
+  const FORM = (() => {
+    const P = Math.PI, split = (n, k) => { const a = []; for (let i = 0; i < k; i++) a.push(Math.floor(n / k) + (i < n % k ? 1 : 0)); return a; };
+    const ROWS_Y = [16.4, 15.2, 14.0, 12.8, 11.6];
+    const layers = (n, flip) => {   // nested V (apex at the bottom) or chevron (apex at the top)
+      const L = n <= 16 ? 2 : n <= 30 ? 3 : 4, cs = split(n, L), cmax = cs[0], sp = Math.min(0.95, Math.max(0.9, 11.4 / Math.max(1, cmax - 1))), out = [];
+      cs.forEach((c, l) => { for (let i = 0; i < c; i++) { const x = (i - (c - 1) / 2) * sp, a = Math.abs(x) * 0.6; out.push({ x, y: flip ? 16.5 - l * 1.1 - a : 9.7 + l * 1.1 + a }); } });
+      return out;
+    };
+    const rowsFrom = (ws, top, dy, spMax) => {   // centred rows of the given widths, top first
+      const wmax = Math.max.apply(null, ws), sp = Math.min(spMax, 11.8 / Math.max(1, wmax - 1)), out = [];
+      ws.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * sp, y: top - r * dy }); });
+      return out;
+    };
+    return {
+      grid: { name: 'Grid', gentle: true, build(n, sp) {
+        const ws = sp && sp.spinners !== undefined ? [sp.spinners, sp.mids, sp.mids, sp.nibs, sp.nibs] : split(n, 5), out = [];
+        ws.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * 1.2, y: ROWS_Y[r] }); });
+        return out; } },
+      v: { name: 'V', gentle: true, build: (n) => layers(n, false) },
+      chevron: { name: 'Chevron', gentle: true, build: (n) => layers(n, true) },
+      columns: { name: 'Two columns', gentle: true, build(n) {
+        const half = Math.ceil(n / 2), w = Math.max(2, Math.min(4, Math.ceil(half / 7))), hw = (w - 1) * 0.6, c = 2.1 + hw, out = [];
+        [-1, 1].forEach((sd, k) => { const m = k ? n - half : half, rs = Math.ceil(m / w), dy = Math.min(1.1, 6.8 / Math.max(1, rs - 1)); let left = m;
+          for (let r = 0; r < rs; r++) { const cnt = Math.min(w, left); left -= cnt; for (let j = 0; j < cnt; j++) out.push({ x: sd * c + (j - (cnt - 1) / 2) * 1.2, y: 16.4 - r * dy }); } });
+        return out; } },
+      diamond: { name: 'Diamond', build(n) {
+        const R = n > 44 ? 9 : 7, p = []; for (let r = 0; r < R; r++) p.push(Math.min(r + 1, R - r)); const sum = p.reduce((a, b) => a + b, 0);
+        const ws = p.map(v => Math.max(1, Math.round(n * v / sum))); let d = n - ws.reduce((a, b) => a + b, 0), mid = (R - 1) >> 1; while (d !== 0) { ws[mid] += d > 0 ? 1 : -1; d += d > 0 ? -1 : 1; }
+        return rowsFrom(ws, 16.5, Math.min(1.15, 6.8 / (R - 1)), 1.2); } },
+      ring: { name: 'Ring', build(n) {
+        const K = n <= 20 ? 1 : n <= 44 ? 2 : 3, sc = (K === 3 ? [1, 0.68, 0.38] : [1, 0.64]).slice(0, K), tot = sc.reduce((a, b) => a + b, 0), cs = sc.map(s => Math.round(n * s / tot)); cs[0] += n - cs.reduce((a, b) => a + b, 0);
+        const out = []; cs.forEach((c, k) => {   // equal steps along the ring's length, not equal angles (an ellipse crowds its tips otherwise)
+          const M = 240, cum = [0]; let px = 0, py = 3.5 * sc[k];
+          for (let i = 1; i <= M; i++) { const a = i / M * 2 * P, x = 5.9 * sc[k] * Math.sin(a), y = 3.5 * sc[k] * Math.cos(a); cum.push(cum[i - 1] + Math.hypot(x - px, y - py)); px = x; py = y; }
+          let i = 0; for (let j = 0; j < c; j++) { const L = (j + (k % 2) * 0.5) / c * cum[M]; while (i < M - 1 && cum[i + 1] < L) i++; const f = (L - cum[i]) / Math.max(1e-6, cum[i + 1] - cum[i]), a = (i + f) / M * 2 * P;
+            out.push({ x: 5.9 * sc[k] * Math.sin(a), y: 13.1 + 3.5 * sc[k] * Math.cos(a) }); } });
+        return out; } },
+      spiral: { name: 'Spiral', build(n) {
+        const out = [], arm = [Math.ceil(n / 2), Math.floor(n / 2)];
+        arm.forEach((m, k) => { let th = 0, lx = 0, ly = 0, first = true, cnt = 0;
+          while (cnt < m) { const r = 1.1 + 0.57 * th, x = r * Math.cos(th + k * P), y = 0.6 * r * Math.sin(th + k * P);
+            if (first || (x - lx) * (x - lx) + (y - ly) * (y - ly) >= 1.1 * 1.1) { out.push({ x, y: 13.1 + y }); lx = x; ly = y; first = false; cnt++; } th += 0.01; } });
+        return out; } },
+      stagger: { name: 'Stagger', gentle: true, build(n) {
+        const out = []; let R = 1; while (true) { let c = 0; for (let r = 0; r < R; r++) c += r % 2 ? 6 : 7; if (c >= n) break; R++; }
+        const dy = Math.min(1.0, 6.8 / Math.max(1, R - 1)); let left = n;
+        for (let r = 0; r < R; r++) { const w = Math.min(left, r % 2 ? 6 : 7); left -= w; for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * 2, y: 16.5 - r * dy }); }
+        return out; } },
+      wall: { name: 'Wall with a gap', build(n, sp, rnd) {
+        const gx = (rnd() - 0.5) * 7, cells = []; for (let j = 0; j < 11; j++) { const x = (j - 5) * 1.2; if (Math.abs(x - gx) > 1.3) cells.push(x); }
+        const rs = Math.ceil(n / cells.length), out = []; let left = n;
+        for (let r = 0; r < rs; r++) { const cnt = Math.min(cells.length, left); left -= cnt; const use = cnt === cells.length ? cells : cells.slice().sort((a, b) => Math.abs(a) - Math.abs(b)).slice(0, cnt);
+          for (const x of use) out.push({ x, y: 16.4 - r * 0.95 }); }
+        return out; } },
+      wings: { name: 'Split wings', build(n) {
+        const out = []; [-1, 1].forEach((sd, k) => { const m = k ? Math.floor(n / 2) : Math.ceil(n / 2), cw = 6; let left = m;
+          for (let r = 0; left > 0; r++) { const cnt = Math.min(cw, left); left -= cnt; for (let i = 0; i < cnt; i++) out.push({ x: sd * (1.6 + i * 0.95), y: 16.3 - r * 0.95 - i * 0.35 }); } });
+        return out; } },
+      arc: { name: 'Arc', build(n) {
+        const K = n <= 24 ? 3 : n <= 44 ? 4 : 5, rad = []; for (let k = 0; k < K; k++) rad.push(6.4 - k * 1.05);
+        const sumR = rad.reduce((a, b) => a + b, 0), al = Math.max(0.45, Math.min(1.45, n * 1.05 / (2 * sumR))), len = rad.map(r => r * 2 * al), tl = len.reduce((a, b) => a + b, 0);
+        const cs = len.map(l => Math.round(n * l / tl)); cs[0] += n - cs.reduce((a, b) => a + b, 0); const out = [];
+        cs.forEach((c, k) => { for (let j = 0; j < c; j++) { const a = c === 1 ? 0 : (j / (c - 1) - 0.5) * 2 * al; out.push({ x: rad[k] * Math.sin(a), y: 10.2 + rad[k] * Math.cos(a) }); } });
+        return out; } },
+      cloud: { name: 'Loose cloud', build(n, sp, rnd) {
+        const cells = []; for (let r = 0; r < 7; r++) for (let j = 0; j < 10; j++) { const x = (j - 4.5 + (r % 2 ? 0.5 : 0)) * 1.25 + (rnd() - 0.5) * 0.3, y = 16.4 - r * 1.0 + (rnd() - 0.5) * 0.3;
+          cells.push({ x, y, k: (x / 6.2) * (x / 6.2) + ((y - 13.1) / 3.6) * ((y - 13.1) / 3.6) + rnd() * 0.5 }); }
+        cells.sort((a, b) => a.k - b.k); return cells.slice(0, n).map(c => ({ x: c.x, y: c.y })); } }
+    };
+  })();
+  // entries: dur = seconds on the path; per = seconds between moths; row = extra seconds per row (grid-style staggering is kept for the swoop).
+  const ENTRIES = {
+    swoop:    { name: 'Swoop',          gentle: true, dur: 1.5, per: 0.07, row: 0.25 },
+    loops:    { name: 'Loops',          dur: 1.9, per: 0.07, row: 0.2 },
+    eight:    { name: 'Figure eight',   dur: 3.2, per: 0.07, row: 0 },
+    drop:     { name: 'Top drop',       gentle: true, dur: 1.1, per: 0, row: 0, rand: 1.6 },
+    spiral:   { name: 'Spiral',         dur: 3.0, per: 0.07, row: 0 },
+    crossing: { name: 'Crossing streams', gentle: true, dur: 1.8, per: 0.06, row: 0.2 },
+    pincer:   { name: 'Pincer',         dur: 1.7, per: 0.06, row: 0.15 },
+    march:    { name: 'Slow march',     gentle: true, dur: 3.4, per: 0, row: 0.35 }
+  };
+  // twists: from = first stage (0 = stage 1) it may appear; not = twists it cannot share a wave with.
+  const TWISTS = {
+    elite:     { name: 'Elite moth',      from: 1, hint: 'A gold-marked moth is tougher. It drops a prize.' },
+    convoy:    { name: 'Convoy',          from: 2, not: ['timer'], hint: 'A convoy crosses the cloth. Break it.' },
+    shield:    { name: 'Shielded front',  from: 2, hint: 'The front row holds shields. Hit from an angle.' },
+    reinforce: { name: 'Reinforcements',  from: 2, not: ['fast'], hint: 'More moths arrive halfway.' },
+    timer:     { name: 'Burning thread',  from: 1, not: ['convoy'], hint: 'Clear it before the thread burns through.' },
+    captive:   { name: 'Captive ship',    from: 1, hint: 'A captive ship hangs from a spinner. Free it.' },
+    split:     { name: 'Splitting moth',  from: 1, hint: 'Marked moths split when they die.' },
+    fast:      { name: 'Fast entry',      from: 1, not: ['reinforce'], hint: 'They come in fast.' },
+    dim:       { name: 'Dim cloth',       from: 2, hint: 'The lights are low. Your own light shows the way.' },
+    weave:     { name: 'Weaving shots',   from: 2, hint: 'Their shots weave from side to side.' }
+  };
+  // dive weights by stage: single is today's dive; the rest are new. cost = how many dive intervals the pattern uses up.
+  const DIVES = {
+    cost: { single: 1, group: 1.9, pair: 1.5, trio: 2.0, sweep: 2.0, kami: 2.2 },
+    byStage: [ { single: 1, pair: 0.25 }, { single: 1, pair: 0.45, group: 0.25 }, { single: 1, pair: 0.45, group: 0.4, trio: 0.3 }, { single: 1, pair: 0.4, group: 0.5, trio: 0.4, sweep: 0.35 },
+      { single: 1, pair: 0.4, group: 0.5, trio: 0.4, sweep: 0.4, kami: 0.3 }, { single: 1, pair: 0.4, group: 0.55, trio: 0.5, sweep: 0.45, kami: 0.4 },
+      { single: 1, pair: 0.4, group: 0.6, trio: 0.5, sweep: 0.5, kami: 0.5 }, { single: 1, pair: 0.4, group: 0.6, trio: 0.6, sweep: 0.55, kami: 0.6 } ] };
+  // boss previews: the third wave of each stage uses attacks its boss uses, through the same warned and drawn kinds. [kind, seconds between, option]
+  const PREVIEWS = {
+    fan:    { name: 'Spreads',       hint: 'The Great Lappet fires spreads like these.', list: [['fan', 4.2, 5]] },
+    net:    { name: 'Nets',          hint: 'Mother Tinea sends nets like these. Find the gap.', list: [['net', 7.2]] },
+    coal:   { name: 'Falling coals', hint: 'The Great Wick drops coals like these.', list: [['coal', 3.4]] },
+    aimed:  { name: 'Aimed strikes', hint: 'The Atlas aims at you like this.', list: [['aimed', 3.2, 3], ['strike', 7.0]] },
+    glare:  { name: 'Glare',         hint: 'The Unraveller floods columns with light like this.', list: [['glare', 6.5], ['knot', 5.0]] },
+    strike: { name: 'Column strikes', hint: 'The Carpet Beetle strikes columns like this.', list: [['strike', 4.4]] },
+    web:    { name: 'Web lines',     hint: 'The Silk Empress strings lines like this. Dash through them.', list: [['web', 7.5]] },
+    ring:   { name: 'Rings',         hint: 'The Moth King fires rings like this.', list: [['ring', 5.5, 12], ['glare', 8.5]] }
+  };
+  const PREVIEW_OF = ['fan', 'net', 'coal', 'aimed', 'glare', 'strike', 'web', 'ring'];
 
   // ---- Difficulty: scales enemy health, speed and fire, and what a run pays. ----
   const MODES = {
@@ -261,34 +385,172 @@
     nightmare: { name: 'Nightmare', hp: 2.2, speed: 1.3,  fire: 1.6,  pay: 2.2, need: 'hard' }
   };
 
-  // ---- Spool Wall: threads (weapons). Bought with Dust, kept for good; weights II/III cost +90/+160. ----
-  const WEIGHT_COST = [0, 400, 900];
-  /* Each weapon has one job. lv = its three levels: rate is seconds between volleys (charge time for the laser), dmg is per shot in units of the ship's damage. */
+  /* ---- The Exchange (the hideout counter): coins to gems and back. Each gem bought raises the price by buyStep, each gem sold lowers
+     the price by sellStep; both counts fall by recoverPerMin gems for every minute flown, and reset overnight (main.js hands the date to
+     ST.exchangeDay). Selling never pays more than 40 and buying never costs less than 150, so a round trip always loses. ---- */
+  const EXCH = { buyBase: 150, buyStep: 0.03, sellBase: 40, sellStep: 0.03, recoverPerMin: 1, maxTrade: 500 };
+
+  /* ---- The Fray dial: after a first full clear of a mode, steps 1 to 20 make that mode harder and pay more. Per step: moths and bosses
+     get tougher and quicker, and +10% coins and gems. Twists switch on at their `from` step and grow with every step after it. ---- */
+  const FRAY = {
+    max: 20, pay: 0.1, hp: 0.045, speed: 0.012, fire: 0.025,
+    twists: [
+      { id: 'elite',  from: 3,  name: 'Elites',          desc: 'An elite moth in every wave.' },
+      { id: 'dive',   from: 4,  name: 'Quick dives',     desc: 'Dives start sooner.' },
+      { id: 'charm',  from: 5,  name: 'Fewer power-ups', desc: 'Power-ups drop less often.' },
+      { id: 'shield', from: 6,  name: 'Thin shields',    desc: 'Shield pickups give less. From step 14 they give nothing while you have two or more.' },
+      { id: 'armour', from: 8,  name: 'Armoured bosses', desc: 'Bosses start with part of their fray meter armoured.' },
+      { id: 'break',  from: 10, name: 'Short breaks',    desc: 'A broken boss mends sooner.' },
+      { id: 'combo',  from: 12, name: 'Short combos',    desc: 'Your combo runs out sooner.' },
+      { id: 'mend',   from: 16, name: 'No mending',      desc: 'Shield Repair and Fresh Start stop working.' },
+      { id: 'spare',  from: 18, name: 'One life fewer',  desc: 'Start with one life less.' }
+    ]
+  };
+  /* The mode as it is flown at a Fray step: a copy of the plain mode with the step's numbers folded in (so everything in the sim that
+     reads mode.hp / speed / fire / pay gets them without further changes). `tw` holds the twist numbers; all zero at step 0. */
+  function frayMode(id, step) {
+    const m = MODES[id] || MODES.normal, s = Math.max(0, Math.min(FRAY.max, step | 0));
+    if (!s) return m;
+    const over = id2 => { const t = FRAY.twists.find(x => x.id === id2); return s >= t.from ? s - t.from + 1 : 0; };
+    return Object.assign({}, m, { fray: s, hp: m.hp * (1 + FRAY.hp * s), speed: m.speed * (1 + FRAY.speed * s), fire: m.fire * (1 + FRAY.fire * s), pay: m.pay * (1 + FRAY.pay * s), frayPay: FRAY.pay * s,
+      tw: { elite: over('elite') > 0, dive: Math.max(0.7, 1 - 0.02 * over('dive')), charm: Math.max(0.6, 1 - 0.03 * over('charm')), shield: s >= 14 ? 2 : s >= 6 ? 1 : 0,
+        armour: over('armour') ? Math.min(0.5, 0.05 * (s - 7)) : 0, breakMul: over('break') ? Math.max(0.5, 1 - 0.05 * over('break')) : 1,
+        combo: over('combo') ? Math.max(0.6, 1 - 0.04 * over('combo')) : 1, noMend: s >= 16, spare: s >= 18 ? 1 : 0 } });
+  }
+  /* One line for a step, for the picker: what changes and what it pays. */
+  const frayLine = s => s ? 'Moths and bosses ' + Math.round(FRAY.hp * s * 100) + '% tougher (the early bosses more), ' + Math.round(FRAY.speed * s * 100) + '% quicker. +' + Math.round(FRAY.pay * s * 100) + '% coins and gems.' : 'Off.';
+
+  // ---- Spool Wall: threads (weapons), levels I to X. Bought with coins (the four newest with gems), kept for good. ----
+  /* Cost of the next level, by the level you own (index 1 = level II). About 1.5 times the level before; VIII to X also take gems. */
+  const WEIGHT_COST = [0, 400, 900, 1350, 2030, 3040, 4560, 6840, 10260, 15390];
+  const WEIGHT_SILK = [0, 0, 0, 0, 0, 0, 0, 20, 35, 60];
+  /* A fork is bought once (the first with coins, the second with gems) and then either option can be chosen in the hideout, free. */
+  const FORK_COST = [{ dust: 1200, silk: 0 }, { dust: 0, silk: 30 }];
+  /* Each weapon has one job (jobMetric: what the balance test measures it on). lv = levels I to X: rate is seconds between volleys
+     (charge time for the laser), dmg is per shot in units of the ship's damage; the rest is the weapon's own. forks = the two choices
+     at levels IV and VII; mastery = what level X adds; pair = the partner weapon on the bobbin, and what the pairing gives (active
+     once the lead weapon is mastered). Only the first three levels of the eight older weapons are what they were. */
   const THREADS = {
-    running:    { name: 'Single Stitch', price: 0,   color: PAL.linen,      job: 'Boss killer', desc: 'One fast, precise shot. Hits boss weak spots 50% harder.',
-      lv: [{ rate: 0.28, n: 1, dmg: 1, pierce: 0 }, { rate: 0.22, n: 1, dmg: 1, pierce: 1 }, { rate: 0.20, n: 1, dmg: 1.3, pierce: 2 }],
-      weights: ['One shot, straight ahead', 'Fires faster and pierces one enemy', 'Hits harder and pierces two'] },
-    backstitch: { name: 'Double Stitch',  price: 350, color: PAL.madder,     job: 'All-rounder', desc: 'Shots side by side. Steady against everything.',
-      lv: [{ rate: 0.34, n: 2, dmg: 0.8 }, { rate: 0.28, n: 2, dmg: 0.9 }, { rate: 0.28, n: 3, dmg: 0.8 }],
-      weights: ['Two shots side by side', 'Fires faster', 'Three shots side by side'] },
-    chain:      { name: 'Chain Stitch',   price: 500, color: PAL.madderPale, job: 'Swarms', desc: 'A hit jumps on to nearby enemies. Weak against a lone target.', chart: 'bp_chain',
-      lv: [{ rate: 0.40, n: 1, dmg: 1.4, jumps: 1, jd: 0.6 }, { rate: 0.36, n: 1, dmg: 1.5, jumps: 2, jd: 0.7 }, { rate: 0.34, n: 1, dmg: 1.6, jumps: 3, jd: 0.8 }],
-      weights: ['Hits jump to a second enemy', 'Hits jump to a third enemy', 'Hits jump to a fourth enemy'] },
-    herringbone:{ name: 'Spread Stitch',  price: 650, color: PAL.saffron,    job: 'Close range', desc: 'A fan of shots that fade with distance: full damage up close, half at the far end. Fly forward.', chart: 'bp_herringbone',
-      lv: [{ rate: 0.50, n: 3, dmg: 0.9, arc: 20 }, { rate: 0.36, n: 3, dmg: 0.9, arc: 20 }, { rate: 0.34, n: 5, dmg: 0.85, arc: 30 }],
-      weights: ['Three shots in a fan', 'Fires faster', 'Five shots in a wider fan'] },
-    knot:       { name: 'Knot Bomb',      price: 700, color: PAL.knot,       job: 'Defence', desc: 'A slow bomb. The blast damages everything nearby and unravels enemy bullets inside it.', chart: 'bp_knot',
-      lv: [{ rate: 0.8, n: 1, dmg: 3.2, burst: 1.6 }, { rate: 0.8, n: 1, dmg: 3.4, burst: 2.6 }, { rate: 0.55, n: 1, dmg: 3.4, burst: 2.6 }],
-      weights: ['A slow bomb with a small blast', 'A much bigger blast', 'Fires faster'] },
-    cross:      { name: 'Cross Stitch',   price: 800, color: PAL.blue,      job: 'Flanks', desc: 'Diagonal shots that bounce off the side walls and hit 60% harder after a bounce.', chart: 'bp_cross',
-      lv: [{ rate: 0.36, n: 2, dmg: 0.8, bounce: 1 }, { rate: 0.34, n: 2, dmg: 0.8, bounce: 2 }, { rate: 0.30, n: 2, dmg: 0.8, bounce: 3, mid: 0.6 }],
-      weights: ['Two diagonal shots that bounce once', 'Shots bounce twice', 'Three bounces, and a third shot straight ahead'] },
-    couching:   { name: 'Wire Laser',     price: 900, color: PAL.steel,      job: 'Armour breaker', desc: 'Charges up, then fires a beam through its whole column, armour and all. Your ship moves at half speed while it charges.', chart: 'bp_couching',
-      lv: [{ rate: 0.9, n: 1, dmg: 3.6, half: 0.5 }, { rate: 0.6, n: 1, dmg: 3.6, half: 0.5 }, { rate: 0.55, n: 1, dmg: 4.2, half: 1.0 }],
-      weights: ['A beam through the whole column', 'Charges faster', 'Hits harder and twice as wide'] },
-    satin:      { name: 'Satin Stitch',   price: 1000, color: PAL.green,     job: 'Sustained', desc: 'A rapid weaving stream. Damage builds up to +60% while it stays on one target.', chart: 'bp_satin',
-      lv: [{ rate: 0.11, n: 1, dmg: 0.34 }, { rate: 0.11, n: 2, dmg: 0.30 }, { rate: 0.09, n: 2, dmg: 0.30 }],
-      weights: ['A rapid weaving stream of light shots', 'Two streams side by side', 'Fires faster'] }
+    running:    { name: 'Single Stitch', price: 0,   color: PAL.linen,      job: 'Precision', jobMetric: 'soft', desc: 'One fast, precise shot. Hits weak spots 50% harder and frays bosses twice as fast.',
+      lv: [{ rate: 0.28, n: 1, dmg: 1.001, pierce: 0 }, { rate: 0.22, n: 1, dmg: 1.073, pierce: 1 }, { rate: 0.20, n: 1, dmg: 1.3, pierce: 2 }, { rate: 0.19, n: 1, dmg: 1.339, pierce: 2 },
+        { rate: 0.18, n: 1, dmg: 1.375, pierce: 3 }, { rate: 0.17, n: 1, dmg: 1.408, pierce: 3 }, { rate: 0.165, n: 1, dmg: 1.481, pierce: 3 }, { rate: 0.16, n: 1, dmg: 1.557, pierce: 4 },
+        { rate: 0.155, n: 1, dmg: 1.636, pierce: 4 }, { rate: 0.15, n: 1, dmg: 1.716, pierce: 5 }],
+      weights: ['One shot, straight ahead', 'Fires faster and pierces one enemy', 'Hits harder and pierces two', 'Hits harder', 'Pierces three', 'Hits harder', 'Fires faster',
+        'Pierces four', 'Hits harder', 'Mastered: every fifth shot is a gold needle'],
+      forks: [{ at: 4, opts: [{ id: 'point', name: 'Needlepoint', desc: 'Slower, heavier shots that hit weak spots twice as hard.' }, { id: 'tack', name: 'Tacking', desc: 'Quick, light shots that pierce everything.' }] },
+        { at: 7, opts: [{ id: 'long', name: 'Long Shot', desc: 'Shots hit harder the farther they fly, up to a third more.' }, { id: 'split', name: 'Split End', desc: 'A shot that kills splits in two.' }] }],
+      mastery: { name: 'Gold Needle', desc: 'Every fifth shot is a gold needle: it goes through everything, hits harder and frays three times as fast.' },
+      pair: { with: 'couching', name: 'Plumb Line', desc: 'Single Stitch pierces everything; the Wire Laser charges a quarter faster.' } },
+    backstitch: { name: 'Double Stitch',  price: 350, color: PAL.madder,     job: 'All-rounder', jobMetric: 'overall', desc: 'Shots side by side. Steady against everything.',
+      lv: [{ rate: 0.34, n: 2, dmg: 0.801 }, { rate: 0.28, n: 2, dmg: 0.9 }, { rate: 0.28, n: 3, dmg: 0.8 }, { rate: 0.27, n: 3, dmg: 0.798, pierce: 1 }, { rate: 0.26, n: 3, dmg: 0.794, pierce: 1 },
+        { rate: 0.25, n: 4, dmg: 0.592, pierce: 1 }, { rate: 0.245, n: 4, dmg: 0.6, pierce: 1 }, { rate: 0.24, n: 4, dmg: 0.608, pierce: 1 }, { rate: 0.235, n: 4, dmg: 0.616, pierce: 1 }, { rate: 0.23, n: 4, dmg: 0.623, pierce: 1 }],
+      weights: ['Two shots side by side', 'Fires faster', 'Three shots side by side', 'Shots pierce one enemy', 'Hits harder', 'Four shots side by side', 'Hits harder',
+        'Hits harder', 'Hits harder', 'Mastered: a lighter second row follows every volley'],
+      forks: [{ at: 4, opts: [{ id: 'wide', name: 'Wide Rows', desc: 'The shots spread out to cover twice the width.' }, { id: 'tight', name: 'Close Rows', desc: 'The shots bunch together and hit 10% harder.' }] },
+        { at: 7, opts: [{ id: 'slant', name: 'Slant', desc: 'The outer shots lean outward, toward the edges.' }, { id: 'lock', name: 'Lockstitch', desc: 'Shots that land together on one target hit harder.' }] }],
+      mastery: { name: 'Second Row', desc: 'Every volley is followed by a lighter second row.' },
+      pair: { with: 'daisy', name: 'Back to Back', desc: 'Double Stitch fires one more shot; the Lazy Daisy grows two more petals.' } },
+    chain:      { name: 'Chain Stitch',   price: 500, color: PAL.madderPale, job: 'Swarms', jobMetric: 'clear', desc: 'A hit jumps on to nearby enemies. Every jump frays a boss a little.', chart: 'bp_chain',
+      lv: [{ rate: 0.40, n: 1, dmg: 1.454, jumps: 1, jd: 0.6 }, { rate: 0.36, n: 1, dmg: 1.784, jumps: 2, jd: 0.7 }, { rate: 0.34, n: 1, dmg: 2.247, jumps: 3, jd: 0.8 },
+        { rate: 0.33, n: 1, dmg: 2.383, jumps: 3, jd: 0.781 }, { rate: 0.32, n: 1, dmg: 2.524, jumps: 4, jd: 0.762 }, { rate: 0.31, n: 1, dmg: 2.672, jumps: 4, jd: 0.744 },
+        { rate: 0.30, n: 1, dmg: 2.825, jumps: 5, jd: 0.726 }, { rate: 0.29, n: 1, dmg: 2.984, jumps: 5, jd: 0.709 }, { rate: 0.28, n: 1, dmg: 3.147, jumps: 5, jd: 0.692 }, { rate: 0.27, n: 1, dmg: 3.316, jumps: 6, jd: 0.675 }],
+      weights: ['Hits jump to a second enemy', 'Hits jump to a third enemy', 'Hits jump to a fourth enemy', 'Hits harder', 'Hits jump to a fifth enemy', 'Hits harder',
+        'Hits jump to a sixth enemy', 'Hits harder', 'Hits harder', 'Mastered: the jumps cut enemy bullets'],
+      forks: [{ at: 4, opts: [{ id: 'long', name: 'Long Chain', desc: 'Jumps reach much farther, and one more time.' }, { id: 'heavy', name: 'Heavy Chain', desc: 'One jump fewer, but every jump hits at full strength.' }] },
+        { at: 7, opts: [{ id: 'branch', name: 'Branching', desc: 'The first jump splits to two enemies.' }, { id: 'loop', name: 'Lazy Loop', desc: 'Jumps can come back to an enemy already hit.' }] }],
+      mastery: { name: 'Live Chain', desc: 'Every jump cuts the enemy bullets along its path.' },
+      pair: { with: 'feather', name: 'Flock', desc: 'Chain Stitch jumps once more; Feather Stitch fires one more shot.' } },
+    herringbone:{ name: 'Spread Stitch',  price: 650, color: PAL.saffron,    job: 'Crowds, up close', jobMetric: 'clear', desc: 'A fan of shots, full damage up close and half at the far end. Point-blank hits fray bosses.', chart: 'bp_herringbone',
+      lv: [{ rate: 0.50, n: 3, dmg: 1.269, arc: 20 }, { rate: 0.36, n: 3, dmg: 1.246, arc: 20 }, { rate: 0.34, n: 5, dmg: 1.367, arc: 30 }, { rate: 0.33, n: 5, dmg: 1.464, arc: 32 },
+        { rate: 0.32, n: 6, dmg: 1.392, arc: 34 }, { rate: 0.31, n: 6, dmg: 1.484, arc: 36 }, { rate: 0.30, n: 7, dmg: 1.43, arc: 38 }, { rate: 0.29, n: 7, dmg: 1.518, arc: 40 },
+        { rate: 0.28, n: 7, dmg: 1.565, arc: 40 }, { rate: 0.27, n: 7, dmg: 1.654, arc: 42 }],
+      weights: ['Three shots in a fan', 'Fires faster', 'Five shots in a wider fan', 'Hits harder', 'Six shots', 'Hits harder', 'Seven shots', 'Hits harder', 'Hits harder',
+        'Mastered: two outer shots bounce off the walls'],
+      forks: [{ at: 4, opts: [{ id: 'fan', name: 'Fan', desc: 'A wider cone with two more shots.' }, { id: 'arrow', name: 'Arrowhead', desc: 'The shots meet at one point ahead and lose less with distance.' }] },
+        { at: 7, opts: [{ id: 'shrap', name: 'Shrapnel', desc: 'A shot that kills bursts into three small ones.' }, { id: 'blank', name: 'Point Blank', desc: 'Hits close in do 60% more and fray bosses twice as fast.' }] }],
+      mastery: { name: 'Herringbone', desc: 'Two outer shots bounce off the walls of the cloth.' },
+      pair: { with: 'knot', name: 'Close Quarters', desc: 'Spread Stitch shots cut the enemy bullets they touch; Knot Bomb blasts are a third wider.' } },
+    knot:       { name: 'Knot Bomb',      price: 700, color: PAL.knot,       job: 'Area and bullets', jobMetric: 'clear', desc: 'A slow knot that grows as it flies. The blast hits everything near and unravels bullets.', chart: 'bp_knot',
+      lv: [{ rate: 0.8, n: 1, dmg: 1.948, burst: 1.6 }, { rate: 0.8, n: 1, dmg: 2.656, burst: 2.6 }, { rate: 0.55, n: 1, dmg: 2.435, burst: 2.6 }, { rate: 0.54, n: 1, dmg: 2.495, burst: 2.6 },
+        { rate: 0.52, n: 1, dmg: 2.508, burst: 2.65 }, { rate: 0.50, n: 1, dmg: 2.517, burst: 2.7 }, { rate: 0.48, n: 1, dmg: 2.522, burst: 2.75 }, { rate: 0.46, n: 1, dmg: 2.523, burst: 2.8 },
+        { rate: 0.44, n: 1, dmg: 2.519, burst: 2.85 }, { rate: 0.42, n: 1, dmg: 2.51, burst: 2.9 }],
+      weights: ['A slow knot with a small blast', 'A much bigger blast', 'Fires faster', 'Hits harder', 'Bigger blast', 'Hits harder', 'Fires faster', 'Bigger blast', 'Hits harder',
+        'Mastered: every blast throws four small knots'],
+      forks: [{ at: 4, opts: [{ id: 'slip', name: 'Slip Knot', desc: 'Knots fly slower and grow twice as big.' }, { id: 'twin', name: 'Twin Knots', desc: 'Two smaller knots side by side.' }] },
+        { at: 7, opts: [{ id: 'double', name: 'Double Knot', desc: 'Each blast bursts again a moment later at half strength.' }, { id: 'french', name: 'French Knot', desc: 'Knots drift toward the nearest enemy.' }] }],
+      mastery: { name: 'Granny Knot', desc: 'Every blast throws four small knots outward that burst too.' },
+      pair: { with: 'herringbone', name: 'Close Quarters', desc: 'Knot Bomb blasts are a third wider; Spread Stitch shots cut the enemy bullets they touch.' } },
+    cross:      { name: 'Cross Stitch',   price: 800, color: PAL.blue,      job: 'Angles and edges', jobMetric: 'cover', desc: 'Diagonal shots that bounce off the walls. Bounced shots hit harder and find side weak spots.', chart: 'bp_cross',
+      lv: [{ rate: 0.36, n: 2, dmg: 0.892, bounce: 1 }, { rate: 0.34, n: 2, dmg: 1.149, bounce: 2 }, { rate: 0.30, n: 2, dmg: 1.105, bounce: 3, mid: 0.493 }, { rate: 0.29, n: 2, dmg: 1.108, bounce: 3, mid: 0.573 },
+        { rate: 0.28, n: 2, dmg: 1.106, bounce: 3, mid: 0.662 }, { rate: 0.27, n: 2, dmg: 1.1, bounce: 3, mid: 0.76 }, { rate: 0.26, n: 2, dmg: 1.086, bounce: 4, mid: 0.87 },
+        { rate: 0.25, n: 2, dmg: 1.067, bounce: 4, mid: 0.988 }, { rate: 0.24, n: 2, dmg: 1.042, bounce: 4, mid: 1.115 }, { rate: 0.23, n: 2, dmg: 1.011, bounce: 4, mid: 1.252 }],
+      weights: ['Two diagonal shots that bounce once', 'Shots bounce twice', 'Three bounces, and a third shot straight ahead', 'Hits harder', 'Hits harder', 'Hits harder',
+        'Four bounces', 'Hits harder', 'Hits harder', 'Mastered: the first bounce sends a second shot back'],
+      forks: [{ at: 4, opts: [{ id: 'wide', name: 'Wide Cross', desc: 'Flatter angles: more bounces, sooner.' }, { id: 'steep', name: 'Long Cross', desc: 'The shots start wide and cross far up the cloth.' }] },
+        { at: 7, opts: [{ id: 'rico', name: 'Ricochet', desc: 'Every bounce adds more damage.' }, { id: 'through', name: 'Through Stitch', desc: 'Bounced shots pierce two enemies.' }] }],
+      mastery: { name: 'Mirror Cross', desc: 'The first bounce sends a second shot back the other way.' },
+      pair: { with: 'blanket', name: 'Selvedge', desc: 'Cross Stitch bounces once more; Blanket Stitch throws one more loop.' } },
+    couching:   { name: 'Wire Laser',     price: 900, color: PAL.steel,      job: 'Armour breaker', jobMetric: 'armour', desc: 'Charges, then fires a beam up its whole column. Goes through armour and boss shields. You fly slower while it charges.', chart: 'bp_couching',
+      lv: [{ rate: 0.9, n: 1, dmg: 4.824, half: 0.5 }, { rate: 0.6, n: 1, dmg: 4.999, half: 0.5 }, { rate: 0.55, n: 1, dmg: 6.315, half: 1.0 }, { rate: 0.54, n: 1, dmg: 6.666, half: 1.0 },
+        { rate: 0.52, n: 1, dmg: 6.956, half: 1.05 }, { rate: 0.50, n: 1, dmg: 7.255, half: 1.1 }, { rate: 0.48, n: 1, dmg: 7.563, half: 1.1 }, { rate: 0.46, n: 1, dmg: 7.879, half: 1.15 },
+        { rate: 0.44, n: 1, dmg: 8.203, half: 1.2 }, { rate: 0.42, n: 1, dmg: 8.535, half: 1.25 }],
+      weights: ['A beam through the whole column', 'Charges faster', 'Hits harder and twice as wide', 'Hits harder', 'Hits harder', 'Hits harder and wider', 'Charges faster',
+        'Hits harder', 'Hits harder', 'Mastered: the beam arcs to two enemies beside it'],
+      forks: [{ at: 4, opts: [{ id: 'wide', name: 'Wide Beam', desc: 'A beam two thirds wider that hits a little softer.' }, { id: 'needle', name: 'Needle Beam', desc: 'A thin beam that hits much harder.' }] },
+        { at: 7, opts: [{ id: 'glow', name: 'Afterglow', desc: 'The beam lingers and keeps burning for a moment.' }, { id: 'twin', name: 'Twin Wire', desc: 'Two beams, one each side of the ship.' }] }],
+      mastery: { name: 'Live Wire', desc: 'Every beam arcs out to the two nearest enemies beside it.' },
+      pair: { with: 'running', name: 'Plumb Line', desc: 'The Wire Laser charges a quarter faster; Single Stitch pierces everything.' } },
+    satin:      { name: 'Satin Stitch',   price: 1000, color: PAL.green,     job: 'Melts one target', jobMetric: 'mid', desc: 'A rapid weaving stream. Damage builds up while it stays on target, and holds when you move to one nearby.', chart: 'bp_satin',
+      lv: [{ rate: 0.11, n: 1, dmg: 0.278 }, { rate: 0.11, n: 2, dmg: 0.19 }, { rate: 0.09, n: 2, dmg: 0.207 }, { rate: 0.088, n: 2, dmg: 0.22 }, { rate: 0.086, n: 2, dmg: 0.234 },
+        { rate: 0.084, n: 2, dmg: 0.249 }, { rate: 0.082, n: 2, dmg: 0.265 }, { rate: 0.08, n: 2, dmg: 0.281 }, { rate: 0.078, n: 2, dmg: 0.299 }, { rate: 0.076, n: 2, dmg: 0.317 }],
+      weights: ['A rapid weaving stream of light shots', 'Two streams side by side', 'Fires faster', 'Hits harder', 'Hits harder', 'Hits harder', 'Hits harder', 'Hits harder',
+        'Hits harder', 'Mastered: at full strength the stream turns gold and frays bosses'],
+      forks: [{ at: 4, opts: [{ id: 'deep', name: 'Padded Satin', desc: 'Builds more slowly, to a much greater strength.' }, { id: 'wide', name: 'Wide Satin', desc: 'Three streams that weave wider and pierce, for crowds.' }] },
+        { at: 7, opts: [{ id: 'gloss', name: 'Gloss', desc: 'At full strength the shots pierce.' }, { id: 'steady', name: 'Steady Hand', desc: 'Strength fades slowly instead of dropping when you miss.' }] }],
+      mastery: { name: 'Sheen', desc: 'At full strength the stream turns gold and frays bosses.' },
+      pair: { with: 'pins', name: 'Pinned Down', desc: 'Satin Stitch builds twice as fast; Tacking Pins keep two more pins in the cloth.' } },
+    daisy:      { name: 'Lazy Daisy',     price: 0, silk: 60, color: PAL.rose, job: 'Defence', jobMetric: 'defence', desc: 'Petals of thread circle your ship, block bullets and cut what comes close. The top petal throws a stitch ahead.', chart: 'bp_daisy',
+      lv: [{ rate: 0.55, n: 4, dmg: 2.918, r: 1.15, grow: 1.4, cut: 1.301 }, { rate: 0.5, n: 5, dmg: 3.618, r: 1.2, grow: 1.3, cut: 1.613 }, { rate: 0.46, n: 5, dmg: 4.438, r: 1.2, grow: 1.2, cut: 2.078 },
+        { rate: 0.44, n: 6, dmg: 4.622, r: 1.25, grow: 1.15, cut: 2.112 }, { rate: 0.42, n: 6, dmg: 4.805, r: 1.25, grow: 1.1, cut: 2.393 }, { rate: 0.40, n: 6, dmg: 4.983, r: 1.3, grow: 1.0, cut: 2.37 },
+        { rate: 0.38, n: 7, dmg: 5.155, r: 1.3, grow: 0.95, cut: 2.698 }, { rate: 0.36, n: 7, dmg: 5.318, r: 1.35, grow: 0.9, cut: 2.668 }, { rate: 0.35, n: 7, dmg: 5.63, r: 1.35, grow: 0.85, cut: 3.013 },
+        { rate: 0.34, n: 8, dmg: 5.956, r: 1.4, grow: 0.8, cut: 3.065 }],
+      weights: ['Four petals', 'Five petals', 'Petals hit harder', 'Six petals', 'Petals regrow faster', 'Petals hit harder', 'Seven petals', 'Throws stitches faster', 'Petals hit harder',
+        'Mastered: a second ring of petals turns the other way'],
+      forks: [{ at: 4, opts: [{ id: 'bloom', name: 'Full Bloom', desc: 'Two more petals in a wider ring.' }, { id: 'bud', name: 'Tight Bud', desc: 'A close ring that spins twice as fast and cuts twice as hard.' }] },
+        { at: 7, opts: [{ id: 'seed', name: 'Seed Head', desc: 'A petal that hits bursts into three seeds.' }, { id: 'ever', name: 'Evergreen', desc: 'Petals regrow twice as fast.' }] }],
+      mastery: { name: 'Daisy Chain', desc: 'A second ring of petals turns the other way, blocking bullets.' },
+      pair: { with: 'backstitch', name: 'Back to Back', desc: 'The Lazy Daisy grows two more petals; Double Stitch fires one more shot.' } },
+    feather:    { name: 'Feather Stitch', price: 0, silk: 80, color: PAL.teal, job: 'Hits what you cannot line up', jobMetric: 'cover', desc: 'Light shots that wander toward the nearest enemy. Weaker per shot.', chart: 'bp_feather',
+      lv: [{ rate: 0.24, n: 1, dmg: 0.866 }, { rate: 0.21, n: 1, dmg: 1.033 }, { rate: 0.19, n: 1, dmg: 1.246 }, { rate: 0.18, n: 1, dmg: 1.232 }, { rate: 0.17, n: 1, dmg: 1.214 },
+        { rate: 0.16, n: 1, dmg: 1.193 }, { rate: 0.15, n: 1, dmg: 1.168 }, { rate: 0.145, n: 1, dmg: 1.178 }, { rate: 0.14, n: 1, dmg: 1.187 }, { rate: 0.135, n: 1, dmg: 1.195 }],
+      weights: ['A wandering shot, left and right in turn', 'Fires faster', 'Hits harder', 'Fires faster', 'Hits harder', 'Fires faster', 'Fires faster', 'Hits harder', 'Hits harder',
+        'Mastered: every sixth shot is a great feather that goes through everything'],
+      forks: [{ at: 4, opts: [{ id: 'quill', name: 'Quill', desc: 'Slower, heavier shots that turn hard.' }, { id: 'down', name: 'Down', desc: 'Two light shots at a time that wander wide.' }] },
+        { at: 7, opts: [{ id: 'preen', name: 'Preen', desc: 'Shots that miss turn round and search again.' }, { id: 'plume', name: 'Plume', desc: 'A hit splits into two small feathers.' }] }],
+      mastery: { name: 'Great Feather', desc: 'Every sixth shot is a great feather that goes through everything.' },
+      pair: { with: 'chain', name: 'Flock', desc: 'Feather Stitch fires one more shot; Chain Stitch jumps once more.' } },
+    blanket:    { name: 'Blanket Stitch', price: 0, silk: 100, color: PAL.rust, job: 'Loops and lines', jobMetric: 'clear', desc: 'A shot that loops out and back, going through everything and hitting each enemy twice.', chart: 'bp_blanket',
+      lv: [{ rate: 0.62, n: 1, dmg: 1.961, w: 0.825, life: 1.15 }, { rate: 0.56, n: 1, dmg: 2.416, w: 0.87, life: 1.15 }, { rate: 0.5, n: 1, dmg: 2.876, w: 0.9, life: 1.1 },
+        { rate: 0.48, n: 1, dmg: 2.881, w: 0.93, life: 1.1 }, { rate: 0.46, n: 1, dmg: 2.882, w: 0.96, life: 1.1 }, { rate: 0.44, n: 1, dmg: 2.878, w: 0.99, life: 1.05 },
+        { rate: 0.42, n: 1, dmg: 2.868, w: 1.05, life: 1.05 }, { rate: 0.4, n: 1, dmg: 2.85, w: 1.08, life: 1.0 }, { rate: 0.39, n: 1, dmg: 2.901, w: 1.125, life: 1.0 }, { rate: 0.38, n: 1, dmg: 2.95, w: 1.2, life: 1.0 }],
+      weights: ['A loop out and back, left and right in turn', 'A wider loop', 'Hits harder', 'Hits harder', 'Hits harder', 'Loops faster', 'Hits harder', 'Loops faster', 'Hits harder',
+        'Mastered: each loop throws three stitches from its top'],
+      forks: [{ at: 4, opts: [{ id: 'wide', name: 'Wide Loop', desc: 'Loops sweep half again as wide.' }, { id: 'tight', name: 'Tight Loop', desc: 'Narrow, quick loops that hit harder.' }] },
+        { at: 7, opts: [{ id: 'double', name: 'Double Loop', desc: 'Each loop goes round twice, hitting three times.' }, { id: 'pair', name: 'Paired Loops', desc: 'Loops go out both sides at once.' }] }],
+      mastery: { name: 'Buttonhole', desc: 'At the top of every loop it throws three stitches outward.' },
+      pair: { with: 'cross', name: 'Selvedge', desc: 'Blanket Stitch throws one more loop; Cross Stitch bounces once more.' } },
+    pins:       { name: 'Tacking Pins',   price: 0, silk: 120, color: PAL.violet, job: 'Control', jobMetric: 'clear', desc: 'Pins that stick in the cloth and fire up at whatever passes over them.', chart: 'bp_pins',
+      lv: [{ rate: 0.62, n: 1, dmg: 4.965, pd: 5.077, every: 0.425, life: 3.5, max: 4 }, { rate: 0.58, n: 1, dmg: 6.333, pd: 6.828, every: 0.4, life: 3.6, max: 4 },
+        { rate: 0.54, n: 1, dmg: 7.862, pd: 8.24, every: 0.375, life: 3.8, max: 5 }, { rate: 0.52, n: 1, dmg: 7.902, pd: 4.015, every: 0.362, life: 3.9, max: 5 },
+        { rate: 0.5, n: 2, dmg: 3.966, pd: 2.048, every: 0.35, life: 4.0, max: 5 }, { rate: 0.48, n: 2, dmg: 3.974, pd: 2.084, every: 0.338, life: 4.1, max: 5 },
+        { rate: 0.46, n: 2, dmg: 3.975, pd: 2.111, every: 0.325, life: 4.2, max: 6 }, { rate: 0.44, n: 2, dmg: 3.969, pd: 2.134, every: 0.312, life: 4.3, max: 6 },
+        { rate: 0.42, n: 2, dmg: 3.954, pd: 2.149, every: 0.3, life: 4.4, max: 6 }, { rate: 0.4, n: 2, dmg: 3.931, pd: 2.159, every: 0.288, life: 4.5, max: 6 }],
+      weights: ['Four pins at a time', 'Pins fire faster', 'Pins hit harder', 'Five pins at a time', 'Two pins at a throw', 'Pins last longer', 'Six pins at a time', 'Pins hit harder',
+        'Pins fire faster', 'Mastered: a pin fires a ring of stitches as it comes loose'],
+      forks: [{ at: 4, opts: [{ id: 'map', name: 'Map Pins', desc: 'Pins land wider apart and farther up the cloth.' }, { id: 'push', name: 'Push Pins', desc: 'Pins fire faster but come loose sooner.' }] },
+        { at: 7, opts: [{ id: 'cushion', name: 'Pincushion', desc: 'Each pin fires three ways at once.' }, { id: 'hat', name: 'Hatpin', desc: 'Pin shots go through two enemies.' }] }],
+      mastery: { name: 'Pinwheel', desc: 'A pin that comes loose spins and fires a ring of eight stitches.' },
+      pair: { with: 'satin', name: 'Pinned Down', desc: 'Tacking Pins keep two more pins in the cloth; Satin Stitch builds twice as fast.' } }
   };
   for (const id in THREADS) THREADS[id].rate = THREADS[id].lv.map(l => l.rate);
 
@@ -315,25 +577,70 @@
   };
 
   // ---- Gimp's Bench: tempers. Dust. Permanent on every needle (owner direction; the bible had them per-Night). ----
-  const TEMPER_COST = [120, 300, 650, 1200, 2000];
+  /* Uncapped. Prices: the first five are today's; after that each level costs 1.22 times the one before (VI 2,440, X 5,410, XV 14,610,
+     XX 39,480, XXX about 288,000). Every temper uses the same ladder. */
+  const TEMPER_COST = [120, 300, 650, 1200, 2000];   // levels I to V (the legacy ladder; temperCost() below is what the shop reads)
+  const temperCost = lv => lv < 5 ? TEMPER_COST[lv] : Math.round(2000 * Math.pow(1.22, lv - 4));   // price of level lv+1 when you own lv
+  /* What each level adds. `curve` is [levels in this stretch, gain per level] stretches in order; the last stretch goes on for ever.
+     Levels I to V (III for the first one) keep their old gains, so an old save flies exactly as before; later levels taper.
+     `cap` is a ceiling on the total gain (shield and the others that must stay playable). `marks`: every fifth level from X adds a
+     small named bonus, `{ key: amount }` added up in ST.derive (soft: boss weak spots, dmg: all damage, sp: special meter from kills,
+     invuln: time safe after a hit, dash: dash recovery, magnet: pickup radius, chart: blueprint drops, charm: power-up drops). */
   const TEMPERS = {
-    point: { name: 'Damage', max: 5, desc: 'Each level: shots hit harder. Level IV breaks Casebearer armour in one hit', chartAt: 4 },
-    eye:   { name: 'Fire rate', max: 5, desc: 'Each level: fire faster', chartAt: 4 },
-    ply:   { name: 'Shield', max: 3, desc: 'Each level: take one more hit before losing a life' },
-    pace:  { name: 'Speed', max: 3, desc: 'Each level: move faster' },
-    magnet: { name: 'Magnet', max: 3, desc: 'Each level: pull in coins and pickups from 35% farther away' },
-    luck:  { name: 'Luck', max: 3, desc: 'Each level: power-ups and blueprints drop 20% more often' }
+    point: { name: 'Damage', desc: 'Each level: shots hit harder. Level IV breaks Casebearer armour in one hit. The gain shrinks after level V', chartAt: 4,
+      curve: [[5, 0.15], [5, 0.08], [10, 0.04], [Infinity, 0.02]],
+      marks: { 10: { name: 'Weak spots', desc: 'Boss weak spots take 10% more', soft: 0.1 }, 15: { name: 'Weak spots II', desc: 'Boss weak spots take another 10% more', soft: 0.1 },
+        20: { name: 'Weak spots III', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 25: { name: 'Weak spots IV', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 30: { name: 'Weak spots V', desc: 'Boss weak spots take another 10% more', soft: 0.1 } } },
+    eye:   { name: 'Fire rate', desc: 'Each level: fire faster. The gain shrinks after level V', chartAt: 4,
+      curve: [[5, 0.07], [5, 0.0373], [10, 0.0187], [Infinity, 0.0093]],
+      marks: { 10: { name: 'Quick spool', desc: 'Kills fill the special meter 10% faster', sp: 0.1 }, 15: { name: 'Quick spool II', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 },
+        20: { name: 'Quick spool III', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 }, 25: { name: 'Quick spool IV', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 }, 30: { name: 'Quick spool V', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 } } },
+    ply:   { name: 'Shield', desc: 'Levels I to III: one more hit each. After that, one more hit every fourth level, up to level XV',
+      curve: [[3, 1], [Infinity, 0.25]], cap: 6,
+      marks: { 10: { name: 'Padding', desc: 'Stay safe 10% longer after a hit', invuln: 0.1 }, 15: { name: 'Padding II', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 },
+        20: { name: 'Padding III', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 }, 25: { name: 'Padding IV', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 }, 30: { name: 'Padding V', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 } } },
+    pace:  { name: 'Speed', desc: 'Levels I to III: move faster. After that each level adds less, and the ceiling is close',
+      curve: [[3, 1.5], [Infinity, 0.5]], decay: 0.85,
+      marks: { 10: { name: 'Light foot', desc: 'Dashes come back 8% sooner', dash: 0.08 }, 15: { name: 'Light foot II', desc: 'Dashes come back 8% sooner again', dash: 0.08 },
+        20: { name: 'Light foot III', desc: 'Dashes come back 8% sooner again', dash: 0.08 }, 25: { name: 'Light foot IV', desc: 'Dashes come back 8% sooner again', dash: 0.08 }, 30: { name: 'Light foot V', desc: 'Dashes come back 8% sooner again', dash: 0.08 } } },
+    magnet: { name: 'Magnet', desc: 'Levels I to III: pull in coins and pickups from 35% farther away. After that each level adds less',
+      curve: [[3, 0.35], [3, 0.15], [4, 0.06], [Infinity, 0.02]], cap: 1.8,
+      marks: { 10: { name: 'Wide net', desc: 'Pickups are pulled from 10% farther', magnet: 0.1 }, 15: { name: 'Wide net II', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 },
+        20: { name: 'Wide net III', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 }, 25: { name: 'Wide net IV', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 }, 30: { name: 'Wide net V', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 } } },
+    luck:  { name: 'Luck', desc: 'Levels I to III: power-ups and blueprints drop 20% more often. After that each level adds less',
+      curve: [[3, 0.2], [5, 0.08], [7, 0.03], [Infinity, 0.01]], cap: 1.4,
+      marks: { 10: { name: 'Keen eye', desc: 'Blueprints drop 10% more often', chart: 0.1 }, 15: { name: 'Bright charms', desc: 'Power-ups drop 10% more often', charm: 0.1 },
+        20: { name: 'Keen eye II', desc: 'Blueprints drop another 10% more often', chart: 0.1 }, 25: { name: 'Bright charms II', desc: 'Power-ups drop another 10% more often', charm: 0.1 }, 30: { name: 'Keen eye III', desc: 'Blueprints drop another 10% more often', chart: 0.1 } } }
   };
+  /* Total gain of a temper at level lv (a number of levels, so 1 level of Damage is 0.15). */
+  function temperGain(id, lv) {
+    const t = TEMPERS[id]; let left = Math.max(0, lv), sum = 0, k = 0;
+    for (const [n, g] of t.curve) {
+      const take = Math.min(left, n);
+      if (t.decay && n === Infinity) sum += g * (1 - Math.pow(t.decay, take)) / (1 - t.decay);   // speed: each level beyond III is 15% smaller than the one before
+      else sum += take * g;
+      left -= take; k++; if (left <= 0) break;
+    }
+    return t.cap !== undefined ? Math.min(sum, t.cap) : sum;
+  }
+  /* The named bonuses a temper at level lv has earned, added up: { soft: .2, dmg: .05, ... }. */
+  function temperMarks(id, lv) {
+    const out = {}, m = TEMPERS[id].marks;
+    for (const at in m) if (lv >= +at) for (const k in m[at]) if (k !== 'name' && k !== 'desc') out[k] = (out[k] || 0) + m[at][k];
+    return out;
+  }
+  /* The next level at which a temper adds a named bonus, after lv (or 0 when it has no more). */
+  const temperNextMark = (id, lv) => { const m = TEMPERS[id].marks; for (const at of Object.keys(m).map(Number).sort((a, b) => a - b)) if (at > lv) return at; return 0; };
 
   // ---- Notions Drawer: consumables. Dust. Single use, three tray slots. ----
   const NOTIONS = {
     thimble: { name: 'Thimble',        price: 120, sprite: 'thimble', desc: 'Blocks the next hit.' },
-    ripper:  { name: 'Seam Ripper',    price: 220, sprite: 'ripper',  desc: 'Destroys the front row of enemies. Damages a boss.' },
+    ripper:  { name: 'Seam Ripper',    price: 220, sprite: 'ripper',  desc: 'Destroys the front row of moths. On a boss it rips a weak spot and frays it a quarter.' },
     beeswax: { name: 'Beeswax',        price: 100, sprite: 'beeswax', desc: 'Double fire rate for 10 seconds.' },
     chalk:   { name: "Tailor's Chalk", price: 80,  sprite: 'chalk',   desc: 'Shows a warning line before the next 3 dive attacks.' },
     pin:     { name: 'Safety Pin',     price: 140, sprite: 'pin',     desc: 'Blocks the next capture beam.' },
     button:  { name: 'Brass Button',   price: 400, sprite: 'button',  desc: '+1 life. Limit one per hideout visit.', perVisit: true, chart: 'bp_button' },
-    shears:  { name: 'Pinking Shears', price: 160, sprite: 'shears',  desc: 'Clears every enemy shot on screen.', chart: 'bp_shears' },
+    shears:  { name: 'Pinking Shears', price: 160, sprite: 'shears',  desc: 'Clears every enemy shot on screen without using a bomb. Does no damage.', chart: 'bp_shears' },
     dish:    { name: 'Magnet Dish',    price: 90,  sprite: 'dish',    desc: 'Pulls every coin and pickup to your ship for 12 seconds.' },
     patch:   { name: 'Patch Kit',      price: 200, sprite: 'patch',   desc: 'Restores your shield to full.' },
     drone:   { name: 'Bobbin Drone',   price: 240, sprite: 'bobbin',  desc: 'A drone flies beside you and fires with you for 25 seconds.', chart: 'bp_drone' }
@@ -363,22 +670,42 @@
       up: { name: 'Seeker Shots', dur: 10, tier: 1, cost: 90, desc: 'Every shot locks on to the nearest enemy and chases it down, even one behind you.' } },
     drone:  { name: 'Bobbin Drone', color: PAL.brass,      dur: 15, desc: 'A drone flies beside you and fires with you.',
       up: { name: 'Twin Drones', dur: 15, tier: 1, cost: 100, desc: 'Two drones, one on each side, fly with you. Their shots curve toward enemies.' } },
-    bomb:   { name: 'Unravel',      color: PAL.madderHi,   dur: 0,  desc: 'Damages every enemy on screen and clears their shots.',
-      up: { name: 'Grand Unravel', dur: 0, tier: 2, cost: 170, desc: 'Hits every enemy on screen twice as hard, and turns every enemy shot into a coin.' } },
+    bomb:   { name: 'Bomb',         color: PAL.madderHi,   dur: 0,  desc: 'Adds one bomb to your stock.',
+      up: { name: 'Grand Unravel', dur: 0, tier: 2, cost: 170, desc: 'Every bomb you use hits twice as hard, does more to a boss, and turns every shot it clears into a coin.' } },
     twin:   { name: 'Twin Ship',    color: PAL.madder,     dur: 0,  desc: 'A second ship flies and fires beside you until it is hit.',
-      up: { name: 'Triple Ship', dur: 0, tier: 2, cost: 220, desc: 'Two extra ships fly and fire beside you. Each hit costs one of them.' } }
+      up: { name: 'Triple Ship', dur: 0, tier: 2, cost: 220, desc: 'Two extra ships fly and fire beside you. Each hit costs one of them.' } },
+    split:  { name: 'Split Thread', color: PAL.greenPale,  dur: 10, desc: 'Your shots split in two the first time they hit a moth.',
+      up: { name: 'Triple Split', dur: 12, tier: 0, cost: 35, desc: 'Your shots split into three the first time they hit a moth.' } },
+    mirror: { name: 'Mirror',       color: PAL.steelHi,    dur: 10, desc: 'A second set of shots fires from the top of the cloth, downward.' },
+    recharge: { name: 'Recharge',   color: PAL.saffron,    dur: 0,  desc: 'Fills your special.' },
+    streak: { name: 'Hot Streak',   color: PAL.madderPale, dur: 12, desc: 'Your fire rate climbs for as long as you are not hit. A hit sets it back.',
+      up: { name: 'Blazing Streak', dur: 14, tier: 1, cost: 70, desc: 'Your fire rate climbs twice as fast, and a hit only takes half of it away.' } },
+    tack:   { name: 'Tack Trap',    color: PAL.brass,      dur: 12, desc: 'Moths you destroy leave a pin behind that shoots for a few seconds.' },
+    fraydust: { name: 'Fray Dust',  color: PAL.mist,       dur: 12, desc: 'Everything you hit frays twice as fast: bosses break sooner and moths take more.',
+      up: { name: 'Fray Storm', dur: 14, tier: 2, cost: 110, desc: 'Everything you hit frays three times as fast.' } },
+    spool:  { name: 'Tangled Spool', color: PAL.darkBrown, dur: 10, desc: 'Huge damage for 10 seconds, but you move at half speed.',
+      up: { name: 'Wound Spool', dur: 12, tier: 2, cost: 120, desc: 'Even more damage for 12 seconds, and you move at two thirds speed.' } }
   };
   /* The order power-up upgrades open in: the first row is open from the start; each row after it opens once you own `need` from the row before. */
   const CHARM_TIERS = [{ name: 'Row 1', need: 0 }, { name: 'Row 2', need: 2 }, { name: 'Row 3', need: 2 }];
 
   // ---- The Pattern: permanent stitches. Silk. Each row unlocks left to right. ----
+  /* Three tiers. The first (rows with no `tier`) is open from the start. The second opens once 6 first-tier perks are owned, the third
+     once 5 second-tier perks are owned (the same rule as the power-up rows). The Coin Exchange perk (`sweepings`) is gone: it paid gems for
+     nothing. Its price is refunded by the save upgrade. Perks whose system another part of the game owns are read as plain flags (see
+     ST.perk in save.js): until that system exists they do nothing. */
   const PATTERN = {
+    tiers: [{ name: 'First pattern', need: 0 }, { name: 'Second pattern', need: 6 }, { name: 'Third pattern', need: 5 }],
     rows: [
       { name: 'Ship',     nodes: ['steady', 'quick', 'second'] },
       { name: 'Senses',   nodes: ['keen', 'chalkline', 'sight'] },
-      { name: 'Wallet',   nodes: ['deep', 'credit', 'sweepings'] },
+      { name: 'Wallet',   nodes: ['deep', 'credit'] },
       { name: 'Survival', nodes: ['sparepin', 'mended', 'lastknot'] },
-      { name: 'Arsenal',  nodes: ['headstart', 'overtime', 'bargain'] }
+      { name: 'Arsenal',  nodes: ['headstart', 'overtime', 'bargain'] },
+      { name: 'Kit',      tier: 1, nodes: ['bombcache', 'warmbobbin', 'halfspool', 'bombcache2'] },
+      { name: 'Finds',    tier: 1, nodes: ['firstpick', 'secondlook', 'heirhook', 'longfray'] },
+      { name: 'Purse',    tier: 2, nodes: ['coinsense', 'gemfinder', 'bargain2'] },
+      { name: 'Nerve',    tier: 2, nodes: ['sparepin2', 'freshstart', 'lastlight', 'quickstep'] }
     ],
     nodes: {
       steady:    { name: 'Recovery',      cost: 30, desc: 'Stay invincible 50% longer after taking a hit.' },
@@ -389,13 +716,29 @@
       sight:     { name: 'Blueprint Finder', cost: 60, desc: 'Blueprints drop twice as often.' },
       deep:      { name: 'Bigger Slots',  cost: 40, desc: 'Each item slot holds two of the same item.' },
       credit:    { name: 'Discount',      cost: 55, desc: '10% off every item.' },
-      sweepings: { name: 'Coin Exchange', cost: 70, desc: 'When a run ends in game over, earn 1 gem for every 100 coins you hold.' },
       sparepin:  { name: 'Extra Life',    cost: 50, desc: 'Start every run with one more life.' },
       mended:    { name: 'Shield Repair', cost: 90, desc: 'Restore 1 shield at the start of every stage.' },
       headstart: { name: 'Head Start',    cost: 40, desc: 'Start every run with a one-hit shield already up.' },
       overtime:  { name: 'Overtime',      cost: 60, desc: 'Power-ups last 30% longer.' },
       bargain:   { name: 'Bargain',       cost: 80, desc: 'Weapon levels and ship upgrades cost 15% less.' },
-      lastknot:  { name: 'Second Chance', cost: 140, desc: 'Once per run, survive the hit that would end it and keep flying with 1 shield.' }
+      lastknot:  { name: 'Second Chance', cost: 140, desc: 'Once per run, survive the hit that would end it and keep flying with 1 shield.' },
+      // second pattern
+      bombcache:  { name: 'Spare Bomb',    cost: 120, desc: 'Carry one more bomb.' },
+      warmbobbin: { name: 'Warm Bobbin',   cost: 170, desc: 'Your bobbin fires at 75% strength instead of 60%.' },
+      halfspool:  { name: 'Half Spool',    cost: 240, desc: 'Your special starts every run half full.' },
+      bombcache2: { name: 'Bomb Belt',     cost: 330, desc: 'Carry one more bomb, on top of Spare Bomb.' },
+      firstpick:  { name: 'First Pick',    cost: 140, desc: 'Start every run by choosing one of three finds.' },
+      secondlook: { name: 'Second Look',   cost: 200, desc: 'Once per run, throw back the three finds on offer and draw three new ones.' },
+      heirhook:   { name: 'Heirloom Hook', cost: 280, desc: 'Wear one more heirloom.' },
+      longfray:   { name: 'Slow Fray',     cost: 380, desc: 'A boss stays broken 25% longer once its fray meter fills.' },
+      // third pattern
+      coinsense:  { name: 'Coin Sense',    cost: 400, desc: 'Every coin you earn is worth 10% more.' },
+      gemfinder:  { name: 'Gem Finder',    cost: 520, desc: 'Bosses drop 20% more gems.' },
+      bargain2:   { name: 'Bargain II',    cost: 680, desc: 'Weapon levels and ship upgrades cost another 10% less.' },
+      sparepin2:  { name: 'Spare Life II', cost: 460, desc: 'Start every run with one more life, on top of Extra Life.' },
+      freshstart: { name: 'Fresh Start',   cost: 600, desc: 'Restore 1 shield at the start of every wave.' },
+      lastlight:  { name: 'Last Light',    cost: 780, desc: 'A second Second Chance each run: survive a killing hit again, with 2 shields.' },
+      quickstep:  { name: 'Quick Step',    cost: 1000, desc: 'Dashes come back 15% sooner.' }
     }
   };
 
@@ -417,8 +760,135 @@
     bp_sail:        { name: 'Sail blueprint',       unseals: 'the Sail ship',     from: 'any enemy (rare drop)', loose: true },
     bp_gilt:        { name: 'Level IV blueprint',   unseals: 'level IV of the Damage and Fire rate upgrades', from: 'The Great Wick, or any enemy (rare drop)', loose: true },
     bp_button:      { name: 'Brass Button blueprint', unseals: 'the Brass Button item',   from: 'The Great Lappet, or any enemy (rare drop)', loose: true },
-    bp_shears:      { name: 'Pinking Shears blueprint', unseals: 'the Pinking Shears item',  from: 'any enemy (rare drop)', loose: true }
+    bp_shears:      { name: 'Pinking Shears blueprint', unseals: 'the Pinking Shears item',  from: 'any enemy (rare drop)', loose: true },
+    bp_daisy:       { name: 'Lazy Daisy blueprint',  unseals: 'the Lazy Daisy weapon',  from: 'The Great Lappet' },
+    bp_feather:     { name: 'Feather Stitch blueprint', unseals: 'the Feather Stitch weapon', from: 'The Great Wick' },
+    bp_blanket:     { name: 'Blanket Stitch blueprint', unseals: 'the Blanket Stitch weapon', from: 'any enemy (rare drop)', loose: true },
+    bp_pins:        { name: 'Tacking Pins blueprint', unseals: 'the Tacking Pins weapon', from: 'The Moth King, or any enemy (rare drop)', loose: true }
   };
+
+  // ---- Unique items (rework: unique items). Finds are found in a run and last for it; heirlooms are bought in the hideout and worn; keepsakes are
+  // heirlooms a boss drops. `fx` is plain data the sim sums into Sim.fv (see Sim.applyFinds in src/sim.js); every key is listed in FX_KEYS. ----
+  /* What each key does (all are fractions unless noted; a fraction of 0.1 is 10%):
+     ply (+shields), invuln (longer safety after a hit), dmg, rate (fire rate), speed (ship), magnet, luck (drop chances), coin (coins), sp (special fills),
+     dash (dashes return sooner), charm (power-up drops), dur (power-ups last), focus (slow time lasts), bobbin (the bobbin's damage), bossDmg, fray (boss fray fills),
+     bomb (bomb damage), bombMax (whole bombs carried, can be negative), bombPerStage (whole bombs given at each stage start), bombRefund (every Nth bomb is free; 0 = off),
+     killHeal (every N kills restore a shield; 0 = off), mendWave (shields restored at each wave start), thorns (needles in the ring when hit), edge (coin value near the edges, a
+     multiplier; 0 = off), gem (gem drop chance), bonusDust (coin multiplier in bonus waves; 0 = off), bossGem (whole gems), bossDust (boss coins), grazeDust (coins a graze),
+     killSp (special per kill), eliteFind (0 to 1: how sure an elite moth's find is, on top of the base chance), waveGuard (1: a one-hit pad at every wave start). */
+  const FX_KEYS = ['ply', 'invuln', 'dmg', 'rate', 'speed', 'magnet', 'luck', 'coin', 'sp', 'dash', 'charm', 'dur', 'focus', 'bobbin', 'bossDmg', 'fray', 'bomb', 'bombMax', 'bombPerStage', 'bombRefund',
+    'killHeal', 'mendWave', 'thorns', 'edge', 'gem', 'bonusDust', 'bossGem', 'bossDust', 'grazeDust', 'killSp', 'eliteFind', 'waveGuard'];
+  const FIND_RARITY = { common: { name: 'Common', weight: 50 }, uncommon: { name: 'Uncommon', weight: 33 }, rare: { name: 'Rare', weight: 17 } };
+  /* Six families. Owning `at[0]` or `at[1]` finds of one family adds that step's fx on top (the rows are what you read on the choice sheet). */
+  const FIND_FAMILIES = {
+    guard:   { name: 'Guard',   color: PAL.steelHi,    at: [2, 4], bonus: [{ invuln: 0.2 }, { ply: 1, thorns: 6 }],                   note: ['Safe 20% longer after a hit', 'One more shield, and a ring of needles when hit'] },
+    purse:   { name: 'Purse',   color: PAL.saffron,    at: [2, 4], bonus: [{ coin: 0.1 }, { bossGem: 2, gem: 0.25 }],                 note: ['Coins worth 10% more', 'Bosses drop 2 more gems, and moths drop gems more often'] },
+    point:   { name: 'Point',   color: PAL.madderPale, at: [2, 4], bonus: [{ dmg: 0.06 }, { fray: 0.25, bossDmg: 0.1 }],              note: ['6% more damage', 'Bosses take 10% more damage and fray 25% faster'] },
+    pace:    { name: 'Pace',    color: PAL.teal,       at: [2, 4], bonus: [{ rate: 0.05 }, { speed: 0.1, dash: 0.15 }],               note: ['5% more fire rate', 'Faster ship, dashes back 15% sooner'] },
+    graze:   { name: 'Graze',   color: PAL.violet,     at: [2, 4], bonus: [{ sp: 0.1 }, { bomb: 0.25, grazeDust: 1 }],                note: ['Special fills 10% faster', 'Bombs hit 25% harder, and every near miss gives a coin'] },
+    fortune: { name: 'Fortune', color: PAL.greenPale,  at: [2, 4], bonus: [{ luck: 0.1 }, { charm: 0.3, dur: 0.15 }],                 note: ['Drops 10% more common', 'Power-ups drop 30% more often and last 15% longer'] }
+  };
+  /* Counted charts for the item pictures: 7 wide, 'a' is the family colour, 'b' is paper. */
+  const GLYPHS = {
+    egg: ['..aaa..', '.aabaa.', 'aaabaaa', 'aaaaaaa', 'aaaaaaa', '.aaaaa.', '..aaa..'],
+    cuff: ['aaaaaaa', 'abbbbba', 'abbbbba', 'aaaaaaa', 'abbbbba', 'abbbbba', 'aaaaaaa'],
+    shield: ['aaaaaaa', 'abbabba', 'abbabba', '.abbba.', '.abbba.', '..aba..', '...a...'],
+    thread: ['.......', 'aa...aa', '..a.a..', '...a...', '..b.b..', 'bb...bb', '.......'],
+    thorn: ['a..a..a', '.a.a.a.', '..aaa..', 'aaabaaa', '..aaa..', '.a.a.a.', 'a..a..a'],
+    coin: ['..aaa..', '.abbba.', 'abaaaba', 'abaaaba', 'abaaaba', '.abbba.', '..aaa..'],
+    purse: ['..a.a..', '..aaa..', '.aaaaa.', 'aabbbaa', 'aabbbaa', 'aaaaaaa', '.aaaaa.'],
+    gem: ['.aaaaa.', 'abbabba', 'abaaaba', '.abbba.', '..aba..', '...a...', '.......'],
+    map: ['aaaaaaa', 'abaabaa', 'aabaaba', 'abbabba', 'aabaaba', 'abaabaa', 'aaaaaaa'],
+    crown: ['a.a.a.a', 'aaaaaaa', 'abbabba', 'aaaaaaa', 'abbbbba', 'abbbbba', 'aaaaaaa'],
+    point: ['...a...', '..aba..', '..aba..', '.abbba.', '.abbba.', 'abbbbba', 'aaaaaaa'],
+    bead: ['..aaa..', '.aabaa.', 'aabbbaa', 'aabbbaa', '.aabaa.', '..aaa..', '.......'],
+    bobbin: ['aaaaaaa', '.abbba.', '.abbba.', '.abbba.', '.abbba.', '.abbba.', 'aaaaaaa'],
+    twin: ['a.....a', 'ab...ba', '.a...a.', '.a...a.', '..a.a..', '..a.a..', '...a...'],
+    wheel: ['..aaa..', '.a.b.a.', 'a..b..a', 'abbbbba', 'a..b..a', '.a.b.a.', '..aaa..'],
+    feather: ['.....aa', '....aab', '...aab.', '..aab..', '.aab...', 'ab.....', 'b......'],
+    heel: ['.......', '.aa....', '.aa....', '.aaa...', '.aabaaa', '.aaaaaa', 'bbbbbbb'],
+    hourglass: ['aaaaaaa', '.abbba.', '..aba..', '...a...', '..aba..', '.abbba.', 'aaaaaaa'],
+    gear: ['.a.a.a.', 'aaaaaaa', '.abbba.', 'aabaaba', '.abbba.', 'aaaaaaa', '.a.a.a.'],
+    pins: ['a..b..a', 'a..b..a', '.a.b.a.', 'aaaaaaa', 'abababa', 'aaaaaaa', '.aaaaa.'],
+    star: ['...a...', '...a...', 'aaabaaa', '.abbba.', '..aba..', '.aa.aa.', 'a.....a'],
+    spark: ['...aaa.', '..aa...', '.aaa...', 'aaaaaaa', '...aaa.', '..aa...', '.aa....'],
+    knot: ['aa...aa', 'aaa.aaa', '.aaaaa.', '..aba..', '.aaaaa.', 'aaa.aaa', 'aa...aa'],
+    bomb: ['....ba.', '...b...', '..aaa..', '.aaaaa.', 'aaabaaa', 'aaaaaaa', '.aaaaa.'],
+    clover: ['.aa.aa.', 'aaaaaaa', '.aaaaa.', 'aaaaaaa', '.aa.aa.', '...b...', '...b...'],
+    magnet: ['aa...aa', 'aa...aa', 'bb...bb', 'a.....a', 'a.....a', '.a...a.', '..aaa..'],
+    ribbon: ['aa...aa', 'aaa.aaa', 'aaaaaaa', '..bab..', '.aa.aa.', '.a...a.', 'aa...aa'],
+    tin: ['.aaaaa.', 'aaaaaaa', 'abbbbba', 'abbabba', 'abbbbba', 'aaaaaaa', '.aaaaa.'],
+    moth: ['a.....a', 'aa...aa', 'aaa.aaa', 'aabbbaa', '.aabaa.', '..a.a..', '.a...a.'],
+    shears: ['a.....a', '.a...a.', '..a.a..', '...a...', '..b.b..', '.b...b.', 'b.....b'],
+    lock: ['..aaa..', '.a...a.', '.a...a.', 'aaaaaaa', 'aabbbaa', 'aabaaba', 'aaaaaaa'],
+    plate: ['.aaaaa.', 'aabbbaa', 'abbabba', 'abbabba', 'abbabba', 'aabbbaa', '.aaaaa.'],
+    jewel: ['..aaa..', '.abbba.', 'abbabba', '.abbba.', '..aba..', '...a...', '.......'],
+    flower: ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..'],
+    web: ['a..a..a', '.a.a.a.', '..aaa..', 'aaabaaa', '..aaa..', '.a.a.a.', 'a..a..a'],
+    eye: ['.......', '..aaa..', '.abbba.', 'abbaabb', '.abbba.', '..aaa..', '.......'],
+    wick: ['...b...', '...a...', '..aaa..', '..aaa..', '..aaa..', '..aaa..', '.aaaaa.'],
+    sun: ['a..a..a', '.a.a.a.', '..bbb..', 'aabbbaa', '..bbb..', '.a.a.a.', 'a..a..a'],
+    pad: ['.aaaaa.', 'abbbbba', 'abababa', 'abbbbba', 'abababa', 'abbbbba', '.aaaaa.']
+  };
+  const FINDS = {
+    darning_egg:     { name: 'Darning Egg',        fam: 'guard',   rar: 'common',   glyph: 'egg',       desc: '+1 shield.', fx: { ply: 1 } },
+    padded_cuff:     { name: 'Padded Cuff',        fam: 'guard',   rar: 'common',   glyph: 'cuff',      desc: 'After a hit you stay safe 40% longer.', fx: { invuln: 0.4 } },
+    felt_lining:     { name: 'Felt Lining',        fam: 'guard',   rar: 'common',   glyph: 'shield',    desc: 'Every 30 kills, restore one shield.', fx: { killHeal: 30 } },
+    mending_thread:  { name: 'Mending Thread',     fam: 'guard',   rar: 'uncommon', glyph: 'thread',    desc: 'Restore one shield at the start of every wave.', fx: { mendWave: 1 } },
+    thimble_thorns:  { name: 'Thimble of Thorns',  fam: 'guard',   rar: 'rare',     glyph: 'thorn',     desc: 'Every hit you take fires a ring of needles.', fx: { thorns: 10 } },
+    lucky_selvedge:  { name: 'Lucky Selvedge',     fam: 'purse',   rar: 'common',   glyph: 'coin',      desc: 'Coins picked up near the edges of the screen are worth double.', fx: { edge: 2 } },
+    coin_purse:      { name: 'Coin Purse',         fam: 'purse',   rar: 'common',   glyph: 'purse',     desc: 'Coins are worth 15% more.', fx: { coin: 0.15 } },
+    gem_needle:      { name: 'Gem Needle',         fam: 'purse',   rar: 'common',   glyph: 'gem',       desc: 'Moths drop gems 25% more often.', fx: { gem: 0.25 } },
+    moth_map:        { name: 'Moth-Eaten Map',     fam: 'purse',   rar: 'uncommon', glyph: 'map',       desc: 'Moths in bonus waves drop double coins.', fx: { bonusDust: 2 } },
+    golden_thimble:  { name: 'Golden Thimble',     fam: 'purse',   rar: 'rare',     glyph: 'crown',     desc: 'Bosses drop 3 more gems and 40% more coins.', fx: { bossGem: 3, bossDust: 0.4 } },
+    sharp_tip:       { name: 'Sharpened Tip',      fam: 'point',   rar: 'common',   glyph: 'point',     desc: '+10% damage.', fx: { dmg: 0.1 } },
+    heavy_bead:      { name: 'Heavy Bead',         fam: 'point',   rar: 'common',   glyph: 'bead',      desc: 'Bosses take 15% more damage.', fx: { bossDmg: 0.15 } },
+    wound_bobbin:    { name: 'Wound Bobbin',       fam: 'point',   rar: 'common',   glyph: 'bobbin',    desc: 'Your bobbin hits 20% harder.', fx: { bobbin: 0.2 } },
+    fraying_thread:  { name: 'Fraying Thread',     fam: 'point',   rar: 'uncommon', glyph: 'thread',    desc: 'Boss fray meters fill 25% faster.', fx: { fray: 0.25 } },
+    twin_needle:     { name: 'Twin Needle',        fam: 'point',   rar: 'rare',     glyph: 'twin',      desc: '+20% damage and +10% fire rate.', fx: { dmg: 0.2, rate: 0.1 } },
+    quick_spool:     { name: 'Quick Spool',        fam: 'pace',    rar: 'common',   glyph: 'wheel',     desc: '+8% fire rate.', fx: { rate: 0.08 } },
+    light_thread:    { name: 'Light Thread',       fam: 'pace',    rar: 'common',   glyph: 'feather',   desc: '+10% ship speed.', fx: { speed: 0.1 } },
+    nimble_heel:     { name: 'Nimble Heel',        fam: 'pace',    rar: 'uncommon', glyph: 'heel',      desc: 'Dashes come back 20% sooner.', fx: { dash: 0.2 } },
+    hourglass_sand:  { name: 'Hourglass Sand',     fam: 'pace',    rar: 'uncommon', glyph: 'hourglass', desc: 'Slow time lasts 40% longer.', fx: { focus: 0.4 } },
+    clockwork_bobbin:{ name: 'Clockwork Bobbin',   fam: 'pace',    rar: 'rare',     glyph: 'gear',      desc: '+25% fire rate and +12% ship speed.', fx: { rate: 0.25, speed: 0.12 } },
+    pin_cushion:     { name: 'Pin Cushion',        fam: 'graze',   rar: 'common',   glyph: 'pins',      desc: 'Every near miss gives 1 coin.', fx: { grazeDust: 1 } },
+    fine_thread:     { name: 'Fine Thread',        fam: 'graze',   rar: 'common',   glyph: 'star',      desc: 'Your special fills 20% faster.', fx: { sp: 0.2 } },
+    static_cling:    { name: 'Static Cling',       fam: 'graze',   rar: 'uncommon', glyph: 'spark',     desc: 'Every kill adds 2% to your special.', fx: { killSp: 0.02 } },
+    spare_knot:      { name: 'Spare Knot',         fam: 'graze',   rar: 'uncommon', glyph: 'knot',      desc: 'Every stage starts with one more bomb.', fx: { bombPerStage: 1 } },
+    knotted_fuse:    { name: 'Knotted Fuse',       fam: 'graze',   rar: 'rare',     glyph: 'bomb',      desc: 'Bombs hit 50% harder, and every third bomb is free.', fx: { bomb: 0.5, bombRefund: 3 } },
+    lucky_button:    { name: 'Lucky Button',       fam: 'fortune', rar: 'common',   glyph: 'clover',    desc: 'Drops of every kind are 20% more common.', fx: { luck: 0.2 } },
+    magnet_needle:   { name: 'Magnet Needle',      fam: 'fortune', rar: 'common',   glyph: 'magnet',    desc: 'Pickups are drawn in from further away.', fx: { magnet: 0.35 } },
+    long_spool:      { name: 'Long Spool',         fam: 'fortune', rar: 'uncommon', glyph: 'bobbin',    desc: 'Power-ups last 25% longer.', fx: { dur: 0.25 } },
+    bright_ribbon:   { name: 'Bright Ribbon',      fam: 'fortune', rar: 'uncommon', glyph: 'ribbon',    desc: 'Power-ups drop 40% more often.', fx: { charm: 0.4 } },
+    collectors_tin:  { name: "Collector's Tin",    fam: 'fortune', rar: 'uncommon', glyph: 'tin',       desc: 'Elite moths always drop a find.', fx: { eliteFind: 1 } }
+  };
+  /* Heirlooms: bought once (dust = coins, silk = gems) and worn, two at a time (three with the Heirloom Hook perk). Sidegrades: each gives and takes.
+     `for` limits one to a weapon (lead or bobbin) or a ship; elsewhere it sits in its slot and does nothing. A keepsake (`keepsake`: a boss id) is not sold: that boss drops it. */
+  const HEIRLOOMS = {
+    shears:     { name: "Grandmother's Shears", glyph: 'shears',  col: 'steelHi',    price: { dust: 2400 }, desc: 'Bombs hit twice as hard, but you carry one bomb fewer.', fx: { bomb: 1, bombMax: -1 } },
+    weights:    { name: 'Lead Weights',         glyph: 'bead',    col: 'steelDark',  price: { dust: 1800 }, desc: '+20% damage, but the ship is 12% slower.', fx: { dmg: 0.2, speed: -0.12 } },
+    slippers:   { name: 'Silk Slippers',        glyph: 'heel',    col: 'rose',       price: { dust: 1800 }, desc: '+20% ship speed, but 10% less damage.', fx: { speed: 0.2, dmg: -0.1 } },
+    pendant:    { name: 'Pincushion Pendant',   glyph: 'pins',    col: 'madderPale', price: { dust: 3000 }, desc: '+1 shield, but you fire 15% slower.', fx: { ply: 1, rate: -0.15 } },
+    bobbincase: { name: 'Bobbin Case',          glyph: 'bobbin',  col: 'saffron',    price: { dust: 2200 }, desc: 'Your bobbin hits 35% harder, but your lead weapon 8% less.', fx: { bobbin: 0.35, dmg: -0.08 } },
+    mothjar:    { name: 'Moth Jar',             glyph: 'moth',    col: 'greenPale',  price: { dust: 2800 }, desc: 'Elite moths always drop a find, but other drops are 15% rarer.', fx: { eliteFind: 1, luck: -0.15 } },
+    dummy:      { name: "Tailor's Dummy",       glyph: 'cuff',    col: 'tan',        price: { dust: 3200 }, desc: 'Every stage starts with one more bomb, but coins are worth 20% less.', fx: { bombPerStage: 1, coin: -0.2 } },
+    chalkline:  { name: 'Chalk Line',           glyph: 'point',   col: 'linen',      price: { silk: 40 }, for: { thread: ['running'] }, desc: 'Built for the Single Stitch. As your lead: +35% damage, but 15% slower fire.', fx: { dmg: 0.35, rate: -0.15 } },
+    chainlink:  { name: 'Chain Link',           glyph: 'wheel',   col: 'madderPale', price: { silk: 40 }, for: { thread: ['chain'] }, desc: 'Built for the Chain Stitch. As your lead: +25% fire rate, but 10% less damage.', fx: { rate: 0.25, dmg: -0.1 } },
+    captain:    { name: "Captain's Thimble",    glyph: 'plate',   col: 'steelHi',    price: { silk: 45 }, for: { needle: ['sail'] }, desc: 'Built for the Sail. 30% faster, but one less shield.', fx: { speed: 0.3, ply: -1 } },
+    glasseye:   { name: 'Glass Eye',            glyph: 'eye',     col: 'teal',       price: { silk: 45 }, for: { needle: ['beading'] }, desc: 'Built for Beading. +30% damage, but you are safe 30% less time after a hit.', fx: { dmg: 0.3, invuln: -0.3 } },
+    dancing:    { name: 'Dancing Shoe',         glyph: 'heel',    col: 'violet',     price: { silk: 40 }, for: { needle: ['between'] }, desc: 'Built for Between. Dashes come back 35% sooner, but 10% less damage.', fx: { dash: 0.35, dmg: -0.1 } },
+    // keepsakes: one for each boss
+    k_lappet:   { keepsake: 'greatlappet', name: "Lappet's Spangle",   glyph: 'flower', col: 'madderPale', desc: '+10% fire rate.', fx: { rate: 0.1 } },
+    k_tinea:    { keepsake: 'tinea',       name: "Tinea's Silk Net",   glyph: 'web',    col: 'steelHi',    desc: 'Pickups are drawn in from further, and coins are worth 10% more.', fx: { magnet: 0.5, coin: 0.1 } },
+    k_wick:     { keepsake: 'greatwick',   name: 'Wick Stub',          glyph: 'wick',   col: 'saffron',    desc: 'Bombs hit 50% harder.', fx: { bomb: 0.5 } },
+    k_atlas:    { keepsake: 'atlas',       name: "Atlas's Map Pin",    glyph: 'eye',    col: 'teal',       desc: 'Your special fills 25% faster.', fx: { sp: 0.25 } },
+    k_loose:    { keepsake: 'unraveller',  name: "Unraveller's Loose End", glyph: 'thread', col: 'violet', desc: 'Boss fray meters fill 30% faster.', fx: { fray: 0.3 } },
+    k_plate:    { keepsake: 'beetle',      name: "Beetle's Plate",     glyph: 'plate',  col: 'tan',        desc: 'Blocks the first hit of every wave.', fx: { waveGuard: 1 } },
+    k_cocoon:   { keepsake: 'empress',     name: "Empress's Cocoon Silk", glyph: 'pad', col: 'greenPale',  desc: '+1 shield.', fx: { ply: 1 } },
+    k_jewel:    { keepsake: 'king',        name: "The King's Jewel",   glyph: 'jewel',  col: 'saffron',    desc: '+10% damage, and power-ups drop 20% more often.', fx: { dmg: 0.1, charm: 0.2 } }
+  };
+  /* Chances for the drops (read by the sim). */
+  const FIND_DROPS = { eliteBase: 0.4, bossOffer: 3, keepsake: 0.25, keepsakeHard: true, ownedBias: 1.6 };
 
   const TUNING = {
     fieldW: 14, fieldH: 18.67, fieldBot: -3.4, playerY: -1.9, roam: 5.6, focusLast: 2.5, focusFill: 7, bobbinLag: 2.4, tether: 2.6, bobbinDmg: 0.6, graze: 0.07, pressure: 1.1, spares: 2, traySlots: 3,
@@ -428,5 +898,5 @@
     stageHp: 0.2, stageSpeed: 0.04, stageShot: 0.05     // per stage: enemies get tougher, faster, and their shots quicker
   };
 
-  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
+  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, EXCH, FRAY, frayMode, frayLine, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, WEIGHT_SILK, FORK_COST, NEEDLES, TEMPERS, TEMPER_COST, temperCost, temperGain, temperMarks, temperNextMark, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING, FX_KEYS, FIND_RARITY, FIND_FAMILIES, GLYPHS, FINDS, HEIRLOOMS, FIND_DROPS };
 })(typeof window !== 'undefined' ? (window.ST = window.ST || {}) : (globalThis.ST = globalThis.ST || {}));

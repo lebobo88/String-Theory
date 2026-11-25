@@ -48,6 +48,13 @@
       fire_knot:        ['fire_knot.mp3',   'Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds', 0.4, 'fire'],
       fire_cross:       ['fire_cross.mp3',  'Two crossing thread whips, a quick sharp X shaped swish, crisp, dry, 0.25 seconds', 0.25, 'fire'],
       fire_satin:       ['fire_satin.mp3',  'Very short silky tick, a smooth light thread flick for rapid fire, soft and high, 0.08 seconds', 0.14, 'fire'],
+      // the four newest weapons (rework): stand-ins until the files are generated (the fourth entry is the stand-in)
+      fire_daisy:       ['fire_daisy.mp3',   'A small loop of thread flicked off a spinning ring: a soft bright pluck with a short airy whirr, like a petal snapped free, dry, 0.2 seconds', 0.2, 'fire_satin'],
+      fire_feather:     ['fire_feather.mp3', 'A light feather quill flicked through the air: a breathy soft swish with a tiny high flutter at the end, dry, 0.15 seconds', 0.18, 'fire_satin'],
+      fire_blanket:     ['fire_blanket.mp3', 'A thread loop thrown out like a lasso and whipping back: a quick rising whoosh then a softer falling one, a rope-like swoosh there and back, dry, 0.35 seconds', 0.25, 'fire_cross'],
+      fire_pins:        ['fire_pins.mp3',    'A dressmaker pin flicked from the fingers: a tiny bright metallic tick with a short thin whistle, dry, 0.15 seconds', 0.22, 'fire_chain'],
+      pin_stick:        ['pin_stick.mp3',    'A steel pin pushed firmly into taut linen: a soft muffled thup with a faint metallic tick on top, close and dry, 0.12 seconds', 0.25, 'hit'],
+      petal_block:      ['petal_block.mp3',  'A stray bullet caught in a loop of silk thread: a soft springy twang and a puff of fabric, gentle and warm, 0.25 seconds', 0.35, 'deflect'],
       charge:           ['laser_charge.mp3','A metal wire being wound tighter, rising pitch creak and hum building tension, 0.8 seconds', 0.3, null],
       armour:           ['armour.mp3',      'Needle glancing off a hard thimble, small bright metallic tink, dry, 0.15 seconds', 0.4, 'hit'],
       deflect:          ['deflect.mp3',     'Thread snapping back off a stiff leather shield, dull slap with a short twang, 0.25 seconds', 0.4, 'hit'],
@@ -60,6 +67,15 @@
       sp_ready:    ['sp_ready.mp3',    'A spool of thread wound full and ready: a bright rising three note chime with a taut string hum, 0.6 seconds', 0.55, 'charm'],
       low_shield:  ['low_shield.mp3',  'Warning: a fraying rope creaking under strain with two low muffled heartbeat thumps, tense, 0.9 seconds', 0.6, 'hurt'],
       life_lost:   ['life_lost.mp3',   'A thick rope snapping and a needle clattering to a wooden floor, a short sad falling note, 1 second', 0.7, 'hurt'],
+      bomb_use:    ['bomb_use.mp3',    'A held bomb let go in a cloth room: a deep soft boom that opens into a wide ring of threads snapping outward all at once, then a short bright shimmer as bullets turn to loose thread, powerful but clean, 1.1 seconds', 0.85, 'burst'],
+      bomb_save:   ['bomb_save.mp3',   'A last-second save: a sharp rising intake of breath cut by a deep soft boom, a rewinding tape-like zip as the hit is undone, then a bright relieved chime, 1 second', 0.85, 'burst'],
+      bomb_get:    ['bomb_get.mp3',    'A heavy round spool of thread dropped into a wooden drawer with a soft thump, then a small clink of a brass latch, 0.5 seconds', 0.6, 'charm'],
+      loose:       ['loose.mp3',       'A single thread coming loose and swinging free with a tiny sparkling ping, light and airy, 0.4 seconds', 0.4, 'charm'],
+      pin:         ['pin.mp3',         'A small brass tack pressed into wood, a short tick with a bright metallic ring, 0.15 seconds', 0.3, 'hit'],
+      pin_shot:    ['pin_shot.mp3',    'A tiny sewing pin flicked upward, a very short thin zip with a faint glassy tick, 0.1 seconds', 0.15, 'fire'],
+      charm_up:    ['charm_up.mp3',    'The same bright three note harp rise played again and climbing a step higher, with a small shimmer on top, 0.7 seconds', 0.6, 'charm'],
+      recharge:    ['recharge.mp3',    'A spool winding full very fast, a quickening ratchet that ends in a bright taut hum and a small chime, 0.7 seconds', 0.6, 'sp_ready'],
+      spool_on:    ['spool_on.mp3',    'A huge heavy spool snagging in a tangle of thread, a thick low creak and a dull thud, slow and weighty, 0.8 seconds', 0.6, 'charm'],
       patch:       ['patch.mp3',       'A shot thudding into a stretched canvas patch, taut drum-like whump, 0.3 seconds', 0.5, 'hit'],
       repad:       ['repad.mp3',       'Stuffing a cushion: two soft plump wool puffs and a quick stitch pulled closed, 0.5 seconds', 0.5, 'charm'],
       tcut:        ['tether_cut.mp3',  'A taut thread slicing through soft fabric, quick clean zip and a small tear, 0.2 seconds', 0.35, 'hit'],
@@ -98,6 +114,9 @@
       in_beetle:   ['in_beetle.mp3',   'Heavy thumps under a floor getting closer, something circling beneath, then a wooden frame splintering as a hard shell bursts through and rolls past, three sharp knocks on wood, and a metallic shing, 4 seconds', 0.9, 'phase'],
       btl_aim:     ['btl_aim.mp3',     'A hard shell clicking shut and a heavy ball starting to spin up on cloth, ratcheting clicks rising, 0.7 seconds', 0.6, null],
       btl_bounce:  ['btl_bounce.mp3',  'A heavy hard ball knocking off a wooden rail, a solid billiard-like clack, 0.25 seconds', 0.7, 'hit'],
+      btl_creak:   ['btl_creak.mp3',   'A rolling armoured shell straining: a sharp woody creak of plates under pressure with a bright tick on top, a clear "now" cue, 0.35 seconds', 0.8, 'deflect'],   // rework: bosses: the matador's moment
+      btl_mothball: ['btl_mothball.mp3', 'A hard white mothball knocked loose and skittering across a felt table: a small knock then a soft rolling patter, 0.4 seconds', 0.5, 'hit'],   // rework: bosses: Mothball Row
+      boss_mend:   ['boss_mend.mp3',   'Loose threads drawn tight again: a quick rising zip of thread through cloth and a soft taut pluck, the break is over, 0.5 seconds', 0.6, 'repad'],   // rework: bosses: a break ends (cue recover, event mended)
       btl_slam:    ['btl_slam.mp3',    'A heavy armoured ball crashing full speed into a wooden frame and flipping over, big crunch, rattling shell and a dazed wobble, 1 second', 0.9, 'burst'],
       in_empress:  ['in_empress.mp3',  'Silk strands shooting across a room one at a time, each a quick taut zing, building a web, then something descending slowly on one creaking thread, a delicate sinister music-box phrase, the line cut with a snip, 4 seconds', 0.9, 'phase'],
       emp_spin:    ['emp_spin.mp3',    'Silk being spun fast from a spinneret, a fine whirring thread drawn out with a soft high whine, 0.7 seconds', 0.55, null],
@@ -129,6 +148,10 @@
       ui_fail:  ['ui_fail.mp3',  'A thread pulled and refusing to give, a short dull double thud, gentle and not harsh, 0.25 seconds', 0.4, null],
       ui_equip: ['ui_equip.mp3', 'A spool dropped onto its spindle and seated with a wooden click and a short thread zip, 0.3 seconds', 0.45, 'buy'],
       ui_start: ['ui_start.mp3', 'A needle threaded and pulled taut, quick zip rising to a bright confident pluck, 0.5 seconds', 0.5, 'chart'],
+      find:      ['find.mp3',      'A small bright treasure found: a soft glassy chime of two rising notes, a faint sparkle of tiny bells after it, warm and quick, 0.8 seconds', 0.7, 'chart'],
+      find_pick: ['find_pick.mp3', 'A coin-sized charm sewn on and snapped tight: one soft thread pull, then a warm round plucked note with a short shimmer, 0.7 seconds', 0.6, 'buy'],
+      keepsake:  ['keepsake.mp3',  'An heirloom unwrapped from tissue paper: a rustle, then a slow warm three-note music-box phrase that settles on a gentle held chord, 1.6 seconds', 0.8, 'chart'],
+      thorns:    ['thorns.mp3',    'A ring of tiny needles flung outward at once: a quick sharp metallic shiver and a short airy whoosh, 0.5 seconds', 0.55, 'burst'],
       // fireworks
       fw_launch: ['fw_launch.mp3', 'A firework rocket launch: a thread zipping fast up through cloth with a soft rising whistle, dry abrupt end, 0.6 seconds', 0.8, 'dash'],
       fw_pop:    ['fw_pop.mp3',    'A distant firework burst: a muffled soft boom like thick cloth whumping, followed by a light crackle of tiny sparks, warm and round, 0.9 seconds', 0.8, 'burst'],
@@ -360,15 +383,15 @@
     'greatwick:light': 'wick_light', 'greatwick:swell': 'wick_swell', 'greatwick:misfire': 'wick_misfire', 'greatwick:boom': 'burst', 'greatwick:throw': 'burst', 'greatwick:snuff': 'tcut', 'greatwick:blink': 'dash',
     'atlas:open': 'atl_open', 'atlas:spotted': 'atl_spotted', 'atlas:sweep': 'atl_sweep', 'atlas:drag': 'atl_sweep', 'atlas:strike': 'lance',
     'unraveller:snag': 'unr_snag', 'unraveller:snap': 'tcut', 'unraveller:bite': 'hurt', 'unraveller:unravel': 'unr_unravel', 'unraveller:restitch': 'xstitch', 'unraveller:inhale': 'unr_inhale', 'unraveller:choke': 'boss_stun', 'unraveller:hookaim': 'btl_aim',
-    'beetle:aim': 'btl_aim', 'beetle:bounce': 'btl_bounce', 'beetle:slam': 'btl_slam', 'beetle:burrow': 'unr_unravel', 'beetle:erupt': 'burst', 'beetle:larvae': 'tin_lay',
+    'beetle:aim': 'btl_aim', 'beetle:bounce': 'btl_bounce', 'beetle:slam': 'btl_slam', 'beetle:burrow': 'unr_unravel', 'beetle:erupt': 'burst', 'beetle:larvae': 'tin_lay', 'beetle:creak': 'btl_creak', 'beetle:mothball': 'btl_mothball',
     'empress:spin': 'emp_spin', 'empress:weave': 'emp_spin', 'empress:cocoon': 'emp_cocoon', 'empress:free': 'repad', 'empress:fall': 'emp_fall', 'empress:snapline': 'tcut', 'empress:puppet': 'atl_open', 'empress:storm': 'unr_inhale',
     'king:swarm': 'king_swarm', 'king:reform': 'atl_open', 'king:eclipse': 'king_eclipse', 'king:jewel': 'king_jewel', 'king:wrongjewel': 'deflect', 'king:crown': 'sp_ready', 'king:pair': 'xstitch', 'king:fail': 'atl_spotted', 'king:pass': 'charm', 'king:laststand': 'unr_unravel',
-    stun: 'boss_stun'
+    stun: 'boss_stun', recover: 'boss_mend'
   };
   const SHORT_SFX = { greatlappet: 'ins_lappet', tinea: 'ins_tinea', greatwick: 'ins_wick', atlas: 'ins_atlas', unraveller: 'ins_unraveller', beetle: 'ins_beetle', empress: 'ins_empress', king: 'ins_king' };
   const DEATH_SFX = { greatlappet: 'out_lappet', tinea: 'out_tinea', greatwick: 'out_wick', atlas: 'out_atlas', unraveller: 'out_unraveller', beetle: 'out_beetle', empress: 'out_empress', king: 'out_king' };
   const FILM_SFX = { greatlappet: 'in_lappet', tinea: 'in_tinea', greatwick: 'in_wick', atlas: 'in_atlas', unraveller: 'in_unraveller', beetle: 'in_beetle', empress: 'in_empress', king: 'in_king' };
-  const GAP = { graze: 90, xstitch: 280, deflect: 120, armour: 70, tcut: 180, hit: 40, dust: 35, kill: 30, ui_tap: 60 };   // least milliseconds between two plays of one sound
+  const GAP = { graze: 90, xstitch: 280, deflect: 120, armour: 70, tcut: 180, hit: 40, dust: 35, kill: 30, ui_tap: 60, pin_stick: 80, petal_block: 90 };   // least milliseconds between two plays of one sound
   ST.audioState = audio;
   ST.AUDIO = AUDIO;
 
@@ -385,7 +408,7 @@
       this.sheet = null;   // a results sheet waiting for a celebration to end (sheetTick)
       this.sim = null; this.state = 'title'; this.midNight = false; this.visit = {};
       this.evbuf = []; this.perf = { t: 0, frames: 0, sim: 0, hud: 0, draw: 0 }; this.drawDt = 0; this.hudN = 0; this.hudNow = true;
-      this.keys = {}; this.pointer = null; this.steer = null; this.aim = null; this.tap2 = null; this.touch = false; this.one = { notion: -1, special: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
+      this.keys = {}; this.pointer = null; this.steer = null; this.aim = null; this.tap2 = null; this.touch = false; this.one = { notion: -1, special: false, bomb: false, dash: 0 }; this.lastTap = 0; this.lastKey = { code: '', t: 0 };
       this.acc = 0; this.last = 0; this.frame = 0;
       loadAudio();
       this.bind();
@@ -441,7 +464,7 @@
     music() {   // pick the track for where the player is
       const s = this.sim, st = this.state;
       const boss = s && s.boss ? (s.panel >= 7 ? 'final' : s.panel >= 4 ? 'boss2' : 'boss') : null;
-      const t = !this.profile.settings.sound ? null : (st === 'flight' || st === 'paused' || st === 'tally') && s ? (boss || (s.sampler ? 'bonus' : 'flight')) : (st === 'hem' || st === 'route') ? 'hideout' : 'menu';
+      const t = !this.profile.settings.sound ? null : (st === 'flight' || st === 'paused' || st === 'tally') && s ? (boss || (s.sampler ? 'bonus' : 'flight')) : (st === 'hem' || st === 'route' || st === 'finds') ? 'hideout' : 'menu';
       playMusic(t);
     }
     mix(dt) {
@@ -458,13 +481,16 @@
     }
     closeBook() {   // a Night has ended: write it in the Ledger
       const r = this.sim && this.sim.record; if (!r || this.sim.booked) return; this.sim.booked = true;
-      this.store.record({ mender: this.profile.mender, needle: r.needle, stitches: r.stitches, reached: r.reached, won: r.won, date: new Date().toISOString().slice(0, 10) });
+      this.store.record({ mender: this.profile.mender, needle: r.needle, stitches: r.stitches, reached: r.reached, won: r.won, fray: r.fray | 0, date: new Date().toISOString().slice(0, 10) });
     }
 
     // ---------- flow ----------
     toTitle() { this.state = 'title'; this.sim = null; this.midNight = false; this.ui.hudVisible(false); this.renderer.clear(); if (this.slot < 0) this.ui.title(); else this.ui.menu(); }
     toPockets() { this.state = 'title'; this.sim = null; this.ui.hudVisible(false); this.ui.pockets(); }
-    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; this.ui.hudVisible(false); if (mid) this.keep('hem'); this.ui.hem(); }
+    /* The Exchange's overnight reset reads the calendar here, in the shell, and never in the sim. */
+    today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    exchange(dir, n) { ST.exchangeDay(this.profile, this.today()); const r = ST.exchange(this.profile, dir, n); if (r.ok) { this.sfx('buy'); this.saved(); } return r; }
+    openHem(mid) { this.state = 'hem'; this.midNight = !!mid; this.visit = {}; if (ST.exchangeDay(this.profile, this.today())) this.saved(); this.ui.hudVisible(false); if (mid) this.keep('hem'); this.ui.hem(); }
     keep(at) { this.profile.run = at && this.sim ? this.sim.snapshot(at) : null; this.saved(); }
     continueRun() {
       const snap = this.profile.run; if (!snap) return this.beginNight();
@@ -480,7 +506,12 @@
       this.sim = new ST.Sim(this.profile, (Date.now() & 0x7fffffff) || 1); this.profile.run = null;
       this.midNight = false; this.renderer.clear(); this.state = 'route'; this.ui.hudVisible(false); this.ui.route();
     }
-    flyPatch(id) { if (!this.sim) return; this.sim.setPatch(id); this.midNight = false; this.fly(); }
+    flyPatch(id) {
+      if (!this.sim) return; this.sim.setPatch(id); this.midNight = false;
+      const sim = this.sim;   // rework: unique items: First Pick, before the first wave of a new run
+      if (!sim.startOffered && !sim.finds.length && sim.panel === 0 && sim.row === 0 && sim.d.perk.findPick > 0 && sim.openOffer('start')) { this.state = 'finds'; this.nextState = 'route'; this.findNext = () => this.fly(); this.ui.finds(); return; }
+      this.fly();
+    }
     fly() {
       // first ever flight: a short lesson that waits for you to do each thing
       if (this.sim && this.profile.stats.nights === 0 && this.sim.panel === 0 && this.sim.row === 0 && !(this.profile.codex.taught)) this.tutor = { step: 0, t: 0, moved: 0, up: 0, slow: 0, x: null, y: null };
@@ -490,15 +521,25 @@
     continueNight() {
       const res = this.sim && this.sim.result;
       if (!res || res.kind === 'snap' || res.last) { this.sim = null; this.renderer.clear(); this.openHem(false); return; }
+      if (this.sim.offer) { this.state = 'finds'; this.nextState = 'tally'; this.findNext = () => this.continueNight(); this.ui.finds(); return; }   // rework: unique items: pick one of three finds first
       const nx = this.sim.advance();
       if (nx === 'hem') { this.renderer.clear(); this.openHem(true); } else this.fly();
     }
+    /* The find choice sheet's buttons: take one (then carry on to wherever the run was going), or throw the three back (Second Look). */
+    pickFind(i) {
+      const sim = this.sim; if (!sim || !sim.offer) return;
+      const id = sim.takeFind(i); this.sfx('find_pick'); this.saved();
+      const next = this.findNext; this.findNext = null; this.state = this.nextState || 'tally';
+      if (next) next();
+    }
+    rerollFind() { const sim = this.sim; if (sim && sim.rerollOffer()) { this.sfx('find_pick'); this.ui.finds(); return true; } this.sfx('ui_fail'); return false; }
     takePocket(id) { if (ST.shop.buyNotion(this.profile, id, null).ok) { this.sfx('buy'); this.saved(); this.ui.tally(this.sim.result, null); } }
     pause() { if (this.state === 'flight') { this.state = 'paused'; this.ui.pause(); } }
     resume() { if (this.state === 'paused') { this.state = 'flight'; this.ui.hide(); this.last = 0; } }
     abandon() { if (this.sim) { if (!this.sim.record) this.sim.closeNight(false); this.closeBook(); this.profile.run = null; this.saved(); } this.sim = null; this.renderer.clear(); this.openHem(false); }
     useNotion(i) { this.one.notion = i; }
     special() { this.one.special = true; }
+    bomb() { this.one.bomb = true; }
 
     // ---------- input ----------
     bind() {
@@ -516,6 +557,7 @@
           if (dir) { if (this.lastKey.code === k && now - this.lastKey.t < 260) this.one.dash = dir; this.lastKey = { code: k, t: now }; this.steer = null; this.touch = false; }
           if (k === 'Digit1' || k === 'Digit2' || k === 'Digit3') this.one.notion = +k.slice(5) - 1;
           if (k === 'KeyE' || k === 'KeyX' || k === 'Enter') this.one.special = true;
+          if (k === 'KeyB' || k === 'KeyV') this.one.bomb = true;
           if (k === 'ShiftLeft' || k === 'ShiftRight') this.one.dash = this.keys.ArrowLeft || this.keys.KeyA ? -1 : this.keys.ArrowRight || this.keys.KeyD ? 1 : (this.sim && this.sim.player.x > 0 ? -1 : 1);
         }
         this.keys[k] = true;
@@ -567,7 +609,7 @@
       const move = ((k.ArrowRight || k.KeyD) ? 1 : 0) - ((k.ArrowLeft || k.KeyA) ? 1 : 0), moveY = ((k.ArrowUp || k.KeyW) ? 1 : 0) - ((k.ArrowDown || k.KeyS) ? 1 : 0);
       const drag = move === 0 && moveY === 0 && this.steer && this.aim;
       return { move, moveY, targetX: drag ? this.aim.x : null, targetY: drag ? this.aim.y : null, fire: st.autofire || !!k.Space || !!this.steer,
-        notion: this.one.notion, dash: this.one.dash, special: this.one.special,
+        notion: this.one.notion, dash: this.one.dash, special: this.one.special, bomb: this.one.bomb,
         focus: !!k.KeyF || (this.touch && !this.steer && st.liftSlow !== false) };
     }
 
@@ -609,7 +651,7 @@
           while (this.acc >= STEP - PACE && stepped < 3) {
             this.acc -= STEP; stepped++;
             this.sim.update(STEP, this.input());
-            this.one.notion = -1; this.one.special = false; this.one.dash = 0;
+            this.one.notion = -1; this.one.special = false; this.one.bomb = false; this.one.dash = 0;
             for (const e of this.sim.events) events.push(e);
             if (this.sim.phase === 'done') { this.acc = 0; break; }
           }
@@ -666,11 +708,17 @@
             if (film) {   // the boss's entrance film carries its name; a shorter cut once you have seen it
               const seen = this.profile.codex.cine || (this.profile.codex.cine = {});
               r.cine.play(id, { short: !!seen[id] }); this.filmSnd = this.sfx(seen[id] ? SHORT_SFX[id] : FILM_SFX[id]); seen[id] = true; this.saved();
-            } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); }
+            } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.hint || (e.sampler ? 'They never shoot back. Get them all.' : e.patch), 1800); if (e.keeper) this.sfx('phase'); }
             this.hudNow = true; break; }
+          case 'petal': this.sfx('petal_block'); break;               // (weapons) a Lazy Daisy petal takes a bullet
+          case 'pin': this.sfx('pin_stick', e.src === 'B' ? 0.6 : 1); break;   // (weapons) a Tacking Pin goes into the cloth
           case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, (b ? 1.3 : 1) * (0.97 + Math.random() * 0.06)); } break; }   // a touch of pitch drift so steady fire never sounds like a machine
           case 'hit': case 'bosshit': this.sfx('hit'); break;
           case 'uncase': this.sfx('armour'); break;
+          case 'thread': this.sfx('graze'); break;                  // (waves) a thread caught in the thread round
+          case 'wrong': this.sfx('deflect'); break;                 // a plain moth shot in the gold round
+          case 'elite': case 'convoybreak': this.sfx('armour'); break;
+          case 'burned': this.sfx('hit'); break;
           case 'guard': case 'bossblock': this.sfx('deflect'); break;
           case 'dash': this.sfx('dash'); this.buzz(12); if (this.tutor) this.tutor.dashed = true; break;
           case 'graze': this.sfx('graze'); break;
@@ -680,9 +728,18 @@
           case 'kill': this.sfx('kill'); if (e.mult > 1 || e.pts >= 200) ui.floater(r.project(e.x, e.y), '+' + e.pts, e.mult > 1 ? 'hot' : ''); break;
           case 'dust': this.sfx('dust'); break;
           case 'silk': this.sfx('silk'); ui.floater(r.project(sim.player.x, 2.6), '+' + e.v + (e.v === 1 ? ' gem' : ' gems'), 'silk'); break;
-          case 'charm': this.sfx('charm', e.up ? 1.15 : 1, e.up ? 1.2 : 1); if (e.up) this.buzz(20); ui.toast(e.name, e.desc); break;
+          case 'charm': this.sfx(e.lv > 1 ? 'charm_up' : e.id === 'bomb' ? 'bomb_get' : e.id === 'recharge' ? 'recharge' : e.id === 'spool' ? 'spool_on' : 'charm', e.up ? 1.15 : 1, e.up ? 1.2 : 1 + 0.06 * Math.max(0, (e.lv || 1) - 1)); if (e.up) this.buzz(20); ui.toast(e.name + (e.lv > 1 ? ' ' + ['', '', 'II', 'III'][e.lv] : ''), e.lv > 1 ? 'Lasts longer and hits harder: step ' + e.lv + ' of 3.' : e.desc); break;
+          case 'bomb': this.sfx(e.save ? 'bomb_save' : 'bomb_use'); this.buzz(e.save ? [30, 40, 60] : 50); this.duck(1.1); ui.banner(e.save ? 'Saved' : 'Bomb', e.save ? 'The hit never landed' : 'Bullets cleared', 900); break;
+          case 'loose': this.sfx('loose'); break;
+          case 'pin': this.sfx('pin'); break;
+          case 'brace': this.sfx('hit'); break;
           case 'chart': this.sfx('chart'); ui.toast('Blueprint found', 'Unlocks ' + e.unseals + ' in the hideout'); break;
           case 'packet': this.sfx('charm'); ui.toast('Item found', e.name); break;
+          case 'find': this.sfx('find'); this.buzz(18); ui.toast('Find: ' + e.name, e.desc); this.hudNow = true; break;   // rework: unique items
+          case 'keepsake': this.sfx('keepsake'); ui.toast('Keepsake: ' + e.name, e.desc + ' Wear it in the hideout.'); break;
+          case 'thorns': this.sfx('thorns'); break;
+          case 'felt': this.sfx('repad'); ui.toast('Shield restored', 'Felt Lining'); break;
+          case 'bombfree': this.sfx('charm'); ui.toast('Bomb returned', 'Knotted Fuse'); break;
           case 'notion': this.sfx('buy'); ui.toast(e.name, C.NOTIONS[e.id].desc); break;
           case 'slip': this.sfx('charm'); ui.toast(e.why, 'Capture beam blocked.'); break;
           case 'captured': this.sfx('hurt'); ui.toast('Captured!', e.dual ? 'Your twin ship was taken.' : 'You lost a life. Destroy that Spinner to get the ship back as a twin.'); break;
@@ -702,7 +759,7 @@
           case 'special': if (this.tutor) this.tutor.special = true; this.sfx('sp_' + e.id); this.buzz(30); this.duck(1.2); ui.banner(e.name, 'Special', 900); break;
           case 'patch': this.sfx('patch'); this.buzz(15); break;
           case 'repad': this.sfx('repad'); ui.toast('Pad re-stuffed', 'Next hit blocked.'); break;
-          case 'burst': this.sfx('burst'); break;
+          case 'burst': if (!e.quiet) this.sfx('burst'); break;
           case 'stageclear': if (e.last) { this.closeBook(); this.profile.run = null; this.saved(); } else this.keep('after'); this.state = 'tally'; this.pocket = e.info.kind === 'row' ? this.rollPocket() : null; this.sheet = { t: 0.3, cap: 9, show: () => this.ui.tally(e, this.pocket) }; break;
           case 'snapped': this.closeBook(); this.profile.run = null; this.saved(); this.state = 'tally'; this.sheet = { t: 0.3, cap: 9, show: () => this.ui.snapped(e) }; break;
         }

@@ -85,7 +85,7 @@
 
   const script = {
     def: {
-      hp: 5600, stunTime: 4, frayAt: 0.2, armour: 0.2, cell: 0.2, halfW: 2.4, halfH: 1.6, softY: -0.3,
+      hp: 5600, stunTime: 4.5, frayAt: 0.2, armour: 0.2, cell: 0.2, halfW: 2.4, halfH: 1.6, softY: -0.3,
       soft: [{ x: 0, r: 0.75 }], softName: 'Her body, while she stops to spin',
       phases: ['She runs along her web and builds it across your half. Cut the line she is spinning on and she falls.', 'She cocoons your bobbin: shoot it free. Moths you destroy are strung back up once.', 'She wraps herself in the centre and spins storms of silk. Her web catches them, so cut only what you must.'],
       phaseTag: ['Her web', 'Cocoons and puppets', 'Silk storm']
@@ -207,7 +207,7 @@
           break;
         }
         case 'cocoon': {     // phase 3: storm, peek, storm
-          if (b.pose === 'cocoon' && s.t >= 1.6) { b.pose = 'storm'; s.t = 0; sim.cue(b, 'storm', { x: b.x, y: b.y }); }
+          if (b.pose === 'cocoon' && s.t >= 1.1) { b.pose = 'storm'; s.t = 0; sim.cue(b, 'storm', { x: b.x, y: b.y }); }
           else if (b.pose === 'storm' && s.t >= 0.7) {
             const n = 16, ph0 = sim.rand() * Math.PI;
             for (let k = 0; k < n; k++) { const a = ph0 + k / n * Math.PI * 2; sim.eshot('silk', b.x, b.y, Math.cos(a) * 3.8, Math.sin(a) * 3.8 - 1.0, { web: true }); }

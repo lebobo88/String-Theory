@@ -50,7 +50,7 @@
      eyes       his eyes gleam where he is about to appear ({ x, y })
      crown      the crown of four jewels forms
      jewel      the right jewel broke ({ n, last: true when the crown falls }); also { last: true, slip: true } when a crown
-                worn for 24 s slips off by itself (no stun)
+                worn for 4.5 s slips off by itself (no break)
      wrongjewel the wrong jewel broke and the crown restores itself
      laststand  the cloth starts to fray inward from every edge
      pair       both eyes hit within a second: real damage (at most once a second)
@@ -176,7 +176,7 @@
     sim.cue(b, k.done, { move: k.move, x: b.x, y: b.y });
     if (k.done === 'pass') {
       const s = b.s; b.fray = Math.min(0.95, b.fray + (b.phase === 1 ? 0.35 : 0.25));
-      if (b.phase === 1) { s.watchT = 4; }
+      if (b.phase === 1) { s.watchT = 5.5; }   // rework: bosses: his eyes stay open longer (uptime)
     }
   }
   function endAllTests(sim, b) { for (const k of b.s.tests) endTest(sim, b, k, false); b.s.tests.length = 0; }
@@ -205,14 +205,14 @@
 
   // ---------- the swarm body ----------
   function swarm(sim, b) {
-    const s = b.s; s.swarmT = 1.7; s.heat = 0; b.hidden = true; s.poseBack = b.pose; b.pose = 'swarm';
+    const s = b.s; s.swarmT = 1.3; s.heat = 0; b.hidden = true; s.poseBack = b.pose; b.pose = 'swarm';
     sim.cue(b, 'swarm', { x: b.x, y: b.y });
     if (sim.enemies.length < 5) for (const sd of [-1, 1]) sim.spawnAt('nibbler', b.x + sd * 1.5, b.y - 1, { passes: 0 });
   }
 
   const script = {
     def: {
-      hp: 7400, stunTime: 3.5, frayAt: 0.06, armour: 0.3,
+      hp: 7400, stunTime: 4.5, frayAt: 0.06, armour: 0.3,
       soft: [{ x: -0.5, r: 0.45 }, { x: 0.5, r: 0.45 }], softName: 'His eyes, under the crown',
       phases: ['He calls on each boss you beat before him. Pass each test and he opens his eyes.', 'The lights go out. Watch for his eyes.', 'Four jewels circle him and bounce shots back. Break them in the order they flash.', 'The cloth frays in from every edge. Hit both eyes within a second of each other.'],
       phaseTag: ['The court', 'Lights out', 'The crown', 'Last stand']
@@ -260,7 +260,7 @@
           s.step++;
           const last = s.step >= 4;
           sim.cue(b, 'jewel', { n: p.data.n, last, x: p.x, y: p.y });
-          if (last) { s.crowned = false; b.pose = 'bare'; s.crownT = 6; sim.stunBoss(5.5); }
+          if (last) { s.crowned = false; b.pose = 'bare'; s.crownT = 12; sim.stunBoss(5); }
           else for (const q of s.jewels) q.data.next = q.data.n === s.order[s.step];
         } else {
           sim.cue(b, 'wrongjewel', { n: p.data.n, x: p.x, y: p.y });
@@ -272,8 +272,8 @@
     onDamage(sim, b, dmg, x) {
       const s = b.s, L = Math.abs(x - (b.x - 0.5)) < 0.45, R = Math.abs(x - (b.x + 0.5)) < 0.45;
       if (b.phase === 1 && !b.softOpen[0]) return 0.06;         // seated at court with his eyes shut: hardly a scratch
-      if (b.phase === 3 && s.crowned) return L || R ? 0.18 : 0.1;
-      if (b.phase === 2 && (L || R) && s.ecl === 2 && s.eclT > 0.8) return 4.5;   // caught in the first moment he shows himself
+      if (b.phase === 3 && s.crowned) return L || R ? 0.4 : 0.3;   // rework: bosses: the crown is a short armoured moment, not a wall
+      if (b.phase === 2 && (L || R) && s.ecl === 2 && s.eclT > 1.3) return 4.5;   // caught in the first moment he shows himself
       if (b.phase !== 4 || !(L || R)) return undefined;
       // last stand: an eye hit only counts if the other eye was hit within the last second
       const now = sim.t;
@@ -328,7 +328,7 @@
         if (s.ecl === 0 && s.eclT <= 0) {      // eyes gleam where he will appear
           s.gx = sim.rr(-4.5, 4.5); s.gy = sim.rr(10.5, 15); s.ecl = 1; s.eclT = 0.7; b.pose = 'gleam';
           sim.cue(b, 'eyes', { x: s.gx, y: s.gy + b.def.softY });
-        } else if (s.ecl === 1 && s.eclT <= 0) { s.ecl = 2; s.eclT = 1.8; b.x = s.gx; b.y = s.gy; b.hidden = false; b.pose = 'seen'; b.softOpen[0] = b.softOpen[1] = true; s.volley = 0.6; }
+        } else if (s.ecl === 1 && s.eclT <= 0) { s.ecl = 2; s.eclT = 2.3; b.x = s.gx; b.y = s.gy; b.hidden = false; b.pose = 'seen'; b.softOpen[0] = b.softOpen[1] = true; s.volley = 0.6; }
         else if (s.ecl === 2) {
           if (s.volley > 0) { s.volley -= dt; if (s.volley <= 0) sim.fanShots(b.x, b.y - 1.5, 5, 0.9, 5.4, 'frass', Math.atan2(pl.y - b.y, pl.x - b.x)); }
           if (s.eclT <= 0) { s.ecl = 0; s.eclT = 1.2; b.hidden = true; b.pose = 'dark'; b.softOpen[0] = b.softOpen[1] = false; }
@@ -341,9 +341,9 @@
         else {
           b.softOpen[0] = b.softOpen[1] = false;
           s.crownAge += dt;
-          if (s.crownAge > 15) {      // worn too long, it slips off by itself: no stun, but his eyes open for a while
+          if (s.crownAge > 4.5) {      // worn too long, it slips off by itself: no stun, but his eyes open for a while
             const c = s.jewels[0]; sim.cue(b, 'jewel', { n: 0, last: true, slip: true, x: c ? c.x : b.x, y: c ? c.y : b.y });
-            clearCrown(sim, b); b.pose = 'bare'; s.crownT = 5;
+            clearCrown(sim, b); b.pose = 'bare'; s.crownT = 7;
           }
           for (const p of s.jewels) {
             p.data.a += dt * ORBIT; p.x = b.x + Math.cos(p.data.a) * RING; p.y = b.y + Math.sin(p.data.a) * RING;

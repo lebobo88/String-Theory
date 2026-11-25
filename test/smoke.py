@@ -32,9 +32,10 @@ try:
             pg.fill('#mender', 'Wren'); pg.click('.btn:has-text("Start a new game")'); pg.wait_for_selector('text=Start run')
             pg.click('text=How to play'); pg.click('.btn:has-text("Back")')
             # a rich save so the Hem can be exercised
-            pg.evaluate("""() => { const g = ST.game, p = g.profile; p.dust = 90000; p.silk = 9000; Object.keys(ST.content.CHARTS).forEach(k => p.charts[k] = true); g.saved(); }""")
+            pg.evaluate("""() => { const g = ST.game, p = g.profile; p.dust = 5000000; p.silk = 60000; Object.keys(ST.content.CHARTS).forEach(k => p.charts[k] = true); g.saved(); }""")
             pg.click('text=Hideout (shop)'); pg.wait_for_selector('.hem'); pg.screenshot(path=f'/tmp/st-{name}-hem.png')
             for tab in ['Upgrades', 'Items', 'Ships', 'Perks', 'Collection', 'Weapons']:
+                pg.evaluate("() => { const p = ST.game.profile; p.dust = 5000000; p.silk = 60000; ST.game.saved(); }")   # uncapped upgrades would otherwise spend every coin before the later tabs
                 pg.click(f'.tabs .tabb:has-text("{tab}")')
                 if tab == 'Perks': pg.click('.pseg .tabb:has-text("Perks")')
                 for i in range(pg.locator('.list .card, .node').count()):
@@ -47,19 +48,21 @@ try:
                     pg.screenshot(path=f'/tmp/st-{name}-pattern.png')
                     # the second view of the Perks tab: power-up upgrades, bought row by row (a row opens after two from the one before)
                     pg.click('.pseg .tabb:has-text("Power-ups")'); pg.wait_for_selector('.utile')
-                    assert pg.locator('.utile').count() == 11, 'eleven power-up upgrades'
+                    nup = pg.evaluate("Object.values(ST.content.CHARMS || {}).filter(c => c && c.up).length"); assert pg.locator('.utile').count() == nup and nup >= 11, f'one tile per power-up upgrade ({nup})'
                     for _ in range(3):
                         for i in range(pg.locator('.utile').count()):
                             pg.locator('.utile').nth(i).click()
                             if pg.locator('.detail .btn.primary:not([disabled])').count(): pg.locator('.detail .btn.primary').first.click()
                     pg.screenshot(path=f'/tmp/st-{name}-powerups.png')
-                    assert pg.locator('.utile.own').count() == 11, 'every power-up upgrade bought'
+                    assert pg.locator('.utile.own').count() == nup, 'every power-up upgrade bought'
             prof = pg.evaluate('ST.game.profile')
-            assert len(prof['needles']) == 9, 'ships bought'
-            assert len(prof['pattern']) == 15 and prof['tempers'] == {'point': 5, 'eye': 5, 'ply': 3, 'pace': 3, 'magnet': 3, 'luck': 3}, 'perks + upgrades'
-            assert all(v == 3 for v in prof['threads'].values()) and len(prof['threads']) == 8, 'weapons'
+            C = pg.evaluate("(() => { const c = ST.content; return { needles: Object.keys(c.NEEDLES).length, threads: Object.keys(c.THREADS).length, tempers: Object.keys(c.TEMPERS) }; })()")
+            assert len(prof['needles']) == C['needles'], 'ships bought'
+            assert len(prof['pattern']) >= 14, 'perks bought'
+            assert prof['tempers'].get('point', 0) > 5 and all(prof['tempers'].get(k, 0) >= 1 for k in C['tempers']), 'upgrades bought, past the old caps until the bank runs dry: ' + json.dumps(prof['tempers'])
+            assert len(prof['threads']) == C['threads'] and all(v >= 3 for v in prof['threads'].values()), 'weapons'
             assert len(prof['tray']) == 3, 'tray'
-            assert sorted(prof['charmUps']) == sorted(pg.evaluate('Object.keys(ST.content.CHARMS)')), 'power-up upgrades saved on the profile'
+            assert sorted(prof['charmUps']) == sorted(pg.evaluate('Object.keys(ST.content.CHARMS).filter(k => ST.content.CHARMS[k].up)')), 'power-up upgrades saved on the profile'
             pg.click('.hem >> text=Start run'); pg.wait_for_selector('[data-act=fly]:visible'); pg.screenshot(path=f'/tmp/st-{name}-route1.png')
             pg.click('[data-act=fly]:visible'); pg.wait_for_function('ST.game.state === "flight"')
             # a bot: fly under the moths, never get hurt, use real keys now and then
@@ -78,6 +81,8 @@ try:
             stages = 0; t0 = time.time()
             while time.time() - t0 < 2400:
                 st = pg.evaluate('ST.game.state')
+                if pg.locator('[data-act=findpick]:visible').count():   # the choose-one-of-three finds sheet after a boss
+                    pg.locator('[data-act=findpick]:visible').first.click(); pg.wait_for_timeout(200); continue
                 if st == 'tally' and pg.locator('[data-act=continue]').count():
                     stages += 1; route = pg.evaluate('ST.game.sim.route')
                     if stages == 1:

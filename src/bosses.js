@@ -7,9 +7,16 @@
              onDamage?(sim,b,dmg,x,y,src) -> undefined | number (damage multiplier, 0 = blocked) | 'reflect',
              onProp?(sim,b,prop,why)   why: 'destroyed' (shot), 'cut' (dash or thread), 'expire' (life ran out),
              onKill?(sim,b,enemy) }
-   BOSS    b = { id, def, x, y, hp, maxHp, phase, t (seconds of active fight, stops while stunned), s (script state, yours),
-             fray 0..1, stun (seconds left), shield (blocks all normal damage), hidden (cannot be hit or seen), contact (body hurts the ship),
+   BOSS    b = { id, def, x, y, hp, maxHp, phase, t (seconds of active fight, stops while broken), s (script state, yours),
+             fray 0..1 (the break meter), frayed (seconds left of a break, > 0 while broken; stun is the same number, kept for the scripts
+             and films), shield (blocks all normal damage), hidden (cannot be hit or seen), contact (body hurts the ship),
+             guard (a short armoured moment: with def.guarded the body takes def.armour only while guard is true, full damage otherwise),
              pose (string the renderer may use), softOpen (null = every weak spot open, or an array of booleans, one per def.soft entry) }
+   BREAK   (rework: bosses) Weak-spot hits (sim.hitFray), body hits with a weight (sim.hitFrayBody: point blank, chains, the laser),
+             grazes, specials and the bomb fill b.fray. Full: the boss is frayed (breakBoss) for BREAK_SEC x sim.breakMul() seconds:
+             it does nothing and takes three times the damage. Events { t: 'frayed', boss } and { t: 'mended', boss }; cues 'stun' and
+             'recover' as before. b.frayArmour (Fray dial) is the share of the meter that is plated: it fills at half speed, and is plated
+             again after every break. A scripted knock-down (the Beetle's slam, the Wick's misfire, the Empress's fall) is a break.
    PROP    sim.addProp({ kind, shape: 'circle'|'seg'|'row'|'cone', x, y, r | x2,y2,w | h | a,half,len, warn, life, hp, shoot, block, cut, hurt, slow, sprite, data })
              warn: seconds drawn as an outline before it does anything. hp + shoot: player shots damage it. block: shots stop on it.
              cut: a dash through it, or the bobbin thread during a dash (always, on the Chenille), removes it. hurt: touching it costs a shield.
@@ -23,15 +30,35 @@
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   ST.bossScripts = ST.bossScripts || {};
   /* Boss scripts are tuned against a fully built ship. POWER is how strong a player is expected to be when they reach each boss
-     (1 = level III weapons and three levels of damage and fire rate; the first boss meets a fresh ship). The framework scales each
-     boss's health, and the health of the things it puts on the cloth, by it. tools/bossbot.js fights each boss with the matching loadout. */
+     (1 = level III weapons and three levels of damage and fire rate; the first boss meets a fresh ship). The framework scales the
+     health of the things a boss puts on the cloth by it (a boss's own health is HP below). tools/bossbot.js fights each boss with the matching loadout. */
   const POWER = { greatlappet: 0.163, tinea: 0.29, greatwick: 0.452, atlas: 0.511, unraveller: 0.717, beetle: 0.845, empress: 0.94, king: 1 };
   ST.bossPower = POWER;
+  /* rework: bosses. BREAK_SEC: how long a break lasts before sim.breakMul() (the plan: 4 to 5 s). FRAY_DECAY: how fast the meter
+     slips back a second. ARMOUR_FILL: how fast the plated part of the meter fills (Fray dial). */
+  const BREAK_SEC = 4.5, FRAY_DECAY = 0.02, ARMOUR_FILL = 0.5;
+  ST.bossBreakSec = BREAK_SEC;
+  /* rework: bosses. One health curve: each boss's health on Normal, re-derived from the expected build (test/lib/econ.js
+     INCOME_AT_BOSS spent in the reworked shop) so that a good player with that build needs about 28 s a phase: 2 phases
+     (about 57 s) for bosses 1 to 4, 3 (85 s) for 5 to 7, 4 (125 s) for the Moth King. Measured with the proper bots of the boss tests
+     (node test/balance.js --only bosses). POWER above now only scales the things a boss puts on the cloth (eggs, fuses, larvae). */
+  const HP = { greatlappet: 275, tinea: 900, greatwick: 2150, atlas: 2435, unraveller: 5000, beetle: 4980, empress: 6600, king: 10600 };
+  /* PAR: the fight length (seconds, breaks included) past which the boss's coins shrink, gently, to 70% (sim.js killBoss); finishing in
+     three quarters of it pays a fast-finish bonus. It is the top of the plan's band for a good player with the expected build. */
+  const PAR = { greatlappet: 70, tinea: 70, greatwick: 70, atlas: 70, unraveller: 100, beetle: 100, empress: 100, king: 140 };
+  /* FRAY_HP: extra health per Fray step, on top of the step's own +4.5% for moths and bosses. The deep steps are where a fully upgraded
+     ship goes (plan section 8), and that ship outgrows each boss's expected build by a different amount: 4 to 11 times as fast at the
+     first bosses (met with a nearly fresh ship), about 4 at the last. So each boss grows by how far it is outgrown, which puts the
+     plan's "fully upgraded" fight lengths (25 to 40, 40 to 60, 65 to 85 s) at the deepest step, 20 (test/lib/econ.js fullBuild).
+     Health never reads the player's own upgrades. */
+  const FRAY_HP = { greatlappet: 0.32, tinea: 0.29, greatwick: 0.088, atlas: 0.06, unraveller: 0.033, beetle: 0.0155, empress: 0.004, king: 0.003 };
+  ST.bossHp = HP;
   ST.registerBoss = function (id, script) {
     if (!C.KEEPERS[id]) throw new Error('unknown boss ' + id);
     ST.bossScripts[id] = script;
     if (script.def) Object.assign(C.KEEPERS[id], script.def);
-    if (script.def && script.def.hp) C.KEEPERS[id].hp = Math.round(script.def.hp * (POWER[id] || 1));
+    if (script.def && script.def.hp) C.KEEPERS[id].hp = HP[id] || Math.round(script.def.hp * (POWER[id] || 1));
+    C.KEEPERS[id].par = PAR[id] || 100; C.KEEPERS[id].frayHp = FRAY_HP[id] || 0;
     if (script.sprites) Object.assign(C.SPRITES, script.sprites);
   };
   const segDist = (px, py, x1, y1, x2, y2) => { const vx = x2 - x1, vy = y2 - y1, ll = vx * vx + vy * vy || 1, u = clamp(((px - x1) * vx + (py - y1) * vy) / ll, 0, 1); return Math.hypot(px - x1 - vx * u, py - y1 - vy * u); };
@@ -39,7 +66,8 @@
   Object.assign(ST.Sim.prototype, {
     // ---------- lifecycle ----------
     bossInit(b) {
-      Object.assign(b, { s: {}, fray: 0, stun: 0, shield: false, hidden: false, contact: false, pose: '', softOpen: null, cd: {}, enter: 0.6, enter0: 0.6 });
+      Object.assign(b, { s: {}, fray: 0, stun: 0, frayed: 0, breakT: BREAK_SEC, breaks: 0, guard: false, shield: false, hidden: false, contact: false, pose: '', softOpen: null, cd: {}, enter: 0.6, enter0: 0.6,
+        frayArm: b.frayArmour || 0, age: 0 });
       b.y = b.def.move[2];
       const sc = ST.bossScripts[b.id]; if (sc.init) sc.init(this, b);
     },
@@ -48,22 +76,37 @@
       b.flash = Math.max(0, b.flash - dt);
       if (b.enter > 0) { b.enter = Math.max(0, b.enter - dt); if (sc.enter) sc.enter(this, b, dt); return; }   // the entrance film covers the arrival: the boss stays where init put it
       if (this.phase !== 'play') return;
-      const n = def.phases.length, ph = Math.min(n, 1 + Math.floor((1 - b.hp / b.maxHp) * n));
+      b.age += dt;   // the whole fight, breaks included (the speed reward reads it)
+      const n = def.phases.length, lost = 1 - b.hp / b.maxHp;
+      let ph = Math.min(n, 1 + Math.floor(lost * n));
+      if (def.split) { ph = 1; for (const at of def.split) if (lost >= at) ph++; }   // def.split: where each later phase starts, as the share of health lost (default: equal shares)
       if (ph !== b.phase) { b.phase = ph; this.emit('phase', { name: def.name, phase: ph, tag: def.phaseTag[ph - 1] }); if (sc.onPhase) sc.onPhase(this, b, ph); }
       if (b.stun > 0) {
-        b.stun -= dt;
-        if (b.stun <= 0) { b.stun = 0; b.fray = 0; this.cue(b, 'recover'); if (sc.onRecover) sc.onRecover(this, b); }
+        b.stun -= dt; b.frayed = Math.max(0, b.stun);
+        if (b.stun <= 0) { b.stun = 0; b.frayed = 0; b.fray = 0; b.frayArm = b.frayArmour || 0; this.cue(b, 'recover'); this.emit('mended', { boss: b.id }); if (sc.onRecover) sc.onRecover(this, b); }
         return;
       }
-      b.t += dt; b.fray = Math.max(0, b.fray - dt * 0.02);
+      b.t += dt; b.fray = Math.max(0, b.fray - dt * FRAY_DECAY);
       sc.update(this, b, dt);
       if (this.boss === b && b.contact && !b.hidden && Math.abs(pl.x - b.x) < def.halfW * 0.8 + this.d.radius && Math.abs(pl.y + 0.2 - b.y) < def.halfH * 0.8 + this.d.radius) this.hurt();
     },
-    /* Knock the boss out for a few seconds: it stops acting, every weak spot counts as open and it takes half again as much. */
-    stunBoss(sec) {
-      const b = this.boss; if (!b || b.stun > 0) return;
-      b.stun = sec || b.def.stunTime || 3.5; b.fray = 1; this.cue(b, 'stun');
+    /* The break: the boss is frayed for a few seconds. It stops acting, every weak spot counts as open and it takes three times the
+       damage. sec (a script's own knock-down) is held to the plan's 4 to 5 s; the Slow Fray perk and the Fray dial's short breaks
+       scale it (sim.breakMul). stunBoss is the old name, kept for the scripts. */
+    breakBoss(sec) {
+      const b = this.boss; if (!b || b.stun > 0 || b.hp <= 0) return;
+      const t = clamp(sec || BREAK_SEC, 4, 5) * (this.breakMul ? this.breakMul() : 1);
+      b.stun = b.frayed = b.breakT = t; b.fray = 1; b.breaks++; b.guard = false;
+      this.cue(b, 'stun'); this.emit('frayed', { boss: b.id, sec: t });
       const sc = ST.bossScripts[b.id]; if (sc && sc.onStun) sc.onStun(this, b);
+    },
+    stunBoss(sec) { this.breakBoss(sec); },
+    /* Fill the break meter by amt (0..1 of it). The plated part (b.frayArm, from the Fray dial) fills at half speed. */
+    addFray(b, amt) {
+      if (!(amt > 0) || b.stun > 0 || b.hp <= 0) return;
+      if (b.fray < b.frayArm) { const plated = Math.min(amt * ARMOUR_FILL, b.frayArm - b.fray); b.fray += plated; amt -= plated / ARMOUR_FILL; }
+      if (amt > 0) b.fray += amt;
+      if (b.fray >= 1) this.breakBoss();
     },
     cue(b, name, o) { this.emit('cue', Object.assign({ boss: b.id, cue: name, x: b.x, y: b.y }, o)); },
     /* True once every `sec` seconds of fight (faster on harder modes). First call arms it. */
@@ -76,16 +119,17 @@
     /* The framework's half of damageBoss: returns the multiplier for a hit at (x, y), 0 when blocked, or 'reflect'. */
     bossHit(b, dmg, x, y, force, src, softMul) {
       const def = b.def, sc = ST.bossScripts[b.id];
-      if (b.hidden) return 0;
+      if (b.hidden) { b.softHit = false; return b.shadow ? b.shadow.mul : 0; }   // under the cloth: only its shadow (b.shadow = { x, y, r, mul }) can be hit, and sim.js decides where
       const stunned = b.stun > 0;
       let soft = false;
       for (let i = 0; i < def.soft.length; i++) { const s = def.soft[i]; if ((stunned || !b.softOpen || b.softOpen[i]) && Math.abs(x - (b.x + s.x)) < s.r) soft = true; }
-      let mul = soft ? 2 * (softMul || 1) : (def.armour || 0.6);
-      if (stunned) mul = Math.max(mul, 2) * 1.5;
+      let mul = soft ? 2 * (softMul || 1) : def.guarded && !b.guard ? 1 : (def.armour || 0.6);   // guarded bosses: armour only in their short guard moments
+      if (stunned) mul = Math.max(mul, 2) * 1.5;   // broken: three times (a weak spot more)
       if (force) return b.shield && !stunned ? 0.25 : Math.max(1, stunned ? 1.5 : 1);
       if (b.shield && !stunned) return 0;
-      if (sc.onDamage && !stunned) { const r = sc.onDamage(this, b, dmg, x, y, src); if (r === 'reflect') return r; if (typeof r === 'number') mul = r; }
-      if (soft && mul > 0 && !stunned) { b.fray += dmg * mul / (b.maxHp * (def.frayAt || 0.12)); if (b.fray >= 1) this.stunBoss(); }
+      if (sc.onDamage && !stunned) { const r = sc.onDamage(this, b, dmg, x, y, src); if (r === 'reflect' || r === 'glance') return r; if (typeof r === 'number') mul = r; }
+      { const fw = soft ? this.hitFray : this.hitFrayBody;   // weapons: the hit's own fray factor (weak spot) and body weight, set by sim.js (1 and 0 by default)
+        if (fw > 0 && mul > 0 && !stunned && src !== 'probe') this.addFray(b, dmg * mul * fw / (b.maxHp * (def.frayAt || 0.12)) * this.frayGain()); }   // frayGain: Fray Dust (sim.js)
       b.softHit = soft && mul > 0;
       return mul;
     },

@@ -35,6 +35,7 @@
   'use strict';
   const C = ST.content, F = ST.FIELD, PAL = C.PAL, PY = F.PY;
   const ROW = 0.55, MAXFLOOR = 3.3, BITE = 2.6;
+  const MOUTH_OPEN = [3.2, 3.0, 3.0], MOUTH_SHUT = [1.2, 1.3, 1.3];   // rework: bosses: the mouth is open most of the time; shut is a short moment
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
   function newHook(sim, b, i) {
@@ -53,7 +54,7 @@
 
   const script = {
     def: {
-      hp: 4800, stunTime: 3.5, frayAt: 0.12, armour: 0.15,
+      hp: 4800, stunTime: 4.5, frayAt: 0.12, armour: 0.15, split: [0.3, 0.6],   // its last phase (it breathes in) is the quickest, so it starts sooner
       soft: [{ x: 0, r: 0.9 }], softName: 'Its mouth, only while it is open',
       phases: ['Two hook arms roam the cloth and snag your ship. Dash to snap the line.', 'The cloth unravels under you and light beams fill whole columns. Hits on the open mouth sew it back.', 'It breathes in, dragging your ship, coins and shots toward its mouth. A bomb or special down its throat chokes it.'],
       phaseTag: ['Hooks and mines', 'The cloth unravels', 'It breathes in']
@@ -171,12 +172,12 @@
 
       if (s.spitT > 0) {
         s.spitT -= dt;
-        if (s.spitT <= 0) { sim.fanShots(mx, my, ph === 1 ? 5 : 6, 1.1, 5.2, 'frass'); setMouth(b, 'open'); s.mouthT = ph === 1 ? 1.8 : 1.6; }
+        if (s.spitT <= 0) { sim.fanShots(mx, my, ph === 1 ? 5 : 6, 1.1, 5.2, 'frass'); setMouth(b, 'open'); s.mouthT = MOUTH_OPEN[ph - 1]; }
         return;
       }
       s.mouthT -= dt;
       if (s.mouthT <= 0) {
-        if (b.pose === 'open') { setMouth(b, 'shut'); s.mouthT = (ph === 1 ? 3.6 : 3.8) / (sim.mode.fire || 1); }
+        if (b.pose === 'open') { setMouth(b, 'shut'); s.mouthT = MOUTH_SHUT[ph - 1] / (sim.mode.fire || 1); }
         else { b.pose = 'spit'; s.spitT = 0.6; sim.cue(b, 'spit', { x: mx, y: my }); }
       }
 

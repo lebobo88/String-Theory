@@ -6,7 +6,9 @@
   const $ = (sel, root) => (root || document).querySelector(sel);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const num = n => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-  const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
+  /* Roman numerals for any level (ship upgrades and weapons have no top level now): ROMAN[7] is 'VII'. Built once up to 120. */
+  const ROMAN = (() => { const out = ['']; for (let n = 1; n <= 120; n++) { let r = '', v = n; for (const [k, t] of [[100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (v >= k) { r += t; v -= k; } out.push(r); } return out; })();
+  const PAT_VIEWS = ['more', 'ups', 'exch'];   // the Perks tab's other views (the first is 'perks')
   const STAT = { ply: 'Shield', pace: 'Speed', eye: 'Fire rate', point: 'Damage' };
   const mq = q => (window.matchMedia ? window.matchMedia(q) : { matches: false });
   const MQ_CALM = mq('(prefers-reduced-motion: reduce)'), MQ_COARSE = mq('(pointer: coarse)');
@@ -33,6 +35,8 @@
   }
   /* A price tag: coin or gem, then the number. size 'sm' is the small tag inside lists and buttons; count marks the number for a results sheet's count-up. */
   const dustTag = (n, size, count) => `<span class="tag ${size || ''}">${icon('dust', 20)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> coins</span></span>`;
+  const softWords = t => esc(t).replace(/([A-Za-z]{4})([A-Za-z]{4,})/g, '$1&shy;$2');   // a long word may break at a hyphen in a narrow tile
+  const gemNum = n => `${icon('silk', 16)}<b>${num(n)}</b><span class="sr"> gems</span>`;   // a tile's price: the gem and the number, the same on every perk and power-up tile
   const silkTag = (n, size, count) => `<span class="tag silk ${size || ''}">${icon('silk', 26)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> gems</span></span>`;
   /* "becomes": a stitched arrow between a number now and the number after. Drawn, so it never depends on a typeface having the glyph. */
   const ARROW = '<svg class="arr" viewBox="0 0 12 9" aria-hidden="true" focusable="false"><path d="M0 4.5h9M6 1l4 3.5L6 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -50,7 +54,15 @@
     sign:   ['...a...', '...a...', 'aaaaaaa', '.aaaaa.', '..aaa..', '.aa.aa.', 'aa...aa'],
     twin:   ['.a...a.', '.a...a.', 'aaa.aaa', 'aaa.aaa', 'a.a.a.a', '.b...b.'],
     triple: ['.....a.....', '.a...a...a.', '.a..aaa..a.', 'aaa.aaa.aaa', 'aaa.a.a.aaa', 'a.a..b..a.a', '.b.......b.'],
-    other:  ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..']
+    other:  ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..'],
+    bomb:   ['.....b.', '....b..', '..aaa..', '.aaaaa.', 'aaabaaa', '.aaaaa.', '..aaa..'],
+    split:  ['...a...', '...a...', '...a...', '..a.a..', '.a...a.', 'a.....a', 'b.....b'],
+    mirror: ['...a...', '..aaa..', '...a...', 'bbbbbbb', '...a...', '..aaa..', '...a...'],
+    recharge: ['....aa.', '...aa..', '..aa...', '.aaaaa.', '...aa..', '..aa...', '.aa....'],
+    streak: ['......a', '.....aa', '...a.aa', '...aaaa', '.a.aaaa', '.aaaaaa', 'bbbbbbb'],
+    tack:   ['.aaa...', 'aaaaa..', '.aaa...', '..a....', '...a...', '....b..', '.....b.'],
+    fraydust: ['.a...a.', '.a.a.a.', '.aa.aa.', '..aaa..', '.b.a.b.', 'b..a..b', '...b...'],
+    spool:  ['aaaaaaa', '.bbbbb.', '.a.a.a.', '.bbbbb.', '.a.a.a.', '.bbbbb.', 'aaaaaaa']
   };
   const PW_SPRITE = { drone: 'bobbin', beeswax: 'beeswax', dish: 'dish', _t: 'thimble', _p: 'pin', _c: 'chalk' };
   const PW_NAME = { sign: 'Signature', _t: 'Thimble', _p: 'Safety Pin', _c: 'Dive warnings', _d: 'Twin ship' };
@@ -78,6 +90,17 @@
     if (UPICONS.size < 200) UPICONS.set(key, h); return h;
   }
 
+  /* Unique items: a find or heirloom as a small counted chart in its family's colour (a rare one wears the saffron ring, like an upgraded power-up). */
+  const ITEMICONS = new Map();
+  function itemIcon(it, px) {
+    const key = (it.glyph || '') + '|' + (it.fam || it.col) + '|' + (it.rar || '') + '|' + px; let h = ITEMICONS.get(key); if (h !== undefined) return h;
+    const col = it.fam ? C.FIND_FAMILIES[it.fam].color : PAL[it.col] || PAL.saffron, g = C.GLYPHS[it.glyph] || C.GLYPHS.egg, rare = it.rar === 'rare';
+    h = stitched(rare ? outlined(g) : g, { a: col, b: PAL.paper, '+': PAL.saffron }, px, 'ic');
+    if (ITEMICONS.size < 200) ITEMICONS.set(key, h); return h;
+  }
+  const findInfo = id => { const f = C.FINDS[id], F = C.FIND_FAMILIES[f.fam]; return { f, F, rar: C.FIND_RARITY[f.rar].name }; };
+  const heirKind = h => h.keepsake ? 'Keepsake' : 'Heirloom';
+
   /* The combo: up to eight turns of thread wound round the score, each one half behind the digits and half in front. */
   const TURNS = 8;
   function woundHtml() {
@@ -100,7 +123,7 @@
   const attr = (el, a, v) => { const k = '_a' + a; if (el && el[k] !== v) { el[k] = v; el.setAttribute(a, v); } };
 
   /* Sounds by action: tabs flick, equipping seats a spool, everything else is a soft tap. Items and the special make their own sound in play. */
-  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
+  const TAB_ACTS = { forks: 1, wlist: 1, tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1, bomb: 1 }, EQUIP_ACTS = { fork: 1, wind: 1, wind2: 1, takeup: 1, wear: 1, unwear: 1 };
 
   class UI {
     constructor(ctl) {
@@ -184,14 +207,23 @@
         case 'hem': c.openHem(false); break;
         case 'title': c.toTitle(); break;
         case 'depart': if (!c.midNight) this.snd('ui_start'); c.depart(); break;
-        case 'tab': this.tab = arg; this.hem(); break;
-        case 'pick': this.sel[this.selKey()] = arg; this.hem(); break;
-        case 'pview': this.patView = arg === 'ups' ? 'ups' : 'perks'; this.hem(); break;
-        case 'bview': this.bookView = arg === 'foes' ? 'foes' : 'charts'; this.hem(); break;
+        case 'tab': this.tab = arg; this.spoolView = null; this.hem(); break;
+        case 'pick': if (this.selKey() === 'forks' && arg === 'back') { this.spoolView = null; this.hem(); break; } if (this.selKey() === 'exch' && /^n:/.test(arg)) this.xn = arg === 'n:max' ? 'max' : +arg.slice(2); else this.sel[this.selKey()] = arg; this.hem(); break;
+        case 'pview': this.patView = ['more', 'ups', 'exch'].indexOf(arg) >= 0 ? arg : 'perks'; this.hem(); break;
+        case 'fray': { const mode = ST.modeUnlocked(this.p, st.mode) ? st.mode : 'normal', top = ST.frayOpen(this.p, mode), now = Math.min(top, st.fray | 0);
+          st.fray = Math.max(0, Math.min(top, now + (arg === 'up' ? 1 : -1))); c.saved(); this.menu(); break; }
+        case 'bview': this.bookView = ['foes', 'album', 'heir'].indexOf(arg) >= 0 ? arg : 'charts'; this.hem(); break;
+        case 'wear': S.wearHeirloom(this.p, arg); c.saved(); this.hem(); break;
+        case 'unwear': S.takeOffHeirloom(this.p, arg); c.saved(); this.hem(); break;
+        case 'findpick': c.pickFind(+arg); break;
+        case 'findreroll': c.rerollFind(); break;
         case 'buy': this.buy(arg); break;
         case 'nope': this.snd('ui_fail'); this.shake(); break;
         case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
         case 'wind2': S.windSecond(this.p, arg); c.saved(); this.hem(); break;
+        case 'forks': this.sel.spool = arg; this.spoolView = 'forks'; this.sel.forks = null; this.hem(); break;   // a weapon's forks, mastery and pairing
+        case 'wlist': this.spoolView = null; this.hem(); break;
+        case 'fork': { const [id, i, o] = arg.split(':'); if (S.setFork(this.p, id, +i, o)) { c.saved(); this.toast('Fork', C.THREADS[id].forks[+i].opts.find(x => x.id === o).name); } this.hem(); break; }
         case 'takeup': S.takeUp(this.p, arg); c.saved(); this.hem(); break;
         case 'continue': c.continueNight(); break;
         case 'pocket': c.takePocket(arg); if (!this.played) this.snd('ui_fail'); break;
@@ -216,6 +248,7 @@
         case 'how': this.how(); break;
         case 'notion': c.useNotion(+arg); break;
         case 'special': c.special(); break;
+        case 'bomb': c.bomb(); break;
         case 'gfx': { const o = ['auto', 'low', 'lite', 'medium', 'high']; st.graphics = o[(o.indexOf(st.graphics || 'auto') + 1) % o.length]; c.saved(); c.applySettings(); this.settings(); break; }
         case 'ctl': st.controls = st.controls === 'follow' ? 'drag' : 'follow'; c.saved(); c.applySettings(); this.settings(); break;
         case 'pause': c.pause(); break;
@@ -245,10 +278,11 @@
         case 'pockets': if (this.unpickArm >= 0) { this.unpickArm = -1; this.pockets(); } else if (c.slot >= 0) c.toTitle(); else this.title(); return true;
         case 'route': if (c.midNight && c.sim) { c.state = 'hem'; this.hem(); } else c.openHem(false); return true;   // mid-run: the same visit, so "one per visit" still holds
         case 'hem':   // a second view steps back to the first; then out to the main menu (a run in progress stays saved there as Continue run)
-          if (this.tab === 'pattern' && this.patView === 'ups') { this.patView = 'perks'; this.hem(); }
-          else if (this.tab === 'book' && this.bookView === 'foes') { this.bookView = 'charts'; this.hem(); }
+          if (this.tab === 'pattern' && this.patView !== 'perks') { this.patView = 'perks'; this.hem(); }
+          else if (this.tab === 'book' && this.bookView && this.bookView !== 'charts') { this.bookView = 'charts'; this.hem(); }
           else c.toTitle();
           return true;
+        case 'finds': return true;   // rework: unique items: the choice stays until you make it
         case 'tally': case 'gameover': case 'victory': c.continueNight(); return true;
       }
       return false;
@@ -308,7 +342,17 @@
         <div class="row mchips">
           <button class="chip" data-act="settings">Settings</button>
           <button class="chip" data-act="mode">Difficulty: ${C.MODES[ST.modeUnlocked(p, st.mode) ? st.mode : 'normal'].name}${Object.keys(C.MODES).some(k => !ST.modeUnlocked(p, k)) ? ' (finish a run to unlock harder)' : ''}</button>
+          ${this.frayStepper()}
         </div></div>`, 'night', 'menu');
+    }
+
+    /* The Fray dial: opens for a mode after its first full clear. A compact stepper next to the difficulty: Less, the step, More. */
+    frayStepper() {
+      const p = this.p, top = ST.frayOpen(p, ST.modeUnlocked(p, p.settings.mode) ? p.settings.mode : 'normal'); if (!top) return '';
+      const fs = ST.frayStep(p), pay = Math.round(C.FRAY.pay * fs * 100);
+      return `<span class="fraystep" role="group" aria-label="Fray: ${esc(C.frayLine(fs))}"><button class="chip" data-act="fray" data-arg="down" aria-label="Lower the Fray" ${fs ? '' : 'disabled'}>Less</button>
+        <span class="frayin"><b>Fray ${fs || 'off'}</b><span>${fs ? '+' + pay + '% coins and gems' : 'Harder, pays more'}</span></span>
+        <button class="chip" data-act="fray" data-arg="up" aria-label="Raise the Fray" ${fs < top ? '' : 'disabled'}>More</button></span>`;
     }
 
     // ---------- the Night's route ----------
@@ -343,7 +387,7 @@
       const c = this.ctl, f = this.ledgerFilter || 'all', p = this.p;
       const rows = c.store.ledger().filter(r => f === 'all' || r.needle === f).slice(0, 12);
       const tabs = [['all', 'All ships']].concat(Object.keys(C.NEEDLES).map(n => [n, C.NEEDLES[n].name]));
-      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
+      const body = rows.length ? rows.map((r, i) => `<tr class="${r.mender === p.mender ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.mender)}</td><td>${esc((C.NEEDLES[r.needle] || { name: r.needle }).name)}</td><td class="mono">${num(r.stitches)}</td><td class="${r.won ? 'won' : ''}">${esc(r.reached)}${r.mode && r.mode !== 'normal' ? ' (' + esc(C.MODES[r.mode].name) + (r.fray ? ', Fray ' + r.fray : '') + ')' : r.fray ? ' (Fray ' + r.fray + ')' : ''}</td><td>${esc(r.date)}</td></tr>`).join('')
         : '<tr><td colspan="6" class="none">No runs on record yet.</td></tr>';
       const marks = [['Perfect bonus waves', p.stats.perfectSamplers || 0]].concat(Object.keys(C.KEEPERS).map(id => [C.KEEPERS[id].name + ' defeated', p.codex.keepers[id] || 0]), [['Longest twin-ship streak', (p.stats.longestDouble || 0) + ' waves']]);
       const view = this.ledgerView === 'stats' ? 'stats' : 'runs';
@@ -375,11 +419,12 @@
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
       const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use'],
-        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'and power-up upgrades'], ['book', 'Collection', 'blueprints and enemies']];
+        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'and power-up upgrades'], ['book', 'Collection', 'blueprints, album, heirlooms']];
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared · next: ${C.PANELS[c.sim.panel].name}` : 'Between runs · everything you buy is saved';
       this.preview = null;
       const view = this.selKey(), body = this['st_' + this.tab](), selNow = view + '/' + body.sel;
+      if (this.bought && (this.bought.at !== selNow || !/^hem:/.test(this.shown || ''))) this.bought = null;   // the highlight of a buy lasts until the next pick, tab or view, or a visit away
       const strip = this.tab === 'pattern' ? this.perkSeg() : this.tab === 'book' ? this.bookSeg() : this.shipStrip();
       const lint = [[12, 19, 0], [31, 26, -7], [52, 22, -13], [68, 29, -3], [86, 24, -17]].map(l => `<i class="lint" style="--x:${l[0]}%;--t:${l[1]}s;--d:${l[2]}s"></i>`).join('');
       this.show(`<div class="hem shop"><div class="amb" aria-hidden="true"><i class="lamp"></i>${lint}<span class="strand"><i></i></span></div>
@@ -398,30 +443,40 @@
       }
     }
     /* Which selection a pick belongs to: the Perks and Collection tabs each hold two views. */
-    selKey() { return this.tab === 'pattern' && this.patView === 'ups' ? 'ups' : this.tab === 'book' && this.bookView === 'foes' ? 'foes' : this.tab; }
+    selKey() { if (this.tab === 'spool' && this.spoolView === 'forks') return 'forks'; return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : this.tab; }
     /* A two-way switch in the strip's slot, for the tabs that hold two views. */
     seg(act, label, opts, cur) {
-      return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b><span>${o[2]} of ${o[3]}</span></button>`).join('')}</nav>`;
+      return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b>${o[2] === '' ? '' : `<span>${o[2]} of ${o[3]}</span>`}</button>`).join('')}</nav>`;
     }
     perkSeg() {
-      const p = this.p, nP = Object.keys(C.PATTERN.nodes), nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up);
-      return this.seg('pview', 'Bought with gems', [['perks', 'Perks', nP.filter(k => p.pattern[k]).length, nP.length], ['ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length]], this.patView === 'ups' ? 'ups' : 'perks');
+      const p = this.p, nU = Object.keys(C.CHARMS).filter(id => C.CHARMS[id].up), rowsOf = more => C.PATTERN.rows.filter(r => (r.tier || 0) > 0 === more).reduce((a, r) => a.concat(r.nodes), []);
+      const n1 = rowsOf(false), n2 = rowsOf(true);
+      return this.seg('pview', 'Bought with gems', [['perks', 'Perks', n1.filter(k => p.pattern[k]).length, n1.length], ['more', 'More perks', n2.filter(k => p.pattern[k]).length, n2.length],
+        ['ups', 'Power-ups', nU.filter(k => (p.charmUps || {})[k]).length, nU.length], ['exch', 'Exchange', '', '']], PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : 'perks');
     }
     bookSeg() {
       const p = this.p, ch = Object.keys(C.CHARTS), mo = Object.keys(C.MOTHS), ke = Object.keys(C.KEEPERS);
+      const fi = Object.keys(C.FINDS), hs = Object.keys(C.HEIRLOOMS), album = p.album || {}, own = p.heirlooms || {};
       return this.seg('bview', 'Collection', [['charts', 'Blueprints', ch.filter(k => p.charts[k]).length, ch.length],
-        ['foes', 'Enemies', mo.filter(k => p.codex.moths[k]).length + ke.filter(k => p.codex.keepers[k]).length, mo.length + ke.length]], this.bookView === 'foes' ? 'foes' : 'charts');
+        ['foes', 'Enemies', mo.filter(k => p.codex.moths[k]).length + ke.filter(k => p.codex.keepers[k]).length, mo.length + ke.length],
+        ['album', 'Album', fi.filter(k => album[k]).length + hs.filter(k => C.HEIRLOOMS[k].keepsake && own[k]).length, fi.length + hs.filter(k => C.HEIRLOOMS[k].keepsake).length],
+        ['heir', 'Heirlooms', hs.filter(k => own[k]).length, hs.length]], ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : 'charts');
     }
     /* The four numbers a purchase can move, for the ship and weapon in hand. */
     flight(p) {
       const d = ST.derive(p), id = p.threads[p.thread] ? p.thread : 'running', w = p.threads[id] || 1;
       return { dmg: d.dmg, rate: d.fireMul / C.THREADS[id].rate[w - 1], ply: d.ply, speed: d.speed };
     }
-    /* Always in the strip's slot: what you fly now, and beside each number what the selected thing would make it. */
+    /* Always in the strip's slot: what you fly now, and under each number what the selected thing would make it: the new value, a
+       direction mark (not colour alone) and the amount, "1.60 ▲ +0.15" (phones have room for the mark and amount only). After a buy
+       the cells it changed keep a highlight with "was 1.45" until the player picks something else (this.bought, cleared in hem()). */
     shipStrip() {
-      const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null;
-      const cell = (lab, k, dp, unit) => { const ch = b && Math.abs(b[k] - a[k]) > 1e-6, u = unit ? `<span class="unit">${unit}</span>` : '';
-        return `<div class="${ch ? 'chg' : ''}" data-k="${k}" data-dp="${dp}"><span class="k">${lab}</span><b class="v"><span class="n">${a[k].toFixed(dp)}</span>${u}</b><em class="d ${ch ? (b[k] > a[k] ? 'up' : 'down') : ''}">${ch ? `${ARROW}<span class="sr">becomes </span>${b[k].toFixed(dp)}` : ''}</em><i class="stitch" aria-hidden="true"></i></div>`; };
+      const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null, kept = this.bought;
+      const cell = (lab, k, dp, unit) => { const u = unit ? `<span class="unit">${unit}</span>` : '', was = kept && Math.abs(kept.now[k] - kept.was[k]) > 1e-6 && Math.abs(kept.now[k] - a[k]) < 1e-6;
+        const ch = !was && b && Math.abs(b[k] - a[k]) > 1e-6, up = ch && b[k] > a[k], amt = ch ? (up ? '+' : '-') + Math.abs(b[k] - a[k]).toFixed(dp) : '';
+        const d = was ? `<em class="d was"><span class="sr">was </span><span class="wl" aria-hidden="true">was </span><b>${kept.was[k].toFixed(dp)}</b></em>`
+          : `<em class="d ${ch ? (up ? 'up' : 'down') : ''}">${ch ? `<span class="sr">becomes </span><span class="to">${b[k].toFixed(dp)} </span><svg class="dir" viewBox="0 0 10 9" aria-hidden="true" focusable="false"><path d="M5 0L10 9H0z"/></svg><span class="sr">${up ? 'up ' : 'down '}</span>${amt}` : ''}</em>`;
+        return `<div class="${ch || was ? 'chg' : ''}" data-k="${k}" data-dp="${dp}"><span class="k">${lab}</span><b class="v"><span class="n">${a[k].toFixed(dp)}</span>${u}</b>${d}<i class="stitch" aria-hidden="true"></i></div>`; };
       return `<div class="shipstrip" role="group" aria-label="Your ship's numbers"><div class="who">${icon(p.needle, 24)}<span><span class="k">Your ship</span><b>${esc(C.NEEDLES[p.needle].name)}</b></span></div>
         ${cell('Damage', 'dmg', 2)}${cell('Fire rate', 'rate', 1, '/s')}${cell('Shield', 'ply', 0)}${cell('Speed', 'speed', 1)}</div>`;
     }
@@ -446,7 +501,8 @@
     }
     stamp(head, sub, none) { return `<div class="stamp ${none ? 'none' : ''}"><b>${head}</b>${sub ? `<span>${sub}</span>` : ''}</div>`; }
     list(items, selId) {
-      let h = items.map(i => `<button class="card ${i.id === selId ? 'sel' : ''} ${i.lock ? 'lock' : ''}" data-act="pick" data-arg="${i.id}" aria-pressed="${i.id === selId}"><span class="cic">${i.icon || ''}</span><span class="cname" data-fit="3">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('');
+      const on = i => Array.isArray(selId) ? selId.indexOf(i.id) >= 0 : i.id === selId;
+      let h = items.map(i => `<button class="card ${on(i) ? 'sel' : ''} ${i.lock ? 'lock' : ''}" data-act="pick" data-arg="${i.id}" aria-pressed="${on(i)}"><span class="cic">${i.icon || ''}</span><span class="cname" data-fit="3">${esc(i.name)}</span><span class="cmeta">${i.meta || ''}</span></button>`).join('');
       for (let i = items.length; i < 10; i++) h += '<span class="ghost" aria-hidden="true"></span>';
       return `<div class="list">${h}</div>`;
     }
@@ -460,43 +516,94 @@
         <div class="dbody" data-anchor="body" data-fit="4">${o.desc ? `<p class="ddesc">${esc(o.desc)}</p>` : ''}${rows.length ? `<dl class="dcmp">${rows.map(r => `<div class="${r.cls || ''}${r.opt ? ' opt' : ''}"><dt>${r.k}</dt><dd>${r.v}</dd></div>`).join('')}</dl>` : ''}</div>
         <div class="dact"><div class="dleft" data-anchor="have" data-fit="1">${o.left || ''}</div><div class="dbuy" data-anchor="buy">${o.buy || ''}</div></div></section>`;
     }
+    /* Weapons. Two views in the same slots: the weapons (list) and one weapon's forks, mastery and pairing (this.spoolView = 'forks').
+       Levels I to X; a fork at IV and at VII is bought once, then either option is chosen for free. */
     st_spool() {
       const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
+      if (this.spoolView === 'forks' && p.threads[sel]) return this.st_forks(sel);
       const owned = ids.filter(id => p.threads[id]), second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : owned.find(id => id !== p.thread) || null;
       const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
         return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, lock: st.why === 'sealed',
-          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · level ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price, 'sm') }; });
-      const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
+          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : t.silk ? silkTag(t.silk, 'sm') : dustTag(t.price, 'sm') }; });
+      const t = C.THREADS[sel], w = p.threads[sel] || 0, top = t.lv.length, st = S.threadState(p, sel);
       const dd = ST.derive(p), L = t.lv[Math.max(1, w) - 1], per = dd.dmg * L.dmg, shots = L.n + (L.mid ? 1 : 0);
       const fires = `${shots} ${shots > 1 ? 'shots' : 'shot'} of <b class="mono">${per.toFixed(2)}</b>, <b class="mono">${(dd.fireMul / L.rate).toFixed(1)}</b> a second`;
+      const f = (p.forks && p.forks[sel]) || {}, chosen = (t.forks || []).map((fk, i) => { const o = fk.opts.find(x => x.id === f[String.fromCharCode(97 + i)]); return o ? o.name : ''; }).filter(Boolean);
+      const mate = t.pair && C.THREADS[t.pair.with], paired = w >= top && mate && p.thread === sel && second === t.pair.with;
+      const forkRow = w ? { k: 'Forks', v: (chosen.length ? esc(chosen.join(', ')) + '.' : w >= 4 ? 'One to choose: see Forks.' : 'A choice of two at level IV.') + `<button class="eq fkb" data-act="forks" data-arg="${sel}">Forks</button>`, opt: !chosen.length && w < 4 } : null;   // (the button shows only where the left slot has no room for it)
+      const pairRow = mate ? { k: 'Pairs with', v: esc(mate.name) + (paired ? ': on.' : '.'), opt: true } : null;
       const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Its blueprint is dropped by: ${esc(C.CHARTS[t.chart].from)}.` }]
-        : w ? [{ k: 'Now', v: `Level ${ROMAN[w]}. ${esc(t.weights[w - 1])}.`, cls: 'was', opt: true }, w < 3 ? { k: 'Next', v: `Level ${ROMAN[w + 1]}. ${esc(t.weights[w])}.` } : { k: 'Level III', v: 'Fully upgraded.' }]
-          : [{ k: 'Level I', v: esc(t.weights[0]) + '.' }];
+        : w ? [{ k: 'Level', v: `${ROMAN[w]} of ${ROMAN[top]}. ${esc(t.weights[w - 1])}.`, cls: 'was', opt: w < top },
+            w < top ? { k: 'Next', v: `${ROMAN[w + 1]}. ${esc(t.weights[w])}.` } : null, forkRow, pairRow]
+          : [{ k: 'Level I', v: esc(t.weights[0]) + '.' }, pairRow];
       const lead = p.thread === sel, bob = second === sel;
-      const left = w ? `<div class="equip" role="group" aria-label="Use this weapon as"><span>Use as</span>
+      const left = w ? `<div class="equip w3" role="group" aria-label="This weapon"><span>Use as</span>
           <button class="eq ${lead ? 'on' : ''}" ${lead ? 'disabled' : `data-act="wind" data-arg="${sel}"`} aria-pressed="${lead}">Lead</button>
-          <button class="eq ${bob ? 'on' : ''}" ${bob || lead ? 'disabled' : `data-act="wind2" data-arg="${sel}"`} aria-pressed="${bob}">Bobbin</button></div>`
+          <button class="eq ${bob ? 'on' : ''}" ${bob || lead ? 'disabled' : `data-act="wind2" data-arg="${sel}"`} aria-pressed="${bob}">Bobbin</button>
+          <button class="eq fkl" data-act="forks" data-arg="${sel}">Forks</button></div>`
         : `<span>${fires}</span>`;
-      const buy = st.ok ? this.buyBtn(st, 'dust', st.why === 'buy' ? 'Buy' : 'Upgrade', 'thread:' + sel, st.why === 'buy' ? '' : 'to level ' + ROMAN[st.next])
-        : st.why === 'owned' ? this.stamp('Max level', 'Level III') : this.buyBtn(st, 'dust', w ? 'Upgrade' : 'Buy');
+      const buy = st.ok ? this.wpnBtn(st, st.why === 'buy' ? 'Buy' : 'Upgrade', 'thread:' + sel, st.why === 'buy' ? '' : 'to level ' + ROMAN[st.next])
+        : st.why === 'owned' ? this.stamp('Mastered', 'Level ' + ROMAN[top]) : this.wpnBtn(st, w ? 'Upgrade' : 'Buy');
       if (st.ok || (w && p.thread !== sel)) { const q = this.clone(); q.thread = sel; q.threads[sel] = p.thread === sel || !w ? (st.ok ? st.next || 1 : w) : w; this.preview = q; }
       return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<i class="spool" style="--c:${t.color}"></i>`, name: t.name,
         kick: 'Weapon · ' + esc(t.job.toLowerCase()) + (lead ? ' · your lead' : bob ? ' · on your bobbin' : ''), desc: t.desc, rows, left, buy }) };
     }
+    /* A weapon's price on the buy button: coins, gems, or both (levels VIII to X). */
+    wpnBtn(st, label, arg, hint) {
+      if (!(st.dust && st.silk)) return this.buyBtn(st, st.cur || 'dust', label, arg, hint);
+      const tag = dustTag(st.dust, 'sm'), gems = `and ${num(st.silk)} gems`;   // the coins on the button, the gems under it
+      if (st.ok) return `<button class="btn primary buy" data-act="buy" data-arg="${arg}" data-fit="3"><span class="bl">${label}${tag}</span><span class="bh">${gems}${hint ? ' · ' + hint : ''}</span></button>`;
+      return `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}${tag}</span><span class="bh">${this.whyNot(st, st.cur)}</span></button>`;
+    }
+    /* One weapon's forks (two options at level IV, two at VII), its mastery and its pairing, as cards in the list's slots. */
+    st_forks(id) {
+      const p = this.p, t = C.THREADS[id], w = p.threads[id] || 0, top = t.lv.length, f = (p.forks && p.forks[id]) || {}, items = [];
+      (t.forks || []).forEach((fk, i) => { const key = String.fromCharCode(97 + i), have = !!f[key];
+        for (const o of fk.opts) items.push({ id: 'f:' + i + ':' + o.id, name: o.name, icon: `<b class="lv">${ROMAN[fk.at]}</b>`, lock: w < fk.at,
+          meta: f[key] === o.id ? 'In use' : have ? 'Free to switch' : w < fk.at ? 'At level ' + ROMAN[fk.at] : C.FORK_COST[i].silk ? silkTag(C.FORK_COST[i].silk, 'sm') : dustTag(C.FORK_COST[i].dust, 'sm') }); });
+      const mate = t.pair && C.THREADS[t.pair.with], second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : null;
+      items.push({ id: 'm', name: t.mastery.name, icon: `<b class="lv">${ROMAN[top]}</b>`, lock: w < top, meta: w >= top ? 'Mastered' : 'At level ' + ROMAN[top] });
+      if (mate) items.push({ id: 'p', name: t.pair.name, icon: `<i class="spool" style="--c:${mate.color}"></i>`, lock: !p.threads[t.pair.with], meta: 'With ' + esc(mate.name) });
+      items.push({ id: 'back', name: 'All weapons', icon: `<i class="spool" style="--c:${t.color}"></i>`, meta: esc(t.name) });
+      const sel = this.sel.forks && items.some(x => x.id === this.sel.forks && x.id !== 'back') ? this.sel.forks : items[0].id;
+      const pic = `<i class="spool" style="--c:${t.color}"></i>`, left = `<div class="equip w1"><button class="eq" data-act="wlist">All weapons</button></div>`;
+      let d;
+      if (sel === 'm') d = { name: t.mastery.name, kick: esc(t.name) + ' · mastery at level ' + ROMAN[top], desc: t.mastery.desc,
+        rows: [{ k: 'Level', v: `${ROMAN[w]} of ${ROMAN[top]}.` }], buy: w >= top ? this.stamp('Mastered', '') : this.stamp('At level ' + ROMAN[top], '', true) };
+      else if (sel === 'p') { const on = w >= top && p.thread === id && second === t.pair.with;
+        d = { name: t.pair.name, kick: 'Pairing · ' + esc(t.name) + ' with ' + esc(mate.name), desc: t.pair.desc,
+          rows: [{ k: 'How', v: `Master ${esc(t.name)}, fly it as your lead and carry ${esc(mate.name)} on the bobbin.` }, { k: 'Now', v: on ? 'On.' : 'Off.' }],
+          buy: on ? this.stamp('On', '') : p.threads[t.pair.with] && p.thread === id && w >= top ? `<button class="btn primary buy" data-act="wind2" data-arg="${t.pair.with}"><span class="bl">Carry ${esc(mate.name)}</span></button>` : this.stamp('Off', w < top ? 'Needs level ' + ROMAN[top] : !p.threads[t.pair.with] ? 'Needs ' + esc(mate.name) : 'Lead and bobbin', true) }; }
+      else { const [, si, oid] = sel.split(':'), i = +si, fk = t.forks[i], o = fk.opts.find(x => x.id === oid), other = fk.opts.find(x => x.id !== oid), key = String.fromCharCode(97 + i);
+        const st = S.forkState(p, id, i);
+        d = { name: o.name, kick: esc(t.name) + ' · fork at level ' + ROMAN[fk.at], desc: o.desc, rows: [{ k: 'Or', v: esc(other.name) + ': ' + esc(other.desc) }, { k: 'Cost', v: i ? 'Bought once with gems. Switch for free.' : 'Bought once with coins. Switch for free.', opt: true }] };
+        d.buy = f[key] === o.id ? this.stamp('In use', '') : f[key] ? `<button class="btn primary buy" data-act="fork" data-arg="${id}:${i}:${o.id}"><span class="bl">Use this</span><span class="bh">Free</span></button>`
+          : w < fk.at ? this.stamp('At level ' + ROMAN[fk.at], '', true) : this.buyBtn(st, st.cur, 'Buy fork', 'fork:' + id + ':' + o.id); }
+      let list = this.list(items, sel); for (let k = Math.max(10, items.length); k < 12; k++) list = list.replace(/<\/div>$/, '<span class="ghost" aria-hidden="true"></span></div>');
+      return { sel: id + '/' + sel, list, detail: this.detail(Object.assign({ pic, left }, d)) };
+    }
+    /* Ship upgrades have no top level. Names and numbers: the list shows the plain level; the details show it in Roman numerals, with
+       five pips for the stretch you are in (the last one is the next bonus level). */
     st_bench() {
       const p = this.p, ids = Object.keys(C.TEMPERS), sel = this.sel.bench && C.TEMPERS[this.sel.bench] ? this.sel.bench : 'point';
-      const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id], st = S.temperState(p, id);
-        return { id, name: t.name, icon: `<b class="lv">${lv}/${t.max}</b>`, meta: lv >= t.max ? 'Max level' : st.why === 'sealed' ? 'Level IV locked' : dustTag(st.price, 'sm') }; });
-      const t = C.TEMPERS[sel], st = S.temperState(p, sel), lv = p.tempers[sel], next = Math.min(t.max, lv + 1);
+      const items = ids.map(id => { const t = C.TEMPERS[id], lv = p.tempers[id] || 0, st = S.temperState(p, id);
+        return { id, name: t.name, icon: `<b class="lv">${lv}</b>`, meta: st.why === 'sealed' ? 'Level ' + ROMAN[lv + 1] + ' locked' : dustTag(st.price, 'sm') }; });
+      const t = C.TEMPERS[sel], st = S.temperState(p, sel), lv = p.tempers[sel] || 0, next = lv + 1;
       let move = '';
-      if (lv < t.max) { const q = this.clone(); q.tempers[sel] = lv + 1; this.preview = q; const a = this.flight(p), b = this.flight(q);
+      { const q = this.clone(); q.tempers[sel] = next; this.preview = q; const a = this.flight(p), b = this.flight(q);
         for (const [k, lab, dp] of [['dmg', 'damage', 2], ['rate', 'shots a second', 1], ['ply', 'shield', 0], ['speed', 'speed', 1]]) if (Math.abs(b[k] - a[k]) > 1e-6) move = `: ${lab} ${a[k].toFixed(dp)} ${ARROW} <b>${b[k].toFixed(dp)}</b>`; }
-      const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Level ${ROMAN[next]} needs a blueprint, dropped by: ${esc(C.CHARTS.bp_gilt.from)}.` }]
-        : lv < t.max ? [{ k: 'Next', v: `Level ${ROMAN[next]}${move}.` }] : [{ k: 'Level ' + ROMAN[lv], v: 'Fully upgraded.' }];
-      let marks = '<span class="pips">'; for (let i = 0; i < t.max; i++) marks += `<i class="${i < lv ? 'on' : i === lv && st.ok ? 'next' : ''}"></i>`; marks += '</span>';
-      const buy = st.ok ? this.buyBtn(st, 'dust', 'Upgrade', 'temper:' + sel, 'to level ' + ROMAN[next]) : lv >= t.max ? this.stamp('Max level', 'Level ' + ROMAN[lv]) : this.buyBtn(st, 'dust', 'Upgrade');
-      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<b class="lvpic">${ROMAN[next]}</b>`, name: t.name, kick: 'Upgrade · every ship, for good',
-        desc: t.desc + '.', rows, left: `<div class="lvrow"><span>Level <b>${lv}</b> of ${t.max}</span>${marks}</div>`, buy }) };
+      const mk = C.temperNextMark(sel, lv), mark = mk ? t.marks[mk] : null, got = Object.keys(t.marks).map(Number).filter(n => n <= lv).length;
+      const rows = (st.why === 'sealed' ? [{ k: 'Locked', v: `Level ${ROMAN[next]} needs a blueprint, dropped by: ${esc(C.CHARTS.bp_gilt.from)}.` }]
+        : [{ k: 'Next', v: `Level ${ROMAN[next]}${move || ': no change to your numbers'}.` }])
+        .concat(next === mk ? [{ k: 'Bonus', v: `${esc(mark.name)}: ${esc(mark.desc)}.` }] : []);
+      const bonus = mk ? `Bonus at ${ROMAN[mk]}` : got ? `${got} bonuses` : '';
+      // five pips: the levels of this stretch (VI to X, XI to XV...); levels I to V are the first stretch
+      const base = Math.floor(Math.max(0, lv - (lv % 5 === 0 && lv > 0 ? 1 : 0)) / 5) * 5, inBlock = lv - base;
+      let marks = '<span class="pips">'; for (let i = 0; i < 5; i++) marks += `<i class="${i < inBlock ? 'on' : i === inBlock && st.ok ? 'next' : ''}"></i>`; marks += '</span>';
+      const buy = st.ok ? this.buyBtn(st, 'dust', 'Upgrade', 'temper:' + sel, 'to level ' + ROMAN[next]) : this.buyBtn(st, 'dust', 'Upgrade');
+      const rn = ROMAN[next], sc = rn.length <= 3 ? 1 : rn.length <= 5 ? 0.7 : 0.5;
+      return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<b class="lvpic"${sc < 1 ? ` style="--k:${sc}"` : ''}>${rn}</b>`, name: t.name, kick: 'Upgrade · every ship, for good',
+        desc: t.desc + '.', rows, left: `<div class="lvrow"><span>Level <b>${lv ? ROMAN[lv] : '0'}</b>${bonus ? ' · ' + bonus : ''}</span>${marks}</div>`, buy }) };
     }
     st_notions() {
       const p = this.p, ids = Object.keys(C.NOTIONS), sel = this.sel.notions && C.NOTIONS[this.sel.notions] ? this.sel.notions : 'thimble', visit = this.ctl.visit;
@@ -518,7 +625,8 @@
         return { id, name: n.name, icon: icon(id, 26), lock: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price, 'sm') }; });
       const n = C.NEEDLES[sel], st = S.needleState(p, sel), own = !!p.needles[sel];
       const left = st.why === 'sealed' ? `<span>Blueprint dropped by: <b>${esc(C.CHARTS[n.chart].from)}</b></span>`
-        : `<span>Shield <b>${n.ply}</b> · Speed <b>${n.pace}</b> · Fire rate <b>${n.eye}</b> · Damage <b>${n.point}</b></span>`;
+        : (() => { const q = this.clone(); q.needle = sel; const f = this.flight(q);   // the same derived numbers as the strip, not the 1 to 5 ratings
+          return `<span>Damage <b class="mono">${f.dmg.toFixed(2)}</b> · Fire rate <b class="mono">${f.rate.toFixed(1)}/s</b> · Shield <b class="mono">${f.ply.toFixed(0)}</b> · Speed <b class="mono">${f.speed.toFixed(1)}</b></span>`; })();
       const buy = st.ok ? this.buyBtn(st, 'silk', 'Buy', 'needle:' + sel) : own ? (p.needle === sel ? this.stamp('Flying', 'Your ship')
         : `<button class="btn primary buy" data-act="takeup" data-arg="${sel}"><span class="bl">Fly this ship</span></button>`) : this.buyBtn(st, 'silk', 'Buy');
       if (sel !== p.needle) { const q = this.clone(); q.needle = sel; this.preview = q; }
@@ -527,17 +635,51 @@
     }
     st_pattern() {
       if (this.patView === 'ups') return this.st_ups();
-      const p = this.p, all = C.PATTERN.nodes, sel = this.sel.pattern && all[this.sel.pattern] ? this.sel.pattern : 'steady';
-      const grid = `<div class="sampler">${C.PATTERN.rows.map(r => `<div class="srow"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
-        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Unlocked' : all[id].cost + ' gems'}</span></button>`; }).join('')}</div>`).join('')}</div>`;
-      const n = all[sel], st = S.patternState(p, sel), ri = C.PATTERN.rows.findIndex(r => r.nodes.includes(sel)), row = C.PATTERN.rows[ri];
+      if (this.patView === 'exch') return this.st_exch();
+      const more = this.patView === 'more', key = more ? 'more' : 'pattern', p = this.p, all = C.PATTERN.nodes;
+      const rows = C.PATTERN.rows.filter(r => (r.tier || 0) > 0 === more), ids = rows.reduce((a, r) => a.concat(r.nodes), []);
+      const sel = this.sel[key] && ids.indexOf(this.sel[key]) >= 0 ? this.sel[key] : ids[0];
+      const cols = more ? 4 : 3;
+      const grid = `<div class="sampler">${rows.map(r => `<div class="${more ? 'urow' : 'srow'}"${more ? ' style="--nc:4"' : ''}><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
+        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' || st.why === 'tier' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Owned' : gemNum(all[id].cost)}</span></button>`; }).join('')
+          + '<span class="ghost" aria-hidden="true"></span>'.repeat(cols - r.nodes.length)}</div>`).join('')}${more ? `<p class="snote">${this.tierNote()}</p>` : ''}</div>`;
+      const n = all[sel], st = S.patternState(p, sel), row = rows.find(r => r.nodes.includes(sel)), ri = C.PATTERN.rows.indexOf(row);
       // a perk that moves one of the ship's numbers shows it, before and after
       let moved = ''; if (!p.pattern[sel]) { const q = this.clone(); q.pattern[sel] = true; const a = this.flight(p), b = this.flight(q);
         for (const [k, lab, dp, unit] of [['dmg', 'Damage', 2, ''], ['rate', 'Fire rate', 1, '/s'], ['ply', 'Shield', 0, ''], ['speed', 'Speed', 1, '']]) if (Math.abs(b[k] - a[k]) > 1e-6) moved += `<span>${lab} <b class="mono">${a[k].toFixed(dp)}${unit}</b> ${ARROW} <em class="mono">${b[k].toFixed(dp)}${unit}</em></span>`; }
-      const pic = [icon(p.needle, 40), icon('dish', 40), icon('dust', 40), icon('thimble', 40), icon('charm', 40)][ri] || icon('charm', 40);
+      const pic = [icon(p.needle, 40), icon('dish', 40), icon('dust', 40), icon('thimble', 40), icon('charm', 40), icon('ripper', 40), icon('chart', 40), icon('silk', 40), icon('thimble', 40)][ri] || icon('charm', 40);
       const buy = st.ok ? this.buyBtn(st, 'silk', 'Unlock', 'pattern:' + sel) : st.why === 'owned' ? this.stamp('Unlocked', 'For good') : this.buyBtn(st, 'silk', 'Unlock');
-      return { sel, list: grid, detail: this.detail({ pic, name: n.name, kick: 'Perk · ' + esc(row.name.toLowerCase()) + ' row', desc: n.desc,
+      return { sel, list: grid, detail: this.detail({ pic, name: n.name, kick: 'Perk · ' + esc(row.name.toLowerCase()) + ' row' + ((row.tier || 0) ? ' · ' + esc(C.PATTERN.tiers[row.tier].name.toLowerCase()) : ''), desc: n.desc,
         left: moved || '<span>For good. Every ship, every run.</span>', buy }) };
+    }
+    /* The note under the second view's rows: what opens the next tier. */
+    tierNote() {
+      const p = this.p, T2 = C.PATTERN.tiers, in1 = S.patternIn(p, 0), in2 = S.patternIn(p, 1);
+      return in1 < T2[1].need ? `The second pattern opens after ${T2[1].need} perks from the first (you have ${in1}).` : in2 < T2[2].need ? `The third pattern opens after ${T2[2].need} perks from the second (you have ${in2}).` : 'Both patterns are open.';
+    }
+    /* The Exchange: coins to gems and back. Pick a way and a size; the rate before and after is on the page before you confirm. */
+    st_exch() {
+      const p = this.p, E = C.EXCH, dir = this.sel.exch === 'sell' ? 'sell' : 'buy', buy = dir === 'buy', c = this.ctl;
+      const sizes = [1, 5, 10, 50];
+      const q = (d, n) => ST.exchangeQuote(p, d, n), one = { buy: q('buy', 1), sell: q('sell', 1) };
+      // "as many as you can": gems you can pay for, or all the gems you hold (never past the limit)
+      let most = 0; if (buy) { let lo = 0, hi = E.maxTrade; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (q('buy', mid).afford) lo = mid; else hi = mid - 1; } most = lo; } else most = Math.min(E.maxTrade, Math.floor(p.silk));
+      const want = this.xn === 'max' ? Math.max(1, most) : sizes.indexOf(this.xn) >= 0 ? this.xn : 10, n = Math.min(want, E.maxTrade);
+      const qt = q(dir, n), coins = v => num(v) + ' coin' + (v === 1 ? '' : 's');
+      const items = [{ id: 'buy', name: 'Buy gems', icon: icon('silk', 26), meta: coins(one.buy.dust) + ' each' }, { id: 'sell', name: 'Sell gems', icon: icon('dust', 26), meta: coins(one.sell.dust) + ' each' }]
+        .concat(sizes.map(k => { const x = q(dir, k); return { id: 'n:' + k, name: k + (k === 1 ? ' gem' : ' gems'), icon: '', meta: coins(x.dust) }; }))
+        .concat([{ id: 'n:max', name: buy ? 'All I can pay for' : 'All my gems', icon: '', meta: most ? most + (most === 1 ? ' gem' : ' gems') : 'None' }]);
+      const sel = ['n:' + (this.xn === 'max' ? 'max' : sizes.indexOf(this.xn) >= 0 ? this.xn : 10), dir];
+      const desc = buy ? `Each gem you buy makes the next ${Math.round(E.buyStep * 100)}% dearer.`
+        : `Each gem you sell pays ${Math.round(E.sellStep * 100)}% less than the last.`;
+      const rows = [{ k: 'Price now', v: `${coins(one[dir].dust)} a gem.` }, { k: 'This trade', v: buy ? `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` : `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` },
+        { k: 'After it', v: `${coins(qt.rateAfter)} a gem.` }, { k: 'Round trip', v: 'Always loses coins. Prices settle back as you fly, and start fresh each morning.', opt: true }];
+      const st = { ok: !!qt.afford && qt.ok, price: buy ? qt.dust : n, why: qt.afford ? 'buy' : 'short' };
+      const label = buy ? 'Buy ' + n + (n === 1 ? ' gem' : ' gems') : 'Sell ' + n + (n === 1 ? ' gem' : ' gems');
+      const btn = st.ok ? `<button class="btn primary buy" data-act="buy" data-arg="exch:${dir}" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'for ' + dustTag(qt.dust, 'sm') : 'for ' + dustTag(qt.dust, 'sm')}</span></button>`
+        : `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'Need ' + num(qt.dust - p.dust) + ' more coins' : 'Need ' + num(n - p.silk) + ' more gems'}</span></button>`;
+      return { sel: dir, list: this.list(items, sel), detail: this.detail({ pic: icon(buy ? 'silk' : 'dust', 40), name: buy ? 'Buy gems' : 'Sell gems', kick: 'Exchange · coins and gems', desc, rows,
+        left: `<span class="xhave"><span class="xw">You have</span> ${dustTag(p.dust, 'sm')} ${silkTag(p.silk, 'sm')}</span>`, buy: btn }) };
     }
     /* Power-up upgrades: each power-up that drops in flight has one stronger form, bought once with gems. Three rows; a row opens
        once two from the row before it are owned. The details set the power-up as it is now against what it becomes. */
@@ -547,7 +689,7 @@
       const lasts = (c, id) => c.dur ? c.dur + ' seconds' : id === 'twin' ? 'until hit' : 'at once';
       const rows = C.CHARM_TIERS.map((tr, t) => { const left = S.charmTierLeft(p, t);
         return `<div class="urow"><span class="eyebrow">${esc(tr.name)}</span>${ids.filter(id => C.CHARMS[id].up.tier === t).sort((a, b) => C.CHARMS[a].up.cost - C.CHARMS[b].up.cost).map(id => { const u = C.CHARMS[id].up, st = S.charmUpState(p, id), own = st.why === 'owned';
-          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${esc(u.name).replace(/([A-Za-z]{6})([A-Za-z]{4,})/g, '$1&shy;$2')}</b><span>${own ? 'Owned' : u.cost + ' gems'}</span></button>`; }).join('')}</div>`; }).join('');
+          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${softWords(u.name)}</b><span>${own ? 'Owned' : gemNum(u.cost)}</span></button>`; }).join('')}</div>`; }).join('');
       const c = C.CHARMS[sel], u = c.up, st = S.charmUpState(p, sel), own = st.why === 'owned';
       if (st.why === 'tier') st.row = C.CHARM_TIERS[u.tier - 1].name.toLowerCase();
       const cmp = [{ k: (own ? 'Was' : 'Now') + ': ' + esc(c.name), v: esc(c.desc), cls: 'was' }, { k: (own ? 'Now' : 'After') + ': ' + esc(u.name), v: esc(u.desc) }];
@@ -558,6 +700,8 @@
     }
     /* The collection, in two views: blueprints by name, then enemies and bosses as pictures (bosses wear a brass frame). */
     st_book() {
+      if (this.bookView === 'album') return this.st_album();
+      if (this.bookView === 'heir') return this.st_heir();
       const p = this.p, foes = this.bookView === 'foes', all = [];
       if (!foes) for (const id of Object.keys(C.CHARTS)) { const c = C.CHARTS[id], got = !!p.charts[id], short = c.name.replace(/ blueprint$/i, '');
         all.push({ id: 'c:' + id, got, tile: `<b class="tn">${esc(short)}</b>`, label: c.name + (got ? ', found' : ', not found yet'), pic: icon('chart', 40), name: c.name, kick: 'Blueprint · ' + (got ? 'found' : 'not found yet'),
@@ -575,15 +719,87 @@
       const grid = `<div class="album ${foes ? 'foes' : 'charts'}">${all.map(x => x ? `<button class="tile ${x.got ? '' : 'unseen'} ${x.boss ? 'boss' : ''} ${x === sel ? 'sel' : ''}" data-act="pick" data-arg="${x.id}" aria-pressed="${x === sel}" aria-label="${esc(x.label)}">${x.tile}</button>` : '<span class="ghost" aria-hidden="true"></span>').join('')}</div>`;
       return { sel: sel.id, list: grid, detail: this.detail({ pic: sel.pic, picCls: sel.got || !foes ? '' : 'unseen', name: sel.name, kick: sel.kick, desc: sel.desc, rows: sel.rows, left: sel.left || '', buy: sel.stamp }) };
     }
+    /* The album: every find and keepsake, in rows by family; the ones you have not found are dark. A collection only: nothing here is power. */
+    st_album() {
+      const p = this.p, album = p.album || {}, own = p.heirlooms || {}, fams = Object.keys(C.FIND_FAMILIES), items = [], tiles = [];
+      for (const fk of fams) {
+        const ids = Object.keys(C.FINDS).filter(id => C.FINDS[id].fam === fk).sort((a, b) => ['common', 'uncommon', 'rare'].indexOf(C.FINDS[a].rar) - ['common', 'uncommon', 'rare'].indexOf(C.FINDS[b].rar)), got = ids.filter(id => album[id]).length;
+        tiles.push(`<span class="afam" style="--c:${C.FIND_FAMILIES[fk].color}"><b>${esc(C.FIND_FAMILIES[fk].name)}</b><span>${got} of ${ids.length}</span></span>`);
+        for (const id of ids) { const f = C.FINDS[id], F = C.FIND_FAMILIES[fk], has = !!album[id], rn = C.FIND_RARITY[f.rar].name;
+          items.push({ id: 'f:' + id, got: has, tile: itemIcon(f, 30), rar: f.rar, label: (has ? f.name : 'Find, not found yet') + ', ' + F.name + ', ' + rn, pic: itemIcon(f, 44), picCls: has ? '' : 'unseen',
+            name: has ? f.name : 'Not found yet', kick: `Find · ${esc(F.name)} · ${rn}`, desc: has ? f.desc : 'Found in a run: an elite moth may drop it, and you choose one of three after every boss.',
+            rows: has ? [{ k: esc(F.name) + ' family', v: F.at.map((n, i) => `${n} finds: ${esc(F.note[i])}.`).join(' ') }] : [{ k: 'Family', v: esc(F.name) + '. Holding several of one family pays off.' }],
+            left: `<span>${esc(F.name)} found: <b class="mono">${got}</b> of ${ids.length}</span>`, stamp: has ? this.stamp('Found') : this.stamp('Not found', '', true) }); }
+        tiles.push(...ids.map(id => 'f:' + id));
+      }
+      const ks = Object.keys(C.HEIRLOOMS).filter(id => C.HEIRLOOMS[id].keepsake), kgot = ks.filter(id => own[id]).length;
+      tiles.push(`<span class="afam" style="--c:${C.PAL.brass}"><b>Keepsakes</b><span>${kgot} of ${ks.length}</span></span>`);
+      for (const id of ks) { const h = C.HEIRLOOMS[id], has = !!own[id], boss = C.KEEPERS[h.keepsake].name;
+        items.push({ id: 'k:' + id, got: has, tile: itemIcon(h, 30), rar: 'keep', label: (has ? h.name : 'Keepsake, not found yet') + ', from ' + boss, pic: itemIcon(h, 44), picCls: has ? '' : 'unseen',
+          name: has ? h.name : 'Not found yet', kick: 'Keepsake · ' + esc(boss), desc: has ? h.desc : 'Dropped by ' + boss + '. A chance on every win, and certain the first time you win on Hard.',
+          rows: has ? [{ k: 'Wear it', v: 'In the Heirlooms view, like any heirloom.' }] : [], left: `<span>Keepsakes found: <b class="mono">${kgot}</b> of ${ks.length}</span>`, stamp: has ? this.stamp('Found') : this.stamp('Not found', '', true) }); tiles.push('k:' + id); }
+      const sel = items.find(x => x.id === this.sel.album) || items.find(x => x.got) || items[0], by = {}; for (const it of items) by[it.id] = it;
+      const grid = `<div class="album items" role="group" aria-label="Album">${tiles.map(t => { const x = by[t]; if (!x) return t;
+        return `<button class="tile ${x.got ? '' : 'unseen'} ${x === sel ? 'sel' : ''}" data-rar="${x.rar}" data-act="pick" data-arg="${x.id}" aria-pressed="${x === sel}" aria-label="${esc(x.label)}">${x.tile}</button>`; }).join('')}</div>`;
+      return { sel: sel.id, list: grid, detail: this.detail({ pic: sel.pic, picCls: sel.picCls, name: sel.name, kick: sel.kick, desc: sel.desc, rows: sel.rows, left: sel.left, buy: sel.stamp }) };
+    }
+    /* Heirlooms: twelve to buy and eight keepsakes from bosses. Wear up to two (three with Heirloom Hook); each gives something and costs something. */
+    st_heir() {
+      const p = this.p, own = p.heirlooms || {}, worn = S.worn(p), slots = S.heirSlots(p), ids = Object.keys(C.HEIRLOOMS), shop = ids.filter(id => !C.HEIRLOOMS[id].keepsake), ks = ids.filter(id => C.HEIRLOOMS[id].keepsake);
+      const sel = this.sel.heir && C.HEIRLOOMS[this.sel.heir] ? this.sel.heir : (worn[0] || shop[0]);
+      const tile = id => { const h = C.HEIRLOOMS[id], has = !!own[id], w = worn.indexOf(id) >= 0, st = S.heirloomState(p, id), pr = h.price || {}, cap = w ? 'Worn' : has ? 'Owned' : h.keepsake ? 'Locked' : pr.silk ? silkTag(pr.silk, 'sm') : dustTag(pr.dust || 0, 'sm');
+        return `<button class="tile ${has || !h.keepsake ? '' : 'unseen'} ${h.keepsake ? 'keep' : ''} ${w ? 'worn' : ''} ${id === sel ? 'sel' : ''}" data-rar="${h.keepsake ? 'keep' : 'heir'}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(h.name + (w ? ', worn' : has ? ', owned' : h.keepsake ? ', not found yet' : ', for sale'))}">${itemIcon(h, 30)}<span class="tcap">${cap}</span></button>`; };
+      const grid = `<div class="album items heirs" role="group" aria-label="Heirlooms"><span class="afam" style="--c:${C.PAL.saffron}"><b>For sale</b><span>${shop.filter(id => own[id]).length} of ${shop.length}</span></span>${shop.map(tile).join('')}
+        <span class="afam" style="--c:${C.PAL.brass}"><b>Keepsakes</b><span>${ks.filter(id => own[id]).length} of ${ks.length}</span></span>${ks.map(tile).join('')}</div>`;
+      const h = C.HEIRLOOMS[sel], has = !!own[sel], w = worn.indexOf(sel) >= 0, st = S.heirloomState(p, sel), boss = h.keepsake ? C.KEEPERS[h.keepsake].name : '';
+      const fits = !h.for || (h.for.thread && h.for.thread.indexOf(p.thread) >= 0) || (h.for.needle && h.for.needle.indexOf(p.needle) >= 0);
+      const rows = [];
+      if (h.for) rows.push({ k: 'Built for', v: (h.for.thread ? h.for.thread.map(t => esc(C.THREADS[t].name)).join(', ') + ' as your lead weapon' : h.for.needle.map(n => esc(C.NEEDLES[n].name)).join(', ') + ' as your ship') + (has ? (fits ? '. It fits now.' : '. It sits idle with what you fly now.') : '.') });
+      if (h.keepsake && !has) rows.push({ k: 'Dropped by', v: esc(boss) + '. A chance on every win, and certain the first time you win on Hard.' });
+      else if (h.keepsake) rows.push({ k: 'Dropped by', v: esc(boss) + '.', opt: true });
+      let buy;
+      if (!has) buy = h.keepsake ? this.stamp('Not found', '', true) : st.ok ? this.buyBtn(st, st.cur, 'Buy', 'heirloom:' + sel) : this.buyBtn(st, st.cur, 'Buy');
+      else if (w) buy = `<button class="btn buy" data-act="unwear" data-arg="${sel}"><span class="bl">Take off</span><span class="bh">Worn now</span></button>`;
+      else if (worn.length >= slots) buy = `<button class="btn nope buy" data-act="nope" aria-disabled="true"><span class="bl">Wear</span><span class="bh">Slots full: take one off</span></button>`;
+      else buy = `<button class="btn primary buy" data-act="wear" data-arg="${sel}" data-focus><span class="bl">Wear</span></button>`;
+      const slotsRow = `<span class="wornrow"><span>Worn</span>${Array.from({ length: slots }, (_, i) => { const id = worn[i]; return `<span class="wslot ${id ? 'on' : ''}">${id ? itemIcon(C.HEIRLOOMS[id], 22) : ''}</span>`; }).join('')}</span>`;
+      return { sel, list: grid, detail: this.detail({ pic: itemIcon(h, 44), picCls: has || !h.keepsake ? '' : 'unseen', name: has || !h.keepsake ? h.name : 'Not found yet', kick: heirKind(h) + (h.keepsake ? ' · ' + esc(boss) : ' · gives and takes'),
+        desc: has || !h.keepsake ? h.desc : 'A keepsake from ' + boss + '. It is yours once you win it.', rows, left: slotsRow, buy }) };
+    }
+    /* The find choice: a small sheet between rounds. Three finds, each a plain button; you keep one for the rest of the run. */
+    finds() {
+      const sim = this.ctl.sim, o = sim && sim.offer; if (!o) return;
+      const opts = o.ids.map((id, i) => { const { f, F, rar } = findInfo(id), n = (sim.famN && sim.famN[f.fam]) || 0, next = F.at.indexOf(n + 1), total = Object.keys(C.FINDS).filter(k => C.FINDS[k].fam === f.fam).length;
+        return `<button class="fopt" data-act="findpick" data-arg="${i}" data-rar="${f.rar}" ${i === 0 ? 'data-focus' : ''} aria-label="${esc(f.name + ', ' + F.name + ', ' + rar + '. ' + f.desc)}">
+          <span class="fic" style="--c:${F.color}">${itemIcon(f, 40)}</span>
+          <span class="ftx"><b class="fn">${esc(f.name)}</b><span class="fd">${esc(f.desc)}</span>
+            <span class="ff">${esc(F.name)} · ${rar}${n ? ` · ${n} of ${total} held` : ''}</span>${next >= 0 ? `<em class="fb">Family bonus: ${esc(F.note[next])}</em>` : ''}</span></button>`; }).join('');
+      const re = o.rerolls > 0 ? `<button class="btn" data-act="findreroll">Throw them back<span class="bh"> · ${o.rerolls} left</span></button>` : '';
+      this.show(`<div class="sheet finds rise"><div class="rhead"><h2>${o.from === 'start' ? 'Choose your first find' : 'Choose a find'}</h2>
+        <p class="sub">${o.from === 'start' ? 'It stays with you for this run.' : 'Boss defeated. Keep one for the rest of this run.'}</p></div>
+        <div class="fopts" role="group" aria-label="Finds on offer">${opts}</div>${re ? `<div class="row">${re}</div>` : ''}</div>`, 'paper veil', 'finds');
+    }
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p, before = this.flight(p), d0 = p.dust, s0 = p.silk;
+      if (kind === 'exch') {   // the Exchange: the same trade the page quoted, then the page again with the new rates
+        const dir = id === 'sell' ? 'sell' : 'buy', sizes = [1, 5, 10, 50];
+        let n = sizes.indexOf(this.xn) >= 0 ? this.xn : this.xn === 'max' ? 0 : 10;
+        if (!n) { n = 1; while (n < C.EXCH.maxTrade && (dir === 'buy' ? ST.exchangeQuote(p, 'buy', n + 1).afford : n + 1 <= p.silk)) n++; }
+        const r = this.ctl.exchange(dir, n);
+        if (r.ok) this.toast(dir === 'buy' ? 'Bought gems' : 'Sold gems', n + (n === 1 ? ' gem' : ' gems') + ' for ' + num(r.dust) + ' coins'); else this.snd('ui_fail');
+        this.hem(); if (r.ok) this.celebrate(before, d0, s0, null); else this.shake();
+        return;
+      }
       const from = this.pressEl && this.pressEl.isConnected ? this.pressEl.getBoundingClientRect() : null;
-      const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
-        : kind === 'charmup' ? S.buyCharmUp(p, id) : S.buyPattern(p, id);
+      const r = kind === 'fork' ? S.buyFork(p, id, arg.split(':')[2]) : kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
+        : kind === 'charmup' ? S.buyCharmUp(p, id) : kind === 'heirloom' ? S.buyHeirloom(p, id) : S.buyPattern(p, id);
       if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy');
-        if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
+        if (kind === 'fork') this.toast('Fork bought', C.THREADS[id].forks[r.slot].opts.find(x => x.id === r.opt).name + '. Switch for free here.');
+        else if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
+        else if (kind === 'heirloom') this.toast('Bought', C.HEIRLOOMS[id].name + '. Wear it in the Heirlooms view.');
         else this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
       else this.snd('ui_fail');
+      this.bought = r.ok ? { at: this.hemSel, was: before, now: this.flight(p) } : this.bought;   // the strip keeps what this buy changed (hem() clears it on the next pick)
       this.hem();
       if (r.ok) this.celebrate(before, d0, s0, from);
       else this.shake();
@@ -654,7 +870,8 @@
         .concat(res.bonuses.map(b => ['Bonus: ' + esc(b.name), (b.stitches ? '+' + n(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust, '', 1) : '+' + silkTag(b.silk, '', 1))]))
         .concat(anyBonus ? [['Total this ' + (keeper ? 'fight' : 'wave'), dustTag(res.dustAll, '', 1) + ' ' + silkTag(res.silkAll, '', 1), 'total']] : [])
         .concat(keeper ? [['Earned this run so far', dustTag(res.nightDust, '', 1) + ' ' + silkTag(res.nightSilk, '', 1)]] : [])
-        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]));
+        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
+        .concat((res.keepsakes || []).map(id => ['Keepsake found', esc(C.HEIRLOOMS[id].name), 'total', 1]));
       const next = keeper ? 'To the hideout' : ({ row: 'Next wave', sampler: 'Bonus wave', keeper: 'Fight the boss' })[C.STAGES[info.row + 1]];
       let pk = '';
       if (pocket && pocket.length) pk = `<div class="pocket"><div class="phead">Quick shop: buy one item, or keep your coins</div><div class="pk">${pocket.map(id => { const it = C.NOTIONS[id], st = S.notionState(this.p, id, null);
@@ -694,7 +911,9 @@
       const nextMode = Object.keys(C.MODES).find(k => C.MODES[k].need === mode), firstWin = nextMode && (p.stats['won_' + mode] || 0) === 1;
       const rows = [['Coins earned this run', dustTag(res.nightDust || 0, '', 1)], ['Gems earned this run', silkTag(res.nightSilk || 0, '', 1)], ['Best combo', '×' + n(res.bestCombo || 0)]]
         .concat((res.charts || []).map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
-        .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : []);
+        .concat((res.keepsakes || []).map(id => ['Keepsake found', esc(C.HEIRLOOMS[id].name), 'total', 1]))
+        .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : [])
+        .concat(s.frayOpened ? [['Fray ' + s.frayOpened, 'Unlocked', 'total', 1]] : []);
       this.show(`<div class="sheet finale won rise" data-fit="3">
         <div class="trophies" role="img" aria-label="All eight bosses defeated">${C.PANELS.map((pn, i) => `<span style="--i:${i}">${icon(C.KEEPERS[pn.keeper].sprite, 30)}</span>`).join('')}</div>
         <h1>Run complete</h1><p class="fsub">All eight stages cleared. Every boss defeated.</p>
@@ -704,9 +923,16 @@
         <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button></div></div>`, 'night veil res', 'victory');
       this.stitchOn();
     }
+    /* What you carry this run, as small pictures (on the pause sheet): the finds taken, then the heirlooms worn. */
+    runItems() {
+      const sim = this.ctl.sim; if (!sim || !sim.finds) return '';
+      const fs = sim.finds, ws = (sim.wornNow || []).filter(id => C.HEIRLOOMS[id]); if (!fs.length && !ws.length) return '';
+      return `<div class="runitems" role="group" aria-label="Your finds and heirlooms">${fs.length ? `<span class="eyebrow">Finds this run</span><span class="ritems">${fs.map(id => `<span class="ri" title="${esc(C.FINDS[id].name)}" role="img" aria-label="${esc(C.FINDS[id].name + ': ' + C.FINDS[id].desc)}">${itemIcon(C.FINDS[id], 26)}</span>`).join('')}</span>` : ''}
+        ${ws.length ? `<span class="eyebrow">Worn</span><span class="ritems">${ws.map(id => `<span class="ri" role="img" aria-label="${esc(C.HEIRLOOMS[id].name + ': ' + C.HEIRLOOMS[id].desc)}">${itemIcon(C.HEIRLOOMS[id], 26)}</span>`).join('')}</span>` : ''}</div>`;
+    }
     pause() {
       this.show(`<div class="sheet narrow"><div class="rhead"><h2>Paused</h2><p class="sub">Your run waits here.</p></div>
-        <div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
+        ${this.runItems()}<div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
           <button class="btn" data-act="settings">Settings</button>
           <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper veil', 'pause');
     }
@@ -767,7 +993,7 @@
         <button class="mpause" data-act="pause" aria-label="Pause"><i></i><i></i></button></div>`;
       E.tray.innerHTML = `<div class="meters"><button class="sp" data-act="special"><span class="spn"></span><i class="fill"></i></button>
         <div class="mm"><div class="fo" role="img" aria-label="Slow time"><span>Slow</span><b class="bar"><i></i></b></div><div class="da" role="img"><span>Dash</span><b class="dp"></b></div></div></div>
-        <div class="lab">Items</div><div class="slots"></div>`;
+        <div class="lab">Items</div><div class="slots"><button class="slot bomb" data-act="bomb" aria-label="Bomb"><span class="bi" aria-hidden="true"></span><span class="bs" aria-hidden="true"></span><kbd>B</kbd></button><span class="sl"></span></div>`;
       // boss health or the bonus count: a name and a line of thread set straight on the cloth, nothing behind them
       E.bossbar.setAttribute('role', 'img');
       E.bossbar.innerHTML = '<div class="bb"><b></b><span></span><div class="seam"><i></i></div></div>';
@@ -776,7 +1002,7 @@
       H.L = { wound: wound(E.hudL), tag: q(E.hudL, '.ctag'), mul: q(E.hudL, '.cmul'), drain: q(E.hudL, '.cdr i'), cn: q(E.hudL, '.cn'), best: q(E.hudL, '.hbest'), chart: q(E.hudL, '.hchart'), stage: q(E.hudL, '.hstage'), threads: q(E.hudL, '.hthreads') };
       H.M = { wound: wound(E.mtop), tag: q(E.mtop, '.ctag'), mul: q(E.mtop, '.cmul'), drain: q(E.mtop, '.cdr i'), lab: q(E.mtop, '.mlab'), lives: q(E.mtop, '.mlives'), ply: q(E.mtop, '.mply'), dust: q(E.mtop, '.mdust'), silk: q(E.mtop, '.msilk') };
       H.R = { pins: q(E.hudR, '.rpins'), spares: q(E.hudR, '.rspares'), plylab: q(E.hudR, '.rplylab'), ply: q(E.hudR, '.rply'), dust: q(E.hudR, '.rdust'), silk: q(E.hudR, '.rsilk'), ship: q(E.hudR, '.rship') };
-      H.T = { sp: q(E.tray, '.sp'), spn: q(E.tray, '.spn'), spf: q(E.tray, '.sp .fill'), fo: q(E.tray, '.fo'), fof: q(E.tray, '.fo .bar i'), da: q(E.tray, '.da'), dp: q(E.tray, '.dp'), slots: q(E.tray, '.slots') };
+      H.T = { sp: q(E.tray, '.sp'), spn: q(E.tray, '.spn'), spf: q(E.tray, '.sp .fill'), fo: q(E.tray, '.fo'), fof: q(E.tray, '.fo .bar i'), da: q(E.tray, '.da'), dp: q(E.tray, '.dp'), slots: q(E.tray, '.slots .sl'), bomb: q(E.tray, '.slots .bomb'), bomi: q(E.tray, '.slots .bi'), boms: q(E.tray, '.slots .bs') };
       H.B = { box: q(E.bossbar, '.bb'), b: q(E.bossbar, 'b'), s: q(E.bossbar, 'span'), i: q(E.bossbar, '.seam i') };
       H.pw = {}; this.fxMax = {}; this.lastMult = 1; this.lastCombo = 0;
     }
@@ -815,7 +1041,7 @@
         put(H.L.chart, `<table class="nchart"><tr><th></th>${C.PANELS.map((_, i) => `<th>${i + 1}</th>`).join('')}</tr>${C.STAGE_LABEL.map((lab, r) => `<tr><th>${lab}</th>${C.PANELS.map((_, pi) => {
           const dn = pi < sim.panel || (pi === sim.panel && r < sim.row) || (done && pi === sim.panel && r === sim.row);
           const cur = !dn && pi === sim.panel && r === sim.row; return `<td class="${dn ? 'done' : cur ? 'cur' : ''}"></td>`; }).join('')}</tr>`).join('')}</table>`); }
-      txt(H.L.stage, info.panelName + ' · ' + info.label + (sim.modeId !== 'normal' ? ' · ' + sim.mode.name : ''));
+      txt(H.L.stage, info.panelName + ' · ' + info.label + (sim.modeId !== 'normal' ? ' · ' + sim.mode.name : '') + (sim.fray ? ' · Fray ' + sim.fray : ''));
       const t1 = sim.curThread(), t2 = sim.secondThread(), th = C.THREADS[t1];
       put(H.L.threads, `<div class="thread"><i class="spool" style="--c:${th.color}"></i><div><b>${esc(th.name)}</b><span>Lead · level ${ROMAN[p.threads[t1] || 1]}</span></div></div>${t2 ? `<div class="thread"><i class="spool" style="--c:${C.THREADS[t2].color}"></i><div><b>${esc(C.THREADS[t2].name)}</b><span>Bobbin · level ${ROMAN[p.threads[t2]]}</span></div></div>` : ''}`);
       // ---- lives, shield, purse ----
@@ -840,6 +1066,10 @@
       txt(T.spn, nd.special + (ready ? ' · ready' : '')); flag(T.sp, 'ready', ready); bar(T.spf, pl.sp);
       attr(T.sp, 'aria-label', 'Special: ' + nd.special + (ready ? ', ready' : ''));
       flag(T.fo, 'on', !!sim.focusOn); bar(T.fof, pl.focus);
+      { const have = pl.bombs | 0, max = pl.bombMax | 0, k = have + '/' + max;   // the bomb: a stitched bomb, and one small stitch for each held (a dashed one for each place still empty)
+        if (T.boms._k !== k) { T.boms._k = k; let m = ''; for (let i = 0; i < max; i++) m += `<i class="${i < have ? 'on' : ''}"></i>`; T.boms.innerHTML = m; attr(T.bomb, 'aria-label', 'Bomb: ' + have + ' of ' + max + ' held' + (have ? '. Tap to use' : '')); }
+        if (!T.bomi._on) { T.bomi._on = 1; T.bomi.innerHTML = stitched(PW_CHART.bomb, { a: PAL.madderPale, b: PAL.saffron }, 26); }
+        flag(T.bomb, 'dry', have === 0); flag(T.bomb, 'held', have > 0); }
       let dash = ''; for (let i = 0; i < d.dashMax; i++) dash += `<i class="${i < pl.dashN ? 'on' : ''}"></i>`; put(T.dp, dash); attr(T.da, 'aria-label', 'Dash charges: ' + pl.dashN);
       const tk = p.tray.map(s => s ? s.id + s.n : '-').join();
       if (T.slots._k !== tk) T.slots._k = tk, put(T.slots, [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) + (s.n > 1 ? ', ' + s.n + ' left' : '') : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('')

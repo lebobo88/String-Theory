@@ -18,7 +18,7 @@
   --hem-gap: var(--sp-8);
   --hem-head: 36px;                /* atelier-ignore: token */
   --hem-tabs: 48px;                /* atelier-ignore: token */
-  --hem-strip: 48px;               /* atelier-ignore: token */
+  --hem-strip: 56px;               /* atelier-ignore: token. Three rows: name, value, change line (14px); see css/05-hideout.css */
   --hem-foot: 56px;                /* atelier-ignore: token */
   /* the list keeps five rows of at least 48; the details take the rest, between 190 and 300 */
   --hem-detail: clamp(190px, calc(100vh - 560px - var(--safe-t) - var(--safe-b)), 300px);   /* atelier-ignore: token */
@@ -30,7 +30,7 @@
   --buy-w: 156px;                  /* atelier-ignore: token */
   --card-ic: var(--sp-32);
   --tile-ic: var(--sp-32);
-} }
+} html.text-large { --hem-strip: 62px; /* atelier-ignore: token. Large text scales the three rows */ } }
 @media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { :root { /* atelier-ignore: breakpoint SHORT */
   --ov-pad: var(--sp-4);
   --sheet-pad: var(--sp-12);
@@ -55,7 +55,7 @@
   --d-name: 24px;                  /* atelier-ignore: token */
   --buy-w: 148px;                  /* atelier-ignore: token */
   --tile-ic: var(--sp-24);
-} }
+} html.text-large { --hem-strip: 48px; /* atelier-ignore: token. Short screens keep the list's 44 px rows: the strip does not grow */ } }
 @media (min-width: 600px) and (max-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint TABLET */
   --ov-pad: var(--sp-16);
   --sheet-pad: var(--sp-24);
@@ -75,7 +75,7 @@
   --buy-w: 220px;                  /* atelier-ignore: token */
   --card-ic: var(--sp-48);
   --tile-ic: var(--sp-48);
-} }
+} html.text-large { --hem-strip: 56px; /* atelier-ignore: token */ } }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint SIDEWAYS */
   --ov-pad: var(--sp-6);
   --sheet-pad: var(--sp-12);

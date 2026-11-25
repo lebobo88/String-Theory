@@ -189,3 +189,26 @@ ending_gold Blugn6BfIXx6mLhDQsfu 2.4
 ending_sting c7ne6om9YWpVVjEfs15Z 15.0 stereo   # take A
 ending_sting_b SAK7VvuflWuTqTQ0mg3W 15.0 stereo # take B
 # ending_sting: take A - onsets at 3.3, 5.0, 5.8 and 6.7 s land on the music-box notes (written 3.15-6.15) and the held eighth note (6.95); B is one flat wall of sound, loudest at the start, with no onsets at all. Both fade from about 7 s, so neither has the 8.4 s opening-out or the 12.1 s swell (A is the better of two weak takes)
+# rework sounds
+find cMpG1sU0ScvnfPZHHXy8 0.8
+find_pick vpo9rbliKQQbBcHi1PzF 0.7
+keepsake nfwXMwZsl5K44KRSsief 1.6
+thorns kqtcqWOxE0OgbvkOF4VE 0.5
+bomb_use XVfF5yA78nNaJrQAT87l 1.1 level
+bomb_save gPyjYGvjq0bis351ijAw 1.0
+bomb_get DhsRyzEMYW3B6RrxkJu2 0.5
+loose slfoACIDLQ8PIOBrCNPV 0.4
+pin s8BfJDIxFD5syrre50Kv 0.2
+pin_shot zelcquU0eiKFyh612wzv 0.15
+charm_up dfzDx5KNqAstQIZJYITk 0.7
+recharge ur721Lt3R2kOiYoGWiZi 0.7
+spool_on yzqxK07goxW7U0d0b5Op 0.8
+fire_daisy ce9mYUVdltCcM5rRHB7F 0.25
+fire_feather 9WL20X5V29qTonltXzE4 0.2
+fire_blanket HepFjMnd6EaiBYIVYPPN 0.4
+fire_pins rEsWuK5VsRlAWC1QDcHF 0.2
+pin_stick zdLcbRudLvr6NCqZuOLC 0.15
+petal_block ftPCsBxThoEtZAfAm5Ka 0.3
+btl_creak ZDM0UyVJpakOKvUwfAz4 0.6
+btl_mothball pHFP9u9xYfMDqc1g8KEB 0.5
+boss_mend YIwka4l2BuG3XfmtYdOz 0.6

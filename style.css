@@ -177,7 +177,7 @@ html.text-large { --ts: 1.15; }
   --hem-gap: var(--sp-8);
   --hem-head: 36px;                /* atelier-ignore: token */
   --hem-tabs: 48px;                /* atelier-ignore: token */
-  --hem-strip: 48px;               /* atelier-ignore: token */
+  --hem-strip: 56px;               /* atelier-ignore: token. Three rows: name, value, change line (14px); see css/05-hideout.css */
   --hem-foot: 56px;                /* atelier-ignore: token */
   /* the list keeps five rows of at least 48; the details take the rest, between 190 and 300 */
   --hem-detail: clamp(190px, calc(100vh - 560px - var(--safe-t) - var(--safe-b)), 300px);   /* atelier-ignore: token */
@@ -189,7 +189,7 @@ html.text-large { --ts: 1.15; }
   --buy-w: 156px;                  /* atelier-ignore: token */
   --card-ic: var(--sp-32);
   --tile-ic: var(--sp-32);
-} }
+} html.text-large { --hem-strip: 62px; /* atelier-ignore: token. Large text scales the three rows */ } }
 @media (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px) { :root { /* atelier-ignore: breakpoint SHORT */
   --ov-pad: var(--sp-4);
   --sheet-pad: var(--sp-12);
@@ -214,7 +214,7 @@ html.text-large { --ts: 1.15; }
   --d-name: 24px;                  /* atelier-ignore: token */
   --buy-w: 148px;                  /* atelier-ignore: token */
   --tile-ic: var(--sp-24);
-} }
+} html.text-large { --hem-strip: 48px; /* atelier-ignore: token. Short screens keep the list's 44 px rows: the strip does not grow */ } }
 @media (min-width: 600px) and (max-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint TABLET */
   --ov-pad: var(--sp-16);
   --sheet-pad: var(--sp-24);
@@ -234,7 +234,7 @@ html.text-large { --ts: 1.15; }
   --buy-w: 220px;                  /* atelier-ignore: token */
   --card-ic: var(--sp-48);
   --tile-ic: var(--sp-48);
-} }
+} html.text-large { --hem-strip: 56px; /* atelier-ignore: token */ } }
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { :root { /* atelier-ignore: breakpoint SIDEWAYS */
   --ov-pad: var(--sp-6);
   --sheet-pad: var(--sp-12);
@@ -413,6 +413,15 @@ body.flying .hud { visibility: visible; }
 .slot.txt { font: 700 var(--t-cap)/1 var(--text); color: var(--mist-hi); }
 .slot.pz { flex-direction: column; gap: var(--sp-2); } .slot.pz .pzi { display: none; gap: var(--sp-4); } .slot.pz .pzi i { width: var(--sp-4); height: var(--sp-16); background: var(--linen); }
 button.slot:active { border-color: var(--saffron); }
+/* ---- the bomb: a stitched bomb with one small stitch for each bomb held (a dashed one for each place still empty). Sits at the end of the item row, under the thumb. ---- */
+.sl { display: contents; }
+.slot.bomb { order: 9; flex-direction: column; gap: var(--sp-2); border-color: var(--madder-lit); }
+.slot.bomb .bi { display: flex; } .slot.bomb .bi .ic { width: var(--sp-24); height: var(--sp-24); }
+.slot.bomb .bs { display: flex; gap: var(--sp-4); height: var(--sp-8); align-items: stretch; }
+.slot.bomb .bs i { width: var(--ln-2); border-left: var(--ln-2) dotted var(--dot); }
+.slot.bomb .bs i.on { border-left: var(--ln-3) solid var(--saffron-lit); }
+.slot.bomb.dry { border-color: var(--dot); } .slot.bomb.dry .bi { opacity: .35; }
+.slot.bomb kbd { display: none; }
 
 /* ---- boss health and the bonus count: lettering and a line of thread set straight on the cloth. Nothing solid behind them:
    a shadow under the letters and a wash that fades to nothing keep them readable over a busy scene. ---- */
@@ -462,6 +471,7 @@ body.sheeted #toasts { display: none; }
 #banner.on ~ #coach { opacity: 0; }
 body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a menu or a results sheet it waits */
 #bossbar.on ~ #coach { transform: translate(-50%, var(--sp-64)); }   /* a boss or a bonus wave has the top line: the prompt sits under it */
+body.lefty #fps { left: auto; right: var(--sp-6); }   /* left-hand mode puts the item row down the left side: the readout moves out of its way */
 #fps { position: absolute; left: var(--sp-6); bottom: calc(max(var(--bot, 0px), var(--safe-b)) + var(--sp-6)); z-index: var(--z-readout); font: 600 var(--t-floor)/1.35 var(--mono); white-space: pre; color: var(--paper); background: var(--night); padding: var(--sp-2) var(--sp-6); pointer-events: none; display: none; }
 #flyers { position: fixed; inset: 0; z-index: var(--z-fly); pointer-events: none; overflow: hidden; }
 .coinfly { position: absolute; left: 0; top: 0; display: block; line-height: 0; filter: drop-shadow(0 var(--sp-2) 0 var(--shade)); }
@@ -514,6 +524,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .slots { grid-area: s; flex-wrap: nowrap; gap: var(--sp-6); justify-content: flex-end; }
   .slot { border: var(--ln) dashed var(--line-dark); outline: var(--ln-3) solid var(--umber); }
   .slot kbd, .slot.pz { display: none; }
+  body.lefty .slot.bomb { order: -1; }
   #bossbar { top: calc(var(--hud-top) + var(--sp-8)); left: calc(var(--sp-16) + var(--safe-l)); right: calc(var(--sp-16) + var(--safe-r)); }
   /* narrow: the name, the thread under it, then what the boss is doing */
   .bb { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "seam" "tag"; }
@@ -564,6 +575,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .slot kbd, .slot.pz .pzt { display: none; }
   .slot.pz { display: inline-flex; margin-left: auto; } .slot.pz .pzi { display: flex; }
   body.lefty .slot.pz { margin-left: 0; order: -1; margin-right: auto; }
+  body.lefty .slot.bomb { order: -1; }
   #toasts { left: 50%; right: auto; bottom: auto; top: var(--sp-64); transform: translateX(-50%); width: min(300px, calc(100vh * .74)); align-items: center; } /* atelier-ignore: component width */
   body.bossing #toasts { top: calc(var(--sp-64) + var(--sp-32)); }
   .toast { align-items: center; text-align: center; padding: var(--sp-4) var(--sp-12); } .toast span { display: none; }
@@ -590,6 +602,10 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .sheet p { font: 400 var(--t-md)/var(--lh-read) var(--text); }
 .sub { font: 400 var(--t-body)/var(--lh-snug) var(--text); color: var(--ink-2); }
 .stack { display: flex; flex-direction: column; gap: var(--sp-8); width: min(100%, 320px); } /* atelier-ignore: component width */
+.fraystep { display: inline-flex; align-items: center; gap: var(--sp-6); }
+.fraystep .chip:disabled { opacity: .45; }
+.frayin { display: flex; flex-direction: column; align-items: center; min-width: 0; font: 400 var(--t-cap)/var(--lh-tight) var(--text); color: var(--mist-hi); }
+.frayin b { font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--linen); }
 .row { display: flex; gap: var(--sp-8); flex-wrap: wrap; align-items: center; justify-content: center; }
 
 /* ---- title and main menu ---- */
@@ -743,16 +759,24 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .shipstrip > div:first-child { border-left: 0; }
 .shipstrip .k { grid-column: 1 / -1; font: 700 var(--t-floor)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; color: var(--mist-hi); white-space: nowrap; }
 .shipstrip .v { font: 600 var(--t-lg)/var(--lh-tight) var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shipstrip .n { line-height: var(--lh-tight); }   /* an inline box keeps the font's own line height: that was a phantom 2 px under every number */
 .shipstrip .d { font: 600 var(--t-body)/var(--lh-tight) var(--mono); font-style: normal; font-variant-numeric: tabular-nums; color: var(--leaf-hi); white-space: nowrap; }
 .shipstrip .d.down { color: var(--madder-hi); }
+.shipstrip .d .dir { display: inline-block; width: .62em; height: .55em; margin-right: .25em; vertical-align: baseline; fill: currentColor; } .shipstrip .d.down .dir { transform: scaleY(-1); }
+.shipstrip .d.was { color: var(--leaf-hi); font-weight: 400; } .shipstrip .d.was b { font-weight: 600; } .shipstrip .d.was .wl { font-size: var(--t-floor); }   /* kept after a buy: what it was */
 .shipstrip .d:empty { display: none; }
 .shipstrip .chg { background: color-mix(in srgb, var(--mist) 14%, transparent); } .shipstrip .chg .k { color: var(--linen); }
 .shipstrip .who { display: flex; align-items: center; gap: var(--sp-8); }
 .shipstrip .who > span { display: flex; flex-direction: column; min-width: 0; }
 .shipstrip .who b { font: 700 var(--t-md)/var(--lh-tight) var(--text); white-space: nowrap; }
 .shipstrip .stitch { position: absolute; left: var(--sp-8); right: var(--sp-8); bottom: var(--sp-2); height: 0; border-top: var(--ln-2) dashed var(--leaf-hi); transform-origin: 0 50%; transform: scaleX(0); opacity: 0; pointer-events: none; }
-.pseg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.shop .pseg .tabb { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--sp-8); padding: 0 var(--sp-16); background: transparent; border: 0; border-left: var(--ln) dashed var(--dot); color: var(--linen); }
+.pseg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.snote { grid-row: 5; align-self: center; font: 400 var(--t-cap)/var(--lh-snug) var(--text); color: var(--ink-2); padding: 0 var(--sp-4); }
+.xhave { font: 400 var(--t-body)/var(--lh-snug) var(--text); display: inline-flex; align-items: center; flex-wrap: nowrap; gap: var(--sp-4); white-space: nowrap; }
+.dleft.fit-1 .xhave .tag.sm { font-size: var(--t-floor); padding: 0 var(--sp-4) 0 var(--sp-12); gap: var(--sp-2); } .dleft.fit-1 .xhave .tag.sm .ic { width: var(--sp-12); }
+.dleft.fit-1 .xw { display: none; }   /* no room for the words: the two tags say it, like the purse above */
+.node > span .ic, .utile > span .ic { width: var(--sp-12); height: auto; }   /* the gem beside a price, not the tile's picture */ .node > span, .utile > span { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.shop .pseg .tabb { flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: var(--sp-2); padding: 0 var(--sp-4); background: transparent; border: 0; border-left: var(--ln) dashed var(--dot); color: var(--linen); }
 .shop .pseg .tabb:first-child { border-left: 0; }
 .shop .pseg .tabb span { font: 600 var(--t-cap)/1 var(--mono); color: var(--mist-hi); white-space: nowrap; }
 .shop .pseg .tabb.on { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 var(--ln-2) var(--coverlet), inset 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron); }
@@ -782,14 +806,14 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .srow { display: grid; grid-template-columns: 5em repeat(3, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
 .srow .eyebrow, .urow .eyebrow { align-self: center; overflow-wrap: anywhere; }
 .node { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-8); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; gap: var(--sp-2); transition: transform var(--dur-1) var(--ease); }
-.node b { font: 700 var(--t-sm)/var(--lh-tight) var(--text); }
+.node b { hyphens: manual; -webkit-hyphens: manual; font: 700 var(--t-sm)/var(--lh-tight) var(--text); }
 .node span { font: 600 var(--t-floor)/1 var(--mono); color: var(--ink-2); white-space: nowrap; }
 .node.done { border: var(--ln) solid var(--madder); } .node.done span { color: var(--madder-ink); }
 .node.lock { background: transparent; border-style: dotted; }
 .node.sel, .utile.sel { background: var(--cream); border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; }
 /* power-up upgrades: three rows of picture tiles */
 .ugrid { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--list-gap); }
-.urow { display: grid; grid-template-columns: 5em repeat(4, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
+.urow { display: grid; grid-template-columns: 5em repeat(var(--nc, 5), minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
 .utile { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-4); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); text-align: center; transition: transform var(--dur-1) var(--ease); }
 .utile .ic { flex: none; width: var(--tile-ic); height: var(--tile-ic); }
 .utile .un { font: 700 var(--t-floor)/1.1 var(--text); hyphens: manual; -webkit-hyphens: manual; }
@@ -813,7 +837,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .dpic .ic { width: 64%; height: auto; max-height: 84%; }
 .dpic.unseen .ic { filter: brightness(0) opacity(.45); }
 .dpic .spool { width: 42%; height: 58%; }
-.dpic .lvpic { font: 400 var(--d-lg)/1 var(--display); color: var(--saffron-lit); }
+.dpic .lvpic { font: 400 calc(var(--d-lg) * var(--k, 1))/1 var(--display); color: var(--saffron-lit); }
 .dtitle { min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: center; gap: var(--sp-2); }
 .dname { font: 400 var(--d-lg)/1 var(--display); white-space: nowrap; overflow: hidden; flex: none; line-height: var(--d-name); height: var(--d-name); }   /* one line box whatever size the name is fitted to, so the name's slot never moves */
 .dname.fit-1 { font-size: var(--d-md); } .dname.fit-2 { font-size: var(--d-sm); } .dname.fit-3 { font-size: var(--d-xs); } .dname.fit-4 { font-size: var(--t-md); }
@@ -865,6 +889,8 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 @media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
   .hem { height: 100%; }
   .hem > header .sub { display: none; }
+  /* a narrow phone at large text: the coin purse must leave the word Hideout whole */
+  .hem > header .purse { gap: var(--sp-4); } .hem > header .tag { font-size: var(--t-body); padding: 0 var(--sp-8) 0 var(--sp-16); }
   .hem.shop { grid-template-rows: var(--hem-head) var(--hem-tabs) var(--hem-strip) minmax(0, 1fr) var(--hem-detail) var(--hem-foot); }
   .station { display: contents; }
   .shop > .tabs { display: flex; gap: var(--sp-2); }
@@ -872,19 +898,21 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .shop .tabb b { font-size: var(--t-floor); white-space: nowrap; } .shop .tabs .tabb span { display: none; }
   .shipstrip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .shipstrip .who { display: none; }
   /* each number keeps three fixed lines: its name, its value, and under it either a row of needle holes or what the chosen thing would make it */
-  .shipstrip > div { padding: 0 var(--sp-4) 0 var(--sp-6); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto var(--sp-12); gap: 0; } .shipstrip > div:nth-child(2) { border-left: 0; }
+  .shipstrip > div { padding: 0 var(--sp-2) 0 var(--sp-4); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto var(--sp-16); gap: 0; } .shipstrip > div:nth-child(2) { border-left: 0; }
   .shipstrip .k { letter-spacing: 0; }
-  .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-floor); line-height: 1; display: block; }
+  .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-body); line-height: 1; display: block; }
   .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
-  .shipstrip .unit { display: none; }
-  .shop .pseg .tabb { padding: 0 var(--sp-12); } .shop .pseg .tabb b { font-size: var(--t-body); }
-  .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
-  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
+  .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
+  .node b { font-size: var(--t-floor); }   /* the perk tiles' names hold at the 12 px floor at large text too: a tile is a fixed slot */
+  html.text-large .shop .pseg .tabb b { font-size: var(--t-floor); }
+  .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }   /* 21 blueprints with the four newest weapons' */
+  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(var(--nc, 5), minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .cname { font-size: var(--t-body); }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); letter-spacing: -.01em; }
   .dname { font-size: var(--d-md); } .dname.fit-1 { font-size: var(--d-sm); } .dname.fit-2 { font-size: var(--d-xs); } .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
-  .dpic .lvpic { font-size: var(--d-xs); }
+  .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
   .btn.buy .bl { font-size: var(--t-body); }
   .trayrow > span:first-child { display: none; }
   html.text-large .equip { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } html.text-large .equip > span { display: none; }
@@ -895,7 +923,9 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .hem > header .tag { height: var(--sp-20); font-size: var(--t-floor); padding: 0 var(--sp-8) 0 var(--sp-16); clip-path: polygon(var(--sp-8) 0, 100% 0, 100% 100%, var(--sp-8) 100%, 0 50%); }
   .hem > footer { align-items: flex-end; }
   .hem > footer .btn, .route .routego .btn { min-height: var(--tap); }
-  .shipstrip .v { font-size: var(--t-body); }
+  .shipstrip .v { font-size: var(--t-body); } .shipstrip .k { line-height: 1; }
+  /* the strip does not grow on a short screen (the list keeps 44 px rows), so its change line stays at the 12 px floor */
+  .shipstrip > div { grid-template-rows: auto auto var(--sp-12); } .shipstrip .d { font-size: var(--t-floor); }
   .card { padding: 0 var(--sp-6); gap: 0 var(--sp-6); }
   .cmeta { padding-top: 0; }
   .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
@@ -911,15 +941,15 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 }
 @media (min-width: 600px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint TABLET */
   .shop .tabb b { font-size: var(--t-md); }
-  .shipstrip > div { padding: 0 var(--sp-12); grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; gap: 0 var(--sp-8); }
-  .shipstrip .v { font-size: var(--d-xs); } .shipstrip .d { font-size: var(--t-md); display: inline; } .shipstrip .d:empty { display: none; } .shipstrip .unit { display: inline; }
+  .shipstrip > div { padding: 0 var(--sp-8); grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; gap: 0 var(--sp-8); }
+  .shipstrip .v { font-size: var(--d-xs); } .shipstrip .d { font-size: var(--t-md); display: inline; } .shipstrip .d:empty { display: none; } .shipstrip .unit { display: inline; } .shipstrip .d .to { display: inline; }
   .trayrow > span:first-child { display: inline; }
   .album { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
   .cname { font-size: var(--t-lg); } .cmeta { font-size: var(--t-body); }
   .node b { font-size: var(--t-md); } .node span, .utile > span, .utile .un, .tile .tn { font-size: var(--t-body); }
   .dname { font-size: var(--d-xl); } .dname.fit-1 { font-size: var(--d-lg); } .dname.fit-2 { font-size: var(--d-md); } .dname.fit-3 { font-size: var(--d-sm); }
   .dbody { font-size: var(--t-md); } .dkick, .dleft { font-size: var(--t-body); }
-  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(4, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(var(--nc, 5), minmax(0, 1fr)); }
 }
 /* ---- SIDEWAYS: tabs down the side; list and details side by side ---- */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
@@ -933,6 +963,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .shop > .tabs { grid-area: tabs; display: grid; grid-auto-flow: row; grid-auto-rows: minmax(0, 1fr); grid-auto-columns: auto; gap: var(--sp-4); }
   .shop .tabb { padding: 0 var(--sp-8); } .shop .tabb b { font-size: var(--t-body); } .shop .tabs .tabb span { display: none; }
   .shop > .strip { grid-area: strip; }
+  .shipstrip .d .to { display: none; }   /* as on a phone: the mark and the amount, not the new value too */
   .shipstrip > div { padding: 0 var(--sp-8); } .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-floor); } .shipstrip .who b { font-size: var(--t-body); }
   .shop > .station { grid-area: station; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--sp-8); }
   .shop > footer { grid-area: foot; border: 0; align-items: flex-end; }
@@ -940,16 +971,36 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .card { padding: 0 var(--sp-6); } .cname { font-size: var(--t-body); } .cmeta { padding-top: 0; }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); }
   .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
-  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(var(--nc, 5), minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .utile .un { display: none; }
-  .dpic .lvpic { font-size: var(--d-xs); }
-  .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }
+  .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
+  .album { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }   /* 21 blueprints with the four newest weapons' */
   .detail { grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--tap); }
   .dname { font-size: var(--d-sm); } .dname.fit-1 { font-size: var(--d-xs); } .dname.fit-2, .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
   .dbody { font-size: var(--t-sm); gap: var(--sp-4); } .dbody.fit-1 { font-size: var(--t-cap); } .dbody.fit-2, .dbody.fit-3 { font-size: var(--t-floor); }
   .btn.buy { padding: 0 var(--sp-4); } .btn.buy .bl { font-size: var(--t-body); gap: var(--sp-4); }
   .tslot { width: var(--sp-32); height: var(--sp-32); } .trayrow > span:first-child { display: none; }
+}
+
+/* ---- weapons (rework): twelve weapons in the same list rectangle, the Forks button beside Lead and Bobbin ---- */
+.st-spool .list { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+.st-spool .card { grid-template-columns: var(--sp-12) minmax(0, 1fr); padding: var(--sp-2) var(--sp-6); gap: 0 var(--sp-6); }
+.st-spool .card .cic .spool { width: var(--sp-12); height: var(--sp-20); border-top-width: var(--sp-2); border-bottom-width: var(--sp-2); }
+.st-spool .card .cic .lv { font-size: var(--t-floor); }
+.equip.w3 { grid-template-columns: auto repeat(3, minmax(0, 1fr)); }
+.dleft.fit-1 .equip.w3, html.text-large .equip.w3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.equip.w1 { grid-template-columns: minmax(0, 1fr); }
+.dcmp .fkb { display: none; }
+.st-spool .cic .lv { font: 700 var(--t-sm)/1 var(--mono); color: var(--ink-2); }
+@media (max-width: 600px), (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px), (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint PHONE, SHORT, SIDEWAYS */
+  .st-spool .card { grid-template-columns: minmax(0, 1fr); padding: 0 var(--sp-4); } .st-spool .card .cic { display: none; }   /* no room for the spool: the name says it */
+  .equip.w3 { gap: var(--sp-2); } .equip.w3 .eq { padding: 0 var(--sp-2); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  /* sideways the left slot holds two tap targets, not three: Forks moves into its row in the details */
+  .equip.w3 .fkl { display: none; } .equip.w3, .dleft.fit-1 .equip.w3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .equip.w3 > span { display: none; }
+  .dcmp .fkb { display: inline-flex; align-items: center; margin-left: var(--sp-6); min-height: var(--tap); vertical-align: middle; }
 }
 
 /* ============ 8 · route map and records ============ */
@@ -1198,4 +1249,66 @@ body.celebrating .overlay.res .stitchin > div, body.celebrating .overlay.res .st
   #banner, .btn, .card, .tabb, .node, .utile, .tile, .chip, .eq, .rcard, .pcard, .ptile { transition: none; }
   #wipe, .amb { display: none; }
   .meters .sp .fill, .fo .bar i, .pw .pt i, .seam i, .ctag .cdr i { transition: none; }
+}
+
+/* ============ 11 · unique items: the find choice, the album, heirlooms ============
+   The choice is a small sheet between rounds (three plain buttons). The album and the heirlooms are views of the Collection tab: they use the
+   same frame as every other view, and a list that is longer than its slot scrolls inside it (the frame itself never moves). */
+.finds { width: min(100%, 560px); gap: var(--sp-12); } /* atelier-ignore: component width */
+.finds .rhead { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fopts { display: grid; gap: var(--sp-8); min-height: 0; }
+.fopt { display: grid; grid-template-columns: var(--sp-48) minmax(0, 1fr); gap: var(--sp-12); align-items: center; min-width: 0; min-height: var(--tap); padding: var(--sp-8) var(--sp-12); text-align: left; background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); border-radius: 0; transition: transform var(--dur-1) var(--ease); }
+.fopt:hover, .fopt:focus-visible { border-style: solid; border-color: var(--ink); background: var(--cream); }
+.fopt:active { transform: scale(.985); }
+.fopt[data-rar="uncommon"] { border: var(--ln-2) solid var(--brass); }
+.fopt[data-rar="rare"] { border: var(--ln-2) solid var(--saffron-ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.fic { width: var(--sp-48); height: var(--sp-48); display: grid; place-items: center; background: var(--pat-cloth), var(--coverlet); }
+.fic .ic { width: var(--sp-32); height: var(--sp-32); }
+.ftx { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.fn { font: 700 var(--t-md)/var(--lh-tight) var(--text); }
+.fd { font: 400 var(--t-body)/var(--lh-snug) var(--text); }
+.ff { font: 600 var(--t-sm)/var(--lh-snug) var(--mono); color: var(--ink-2); }
+.fb { font: 700 var(--t-sm)/var(--lh-snug) var(--text); font-style: normal; color: var(--saffron-ink); }
+.finds .row .btn .bh { font-weight: 400; }
+
+/* the album and the heirlooms: rows of five, a heading for each family, scrolling inside the list's slot */
+.album.items { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; align-content: start; overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-2); scrollbar-width: thin; }
+.album.items .tile { min-height: var(--sp-64); }
+.album.items .tile .ic { width: var(--tile-ic); height: var(--tile-ic); }
+.album.items .afam { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp-8); padding-top: var(--sp-4); font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--ink); border-bottom: var(--ln) dotted var(--ink-2); }
+.album.items .afam::before { content: ""; flex: none; width: var(--sp-12); height: var(--sp-12); background: var(--c); border: var(--ln) solid var(--ink); }
+.album.items .afam > span { margin-left: auto; font: 600 var(--t-sm)/var(--lh-tight) var(--mono); color: var(--ink-2); }
+.album.items .afam:first-child { padding-top: 0; }
+.tile[data-rar="uncommon"] { border: var(--ln-2) dashed var(--brass); }
+.tile[data-rar="rare"] { box-shadow: inset 0 0 0 var(--ln-2) var(--saffron); }
+.tile[data-rar="keep"], .tile[data-rar="heir"] { box-shadow: inset 0 0 0 var(--ln-2) var(--brass); }
+.tile.sel[data-rar] { border: var(--ln-2) solid var(--saffron); box-shadow: 0 0 0 var(--ln-2) var(--coverlet) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.tile .tcap { display: flex; align-items: center; justify-content: center; max-width: 100%; font: 600 var(--t-floor)/1 var(--mono); color: var(--mist-hi); }
+.tile.worn .tcap { color: var(--saffron-hi); }
+.tile .tcap .tag { background: transparent; color: var(--linen); padding: 0; clip-path: none; height: auto; gap: var(--sp-2); }
+.tile .tcap .tag .ic { width: var(--sp-12); }
+.tile.unseen .tcap { color: var(--mist-hi); }
+.tile.unseen.worn .ic { filter: none; }
+
+/* what is worn, in the details' left slot */
+.wornrow { display: flex; align-items: center; gap: var(--sp-6); min-width: 0; }
+.wslot { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); border: var(--ln-2) dashed var(--ink-2); }
+.wslot.on { border: var(--ln-2) solid var(--ink); background: var(--coverlet); }
+.wslot .ic { width: var(--sp-24); height: var(--sp-24); }
+
+/* the pause sheet's small pictures of what you carry */
+.runitems { display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start; }
+.ritems { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
+.ri { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); background: var(--coverlet); }
+.ri .ic { width: var(--sp-24); height: var(--sp-24); }
+
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .fopt { grid-template-columns: var(--sp-40) minmax(0, 1fr); gap: var(--sp-8); padding: var(--sp-6) var(--sp-8); }
+  .fic { width: var(--sp-40); height: var(--sp-40); } .fic .ic { width: var(--sp-24); height: var(--sp-24); }
+  .fn { font-size: var(--t-body); } .fd { font-size: var(--t-sm); } .ff, .fb { font-size: var(--t-floor); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .finds { width: min(100%, 900px); display: grid; grid-template-columns: minmax(0, 1fr); } /* atelier-ignore: component width */
+  .fopts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fopt { grid-template-columns: minmax(0, 1fr); align-items: start; }
 }
