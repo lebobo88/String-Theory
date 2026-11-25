@@ -24,8 +24,11 @@
 .shipstrip > div:first-child { border-left: 0; }
 .shipstrip .k { grid-column: 1 / -1; font: 700 var(--t-floor)/var(--lh-tight) var(--text); letter-spacing: var(--track); text-transform: uppercase; color: var(--mist-hi); white-space: nowrap; }
 .shipstrip .v { font: 600 var(--t-lg)/var(--lh-tight) var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.shipstrip .n { line-height: var(--lh-tight); }   /* an inline box keeps the font's own line height: that was a phantom 2 px under every number */
 .shipstrip .d { font: 600 var(--t-body)/var(--lh-tight) var(--mono); font-style: normal; font-variant-numeric: tabular-nums; color: var(--leaf-hi); white-space: nowrap; }
 .shipstrip .d.down { color: var(--madder-hi); }
+.shipstrip .d .dir { display: inline-block; width: .62em; height: .55em; margin-right: .25em; vertical-align: baseline; fill: currentColor; } .shipstrip .d.down .dir { transform: scaleY(-1); }
+.shipstrip .d.was { color: var(--leaf-hi); font-weight: 400; } .shipstrip .d.was b { font-weight: 600; } .shipstrip .d.was .wl { font-size: var(--t-floor); }   /* kept after a buy: what it was */
 .shipstrip .d:empty { display: none; }
 .shipstrip .chg { background: color-mix(in srgb, var(--mist) 14%, transparent); } .shipstrip .chg .k { color: var(--linen); }
 .shipstrip .who { display: flex; align-items: center; gap: var(--sp-8); }
@@ -146,6 +149,8 @@
 @media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
   .hem { height: 100%; }
   .hem > header .sub { display: none; }
+  /* a narrow phone at large text: the coin purse must leave the word Hideout whole */
+  .hem > header .purse { gap: var(--sp-4); } .hem > header .tag { font-size: var(--t-body); padding: 0 var(--sp-8) 0 var(--sp-16); }
   .hem.shop { grid-template-rows: var(--hem-head) var(--hem-tabs) var(--hem-strip) minmax(0, 1fr) var(--hem-detail) var(--hem-foot); }
   .station { display: contents; }
   .shop > .tabs { display: flex; gap: var(--sp-2); }
@@ -153,11 +158,11 @@
   .shop .tabb b { font-size: var(--t-floor); white-space: nowrap; } .shop .tabs .tabb span { display: none; }
   .shipstrip { grid-template-columns: repeat(4, minmax(0, 1fr)); } .shipstrip .who { display: none; }
   /* each number keeps three fixed lines: its name, its value, and under it either a row of needle holes or what the chosen thing would make it */
-  .shipstrip > div { padding: 0 var(--sp-4) 0 var(--sp-6); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto var(--sp-12); gap: 0; } .shipstrip > div:nth-child(2) { border-left: 0; }
+  .shipstrip > div { padding: 0 var(--sp-2) 0 var(--sp-4); grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto var(--sp-16); gap: 0; } .shipstrip > div:nth-child(2) { border-left: 0; }
   .shipstrip .k { letter-spacing: 0; }
-  .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-floor); line-height: 1; display: block; }
+  .shipstrip .v { font-size: var(--t-md); } .shipstrip .d { font-size: var(--t-body); line-height: 1; display: block; }
   .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
-  .shipstrip .unit { display: none; }
+  .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
   .shop .pseg .tabb { padding: 0 var(--sp-12); } .shop .pseg .tabb b { font-size: var(--t-body); }
   .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
   .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
@@ -176,7 +181,9 @@
   .hem > header .tag { height: var(--sp-20); font-size: var(--t-floor); padding: 0 var(--sp-8) 0 var(--sp-16); clip-path: polygon(var(--sp-8) 0, 100% 0, 100% 100%, var(--sp-8) 100%, 0 50%); }
   .hem > footer { align-items: flex-end; }
   .hem > footer .btn, .route .routego .btn { min-height: var(--tap); }
-  .shipstrip .v { font-size: var(--t-body); }
+  .shipstrip .v { font-size: var(--t-body); } .shipstrip .k { line-height: 1; }
+  /* the strip does not grow on a short screen (the list keeps 44 px rows), so its change line stays at the 12 px floor */
+  .shipstrip > div { grid-template-rows: auto auto var(--sp-12); } .shipstrip .d { font-size: var(--t-floor); }
   .card { padding: 0 var(--sp-6); gap: 0 var(--sp-6); }
   .cmeta { padding-top: 0; }
   .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
@@ -193,7 +200,7 @@
 @media (min-width: 600px) and (max-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint TABLET */
   .shop .tabb b { font-size: var(--t-md); }
   .shipstrip > div { padding: 0 var(--sp-12); grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; gap: 0 var(--sp-8); }
-  .shipstrip .v { font-size: var(--d-xs); } .shipstrip .d { font-size: var(--t-md); display: inline; } .shipstrip .d:empty { display: none; } .shipstrip .unit { display: inline; }
+  .shipstrip .v { font-size: var(--d-xs); } .shipstrip .d { font-size: var(--t-md); display: inline; } .shipstrip .d:empty { display: none; } .shipstrip .unit { display: inline; } .shipstrip .d .to { display: inline; }
   .trayrow > span:first-child { display: inline; }
   .album { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
   .cname { font-size: var(--t-lg); } .cmeta { font-size: var(--t-body); }

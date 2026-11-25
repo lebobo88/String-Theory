@@ -666,11 +666,15 @@
             if (film) {   // the boss's entrance film carries its name; a shorter cut once you have seen it
               const seen = this.profile.codex.cine || (this.profile.codex.cine = {});
               r.cine.play(id, { short: !!seen[id] }); this.filmSnd = this.sfx(seen[id] ? SHORT_SFX[id] : FILM_SFX[id]); seen[id] = true; this.saved();
-            } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.sampler ? 'They never shoot back. Get them all.' : e.patch, 1800); if (e.keeper) this.sfx('phase'); }
+            } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.hint || (e.sampler ? 'They never shoot back. Get them all.' : e.patch), 1800); if (e.keeper) this.sfx('phase'); }
             this.hudNow = true; break; }
           case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, (b ? 1.3 : 1) * (0.97 + Math.random() * 0.06)); } break; }   // a touch of pitch drift so steady fire never sounds like a machine
           case 'hit': case 'bosshit': this.sfx('hit'); break;
           case 'uncase': this.sfx('armour'); break;
+          case 'thread': this.sfx('graze'); break;                  // (waves) a thread caught in the thread round
+          case 'wrong': this.sfx('deflect'); break;                 // a plain moth shot in the gold round
+          case 'elite': case 'convoybreak': this.sfx('armour'); break;
+          case 'burned': this.sfx('hit'); break;
           case 'guard': case 'bossblock': this.sfx('deflect'); break;
           case 'dash': this.sfx('dash'); this.buzz(12); if (this.tutor) this.tutor.dashed = true; break;
           case 'graze': this.sfx('graze'); break;

@@ -12,12 +12,25 @@ Rules, each must be zero on every screen at every size:
   overlap  no two things overlap                   trunc    no text cut off sideways
   cut      no fixed slot with text spilling out of it (the hideout fits text to its slots: see fit() in src/ui.js)
   unsafe   with a cutout and a gesture bar, nothing sits under them
+  stat     (reported under cut) a cell of the hideout's stats bar never holds more than its box: not taller, not wider, nothing
+           under the bar's inner edge, with a preview showing and at large text
   anchor   in the hideout the named anchors (header, tab bar and each tab, strip, list, details panel, picture, name, text block,
            what-you-have, buy slot, footer) are at the same pixel rectangle on every tab and for every item, at every size
 Set AUDIT_OUT to keep screenshots apart from another run's; AUDIT_ROOT to audit a copy of the game."""
 import subprocess, sys, time, json, os, socket, base64, shutil
 from playwright.sync_api import sync_playwright
 root = os.environ.get('AUDIT_ROOT') or os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# stat cell: every cell of the hideout's stats bar holds its own content: nothing taller than the cell (or the bar's inner edge), nothing wider
+STATCELLS = r"""
+  for (const strip of document.querySelectorAll('#overlay .shipstrip')) { const sr = strip.getBoundingClientRect(), bw = parseFloat(getComputedStyle(strip).borderBottomWidth) || 0, inner = sr.bottom - bw;
+    for (const c of strip.children) { const cs = getComputedStyle(c), r = c.getBoundingClientRect(); if (cs.display === 'none' || r.width < 1) continue;
+      const nm = 'stat cell "' + ((c.querySelector('.k') || {}).textContent || '?') + '"';
+      if (c.scrollHeight > c.clientHeight) out.cut.push(nm + ' content ' + c.scrollHeight + ' tall in a box ' + c.clientHeight);
+      if (c.scrollWidth > c.clientWidth) out.cut.push(nm + ' content ' + c.scrollWidth + ' wide in a box ' + c.clientWidth);
+      for (const e of c.querySelectorAll('.k, .v, .d, .n, .unit, .to, .dir, b, em')) { const q = e.getBoundingClientRect(), es = getComputedStyle(e); if (es.display === 'none' || q.width < 1 || !e.textContent.trim() && !e.matches('.dir')) continue;
+        if (q.bottom > inner + 0.5 || q.bottom > r.bottom + 0.5 || q.top < r.top - 0.5) out.cut.push(nm + ' ' + (e.className || e.tagName.toLowerCase()) + ' runs ' + (q.bottom > r.bottom ? 'under' : 'over') + ' its box (' + q.top.toFixed(1) + '-' + q.bottom.toFixed(1) + ' in ' + r.top.toFixed(1) + '-' + inner.toFixed(1) + ')');
+        if (q.right > r.right + 0.5 || q.left < r.left - 0.5) out.cut.push(nm + ' ' + (e.className || e.tagName.toLowerCase()) + ' runs out sideways (' + q.left.toFixed(1) + '-' + q.right.toFixed(1) + ' in ' + r.left.toFixed(1) + '-' + r.right.toFixed(1) + ')'); } } }
+"""
 MEASURE = r"""(name) => {
   for (const a of document.getAnimations()) { try { const t = a.effect && a.effect.getComputedTiming(); if (t && isFinite(t.endTime)) a.finish(); } catch (e) {} }
   const vw = innerWidth, vh = innerHeight, out = { name, vw, vh, scroll: [], small: [], tiny: [], clip: [], overlap: [], trunc: [], cut: [], unsafe: [] };
@@ -68,6 +81,7 @@ MEASURE = r"""(name) => {
   const cs = getComputedStyle(document.documentElement), px = k => parseFloat(cs.getPropertyValue(k)) || 0, sa = { t: px('--safe-t'), r: px('--safe-r'), b: px('--safe-b'), l: px('--safe-l') };
   if (sa.t + sa.r + sa.b + sa.l > 0) for (const e of leaves) { if (e.closest('#floaters, #banner')) continue; const r = clipR(e); if (!r) continue;
     if (r.top < sa.t - 1 || r.left < sa.l - 1 || r.right > vw - sa.r + 1 || r.bottom > vh - sa.b + 1) out.unsafe.push(lab(e) + ' ' + [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)].join(',')); }
+  /*STATCELLS*/
   for (const k of ['small', 'tiny', 'clip', 'overlap', 'trunc', 'cut', 'unsafe']) { out[k + 'N'] = out[k].length; out[k] = [...new Set(out[k])].slice(0, 8); }
   return out; }"""
 # the hideout's anchors: where each one is, to the half pixel
@@ -89,8 +103,10 @@ FIT = r"""(name) => { const out = { name, scroll: [], small: [], tiny: [], clip:
   for (let i = 0; i < parts.length; i++) for (let j = i + 1; j < parts.length; j++) { const a = parts[i][1], b = parts[j][1]; if (Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1) out.overlap.push(lab(parts[i][0]).split(' ')[0] + ' >< ' + lab(parts[j][0]).split(' ')[0]); }
   // list cells: their own text inside them
   for (const c of hem.querySelectorAll('.larea button')) { const r = c.getBoundingClientRect(); for (const k of c.querySelectorAll('*')) { const q = k.getBoundingClientRect(); if (q.width > 1 && (q.bottom > r.bottom + 1 || q.right > r.right + 1 || q.top < r.top - 1 || q.left < r.left - 1)) { out.cut.push('outside its cell: ' + lab(k)); break; } } }
+  /*STATCELLS*/
   for (const k of ['small', 'tiny', 'cut', 'overlap']) out[k] = [...new Set(out[k])].slice(0, 6);
   return out; }"""
+MEASURE = MEASURE.replace('/*STATCELLS*/', STATCELLS); FIT = FIT.replace('/*STATCELLS*/', STATCELLS)
 RULES = ('scroll', 'small', 'tiny', 'clip', 'overlap', 'trunc', 'cut', 'unsafe')
 VPS = {'phoneS': (360, 640), 'phone': (390, 844), 'pixel': (412, 915), 'tablet': (820, 1180), 'tabletL': (1180, 820), 'phoneL': (844, 390), 'desktop': (1280, 720), 'phoneL2': (915, 412)}
 VIEWS = ['spool', 'bench', 'notions', 'case', 'pattern', 'ups', 'book', 'foes']

@@ -380,6 +380,7 @@
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared · next: ${C.PANELS[c.sim.panel].name}` : 'Between runs · everything you buy is saved';
       this.preview = null;
       const view = this.selKey(), body = this['st_' + this.tab](), selNow = view + '/' + body.sel;
+      if (this.bought && (this.bought.at !== selNow || !/^hem:/.test(this.shown || ''))) this.bought = null;   // the highlight of a buy lasts until the next pick, tab or view, or a visit away
       const strip = this.tab === 'pattern' ? this.perkSeg() : this.tab === 'book' ? this.bookSeg() : this.shipStrip();
       const lint = [[12, 19, 0], [31, 26, -7], [52, 22, -13], [68, 29, -3], [86, 24, -17]].map(l => `<i class="lint" style="--x:${l[0]}%;--t:${l[1]}s;--d:${l[2]}s"></i>`).join('');
       this.show(`<div class="hem shop"><div class="amb" aria-hidden="true"><i class="lamp"></i>${lint}<span class="strand"><i></i></span></div>
@@ -417,11 +418,16 @@
       const d = ST.derive(p), id = p.threads[p.thread] ? p.thread : 'running', w = p.threads[id] || 1;
       return { dmg: d.dmg, rate: d.fireMul / C.THREADS[id].rate[w - 1], ply: d.ply, speed: d.speed };
     }
-    /* Always in the strip's slot: what you fly now, and beside each number what the selected thing would make it. */
+    /* Always in the strip's slot: what you fly now, and under each number what the selected thing would make it: the new value, a
+       direction mark (not colour alone) and the amount, "1.60 ▲ +0.15" (phones have room for the mark and amount only). After a buy
+       the cells it changed keep a highlight with "was 1.45" until the player picks something else (this.bought, cleared in hem()). */
     shipStrip() {
-      const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null;
-      const cell = (lab, k, dp, unit) => { const ch = b && Math.abs(b[k] - a[k]) > 1e-6, u = unit ? `<span class="unit">${unit}</span>` : '';
-        return `<div class="${ch ? 'chg' : ''}" data-k="${k}" data-dp="${dp}"><span class="k">${lab}</span><b class="v"><span class="n">${a[k].toFixed(dp)}</span>${u}</b><em class="d ${ch ? (b[k] > a[k] ? 'up' : 'down') : ''}">${ch ? `${ARROW}<span class="sr">becomes </span>${b[k].toFixed(dp)}` : ''}</em><i class="stitch" aria-hidden="true"></i></div>`; };
+      const p = this.p, a = this.flight(p), b = this.preview ? this.flight(this.preview) : null, kept = this.bought;
+      const cell = (lab, k, dp, unit) => { const u = unit ? `<span class="unit">${unit}</span>` : '', was = kept && Math.abs(kept.now[k] - kept.was[k]) > 1e-6 && Math.abs(kept.now[k] - a[k]) < 1e-6;
+        const ch = !was && b && Math.abs(b[k] - a[k]) > 1e-6, up = ch && b[k] > a[k], amt = ch ? (up ? '+' : '-') + Math.abs(b[k] - a[k]).toFixed(dp) : '';
+        const d = was ? `<em class="d was"><span class="sr">was </span><span class="wl" aria-hidden="true">was </span><b>${kept.was[k].toFixed(dp)}</b></em>`
+          : `<em class="d ${ch ? (up ? 'up' : 'down') : ''}">${ch ? `<span class="sr">becomes </span><span class="to">${b[k].toFixed(dp)} </span><svg class="dir" viewBox="0 0 10 9" aria-hidden="true" focusable="false"><path d="M5 0L10 9H0z"/></svg><span class="sr">${up ? 'up ' : 'down '}</span>${amt}` : ''}</em>`;
+        return `<div class="${ch || was ? 'chg' : ''}" data-k="${k}" data-dp="${dp}"><span class="k">${lab}</span><b class="v"><span class="n">${a[k].toFixed(dp)}</span>${u}</b>${d}<i class="stitch" aria-hidden="true"></i></div>`; };
       return `<div class="shipstrip" role="group" aria-label="Your ship's numbers"><div class="who">${icon(p.needle, 24)}<span><span class="k">Your ship</span><b>${esc(C.NEEDLES[p.needle].name)}</b></span></div>
         ${cell('Damage', 'dmg', 2)}${cell('Fire rate', 'rate', 1, '/s')}${cell('Shield', 'ply', 0)}${cell('Speed', 'speed', 1)}</div>`;
     }
@@ -518,7 +524,8 @@
         return { id, name: n.name, icon: icon(id, 26), lock: st.why === 'sealed', meta: p.needle === id ? 'Flying' : p.needles[id] ? 'Owned' : st.why === 'sealed' ? 'Locked' : silkTag(n.price, 'sm') }; });
       const n = C.NEEDLES[sel], st = S.needleState(p, sel), own = !!p.needles[sel];
       const left = st.why === 'sealed' ? `<span>Blueprint dropped by: <b>${esc(C.CHARTS[n.chart].from)}</b></span>`
-        : `<span>Shield <b>${n.ply}</b> · Speed <b>${n.pace}</b> · Fire rate <b>${n.eye}</b> · Damage <b>${n.point}</b></span>`;
+        : (() => { const q = this.clone(); q.needle = sel; const f = this.flight(q);   // the same derived numbers as the strip, not the 1 to 5 ratings
+          return `<span>Damage <b class="mono">${f.dmg.toFixed(2)}</b> · Fire rate <b class="mono">${f.rate.toFixed(1)}/s</b> · Shield <b class="mono">${f.ply.toFixed(0)}</b> · Speed <b class="mono">${f.speed.toFixed(1)}</b></span>`; })();
       const buy = st.ok ? this.buyBtn(st, 'silk', 'Buy', 'needle:' + sel) : own ? (p.needle === sel ? this.stamp('Flying', 'Your ship')
         : `<button class="btn primary buy" data-act="takeup" data-arg="${sel}"><span class="bl">Fly this ship</span></button>`) : this.buyBtn(st, 'silk', 'Buy');
       if (sel !== p.needle) { const q = this.clone(); q.needle = sel; this.preview = q; }
@@ -584,6 +591,7 @@
         if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
         else this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
       else this.snd('ui_fail');
+      this.bought = r.ok ? { at: this.hemSel, was: before, now: this.flight(p) } : this.bought;   // the strip keeps what this buy changed (hem() clears it on the next pick)
       this.hem();
       if (r.ok) this.celebrate(before, d0, s0, from);
       else this.shake();

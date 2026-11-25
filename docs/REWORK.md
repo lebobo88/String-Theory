@@ -1,0 +1,34 @@
+# Combat and progression rework: the contract every agent follows
+
+The approved design is `docs/progression-plan.html`. Read it first and build exactly what it says. Where the plan is silent, make the soundest call in its spirit and record it in `docs/DEPARTURES.md` under your own "## Rework: <your stream>" section, with the reason. Where the plan meets reality (code that makes a part impossible or wrong), investigate the cause, choose a fix grounded in the plan's goals, and record it the same way.
+
+The research behind the plan is in `/tmp/plan2/` (combat.md, economy.md, waves.md, statsbar.md, research.md) with measurement scripts in `/tmp/plan2/combat/`, `/tmp/plan2/economy/` and `/tmp/plan2/waves/`. Use them; don't redo them.
+
+## Working rules
+- Work in `/home/claude/string-theory` on the `rework` branch. **No git commands**; the lead commits.
+- Several agents work at once in the same tree. Before every edit, re-read the part of the file you are changing (others may have changed it). Keep edits small and local. Never reformat or reorder code you don't own. If you need a change inside another stream's area, make the smallest change and say so in your report.
+- Names in code: coins are `dust`, gems are `silk`, ship upgrades are `tempers`, weapons are `threads`, the second weapon is the `bobbin`, perks are `pattern`, power-ups are `charms`, consumables are `notions`. The sim is deterministic (60 Hz fixed step, seeded RNG): never use `Math.random` or wall time in `src/sim.js` or `src/boss/*`.
+- Old saves must keep working. Read new profile fields with defaults. Only the Economy stream changes the save version (with a migration).
+- Player-facing text: plain, short English. UI design rules: no cards with a coloured left-edge bar, no pill badges, the hideout layout stays locked (nothing shifts between tabs, `tools/audit.py` anchor rule), the sidebar stays static.
+- Performance: no allocation in per-frame paths; stay within `docs/PERF.md` budgets.
+- The machine has 2 CPUs and other agents run beside you. Run one headless Chrome at a time, on your own port (given in your brief). Prefer node sims.
+- Headless Chrome: `/usr/bin/google-chrome --no-sandbox --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`.
+
+## Tests you must keep green
+`node test/sim.test.js`, `node test/boss-a.test.js`, `node test/boss-b.test.js`, `python3 test/fromdisk.py`, and once it exists `node test/balance.js` (bands may only be changed by the Balance stream or the lead). Long browser suites (`test/cine.py`, `test/effects.py`, `test/perf.py`, `test/smoke.py`, `tools/audit.py`) are run by the lead at the end; run the parts that touch your work.
+
+## Shared names (add yours here when you create something others use)
+- `C.THREADS[id].lv[]` grows to 10 entries; `p.threads[id]` is the owned level (0 = not owned). Forks: `p.forks[id] = { a: 'fan'|'arrow'|..., b: ... }` chosen fork ids, `C.THREADS[id].forks = [{ at: 4, opts: [...] }, { at: 7, opts: [...] }]`.
+- Bomb stock: `sim.player.bombs`, `sim.player.bombMax`; the sim emits `{ t: 'bomb', x, y, save: bool }`; input `sim.input.bomb` (edge-triggered) from the HUD button.
+- Boss break: `boss.fray` 0..1, `boss.frayed` seconds left of the break (>0 while broken); the sim emits `{ t: 'frayed', boss }` and `{ t: 'mended', boss }`.
+- Finds (run-only uniques): `C.FINDS[id]`, `sim.finds` (array of ids this run); heirlooms `C.HEIRLOOMS[id]`, `p.heirlooms` (owned map), `p.worn` (equipped ids); keepsakes are heirlooms with `keepsake: '<boss id>'`. Album: `p.album[id] = true`.
+- Fray dial: `p.fray[mode]` unlocked max, `p.settings.fray` chosen step (0 = off); `C.FRAY` step table.
+- Exchange: `p.exch = { buy: n, sell: n, t: <play seconds stamp> }`.
+- Exchange (placeholder spec from the Balance stream; `test/economy.js` reads it and skips cleanly until it exists, so the Economy stream may change details but should tell the Balance stream): `C.EXCH = { buyBase, buyStep, sellBase, sellStep, recoverPerMin }`. `ST.exchangeQuote(p, dir, n, now)` is pure: `dir` is `'buy'` (coins to gems) or `'sell'` (gems to coins), `n` is the number of gems traded, `now` is play seconds (default `p.stats.playSec` or 0); it returns `{ ok, dir, n, dust, silk }` where `silk === n` and `dust` is the coins paid (buy) or received (sell) at the rates after recovery since `p.exch.t`. `ST.exchange(p, dir, n, now)` does the trade (moves `p.dust` and `p.silk`, updates `p.exch`) and returns the same object, with `ok: false` and a `why` when the player is short. The test asserts: a sell of n gems returns less than a buy of n gems costs; no random sequence of trades ends with net gems >= 0 and net coins > 0 (or the reverse); the rates are back to base after 8 hours.
+- Balance harness (Balance stream; `docs/BALANCE.md` has the numbers and the commands): `node test/balance.js`, `node test/economy.js`, `node test/variety.js` (all exit 0 until `test/balance.strict` exists or `BALANCE_STRICT=1`; `--report` never fails; `--only <part>`). They read content at run time. What they expect from other streams:
+  - Weapons: every id in `C.THREADS` with any number of `lv` entries; forks as `C.THREADS[id].forks`, chosen with `p.forks[id] = { a, b }`; optional `C.THREADS[id].jobMetric` = one of `soft | mid | clear | cover | armour | defence | overall` (what the weapon is best at; otherwise the test guesses from `job`); new weapons are measured solo at their top level with all fork variants and the best variant counts.
+  - Bosses: damage goes through `sim.bossHit(b, dmg, x, y, force, src, softMul)` which returns a multiplier (the test calls it with a near-zero shot to measure uptime), and a break shows as `boss.stun > 0` or `boss.frayed > 0`.
+  - Bomb: if `sim.player.bombMax` is defined the test uses the held-stock bomb (sets `player.bombs`, passes `bomb: true` in the update input); otherwise it uses `sim.charm('bomb')`.
+  - Boss bots: bosses 1 to 4 use `BOSSES[id].proper` exported by `test/boss-a.test.js`; bosses 5 to 8 use COPIES in `test/lib/bots.js` (boss-b does not export its bots). Whoever changes the Unraveller, Beetle, Empress or King mechanics must keep that copy working (a bot that throws is counted and fails the run with exit 2).
+  - Waves (read by `test/variety.js`): `sim.waveSpec(panel, row)`, `sim.bonusSpec(panel)`, `sim.getDeck()`, `C.FORM / C.ENTRIES / C.TWISTS` with `gentle: true`, `sim.spec.formation / entry` after `startStage()`.
+  - Shop: `ST.shop.<x>State(p, id)` and `ST.shop.buy<X>(p, id)` pairs (thread, temper, needle, pattern, charmUp; heirloom and fork are read when they exist). A shop function the model does not know is printed by `test/economy.js` as "not in the model"; add it to `KINDS` in `test/lib/econ.js`.

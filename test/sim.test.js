@@ -114,13 +114,13 @@ function fly(profile, seed, skill, log) {
     for (const ev of sim.events) { seen[ev.t] = (seen[ev.t] || 0) + 1; if (ev.t === 'stageclear') { stages++; if (ev.sampler) samplers.push(ev.sampler); if (ev.last) out = 'won'; else { if (sim.advance() === 'hem') sim.setPatch(C.PANELS[sim.panel].patches.slice(-1)[0]); sim.startStage(); } } }
   }
   ok(out === 'won', 'god-mode Night is mended'); ok(seen.keeperdown === 8, 'eight bosses defeated');
-  ok(stages === 40, 'forty stages on the chart'); ok(samplers.length === 8 && samplers.every(x => x.total === 40), 'eight bonus waves of 40');
+  ok(stages === 40, 'forty stages on the chart'); ok(samplers.length === 8 && samplers.every(x => x.total === 40 || x.total === 18 || x.total === 24), 'eight bonus waves (40 moths, 18 gold, or 24 threads)');
   ok(p.codex.keepers.greatlappet && p.codex.keepers.greatwick && seen.burn, 'stand-in Keepers fought');
   ok(seen.net && seen.strike && seen.glare && seen.phase >= 12, 'every boss phase seen');
   ok(p.charts.bp_herringbone && p.charts.bp_chain && p.charts.bp_beading, 'Keeper charts found');
   ok(p.stats.mended === 1 && p.silk >= 40, 'night mended, silk banked');
   ok(sim.record && sim.record.reached === 'Run completed', 'ledger record');
-  for (const pat of ['rosette', 'eight', 'wave', 'spiral', 'heart', 'star']) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
+  for (const pat of C.SAMPLER.figures) for (let u = 0; u <= 1; u += 0.01) { const q = sim.pathPoint(pat, u); ok(Math.abs(q.x) < 6.6 && q.y > 5.5 && q.y < 15.5, 'sampler path in field ' + pat); }
   const r0 = sim.pathPoint('rosette', 0); ok(Math.abs(r0.x - 4.72) < 0.01 && Math.abs(r0.y - 10.33) < 0.01, 'rosette starts at the right lobe tip');
   console.log('samplers:', samplers.map(x => x.hit + '/' + x.total).join(' '), 'perfect', sim.perfectSamplers);
   console.log('god-mode:', { minutes: +(frames / 3600).toFixed(1), stitches: sim.stitches, dust: sim.nightDust, silk: sim.nightSilk, charts: sim.nightCharts });

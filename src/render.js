@@ -1115,6 +1115,25 @@
       this.trA.strip(px, py, pz, ps, n, 0.5, 0.5, this.lc(PAL.steelHi, 1.8), 0.1 + 0.6 * fl, 0.1 + 0.6 * fl, 0);
       this.spr.add(px[0], py[0], z + 0.2, 0.32, hi, 0.9, 5, 0); this.spr.add(px[n - 1], py[n - 1], z + 0.2, 0.32, hi, 0.9, 5, 0);
     }
+    /* Wave twist marks: an elite moth (a gold hoop with four sparks turning round it), a moth that splits (two pale beads), the convoy's leader (a linen hoop),
+       a gold moth in the gold round (a halo). */
+    twistMark(e, z) {
+      const t = this.time, tw = e.tw, sp = this.spr;
+      if (tw === 'elite') { sp.add(e.x, e.y, z + 0.3, 2.0 + 0.12 * Math.sin(t * 5), this.lc(PAL.saffron, 2.4), 0.8, 7, t * 1.3); for (let k = 0; k < 4; k++) { const a = t * 2.2 + k * 1.5708; sp.add(e.x + Math.cos(a) * 0.85, e.y + Math.sin(a) * 0.85, z + 0.4, 0.3, this.lc(PAL.glare, 2.6), 0.95, 1, a); } }
+      else if (tw === 'split') { const a = Math.sin(t * 3 + e.id) * 0.15; for (let k = -1; k <= 1; k += 2) sp.add(e.x + k * (0.55 + a), e.y + 0.45, z + 0.4, 0.42, this.lc(PAL.paper, 2), 0.95, 0); sp.add(e.x, e.y, z + 0.25, 1.5, this.lc(PAL.paper, 1.2), 0.3, 7, -t); }
+      else if (tw === 'lead') { sp.add(e.x, e.y, z + 0.3, 2.2, this.lc(PAL.linen, 2), 0.7, 7, t); sp.add(e.x, e.y, z + 0.2, 1.4, this.lc(PAL.saffron, 1.4), 0.4, 0); }
+      else if (tw === 'gold') { sp.add(e.x, e.y, z + 0.2, 1.7 + 0.15 * Math.sin(t * 6 + e.id), this.lc(PAL.saffron, 2.2), 0.8, 7, t * 1.5); sp.add(e.x, e.y, z + 0.1, 1.4, this.lc(PAL.saffron, 1.6), 0.55, 0); }
+    }
+    /* The burning thread (a wave twist): a line along the top of the cloth that burns away from the right; a spark runs at its end and it turns red when low. */
+    syncTimer(sim, fdt) {
+      const tm = sim.timer; if (!tm || sim.phase !== 'play' || tm.burned) return;
+      const f = tm.left / tm.total, x0 = -HW + 0.5, x1 = x0 + (2 * HW - 1) * f, y = Math.min(H, this.viewTop) - 0.9, n = 10, px = this.px, py = this.py, pz = this.pz, ps = this.ps;
+      for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = x0 + (x1 - x0) * u; py[i] = y; pz[i] = 0.6; ps[i] = (x1 - x0) * u; }
+      const low = f < 0.25, pulse = low ? 0.6 + 0.4 * Math.sin(this.time * 14) : 1;
+      this.trN.strip(px, py, pz, ps, n, 0.1, 0.1, low ? this.lc(PAL.madderHi, 1.6) : this.lc(PAL.linen), 0.9 * pulse, 0.9 * pulse, 1);
+      this.spr.add(x1, y, 0.8, 0.9 + 0.2 * Math.sin(this.time * 30), this.lc(PAL.saffron, 2.6), 0.95, 1, this.time * 3); this.spr.add(x1, y, 0.7, 1.6, this.lc(PAL.saffron, 1.6), 0.5, 0);
+      if (Math.random() < fdt * 30 * this.q.particles) this.glow.emit(x1, y - 0.1, 0.7, rnd(-0.5, 0.5), rnd(-1.2, -0.4), 0, 0.5, 0.18, this.lc(PAL.saffron, 2.4), 1, 1, 0, 0.2);
+    }
     /* Full Sail: a prow of light ahead, a wake of stitches behind, the cloth rippling under the ram. */
     drawRam(pl, fdt) {
       const k = this.ramK, x = pl.x, y = PY + 0.25, px = this.px, py = this.py, pz = this.pz, ps = this.ps, sa = this.lc(PAL.saffron, 2.2), li = this.lc(PAL.linen), pa = this.lc(PAL.paper, 1.2);
@@ -1286,10 +1305,10 @@
         const rot = v.rot = diving ? Math.PI + (e.vx || 0) * 0.12 : (e.type === 'looper' ? (e.dir > 0 ? 0 : Math.PI) : 0);
         const z = 0.35 + (e.state === 'form' ? 0 : 0.5);
         const hurt = e.hurt ? e.hurt / 0.15 : 0, wind = e.state === 'windup', wk = wind ? clamp(1 - e.t / 0.3, 0, 1) : 0;   // wk: the last 0.3 s before it goes
-        const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0);
+        const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0);   // an elite moth is bigger
         const sprite = this.mothSprite(e), noSplit = e.type === 'looper';
         this.compose(e.x, e.y + wk * 0.2, z + wk * 0.25, rot, 0, diving ? -0.25 : wk * 0.4, sx, sy, 1);   // it rears back before it dives
-        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = e.state === 'trace' ? 0.12 : 0, flash = hurt * 0.9;
+        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = (e.state === 'trace' ? (e.gold ? 0.6 : 0.12) : 0) + sim.dark * 0.3, flash = hurt * 0.9;   // (a gold moth glows; in a dim cloth every moth carries a little light)
         this.mothPool(sprite, 'body', noSplit).push(this.M, white, flash, glow, warn);
         if (!noSplit) {
           const a = Math.sin(e.flap) * 0.55 - 0.15, cell = 0.088;
@@ -1311,6 +1330,7 @@
           for (let j = 0; j < 2; j++) { const d = 0.9 + j * 0.5 + 0.3 * wk; this.spr.add(e.x + ux * d, e.y + uy * d, z + 0.55, 0.72, tell, (0.45 + 0.55 * wk) * ((Math.floor(this.time * 10) + j) % 2 ? 1 : 0.45), 13, th); }
         }
         if (e.guard === true) this.guardShield(e, z);
+        if (e.tw) this.twistMark(e, z);
         if (e.type === 'spinner' || e.mark) this.enemyExtras(v, e, sim);
       }
       map.forEach(dropEnemyView, this);
@@ -1490,6 +1510,11 @@
           this.compose(x, y, z, 0, d.t * 9 + d.id, 0, 1); this.dropPool('dust', 0.085).push(this.M, this.lc('#FFFFFF'), 0, sim.fx.gold > 0 ? 0.45 : 0.18);
           this.spr.add(x, y, z - 0.1, 0.75, this.lc(PAL.saffron, sim.fx.gold > 0 ? 1.8 : 1), 0.35, 0);
           if (Math.sin(d.t * 9 + d.id) > 0.97) this.spr.add(x + 0.1, y + 0.05, z + 0.2, 0.6, this.lc(PAL.glare, 2.5), 0.9, 1, 0.3);
+        } else if (d.kind === 'thread') {   // the thread round: a length of gold thread, falling. Fly into it.
+          const px = this.px, py = this.py, pz = this.pz, ps = this.ps;
+          for (let i = 0; i < 6; i++) { px[i] = x + Math.sin(t * 7 + i * 0.9 + d.id) * 0.1 * i; py[i] = y + 1.1 - i * 0.4; pz[i] = z; ps[i] = i * 0.4; }
+          this.trN.strip(px, py, pz, ps, 6, 0.1, 0.03, this.lc(PAL.saffron, 1.9), 1, 0.2, 1);
+          this.spr.add(x, y, z, 1.2, this.lc(PAL.glare, 2.4), 0.85, 1, t * 2); this.spr.add(x, y, z - 0.1, 1.7, this.lc(PAL.saffron, 1.4), 0.4, 0);
         } else if (d.kind === 'silk') {
           this.compose(x, y, z, Math.sin(d.t * 1.5) * 0.4, Math.sin(d.t * 3) * 0.5, 0, 1.1); this.dropPool('silk', 0.085).push(this.M, this.lc('#FFFFFF'), 0, 0.3);
           this.spr.add(x, y, z - 0.1, 1.5, this.lc(PAL.paper, 1.2), 0.45, 0);
@@ -1960,6 +1985,7 @@
       if (this.syncBossFx) this.syncBossFx(sim, dt, fdt, events);   // src/render-boss.js: props, arena, poses
       this.shadowCasters();
       this.syncSamplerPath(sim, fdt);
+      this.syncTimer(sim, fdt);
       this.heat += (((sim.comboMult ? sim.comboMult() : 1) - 1) / 4 - this.heat) * Math.min(1, dt * 2);
       this.slowMo += ((sim.fx.tangle > 0 ? 1 : 0) - this.slowMo) * Math.min(1, dt * 4);
       this.finish(dt, fdt);

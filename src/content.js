@@ -252,7 +252,130 @@
   };
 
   // ---- The Sampler: 40 moths trace a pattern and never fire. Stitch them all. ----
-  const SAMPLER = { count: 40, pts: 100, perfectPts: 2400, perfectSilk: 3, gap: 0.3, speed: 0.105, order: ['nibbler', 'nibbler', 'casebearer', 'lappet'] };
+  const SAMPLER = { count: 40, pts: 100, perfectPts: 2400, perfectSilk: 3, gap: 0.3, speed: 0.105, order: ['nibbler', 'nibbler', 'casebearer', 'lappet'],
+    // Rework: waves. 12 figures (sim.pathPoint), three kinds of round, and the moths change by stage (index = stage).
+    // trace: stitch every moth as it flies the figure. gold: only the gold moths count; a plain one breaks the perfect. thread: no moths; catch the falling thread.
+    figures: ['wave', 'eight', 'spiral', 'rosette', 'heart', 'star', 'ring', 'clover', 'trefoil', 'lissa', 'knot3', 'eightv'],
+    figureName: { wave: 'the wave', eight: 'the figure eight', spiral: 'the spiral', rosette: 'the rosette', heart: 'the heart', star: 'the star', ring: 'the ring', clover: 'the clover', trefoil: 'the trefoil', lissa: 'the lissajous', knot3: 'the three-knot', eightv: 'the upright eight' },
+    kinds: { trace: { hint: 'They never shoot back. Get them all.' }, gold: { hint: 'Shoot only the gold moths.' }, thread: { hint: 'Catch the falling thread. Do not shoot.' } },
+    byStage: [ ['nibbler', 'nibbler', 'casebearer', 'lappet'], ['nibbler', 'casebearer', 'lappet', 'hawk'], ['wick', 'nibbler', 'casebearer', 'lappet'], ['hawk', 'nibbler', 'wick', 'casebearer'],
+      ['firefly', 'nibbler', 'casebearer', 'wick'], ['lappet', 'firefly', 'hawk', 'casebearer'], ['firefly', 'wick', 'hawk', 'lappet'], ['spinner', 'firefly', 'hawk', 'wick', 'lappet'] ],
+    thread: { count: 24, gap: 0.45, fall: 1.6, pts: 100 } };
+
+  // ---- Rework: waves. A wave is built from parts, drawn from a shuffled deck per run (Sim.deck): a formation, an entry, twists, and on each
+  // stage's third wave a preview of the boss. All authored; the sim only chooses and places. y runs 9.6 to 16.8 (the top of the cloth is 18.67). ----
+  const FORM = (() => {
+    const P = Math.PI, split = (n, k) => { const a = []; for (let i = 0; i < k; i++) a.push(Math.floor(n / k) + (i < n % k ? 1 : 0)); return a; };
+    const ROWS_Y = [16.4, 15.2, 14.0, 12.8, 11.6];
+    const layers = (n, flip) => {   // nested V (apex at the bottom) or chevron (apex at the top)
+      const L = n <= 16 ? 2 : n <= 30 ? 3 : 4, cs = split(n, L), cmax = cs[0], sp = Math.min(0.95, Math.max(0.9, 11.4 / Math.max(1, cmax - 1))), out = [];
+      cs.forEach((c, l) => { for (let i = 0; i < c; i++) { const x = (i - (c - 1) / 2) * sp, a = Math.abs(x) * 0.6; out.push({ x, y: flip ? 16.5 - l * 1.1 - a : 9.7 + l * 1.1 + a }); } });
+      return out;
+    };
+    const rowsFrom = (ws, top, dy, spMax) => {   // centred rows of the given widths, top first
+      const wmax = Math.max.apply(null, ws), sp = Math.min(spMax, 11.8 / Math.max(1, wmax - 1)), out = [];
+      ws.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * sp, y: top - r * dy }); });
+      return out;
+    };
+    return {
+      grid: { name: 'Grid', gentle: true, build(n, sp) {
+        const ws = sp && sp.spinners !== undefined ? [sp.spinners, sp.mids, sp.mids, sp.nibs, sp.nibs] : split(n, 5), out = [];
+        ws.forEach((w, r) => { for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * 1.2, y: ROWS_Y[r] }); });
+        return out; } },
+      v: { name: 'V', gentle: true, build: (n) => layers(n, false) },
+      chevron: { name: 'Chevron', gentle: true, build: (n) => layers(n, true) },
+      columns: { name: 'Two columns', gentle: true, build(n) {
+        const half = Math.ceil(n / 2), w = Math.max(2, Math.min(4, Math.ceil(half / 7))), hw = (w - 1) * 0.6, c = 2.1 + hw, out = [];
+        [-1, 1].forEach((sd, k) => { const m = k ? n - half : half, rs = Math.ceil(m / w), dy = Math.min(1.1, 6.8 / Math.max(1, rs - 1)); let left = m;
+          for (let r = 0; r < rs; r++) { const cnt = Math.min(w, left); left -= cnt; for (let j = 0; j < cnt; j++) out.push({ x: sd * c + (j - (cnt - 1) / 2) * 1.2, y: 16.4 - r * dy }); } });
+        return out; } },
+      diamond: { name: 'Diamond', build(n) {
+        const R = n > 44 ? 9 : 7, p = []; for (let r = 0; r < R; r++) p.push(Math.min(r + 1, R - r)); const sum = p.reduce((a, b) => a + b, 0);
+        const ws = p.map(v => Math.max(1, Math.round(n * v / sum))); let d = n - ws.reduce((a, b) => a + b, 0), mid = (R - 1) >> 1; while (d !== 0) { ws[mid] += d > 0 ? 1 : -1; d += d > 0 ? -1 : 1; }
+        return rowsFrom(ws, 16.5, Math.min(1.15, 6.8 / (R - 1)), 1.2); } },
+      ring: { name: 'Ring', build(n) {
+        const K = n <= 20 ? 1 : n <= 44 ? 2 : 3, sc = (K === 3 ? [1, 0.68, 0.38] : [1, 0.64]).slice(0, K), tot = sc.reduce((a, b) => a + b, 0), cs = sc.map(s => Math.round(n * s / tot)); cs[0] += n - cs.reduce((a, b) => a + b, 0);
+        const out = []; cs.forEach((c, k) => {   // equal steps along the ring's length, not equal angles (an ellipse crowds its tips otherwise)
+          const M = 240, cum = [0]; let px = 0, py = 3.5 * sc[k];
+          for (let i = 1; i <= M; i++) { const a = i / M * 2 * P, x = 5.9 * sc[k] * Math.sin(a), y = 3.5 * sc[k] * Math.cos(a); cum.push(cum[i - 1] + Math.hypot(x - px, y - py)); px = x; py = y; }
+          let i = 0; for (let j = 0; j < c; j++) { const L = (j + (k % 2) * 0.5) / c * cum[M]; while (i < M - 1 && cum[i + 1] < L) i++; const f = (L - cum[i]) / Math.max(1e-6, cum[i + 1] - cum[i]), a = (i + f) / M * 2 * P;
+            out.push({ x: 5.9 * sc[k] * Math.sin(a), y: 13.1 + 3.5 * sc[k] * Math.cos(a) }); } });
+        return out; } },
+      spiral: { name: 'Spiral', build(n) {
+        const out = [], arm = [Math.ceil(n / 2), Math.floor(n / 2)];
+        arm.forEach((m, k) => { let th = 0, lx = 0, ly = 0, first = true, cnt = 0;
+          while (cnt < m) { const r = 1.1 + 0.57 * th, x = r * Math.cos(th + k * P), y = 0.6 * r * Math.sin(th + k * P);
+            if (first || (x - lx) * (x - lx) + (y - ly) * (y - ly) >= 1.1 * 1.1) { out.push({ x, y: 13.1 + y }); lx = x; ly = y; first = false; cnt++; } th += 0.01; } });
+        return out; } },
+      stagger: { name: 'Stagger', gentle: true, build(n) {
+        const out = []; let R = 1; while (true) { let c = 0; for (let r = 0; r < R; r++) c += r % 2 ? 6 : 7; if (c >= n) break; R++; }
+        const dy = Math.min(1.0, 6.8 / Math.max(1, R - 1)); let left = n;
+        for (let r = 0; r < R; r++) { const w = Math.min(left, r % 2 ? 6 : 7); left -= w; for (let i = 0; i < w; i++) out.push({ x: (i - (w - 1) / 2) * 2, y: 16.5 - r * dy }); }
+        return out; } },
+      wall: { name: 'Wall with a gap', build(n, sp, rnd) {
+        const gx = (rnd() - 0.5) * 7, cells = []; for (let j = 0; j < 11; j++) { const x = (j - 5) * 1.2; if (Math.abs(x - gx) > 1.3) cells.push(x); }
+        const rs = Math.ceil(n / cells.length), out = []; let left = n;
+        for (let r = 0; r < rs; r++) { const cnt = Math.min(cells.length, left); left -= cnt; const use = cnt === cells.length ? cells : cells.slice().sort((a, b) => Math.abs(a) - Math.abs(b)).slice(0, cnt);
+          for (const x of use) out.push({ x, y: 16.4 - r * 0.95 }); }
+        return out; } },
+      wings: { name: 'Split wings', build(n) {
+        const out = []; [-1, 1].forEach((sd, k) => { const m = k ? Math.floor(n / 2) : Math.ceil(n / 2), cw = 6; let left = m;
+          for (let r = 0; left > 0; r++) { const cnt = Math.min(cw, left); left -= cnt; for (let i = 0; i < cnt; i++) out.push({ x: sd * (1.6 + i * 0.95), y: 16.3 - r * 0.95 - i * 0.35 }); } });
+        return out; } },
+      arc: { name: 'Arc', build(n) {
+        const K = n <= 24 ? 3 : n <= 44 ? 4 : 5, rad = []; for (let k = 0; k < K; k++) rad.push(6.4 - k * 1.05);
+        const sumR = rad.reduce((a, b) => a + b, 0), al = Math.max(0.45, Math.min(1.45, n * 1.05 / (2 * sumR))), len = rad.map(r => r * 2 * al), tl = len.reduce((a, b) => a + b, 0);
+        const cs = len.map(l => Math.round(n * l / tl)); cs[0] += n - cs.reduce((a, b) => a + b, 0); const out = [];
+        cs.forEach((c, k) => { for (let j = 0; j < c; j++) { const a = c === 1 ? 0 : (j / (c - 1) - 0.5) * 2 * al; out.push({ x: rad[k] * Math.sin(a), y: 10.2 + rad[k] * Math.cos(a) }); } });
+        return out; } },
+      cloud: { name: 'Loose cloud', build(n, sp, rnd) {
+        const cells = []; for (let r = 0; r < 7; r++) for (let j = 0; j < 10; j++) { const x = (j - 4.5 + (r % 2 ? 0.5 : 0)) * 1.25 + (rnd() - 0.5) * 0.3, y = 16.4 - r * 1.0 + (rnd() - 0.5) * 0.3;
+          cells.push({ x, y, k: (x / 6.2) * (x / 6.2) + ((y - 13.1) / 3.6) * ((y - 13.1) / 3.6) + rnd() * 0.5 }); }
+        cells.sort((a, b) => a.k - b.k); return cells.slice(0, n).map(c => ({ x: c.x, y: c.y })); } }
+    };
+  })();
+  // entries: dur = seconds on the path; per = seconds between moths; row = extra seconds per row (grid-style staggering is kept for the swoop).
+  const ENTRIES = {
+    swoop:    { name: 'Swoop',          gentle: true, dur: 1.5, per: 0.07, row: 0.25 },
+    loops:    { name: 'Loops',          dur: 1.9, per: 0.07, row: 0.2 },
+    eight:    { name: 'Figure eight',   dur: 3.2, per: 0.07, row: 0 },
+    drop:     { name: 'Top drop',       gentle: true, dur: 1.1, per: 0, row: 0, rand: 1.6 },
+    spiral:   { name: 'Spiral',         dur: 3.0, per: 0.07, row: 0 },
+    crossing: { name: 'Crossing streams', gentle: true, dur: 1.8, per: 0.06, row: 0.2 },
+    pincer:   { name: 'Pincer',         dur: 1.7, per: 0.06, row: 0.15 },
+    march:    { name: 'Slow march',     gentle: true, dur: 3.4, per: 0, row: 0.35 }
+  };
+  // twists: from = first stage (0 = stage 1) it may appear; not = twists it cannot share a wave with.
+  const TWISTS = {
+    elite:     { name: 'Elite moth',      from: 1, hint: 'A gold-marked moth is tougher. It drops a prize.' },
+    convoy:    { name: 'Convoy',          from: 2, not: ['timer'], hint: 'A convoy crosses the cloth. Break it.' },
+    shield:    { name: 'Shielded front',  from: 2, hint: 'The front row holds shields. Hit from an angle.' },
+    reinforce: { name: 'Reinforcements',  from: 2, not: ['fast'], hint: 'More moths arrive halfway.' },
+    timer:     { name: 'Burning thread',  from: 1, not: ['convoy'], hint: 'Clear it before the thread burns through.' },
+    captive:   { name: 'Captive ship',    from: 1, hint: 'A captive ship hangs from a spinner. Free it.' },
+    split:     { name: 'Splitting moth',  from: 1, hint: 'Marked moths split when they die.' },
+    fast:      { name: 'Fast entry',      from: 1, not: ['reinforce'], hint: 'They come in fast.' },
+    dim:       { name: 'Dim cloth',       from: 2, hint: 'The lights are low. Your own light shows the way.' },
+    weave:     { name: 'Weaving shots',   from: 2, hint: 'Their shots weave from side to side.' }
+  };
+  // dive weights by stage: single is today's dive; the rest are new. cost = how many dive intervals the pattern uses up.
+  const DIVES = {
+    cost: { single: 1, group: 1.9, pair: 1.5, trio: 2.0, sweep: 2.0, kami: 2.2 },
+    byStage: [ { single: 1, pair: 0.25 }, { single: 1, pair: 0.45, group: 0.25 }, { single: 1, pair: 0.45, group: 0.4, trio: 0.3 }, { single: 1, pair: 0.4, group: 0.5, trio: 0.4, sweep: 0.35 },
+      { single: 1, pair: 0.4, group: 0.5, trio: 0.4, sweep: 0.4, kami: 0.3 }, { single: 1, pair: 0.4, group: 0.55, trio: 0.5, sweep: 0.45, kami: 0.4 },
+      { single: 1, pair: 0.4, group: 0.6, trio: 0.5, sweep: 0.5, kami: 0.5 }, { single: 1, pair: 0.4, group: 0.6, trio: 0.6, sweep: 0.55, kami: 0.6 } ] };
+  // boss previews: the third wave of each stage uses attacks its boss uses, through the same warned and drawn kinds. [kind, seconds between, option]
+  const PREVIEWS = {
+    fan:    { name: 'Spreads',       hint: 'The Great Lappet fires spreads like these.', list: [['fan', 4.2, 5]] },
+    net:    { name: 'Nets',          hint: 'Mother Tinea sends nets like these. Find the gap.', list: [['net', 7.2]] },
+    coal:   { name: 'Falling coals', hint: 'The Great Wick drops coals like these.', list: [['coal', 3.4]] },
+    aimed:  { name: 'Aimed strikes', hint: 'The Atlas aims at you like this.', list: [['aimed', 3.2, 3], ['strike', 7.0]] },
+    glare:  { name: 'Glare',         hint: 'The Unraveller floods columns with light like this.', list: [['glare', 6.5], ['knot', 5.0]] },
+    strike: { name: 'Column strikes', hint: 'The Carpet Beetle strikes columns like this.', list: [['strike', 4.4]] },
+    web:    { name: 'Web lines',     hint: 'The Silk Empress strings lines like this. Dash through them.', list: [['web', 7.5]] },
+    ring:   { name: 'Rings',         hint: 'The Moth King fires rings like this.', list: [['ring', 5.5, 12], ['glare', 8.5]] }
+  };
+  const PREVIEW_OF = ['fan', 'net', 'coal', 'aimed', 'glare', 'strike', 'web', 'ring'];
 
   // ---- Difficulty: scales enemy health, speed and fire, and what a run pays. ----
   const MODES = {
@@ -428,5 +551,5 @@
     stageHp: 0.2, stageSpeed: 0.04, stageShot: 0.05     // per stage: enemies get tougher, faster, and their shots quicker
   };
 
-  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
+  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
 })(typeof window !== 'undefined' ? (window.ST = window.ST || {}) : (globalThis.ST = globalThis.ST || {}));
