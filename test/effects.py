@@ -156,7 +156,8 @@ def run_case(b, base, case, size, quality, fails, notes, reduced=False):
         a = Image.open(shots[-6]).convert('RGB'); c = Image.open(shots[-1]).convert('RGB')
         diff = ImageChops.difference(a, c).convert('L'); changed = sum(diff.histogram()[7:]); info['pixels_changed_under_sheet'] = changed
         # (with "remove animations" on the light version barely moves on purpose: the frame count above is the check)
-        if changed < 400 and not reduced: fails.append(f"{name}: the picture under the results sheet did not change in 1 s ({changed} pixels)")
+        calm = case == 'king' and pg.evaluate("!!(ST.Cine && ST.Cine.has && ST.Cine.has('ending'))")   # the victory page after the ending film is meant to be still
+        if changed < 400 and not reduced and not calm: fails.append(f"{name}: the picture under the results sheet did not change in 1 s ({changed} pixels)")
         if case == 'bonus' and probe['maxRockets'] == 0 and not reduced: fails.append(f'{name}: no fireworks at all after a perfect bonus wave')
         if not reduced and A.tag != 'before':
             if not probe['celebrate']: fails.append(f'{name}: the sim sent no celebrate event')

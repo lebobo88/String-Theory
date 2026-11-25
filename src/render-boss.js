@@ -578,6 +578,7 @@
       case 'fang': return this.bfFang(p, v, warn);
       case 'larva': return this.bfLarva(p, v, warn, fdt);
       case 'roller': return this.bfRoller(p, v, fdt);
+      case 'mothball': return this.bfMothball(p, v, warn, fdt);
       case 'puppetline': return this.bfPuppet(p, v, warn);
       default: return this.bfDefault(p, v, warn);
     }
@@ -889,6 +890,10 @@
     this.bfLine(this.trA, p.x, p.y, p.x2, p.y2, 0.62, w * 0.45, K.glare, 0.9 * k, 9);
     this.bfLine(this.trN, p.x, p.y, p.x2, p.y2, 0.58, w * 0.6, K.dbrown, 0.8 * k, 8, 0, 0.1, t * 40);
     this.spr.add(p.x2, p.y2, 0.8, w * 2.4, K.ember, 0.8 * k, 8, t * 4);
+  };
+  P.bfMothball = function (p, v, warn, fdt) {   // a loose mothball rolling about the cloth (Mothball Row), turning the way it rolls
+    const d = p.data || {}; p._spin = (p._spin || 0) - ((d.vx || 0) / Math.max(0.2, p.r || 0.45)) * (fdt || 0);
+    return this.bfSprite(p, 0.12, p._spin, (p.r || 0.45) * 2.6) || this.bfDefault(p, v, warn);
   };
   P.bfLarva = function (p, v, warn, fdt) {   // a larva crawling, wriggling as it goes
     const K = this.bf.K, t = this.time, r = p.r || 0.4, dx = p.x - v.lx, dy = p.y - v.ly;
