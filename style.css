@@ -904,6 +904,8 @@ body.lefty #fps { left: auto; right: var(--sp-6); }   /* left-hand mode puts the
   .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
   .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
   .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
+  .node b { font-size: var(--t-floor); }   /* the perk tiles' names hold at the 12 px floor at large text too: a tile is a fixed slot */
+  html.text-large .shop .pseg .tabb b { font-size: var(--t-floor); }
   .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }   /* 21 blueprints with the four newest weapons' */
   .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(var(--nc, 5), minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }

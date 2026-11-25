@@ -205,7 +205,7 @@
 
   // ---------- the swarm body ----------
   function swarm(sim, b) {
-    const s = b.s; s.swarmT = 1.7; s.heat = 0; b.hidden = true; s.poseBack = b.pose; b.pose = 'swarm';
+    const s = b.s; s.swarmT = 1.3; s.heat = 0; b.hidden = true; s.poseBack = b.pose; b.pose = 'swarm';
     sim.cue(b, 'swarm', { x: b.x, y: b.y });
     if (sim.enemies.length < 5) for (const sd of [-1, 1]) sim.spawnAt('nibbler', b.x + sd * 1.5, b.y - 1, { passes: 0 });
   }

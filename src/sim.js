@@ -15,6 +15,7 @@
   const STOP_RATE = 0.08, STOP_GAP = 0.3;
   /* The last-second save: a hit waits this many seconds before it lands, and a bomb used inside the window cancels it. */
   const BOSS_PACE_K = 0.3, BOSS_PACE_MIN = 0.7, BOSS_FAST = 0.75, BOSS_FAST_PAY = 0.25;   // rework: bosses: the speed reward (see killBoss)
+  const QUILT_BOSS = 2;   // rework: bosses: seconds of your own fire the Quilt pays a boss on its own, before the bullets it draws in
   const GRAZE_FRAY = 0.04, NEAR_FRAY = 0.35, NEAR_T = 0.3;   // rework: bosses: fray from a graze; body weight of a close-range hit (a shot younger than NEAR_T s)
   const BOSS_DMG_CHARMS = { fan: 1, wide: 1, seek: 1, split: 1, streak: 1, spool: 1, twin: 1, drone: 1, pierce: 1, fraydust: 1 };
 const HIT_BUFFER = 0.15;
@@ -1573,6 +1574,7 @@ const HIT_BUFFER = 0.15;
       else if (id === 'quilter') {   // Quilt: the bullets near you are drawn in for a shield, and a quilted patch keeps drawing them in; on a boss each one becomes fray
         this.unravel(pl.x, pl.y, 4.6, false); this.emit('burst', { x: pl.x, y: pl.y, r: 4 }); if (pl.ply < d.ply) pl.ply++; else this.armed.thimble = true;
         this.zones.push({ id: this.nextId++, kind: 'quilt', x: pl.x, y: pl.y, r: 4.6, life: 3 });
+        if (b) { this.damageBoss(this.bossPay(QUILT_BOSS), b.x, true, 'S'); this.fillFray(b, SPECIAL_FRAY.quilt * 2); }   // rework: bosses: a boss with few bullets out still feels the quilt (the plan: every special has a boss use)
       }
       else if (id === 'embroidery') this.fx.sign = b ? SIGN_BOSS : SIGN_WAVE;   // Signature: lasts longer against a boss
       else if (id === 'tapestry') this.zones.push({ id: this.nextId++, kind: 'sweep', y: pl.y + 0.9, vy: 10, life: 4, hit: {} });

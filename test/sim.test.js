@@ -318,5 +318,40 @@ function fly(profile, seed, skill, log) {
     ok(r.outcome && r.seen.charm > 20, 'a run with every upgraded power-up ends cleanly (' + r.outcome + ', ' + (r.seen.charm || 0) + ' pickups)');
   }
 }
+// --- rework: the bomb stock, the last-second save and the loose threads a boss sheds ---
+{
+  const mk = (opt) => { const q = ST.save.freshProfile(); if (opt) opt(q); const s = new ST.Sim(q, 11); s.startStage(); s.enemies.length = 0; s.extras = []; s.diveT = s.fireT = 1e9; s.phase = 'play'; s.player.invuln = 0; s.spawn('nibbler', { state: 'form', slot: true, sx: 6.2, sy: 17.8, row: 0, hp: 999 }); return s; };   // one far-off moth keeps the wave open
+  const go = (s, sec, inp) => { const ev = []; for (let f = 0; f < Math.round(sec * 60); f++) { s.update(1 / 60, Object.assign({ fire: false, notion: -1, dash: 0, targetX: s.player.x }, inp)); ev.push(...s.events); } return ev; };
+  { // the stock: one to start, three at most, a pickup adds one, none held means nothing fires
+    const s = mk(); ok(s.player.bombs === 1 && s.player.bombMax === 3, 'a run starts with one bomb and room for three');
+    s.player.bombs = 3; s.charm('bomb'); ok(s.player.bombs === 3, 'a pickup at a full stock adds none');
+    s.player.bombs = 0; ok(s.useBomb() === false && s.player.bombs === 0, 'with no bomb held the button does nothing');
+    s.player.bombs = 2; ok(s.useBomb() === true && s.player.bombs === 1, 'using a bomb spends one');
+    const q = mk(p => { p.pattern.bombPlus = true; }); go(q, 0.05); ok(q.player.bombMax >= 3, 'a Spare Bomb perk never lowers the ceiling');
+    const t = mk(); t.player.bombs = 1; const ev = []; t.input = {}; ev.push(...go(t, 0.05, { bomb: true })); ok(t.player.bombs === 0 && ev.some(e => e.t === 'bomb'), 'the bomb input fires one bomb and says so');
+    ok(t.player.invuln >= 1.4, 'a bomb keeps the ship safe for about a second and a half');
+    t.eshot('frass', 0, 10, 0, -1); ok(t.eshots.length === 1, 'bench: one shot in the air'); t.player.bombs = 1; t.useBomb(); ok(t.eshots.length === 0, 'a bomb clears the enemy shots');
+  }
+  { // last-second save: with a bomb held a hit waits 0.15 s; a bomb inside the window cancels it, otherwise it lands
+    const s = mk(); s.player.bombs = 1; const ply = s.player.ply;
+    s.hurt(); ok(s.hitBuf > 0 && s.player.ply === ply, 'with a bomb held a hit waits before it lands');
+    const ev = go(s, 0.05, { bomb: true }); ok(s.player.ply === ply && s.player.bombs === 0, 'a bomb inside the window cancels the hit');
+    ok(ev.some(e => e.t === 'bomb' && e.save), 'the bomb event says it was a save');
+    go(s, 0.3); ok(s.player.ply === ply, 'and the cancelled hit does not land later');
+    const u = mk(); u.player.bombs = 1; const ply2 = u.player.ply; u.hurt(); go(u, 0.3); ok(u.player.ply === ply2 - 1 && u.player.bombs === 1, 'with no bomb pressed the hit lands once the window ends and the bomb is kept');
+    const w = mk(); w.player.bombs = 1; w.hurt(); w.hurt(); w.hurt(); go(w, 0.3); ok(w.player.ply === ply2 - 1, 'shots inside the window are the same hit');
+    const x = mk(); x.player.bombs = 0; const ply3 = x.player.ply; x.hurt(); ok(x.player.ply === ply3 - 1, 'with no bomb a hit lands at once');
+    const y = mk(); y.player.bombs = 1; y.player.invuln = 0; y.armed.thimble = 1; y.hurt(); ok(y.hitBuf === 0, 'a thimble takes the hit before any bomb is risked');
+  }
+  { // a boss sheds a loose thread for every tenth of its health taken, nine in all, each a power-up that falls and fades
+    const s = mk(); s.buildKeeper(Object.keys(C.KEEPERS)[0]); const b = s.boss; b.enter = 0; b.shed = 0; s.drops.length = 0; const loose = () => s.drops.filter(d => d.loose).length;
+    s.damageBoss(b.maxHp * 0.05, b.x, true, 'S'); ok(loose() === 0, 'no thread before a tenth is gone');
+    s.damageBoss(b.maxHp * 0.06, b.x, true, 'S'); ok(loose() === 1, 'the first tenth sheds one thread');
+    s.damageBoss(b.maxHp * 0.4, b.x, true, 'S'); ok(loose() === 5 && b.shed === 5, 'a big hit sheds every tenth it crossed');
+    const ev = go(s, 0.02); ok(s.drops.filter(d => d.loose).every(d => d.kind === 'charm' || d.charm), 'every loose thread is a power-up');
+    const d0 = s.drops.find(d => d.loose); ok(d0 && d0.life <= 8, 'a loose thread fades within eight seconds');
+    s.damageBoss(b.maxHp * 0.3, b.x, true, 'S'); s.damageBoss(b.maxHp * 0.1, b.x, true, 'S'); ok(b.shed <= 9, 'nine threads at most, none for the last tenth (it is dead)');
+  }
+}
 console.log(fails ? fails + ' FAILED' : 'all checks passed');
 process.exit(fails ? 1 : 0);

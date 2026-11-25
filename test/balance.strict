@@ -1,0 +1,1 @@
+Strict is on: test/balance.js, test/economy.js and test/variety.js fail on any check outside its band (docs/BALANCE.md).

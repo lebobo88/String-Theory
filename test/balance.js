@@ -113,13 +113,20 @@ function hitsTaken(p) {
   }
   return hits;
 }
+/* The x of the boss's body farthest from every weak spot (inside 70% of its half-width): aiming at b.x itself hits a centred weak spot
+   (the Unraveller's mouth, the Empress), which is not a body shot (rework: bosses). */
+function bodyX(b) {
+  const soft = b.def.soft || [], hw = b.def.halfW * 0.7; let best = b.x, bd = -1;
+  for (let k = -10; k <= 10; k++) { const x = b.x + hw * k / 10; let d = 1e9; for (const sp of soft) d = Math.min(d, Math.abs(x - (b.x + sp.x)) - sp.r); if (d > bd + 1e-6) { bd = d; best = x; } }
+  return best;
+}
 /* Share of a boss's health removed per second when only its body is shot at (no weak spot), over the bosses with heavy armour. */
 function bodyShotRate(p, ids) {
   const out = [];
   for (const id of ids) {
     const sim = K.bossSim(p, id, 1); let t0 = null, f = 0;
     for (; f < 60 * 40; f++) { const b = sim.boss; if (!b) break; sim.player.invuln = 1; if (sim.phase === 'play' && !(b.enter > 0) && t0 === null) { t0 = f; var h0 = b.hp; }
-      if (t0 !== null && f - t0 >= 60 * 20) break; sim.update(1 / 60, K.go(b.x, K.HOME)); }
+      if (t0 !== null && f - t0 >= 60 * 20) break; sim.update(1 / 60, K.go(bodyX(b), K.HOME)); }
     out.push(sim.boss ? (h0 - sim.boss.hp) / sim.boss.maxHp / 20 : 1 / 20);
   }
   return K.mean(out);
@@ -139,7 +146,7 @@ function measureVariant(id, variant, ctx) {
   return m;
 }
 function partWeapons() {
-  const ctx = { waves: WAVES.map(([a, b]) => [a, b]), armoured: bossIds.filter(b => (C.KEEPERS[b].armour !== undefined && C.KEEPERS[b].armour <= 0.3)) };
+  const ctx = { waves: WAVES.map(([a, b]) => [a, b]), armoured: bossIds.filter(b => (C.KEEPERS[b].armour !== undefined && C.KEEPERS[b].armour <= 0.3 && !C.KEEPERS[b].guarded)) };   // a guarded boss is armoured only in short moments (rework: bosses)
   if (!ctx.armoured.length) ctx.armoured = bossIds.slice(0, 3);
   const best = {}, rows = [];
   for (const id of K.weaponIds()) {

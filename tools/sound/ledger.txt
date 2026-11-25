@@ -209,3 +209,6 @@ fire_blanket HepFjMnd6EaiBYIVYPPN 0.4
 fire_pins rEsWuK5VsRlAWC1QDcHF 0.2
 pin_stick zdLcbRudLvr6NCqZuOLC 0.15
 petal_block ftPCsBxThoEtZAfAm5Ka 0.3
+btl_creak ZDM0UyVJpakOKvUwfAz4 0.6
+btl_mothball pHFP9u9xYfMDqc1g8KEB 0.5
+boss_mend YIwka4l2BuG3XfmtYdOz 0.6

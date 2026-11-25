@@ -46,7 +46,8 @@ Definitions that matter:
 - **Fight length** is the time with the boss able to act, from a flawless never-hit bot ("proper" bot that plays the mechanic, god mode). It is a floor, not a human time. It excludes the stage intro and entrance (about 2.4 s), so it runs that much below the old `tools/bossbot.js` numbers.
 - **Uptime** is the share of the fight in which the best shot (any weak spot or the body) would do at least its sheet damage (multiplier 1 or more). It asks the boss itself, with a near-zero shot through `sim.bossHit`, so it does not depend on the boss's internal fields. Armour hits (0.15 to 0.6), shields, hidden and reflecting states do not count.
 - **Expected build** is what the audit's competent player has earned when they first meet each boss, spent by a buyer that saves for damage, fire rate and weapon levels on the Double Stitch lead and Single Stitch bobbin (the pair the repo's boss loadout uses). Income is the economy audit's A4 table (cumulative coins and gems after runs 1 to 5 and 8: 424/6, 1,615/26, 3,752/56, 8,553/123, 14,071/219, 36,345/629), read as "boss k is met in about run k with everything earned in the runs before" (runs 6 and 7 interpolated; boss 1 is a fresh ship, as in `src/bosses.js`). The income is fixed so the expected build does not move when waves or bosses change; what it buys comes from the live shop, so it moves when prices, caps or levels change. The table is `INCOME_AT_BOSS` in `test/lib/econ.js`.
-- **Full build** is every owned weapon at its top level (3 today, 10 after the rework), every ship upgrade at its cap (level XV when a cap is removed), all perks except the exchange perk, Sharps ship, lead Double Stitch with Single Stitch on the bobbin.
+- **Full build** (rework: bosses, the lead's definition) is every weapon at its top level (X) with its forks (first option), every ship upgrade at level X, every perk except the exchange perk, no finds or heirlooms, Sharps ship, lead Double Stitch with Single Stitch on the bobbin (`test/lib/econ.js` `fullBuild`), flown at **Fray step 20** with every twist of that step (`FULL_FRAY`). At step 0 that ship is 4 to 11 times as fast at a boss as the expected build, so no boss health that suits the expected build can hold it to the plan's 25 to 85 s; boss health grows with the Fray dial (per boss, `FRAY_HP` in `src/bosses.js`), never with the player's upgrades (docs/DEPARTURES.md, "Rework: bosses"). Specials and the bomb are measured on the same build. The weapon tests keep `core.js` `fullProfile` (tempers at XV, step 0): they compare weapons with each other.
+- **Ignore bot** (boss tests): the mean of 3 seeds of a bot that only sits under the weak spot and shoots must be 1.3 to 3 times the proper bot's (the balance test checks at most 3, on seed 1).
 - **Weapon tests** put one weapon, solo, on the full ship: damage per second on a lone target at 3, 8 and 14.4 units (and a boss-body-sized one), how much of a row of 27 targets one second of fire hits, wave clear time with an auto-aim pilot that flies the home row or forward (whichever is faster for that weapon), with enemy health x6 so the clear is limited by damage instead of by the moths arriving, kill time against all 8 bosses, and hits taken by a ship that never moves. Each weapon has one job metric (`soft`, `mid`, `clear`, `cover`, `armour`, `defence`, `overall`); unknown weapons are placed by the words in their `job`, or set `jobMetric` in content. When a weapon has forks, each metric takes its best variant.
 - **Economy income** is the audit's bot (`/tmp/plan2/economy/bot.js`) with skill proxies `aid 20` (competent) and `aid 8` (average) flying real runs for 12 runs, then the mean of the last three runs for the rest, with a buyer spending everything at every hideout visit.
 
@@ -245,3 +246,21 @@ seed  formations  entries  distinct pairs  repeated pairs  twists used  distinct
 ## Names the tests rely on
 
 See the "Shared names" section of `docs/REWORK.md` (weapon levels and forks, `bossHit`, `boss.frayed`, the bomb stock and `bomb` input, the exchange spec, the wave deck, the shop functions). Everything is read at run time, so a new weapon id, a longer `lv` array, a new ship or boss is picked up without changing the tests. What a stream has to keep working: the boss bots copied into `test/lib/bots.js` for bosses 5 to 8, the shop `xState` / `buyX` pairs listed in `KINDS` in `test/lib/econ.js` (a shop function that is not listed is printed by `economy.js`), and `sim.bossHit` returning a damage multiplier.
+
+## After the boss rework (2026-11-25)
+
+All five parts pass with `BALANCE_STRICT=1` (126 checks); `test/balance.strict` exists, so strict is on by default.
+
+```
+boss         expected s  band     full s (Fray 20)  band   phases (expected s)  uptime exp  uptime full  ignore/proper
+greatlappet  50.8        45-70    31.7              25-40  29/22                82%         82%          2.27
+tinea        56.0        45-70    34.0              25-40  29/27                79%         88%          1.58
+greatwick    55.9        45-70    34.4              25-40  28/28                91%         87%          1.70
+atlas        60.3        45-70    34.6              25-40  29/31                89%         84%          2.27
+unraveller   83.3        70-100   51.0              40-60  29/29/24             68%         72%          2.55
+beetle       78.6        70-100   54.8              40-60  30/26/23             89%         83%          1.82
+empress      86.0        70-100   49.0              40-60  30/29/28             81%         74%          2.76
+king         125.3       110-140  70.5              65-85  34/30/36/26          82%         76%          1.68
+```
+
+The specials part now scales wave health like the clear-time test and scores boss specials against the ship's own fire on that boss; the armour metric shoots the body away from weak spots. See docs/DEPARTURES.md, "Rework: bosses", for why each changed.

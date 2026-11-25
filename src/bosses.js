@@ -42,7 +42,7 @@
      INCOME_AT_BOSS spent in the reworked shop) so that a good player with that build needs about 28 s a phase: 2 phases
      (about 57 s) for bosses 1 to 4, 3 (85 s) for 5 to 7, 4 (125 s) for the Moth King. Measured with the proper bots of the boss tests
      (node test/balance.js --only bosses). POWER above now only scales the things a boss puts on the cloth (eggs, fuses, larvae). */
-  const HP = { greatlappet: 311, tinea: 900, greatwick: 2150, atlas: 2435, unraveller: 5000, beetle: 4980, empress: 6600, king: 10170 };
+  const HP = { greatlappet: 275, tinea: 900, greatwick: 2150, atlas: 2435, unraveller: 5000, beetle: 4980, empress: 6600, king: 10600 };
   /* PAR: the fight length (seconds, breaks included) past which the boss's coins shrink, gently, to 70% (sim.js killBoss); finishing in
      three quarters of it pays a fast-finish bonus. It is the top of the plan's band for a good player with the expected build. */
   const PAR = { greatlappet: 70, tinea: 70, greatwick: 70, atlas: 70, unraveller: 100, beetle: 100, empress: 100, king: 140 };
@@ -51,7 +51,7 @@
      first bosses (met with a nearly fresh ship), about 4 at the last. So each boss grows by how far it is outgrown, which puts the
      plan's "fully upgraded" fight lengths (25 to 40, 40 to 60, 65 to 85 s) at the deepest step, 20 (test/lib/econ.js fullBuild).
      Health never reads the player's own upgrades. */
-  const FRAY_HP = { greatlappet: 0.37, tinea: 0.29, greatwick: 0.088, atlas: 0.06, unraveller: 0.033, beetle: 0.0155, empress: 0.004, king: 0.003 };
+  const FRAY_HP = { greatlappet: 0.32, tinea: 0.29, greatwick: 0.088, atlas: 0.06, unraveller: 0.033, beetle: 0.0155, empress: 0.004, king: 0.003 };
   ST.bossHp = HP;
   ST.registerBoss = function (id, script) {
     if (!C.KEEPERS[id]) throw new Error('unknown boss ' + id);
@@ -77,7 +77,9 @@
       if (b.enter > 0) { b.enter = Math.max(0, b.enter - dt); if (sc.enter) sc.enter(this, b, dt); return; }   // the entrance film covers the arrival: the boss stays where init put it
       if (this.phase !== 'play') return;
       b.age += dt;   // the whole fight, breaks included (the speed reward reads it)
-      const n = def.phases.length, ph = Math.min(n, 1 + Math.floor((1 - b.hp / b.maxHp) * n));
+      const n = def.phases.length, lost = 1 - b.hp / b.maxHp;
+      let ph = Math.min(n, 1 + Math.floor(lost * n));
+      if (def.split) { ph = 1; for (const at of def.split) if (lost >= at) ph++; }   // def.split: where each later phase starts, as the share of health lost (default: equal shares)
       if (ph !== b.phase) { b.phase = ph; this.emit('phase', { name: def.name, phase: ph, tag: def.phaseTag[ph - 1] }); if (sc.onPhase) sc.onPhase(this, b, ph); }
       if (b.stun > 0) {
         b.stun -= dt; b.frayed = Math.max(0, b.stun);

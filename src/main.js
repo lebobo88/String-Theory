@@ -114,6 +114,9 @@
       in_beetle:   ['in_beetle.mp3',   'Heavy thumps under a floor getting closer, something circling beneath, then a wooden frame splintering as a hard shell bursts through and rolls past, three sharp knocks on wood, and a metallic shing, 4 seconds', 0.9, 'phase'],
       btl_aim:     ['btl_aim.mp3',     'A hard shell clicking shut and a heavy ball starting to spin up on cloth, ratcheting clicks rising, 0.7 seconds', 0.6, null],
       btl_bounce:  ['btl_bounce.mp3',  'A heavy hard ball knocking off a wooden rail, a solid billiard-like clack, 0.25 seconds', 0.7, 'hit'],
+      btl_creak:   ['btl_creak.mp3',   'A rolling armoured shell straining: a sharp woody creak of plates under pressure with a bright tick on top, a clear "now" cue, 0.35 seconds', 0.8, 'deflect'],   // rework: bosses: the matador's moment
+      btl_mothball: ['btl_mothball.mp3', 'A hard white mothball knocked loose and skittering across a felt table: a small knock then a soft rolling patter, 0.4 seconds', 0.5, 'hit'],   // rework: bosses: Mothball Row
+      boss_mend:   ['boss_mend.mp3',   'Loose threads drawn tight again: a quick rising zip of thread through cloth and a soft taut pluck, the break is over, 0.5 seconds', 0.6, 'repad'],   // rework: bosses: a break ends (cue recover, event mended)
       btl_slam:    ['btl_slam.mp3',    'A heavy armoured ball crashing full speed into a wooden frame and flipping over, big crunch, rattling shell and a dazed wobble, 1 second', 0.9, 'burst'],
       in_empress:  ['in_empress.mp3',  'Silk strands shooting across a room one at a time, each a quick taut zing, building a web, then something descending slowly on one creaking thread, a delicate sinister music-box phrase, the line cut with a snip, 4 seconds', 0.9, 'phase'],
       emp_spin:    ['emp_spin.mp3',    'Silk being spun fast from a spinneret, a fine whirring thread drawn out with a soft high whine, 0.7 seconds', 0.55, null],
@@ -380,10 +383,10 @@
     'greatwick:light': 'wick_light', 'greatwick:swell': 'wick_swell', 'greatwick:misfire': 'wick_misfire', 'greatwick:boom': 'burst', 'greatwick:throw': 'burst', 'greatwick:snuff': 'tcut', 'greatwick:blink': 'dash',
     'atlas:open': 'atl_open', 'atlas:spotted': 'atl_spotted', 'atlas:sweep': 'atl_sweep', 'atlas:drag': 'atl_sweep', 'atlas:strike': 'lance',
     'unraveller:snag': 'unr_snag', 'unraveller:snap': 'tcut', 'unraveller:bite': 'hurt', 'unraveller:unravel': 'unr_unravel', 'unraveller:restitch': 'xstitch', 'unraveller:inhale': 'unr_inhale', 'unraveller:choke': 'boss_stun', 'unraveller:hookaim': 'btl_aim',
-    'beetle:aim': 'btl_aim', 'beetle:bounce': 'btl_bounce', 'beetle:slam': 'btl_slam', 'beetle:burrow': 'unr_unravel', 'beetle:erupt': 'burst', 'beetle:larvae': 'tin_lay',
+    'beetle:aim': 'btl_aim', 'beetle:bounce': 'btl_bounce', 'beetle:slam': 'btl_slam', 'beetle:burrow': 'unr_unravel', 'beetle:erupt': 'burst', 'beetle:larvae': 'tin_lay', 'beetle:creak': 'btl_creak', 'beetle:mothball': 'btl_mothball',
     'empress:spin': 'emp_spin', 'empress:weave': 'emp_spin', 'empress:cocoon': 'emp_cocoon', 'empress:free': 'repad', 'empress:fall': 'emp_fall', 'empress:snapline': 'tcut', 'empress:puppet': 'atl_open', 'empress:storm': 'unr_inhale',
     'king:swarm': 'king_swarm', 'king:reform': 'atl_open', 'king:eclipse': 'king_eclipse', 'king:jewel': 'king_jewel', 'king:wrongjewel': 'deflect', 'king:crown': 'sp_ready', 'king:pair': 'xstitch', 'king:fail': 'atl_spotted', 'king:pass': 'charm', 'king:laststand': 'unr_unravel',
-    stun: 'boss_stun'
+    stun: 'boss_stun', recover: 'boss_mend'
   };
   const SHORT_SFX = { greatlappet: 'ins_lappet', tinea: 'ins_tinea', greatwick: 'ins_wick', atlas: 'ins_atlas', unraveller: 'ins_unraveller', beetle: 'ins_beetle', empress: 'ins_empress', king: 'ins_king' };
   const DEATH_SFX = { greatlappet: 'out_lappet', tinea: 'out_tinea', greatwick: 'out_wick', atlas: 'out_atlas', unraveller: 'out_unraveller', beetle: 'out_beetle', empress: 'out_empress', king: 'out_king' };

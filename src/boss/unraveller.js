@@ -54,7 +54,7 @@
 
   const script = {
     def: {
-      hp: 4800, stunTime: 4.5, frayAt: 0.12, armour: 0.15,
+      hp: 4800, stunTime: 4.5, frayAt: 0.12, armour: 0.15, split: [0.3, 0.6],   // its last phase (it breathes in) is the quickest, so it starts sooner
       soft: [{ x: 0, r: 0.9 }], softName: 'Its mouth, only while it is open',
       phases: ['Two hook arms roam the cloth and snag your ship. Dash to snap the line.', 'The cloth unravels under you and light beams fill whole columns. Hits on the open mouth sew it back.', 'It breathes in, dragging your ship, coins and shots toward its mouth. A bomb or special down its throat chokes it.'],
       phaseTag: ['Hooks and mines', 'The cloth unravels', 'It breathes in']

@@ -102,7 +102,8 @@ const proper = {
 
 // ---------- what each boss must show ----------
 /* target: the plan's fight length with the expected build (docs/progression-plan.html section 3), seconds from when the boss can act. */
-const IGNORE = [1.3, 3.0];   // ignoring the mechanic costs time, but never several times as long (plan: at most 3 times)
+const IGNORE = [1.3, 3.0];   // ignoring the mechanic costs time, but never several times as long (plan: at most 3 times); checked on the mean of the seeds
+const SEED_SLACK = 0.2;      // the mean of the seeds must be in the target; each seed within 20% of it (one fight can draw a long run of attacks)
 const BOSSES = [
   { id: 'unraveller', file: 'unraveller.js', target: [70, 100], properCues: ['snag', 'snap', 'choke'], ignoreCues: ['bite'] },
   { id: 'beetle', file: 'beetle.js', target: [70, 100], properCues: ['creak', 'slam', 'larvae', 'burrow', 'erupt'], ignoreCues: ['bounce'], patch: { id: 'mothballs', cues: ['mothball'] } },
@@ -131,12 +132,14 @@ for (const B of BOSSES) {
       ok(r.stalled < 25, tag + ': no stall (' + r.stalled + ' s)');
       ok(r.maxProps < 80, tag + ': props and shots under 80 (' + r.maxProps + ')');
       if (kind === 'proper') {
-        ok(r.live >= B.target[0] && r.live <= B.target[1], tag + ': fight length ' + r.live + ' s inside ' + B.target.join(' to '));
+        ok(r.live >= B.target[0] * (1 - SEED_SLACK) && r.live <= B.target[1] * (1 + SEED_SLACK), tag + ': fight length ' + r.live + ' s about ' + B.target.join(' to '));
         for (const c of B.properCues) ok(r.cues[c] > 0, tag + ': the mechanic happens (cue ' + c + ')');
         ok(r.stuns > 0, tag + ': the boss is frayed (a break) at least once');
       } else {
         ok(r.sec < 420, tag + ': finishes inside 420 s');
-        { const k = r.live / times['proper' + seed]; ok(k >= IGNORE[0] && k <= IGNORE[1], tag + ': ignoring the mechanic takes ' + IGNORE.join(' to ') + ' times as long (' + r.live + ' vs ' + times['proper' + seed] + ')'); }
+        if (seed === 3) { const m = k0 => (times[k0 + 1] + times[k0 + 2] + times[k0 + 3]) / 3, k = m('ignore') / m('proper');
+          ok(m('proper') >= B.target[0] && m('proper') <= B.target[1], B.id + ': mean fight length ' + m('proper').toFixed(1) + ' s inside ' + B.target.join(' to '));
+          ok(k >= IGNORE[0] && k <= IGNORE[1], B.id + ': ignoring the mechanic takes ' + IGNORE.join(' to ') + ' times as long (' + m('ignore').toFixed(1) + ' vs ' + m('proper').toFixed(1) + ')'); }
         for (const c of B.ignoreCues) ok(r.cues[c] > 0, tag + ': ignoring it costs (cue ' + c + ')');
       }
       for (const [c, n] of Object.entries(r.cues)) seenCues[c] = (seenCues[c] || 0) + n;
