@@ -18,9 +18,9 @@
 const HIT_BUFFER = 0.15;
   const SIDES = [-1, 1];   // weapons: left and right
   const byY = (a, b) => a.y - b.y;
-  const LOOP_A = [0, -10, 10, -20, 20, -5, 5];   // Blanket Stitch: the slant of each loop, in turn (degrees from straight up)
-  const PIN_REACH = 9;   // Tacking Pins: how far up the cloth a pin's shots go
-  const CROSS_K = [1, 0.85, 1.15, 0.92, 1.08, 0.78];   // Cross Stitch: each volley's angle, as a share of the weapon's angle
+  const LOOP_A = [0, -8, 8, -16, 16, -4, 4];   // Blanket Stitch: the slant of each loop, in turn (degrees from straight up)
+  const PIN_REACH = 7.5;   // Tacking Pins: how far up the cloth a pin's shots go
+  const CROSS_K = [1, 0.8, 1.2, 0.9, 1.12, 0.72];   // Cross Stitch: each volley's angle, as a share of the weapon's angle
   const PIN_X = [0, -0.7, 0.7, -1.6, 1.6, 0.35, -0.35, -2.4, 2.4];   // Tacking Pins: where each pin lands, across from the gun, in turn
   /* What a special does to a boss, in seconds of your own recent fire (bossPay) and in fray (0..1 of the meter). Tuned against test/balance.js --only specials. */
   const SPECIAL_PAY = { seam: 5, lasso: 1.2, bead: 0.7, sail: 5.5, loom: 5, tie: 3.5, darn: 3.5, quilt: 0.3 };
@@ -635,7 +635,7 @@ const HIT_BUFFER = 0.15;
     }
     lance(x, y, halfW, dmg, src, live, quiet) {   // live: the mastered beam arcs out to two enemies beside it; quiet: the afterglow (no new beam drawn)
       this.emit('lance', { x, y, w: halfW * 2, glow: !!quiet });
-      { const hit = this.lanceHit || (this.lanceHit = []); hit.length = 0;   // the beam hits moths a little softer than bosses and loses 40% through each moth it passes
+      { const hit = this.lanceHit || (this.lanceHit = []); hit.length = 0;   // the beam is made for bosses: moths take about half as much, and 40% less through each moth it passes
         for (const e of this.enemies) if (Math.abs(e.x - x) < halfW + e.r && e.y > y) hit.push(e);
         if (hit.length > 1) hit.sort(byY);
         let k = 0.72; for (let i = 0; i < hit.length; i++) { this.damageEnemy(hit[i], dmg * k, true, src); k = Math.max(0.2, k * 0.6); }
@@ -646,7 +646,7 @@ const HIT_BUFFER = 0.15;
       }
       for (let i = this.eshots.length - 1; i >= 0; i--) { const s = this.eshots[i]; if (s.kind === 'knot' && Math.abs(s.x - x) < halfW + 0.3) this.eshots.splice(i, 1); }
       if (this.props.length) this.columnVsProps(x, halfW, y, dmg);
-      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW && this.boss.y > y) { this.hitArmour = true; this.hitFray = 1.5; this.hitFrayBody = 1; this.damageBoss(dmg, x, false, src, 1, this.boss.y); this.hitArmour = false; this.hitFray = 1; this.hitFrayBody = 0; }   // through armour and shields, and it frays the body: it breaks armour
+      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW && this.boss.y > y) { this.hitArmour = true; this.hitFray = 1.5; this.hitFrayBody = 1; this.damageBoss(dmg * 1.35, x, false, src, 1, this.boss.y); this.hitArmour = false; this.hitFray = 1; this.hitFrayBody = 0; }   // through armour and shields, and it frays the body: it breaks armour
     }
 
     // ---------- weapons: forks, mastery, pairings and the four newest weapons (rework, weapons stream) ----------
@@ -679,17 +679,17 @@ const HIT_BUFFER = 0.15;
           if (fo('point')) { dm = 1.6; soft = 2; } else if (fo('tack')) { dm = 0.62; pierce = 99; }
           if (pair) pierce = 99;
           const gold = mast && (pl.goldN = (pl.goldN || 0) + 1) % 5 === 0;
-          const s = add(x, y, { pierce: bp + (gold ? 99 : pierce), soft, dmg: base * L.dmg * dm * (gold ? 2 : 1), fray: gold ? 3 : 2 });
-          if (gold) s.gold = 1; if (fo('long')) s.grow = 0.7; if (fo('split')) s.splitEnd = 1;
+          const s = add(x, y, { pierce: bp + (gold ? 99 : pierce), soft, dmg: base * L.dmg * dm * (gold ? 1.5 : 1), fray: gold ? 3 : 2 });
+          if (gold) s.gold = 1; if (fo('long')) s.grow = 0.45; if (fo('split')) s.splitEnd = 1;
           return 8;
         }
         case 'backstitch': {
-          const n = L.n + (pair ? 1 : 0), wide = fo('wide'), gap = wide ? 0.7 : fo('tight') ? 0.2 : 0.34, dm = fo('tight') ? 1.15 : 1, lock = fo('lock') ? this.nextId : 0, slant = fo('slant');
+          const n = L.n + (pair ? 1 : 0), wide = fo('wide'), gap = wide ? 0.52 : fo('tight') ? 0.2 : 0.34, dm = fo('tight') ? 1.1 : wide ? 1.05 : 1, lock = fo('lock') ? this.nextId : 0, slant = fo('slant');
           const step = wide ? ((pl.backK = (pl.backK || 0) ^ 1) ? 0.5 : 0) * gap - gap / 4 : 0;   // Wide Rows: every other volley steps half a stitch across
           for (let i = 0; i < n; i++) {
-            const o = i - (n - 1) / 2, a = slant && Math.abs(o) > n / 2 - 1 ? Math.sign(o) * 7 : 0;   // Slant: the outer pair leans out
+            const o = i - (n - 1) / 2, a = slant && Math.abs(o) > n / 2 - 1 ? Math.sign(o) * 4.5 : 0;   // Slant: the outer pair leans out
             const s = add(x + o * gap + step, y, a ? ang(a, 17) : null); s.dmg = base * L.dmg * dm; s.pierce += L.pierce || 0; if (lock) s.lock = lock;
-            if (mast) { const s2 = add(x + o * gap + step, y - 0.55, a ? ang(a, 17) : null); s2.dmg = base * L.dmg * dm * 0.5; s2.row2 = 1; if (lock) s2.lock = lock + 1; }
+            if (mast) { const s2 = add(x + o * gap + step, y - 0.55, a ? ang(a, 17) : null); s2.dmg = base * L.dmg * dm * 0.25; s2.row2 = 1; if (lock) s2.lock = lock + 1; }
           }
           return slant ? 22 : 8;
         }
@@ -707,7 +707,7 @@ const HIT_BUFFER = 0.15;
         }
         case 'chain': {   // swarms; every jump frays a boss a little
           let j = L.jumps + (pair ? 1 : 0), jd = L.jd, reach = 4;
-          if (fo('long')) { reach = 6.5; j++; } else if (fo('heavy')) { jd = 1; j = Math.max(1, j - 1); }
+          if (fo('long')) { reach = 6; j++; } else if (fo('heavy')) { jd = 1; j = Math.max(1, j - 1); }
           const s = add(x, y, { chain: j, chainDmg: jd, vy: 15, reach, fray: 1 + 0.2 * j, frayB: 0.12 * j });
           if (fo('branch')) s.branch = 1; if (fo('loop')) s.loopBack = 1; if (mast) s.live = 1;
           return 8;
@@ -716,33 +716,34 @@ const HIT_BUFFER = 0.15;
           const twin = fo('twin'), slip = fo('slip'), n = twin ? 2 : 1;
           for (let i = 0; i < n; i++) {
             const s = add(x + (n > 1 ? (i - 0.5) * 0.9 : 0), y, { vy: slip ? 5.5 : 8, r: 0.3, home: false, wpn: 1, knot: slip ? 2 : 1 });
-            s.b0 = s.burst = L.burst * (twin ? 0.78 : 1) * (pair ? 1.33 : 1); s.d0 = s.dmg = base * L.dmg * (twin ? 0.62 : 1);
+            s.b0 = s.burst = L.burst * (twin ? 0.78 : 1) * (pair ? 1.33 : 1); s.d0 = s.dmg = base * L.dmg * (twin ? 0.55 : 1);
             if (fo('double')) s.echo = 1; if (fo('french')) s.drift = 1; if (mast) s.granny = 1;
           }
           return 8;
         }
         case 'cross': {   // angles: bank shots hit harder and find side weak spots
           const k = pl.crossK = ((pl.crossK || 0) + 1) % CROSS_K.length, a0 = (fo('wide') ? 40 : fo('steep') ? 14 : 25) * CROSS_K[k], b = L.bounce + (pair ? 1 : 0);   // the angle changes a little every volley
-          for (const sd of SIDES) { const s = add(x, y, ang(sd * a0, 15)); s.bounce = b; s.home = false; s.bank = 1.8; s.xs = 1; if (fo('rico')) s.rico = 1; if (fo('through')) s.thru = 1; if (mast) s.mirror = 1; }
+          const steep = fo('steep');
+          for (const sd of SIDES) { const s = steep ? add(x - sd * 1.1, y, ang(sd * a0 * 0.45, 15)) : add(x, y, ang(sd * a0, 15)); s.bounce = b; s.home = false; s.bank = 1.8; s.xs = 1; if (fo('rico')) s.rico = 1; if (fo('through')) s.thru = 1; if (mast) s.mirror = 1; }
           if (L.mid) add(x, y, { dmg: base * L.mid });
           return a0 * 2;
         }
         case 'couching': {   // breaks armour: through armour and boss shields
           let half = L.half, dm = 1;
-          if (fo('wide')) { half *= 1.65; dm = 0.85; } else if (fo('needle')) { half *= 0.5; dm = 1.45; }
+          if (fo('wide')) { half *= 1.65; dm = 0.85; } else if (fo('needle')) { half *= 0.5; dm = 1.3; }
           const dmg = base * L.dmg * dm;
           if (fo('twin')) for (const sd of SIDES) this.lance(x + sd * 0.6, y, half * 0.7, dmg * 0.6, src, mast);
           else this.lance(x, y, half, dmg, src, mast);
-          if (fo('glow')) this.fuse(0.18, 'glow', x, y, half, dmg * 0.4, src);
+          if (fo('glow')) this.fuse(0.18, 'glow', x, y, half, dmg * 0.3, src);
           return 8;
         }
         case 'satin': {   // melts one target; the build-up is held by the stream, not the target
           const wide = fo('wide'), n = wide ? 3 : L.n, R = this.satR(slot);
-          R.cap = fo('deep') ? 1.6 : wide ? 0.5 : 0.8; R.step = (fo('deep') ? 0.03 : 0.06) * (pair ? 2 : 1); R.steady = fo('steady');
+          R.cap = fo('deep') ? 1.3 : wide ? 0.5 : 0.8; R.step = (fo('deep') ? 0.04 : 0.06) * (pair ? 2 : 1); R.steady = fo('steady');
           const full = R.r >= R.cap - 1e-6;
           for (let i = 0; i < n; i++) {
             const s = add(x + (i - (n - 1) / 2) * (wide ? 0.6 : 0.5), y, { zig: wide ? 1.6 : 1, ramp: slot, t: this.t * 0.9 + i * 1.5, vy: 19 });
-            if (wide) s.dmg *= 0.8;
+            if (wide) { s.dmg *= 0.8; s.pierce += 1; }
             if (full && fo('gloss')) s.pierce += 1;
             if (full && mast) { s.gold = 1; s.fray = 2; s.frayB = 0.5; }
           }
@@ -762,12 +763,13 @@ const HIT_BUFFER = 0.15;
           return 8;
         }
         case 'blanket': {   // a loop out and back that goes through everything near its line, twice; thrown at a new slant each time
-          const tight = fo('tight'), n = (fo('pair') ? 2 : 1) + (pair ? 1 : 0), W = L.w * (fo('wide') ? 1.6 : tight ? 0.5 : 1), laps = fo('double') ? 2 : 1;
+          const tight = fo('tight'), n = (fo('pair') ? 2 : 1) + (pair ? 1 : 0), W = L.w * (fo('wide') ? 1.35 : tight ? 0.5 : 1), laps = fo('double') ? 2 : 1;
           for (let i = 0; i < n; i++) {
-            const k = pl.loopK = ((pl.loopK || 0) + 1) % LOOP_A.length, tilt = LOOP_A[k] * (fo('wide') ? 1.35 : 1) * Math.PI / 180, ct = Math.cos(tilt);
-            const s = add(x, y, { vy: 0, wpn: 1, loop: 1, side: k % 2 ? 1 : -1, w: W, ct, st: Math.sin(tilt), reach: Math.min(17, Math.max(6, (15.4 - y) / ct)),
+            const k = pl.loopK = ((pl.loopK || 0) + 1) % LOOP_A.length, ct = Math.cos(LOOP_A[k] * (fo('wide') ? 1.1 : 1) * Math.PI / 180), reach = Math.min(17, Math.max(6, (15.4 - y) / ct));
+            let st = Math.sin(LOOP_A[k] * (fo('wide') ? 1.1 : 1) * Math.PI / 180); if (Math.abs(x + st * reach) > HW - 0.8) st = -st;   // near a wall the loop leans back in
+            const s = add(x, y, { vy: 0, wpn: 1, loop: 1, side: k % 2 ? 1 : -1, w: W, ct, st, reach,
               life: L.life * (tight ? 0.8 : 1) * (laps > 1 ? 1.7 : 1), x0: x, y0: y, pierce: 99, home: false, slot, laps, pass: 0 });
-            s.dmg = base * L.dmg * (tight ? 1.25 : 1); if (mast) s.bh = 1;
+            s.dmg = base * L.dmg * (tight ? 1.25 : 1) * (n > 1 ? 0.6 : 1); if (mast) s.bh = 1;   // Paired Loops: two lighter loops
           }
           return 8;
         }
@@ -778,7 +780,7 @@ const HIT_BUFFER = 0.15;
             const tx = clamp(x + PIN_X[k] * (map ? 1.6 : 1), -HW + 0.4, HW - 0.4), ty = y + 3.2 + (k % 3) * 1.1 + (map ? 2.5 : 0);
             const dx = tx - x, dy = ty - y, dd = Math.hypot(dx, dy) || 1;
             const s = add(x, y, { vx: dx / dd * 15, vy: dy / dd * 15, wpn: 1, thrown: 1, tx, ty, home: false, life: dd / 15 + 0.04 });
-            s.dmg = base * L.dmg; s.pd = base * L.pd * (fo('hat') ? 1.4 : 1); s.every = L.every * (fo('push') ? 0.5 : 1); s.plife = L.life * (fo('push') ? 0.55 : 1);
+            s.dmg = base * L.dmg; s.pd = base * L.pd; s.every = L.every * (fo('push') ? 0.6 : 1); s.plife = L.life * (fo('push') ? 0.55 : 1);
             s.pmax = L.max + (pair ? 2 : 0); s.cushion = fo('cushion') ? 1 : 0; s.hat = fo('hat') ? 1 : 0; s.wheel = mast ? 1 : 0;
           }
           return 8;
@@ -824,7 +826,7 @@ const HIT_BUFFER = 0.15;
       const b = this.boss; if (!found && b && !b.enter && !b.hidden) { tx = this.bossAim(b, s.x, 99); ty = b.y; found = true; }
       const sp = 12.5, k = Math.min(1, dt * (s.feather === 2 ? 7 : 3.2));
       let wx = 0, wy = sp; if (found) { const dx = tx - s.x, dy = ty - s.y, dd = Math.sqrt(dx * dx + dy * dy) || 1; wx = dx / dd * sp; wy = dy / dd * sp; }
-      const vl = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1, wob = Math.sin(s.t * 7 + s.ph) * (s.feather === 3 ? 16 : 10);
+      const vl = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1, wob = Math.sin(s.t * 7 + s.ph) * (s.feather === 3 ? 19 : 12);
       s.vx += (wx - s.vx) * k - s.vy / vl * wob * dt; s.vy += (wy - s.vy) * k + s.vx / vl * wob * dt;
       const v2 = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1; s.vx *= sp / v2; s.vy *= sp / v2;
       if (s.y < BOT - 0.5) s.gone = 1;
@@ -844,12 +846,12 @@ const HIT_BUFFER = 0.15;
     /* After a shot hits a moth: what the weapon does next. */
     shotHit(s, e) {
       if (s.thrown) { this.stickPin(s, s.x, s.y); s.gone = 1; return; }
-      if (s.kid) return;
+      if (s.kid || !(s.splitEnd || s.shrap || s.seed || s.plume)) return;
       const sp = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 15, hit = [e.id];
       if (s.splitEnd && e.dead) for (const sd of SIDES) this.loose(s.src, s.kind, s.x, s.y, sd * sp * 0.34, sp * 0.94, s.dmg * 0.5, { hit: hit.slice(), soft: s.soft, fray: s.fray });
       if (s.shrap && e.dead) for (let k = -1; k <= 1; k++) this.loose(s.src, s.kind, s.x, s.y, k * 6, 13, s.dmg * 0.4, { hit: hit.slice(), fall: 1, t: s.t });
-      if (s.seed) for (let k = -1; k <= 1; k++) this.loose(s.src, 'daisy', s.x, s.y, k * 5, 14, s.dmg * 0.35, { hit: hit.slice(), r: 0.1, seedling: 1 });
-      if (s.plume) for (const sd of SIDES) this.loose(s.src, 'feather', s.x, s.y, sd * 10, 7, s.dmg * 0.4, { hit: hit.slice(), wpn: 1, feather: 1, ph: s.ph + sd, life: 1.2 });
+      if (s.seed) for (let k = -1; k <= 1; k++) this.loose(s.src, 'daisy', s.x, s.y, k * 5, 14, s.dmg * 0.2, { hit: hit.slice(), r: 0.1, seedling: 1 });
+      if (s.plume) for (const sd of SIDES) this.loose(s.src, 'feather', s.x, s.y, sd * 10, 7, s.dmg * 0.25, { hit: hit.slice(), wpn: 1, feather: 1, ph: s.ph + sd, life: 1.2 });
     }
     /* A shot that reaches the boss: its fray factors go with the hit (sim.hitFray on a weak spot, sim.hitFrayBody on the body). */
     shotBoss(s, b) {
@@ -869,7 +871,7 @@ const HIT_BUFFER = 0.15;
     knotBurst(s, dmg) {
       this.burst(s.x, s.y, s.burst, dmg, s.src, true);
       if (s.kid) return;
-      if (s.echo) this.fuse(0.35, 'knot', s.x, s.y, s.burst * 0.8, s.d0 * 0.5, s.src);
+      if (s.echo) this.fuse(0.35, 'knot', s.x, s.y, s.burst * 0.8, s.d0 * 0.35, s.src);
       if (s.granny) for (let k = 0; k < 4; k++) { const a = 0.785 + k * 1.571; this.loose(s.src, 'knot', s.x, s.y, Math.cos(a) * 5, Math.sin(a) * 5, s.d0 * 0.35, { burst: s.b0 * 0.4, r: 0.2, life: 0.4, small: 1 }); }
     }
     /* Release the trigger and every knot in flight from that gun bursts where it is. */
@@ -892,25 +894,33 @@ const HIT_BUFFER = 0.15;
       const id = 'daisy', L = C.THREADS[id].lv[(this.p.threads[id] || 1) - 1], pl = this.player, R = this.ringOf(slot), bob = slot === 'B';
       const bloom = this.fo(id, 'bloom'), bud = this.fo(id, 'bud'), pair = this.paired(id);
       let n = L.n + (bloom ? 2 : 0) + (pair ? 2 : 0); if (bob) n = Math.max(3, n - 2);
-      const r = L.r * (bloom ? 1.25 : bud ? 0.72 : 1) * (bob ? 0.7 : 1), w = 2.4 * (bud ? 2 : 1), grow = L.grow * (this.fo(id, 'ever') ? 0.5 : 1);
+      const r = L.r * (bloom ? 1.12 : bud ? 0.72 : 1) * (bob ? 0.7 : 1), w = 2.4 * (bud ? 2 : 1), grow = L.grow * (this.fo(id, 'ever') ? 0.5 : 1);
       const cut = L.cut * (bud ? 2 : 1) * this.d.dmg * mul * this.fxDmg(), cx = bob ? pl.bx : pl.x, cy = bob ? pl.by : pl.y + 0.15;
       R.on = true; R.n = n; R.n2 = this.mastered(id) ? n : 0; R.r = r; R.cx = cx; R.cy = cy; R.grow = grow; R.a += w * dt; R.b -= w * 0.6 * dt;
-      const es = this.eshots, en = this.enemies, all = n + R.n2;
+      const es = this.eshots, en = this.enemies, all = n + R.n2, step = 6.2832 / n;
       for (let i = 0; i < all; i++) {
-        const P = R.p[i], outer = i >= n, k = outer ? i - n : i, a = (outer ? R.b : R.a) + k * 6.2832 / n, rr = outer ? r * 1.6 : r;
+        const P = R.p[i], outer = i >= n, k = outer ? i - n : i, a = (outer ? R.b : R.a) + k * step, rr = outer ? r * 1.6 : r;
         P.a = a; P.x = cx + Math.cos(a) * rr; P.y = cy + Math.sin(a) * rr;
         if (!P.on) { P.re -= dt; if (P.re <= 0) P.on = true; continue; }
-        for (let j = es.length - 1; j >= 0; j--) { const e = es[j], dx = e.x - P.x, dy = e.y - P.y; if (dx * dx + dy * dy < 0.13) { es.splice(j, 1); P.on = false; P.re = grow; this.emit('petal', { x: P.x, y: P.y }); break; } }
-        if (!P.on || outer) continue;
+        if (outer) continue;
         for (let j = en.length - 1; j >= 0; j--) { const e = en[j]; if (!e || (e.state === 'enter' && e.t < 0)) continue; const dx = e.x - P.x, dy = e.y - P.y, q = e.r + 0.25; if (dx * dx + dy * dy < q * q) this.damageEnemy(e, cut * dt, false, slot); }
+      }
+      // a bullet crossing a ring is caught by the petal nearest it, if that petal is grown: the ring is a fence with gaps where petals regrow
+      for (let j = es.length - 1; j >= 0; j--) {
+        const e = es[j], dx = e.x - cx, dy = e.y - cy, d = Math.sqrt(dx * dx + dy * dy);
+        for (let g = 0; g < (R.n2 ? 2 : 1); g++) {
+          const rr = g ? r * 1.6 : r; if (Math.abs(d - rr) > 0.42) continue;
+          const th = Math.atan2(dy, dx) - (g ? R.b : R.a), k = ((Math.round(th / step) % n) + n) % n, P = R.p[g * n + k];
+          if (!P.on) continue;
+          es.splice(j, 1); P.on = false; P.re = grow; this.emit('petal', { x: P.x, y: P.y }); break;
+        }
       }
     }
     /* The top petal of the ring flies off as a shot and grows back. */
     launchPetal(slot, L, base, add) {
       const R = this.ringOf(slot); if (!R.on) return;
       let best = null; for (let i = 0; i < R.n; i++) { const P = R.p[i]; if (P.on && (!best || P.y > best.y)) best = P; }
-      if (!best) return;
-      best.on = false; best.re = R.grow;
+      if (!best) return;   // the petal throws a stitch and stays in the ring
       const s = add(best.x, best.y + 0.1, { vx: (R.cx - best.x) * 1.15, vy: 16, pierce: 1, home: false, r: 0.18 });   // petals from the side lean in, to cross the ship's line far up the cloth
       s.kind = 'daisy'; s.dmg = base * L.dmg; s.ang = best.a; if (this.fo('daisy', 'seed')) s.seed = 1;
     }
@@ -938,7 +948,7 @@ const HIT_BUFFER = 0.15;
         if (!over) continue;
         q.cd = q.every;
         const o = { r: 0.1, pierce: q.hat ? 2 : 0, pinShot: 1, life: PIN_REACH / 18 };
-        if (q.cushion) for (let k = -1; k <= 1; k++) this.loose(q.src, 'pins', q.x, q.y + 0.2, k * 6, 17, q.pd * 0.55, o);
+        if (q.cushion) for (let k = -1; k <= 1; k++) this.loose(q.src, 'pins', q.x, q.y + 0.2, k * 6, 17, q.pd * 0.4, o);
         else this.loose(q.src, 'pins', q.x, q.y + 0.2, 0, 18, q.pd, o);
       }
     }
@@ -1032,8 +1042,8 @@ const HIT_BUFFER = 0.15;
         if (gap < 0.45 && dx * dx + dy * dy < 12.25) R.r = Math.min(R.cap, R.r + R.step); else R.r = R.steady ? Math.max(0, Math.min(R.cap, R.r) - gap * 0.5) : 0;
         R.t = this.t; R.x = target.x; R.y = target.y; dm *= 1 + R.r;
       }
-      if (s.grow) dm *= 1 + Math.min(0.5, s.t * s.grow);   // Long Shot
-      if (s.lock) { if (target.lkV === s.lock) dm *= 1.25; target.lkV = s.lock; }   // Lockstitch
+      if (s.grow) dm *= 1 + Math.min(0.3, s.t * s.grow);   // Long Shot
+      if (s.lock) { if (target.lkV === s.lock) dm *= 1.12; target.lkV = s.lock; }   // Lockstitch
       return dm;
     }
     burst(x, y, r, dmg, src, clear) {

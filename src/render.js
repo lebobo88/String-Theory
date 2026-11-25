@@ -56,7 +56,7 @@
   };
   /* How hard each weapon kicks: [camera, in cloth units; the ship's own recoil]. Light, fast weapons move only the ship. */
   const HOT = { heat: 0.7 };
-  const KICK = { running: [0, 0.8], satin: [0, 0.55], backstitch: [0.014, 1], chain: [0.012, 1], cross: [0.016, 1.05], herringbone: [0.026, 1.2], fan: [0, 0.8], knot: [0.11, 1.7], couching: [0.16, 1.5] };
+  const KICK = { running: [0, 0.8], satin: [0, 0.55], backstitch: [0.014, 1], chain: [0.012, 1], cross: [0.016, 1.05], herringbone: [0.026, 1.2], fan: [0, 0.8], knot: [0.11, 1.7], couching: [0.16, 1.5], daisy: [0, 0.7], feather: [0, 0.6], blanket: [0.01, 0.9], pins: [0.008, 0.8] };
   /* per-frame helpers kept outside the class so no closure is made each frame */
   function unsee(v) { v.seen = false; }
   function dropEnemyView(v, id, map) { if (v.seen) return; if (v.extra) { if (v.extra.cone) this.scene.remove(v.extra.cone); if (v.extra.captive) this.scene.remove(v.extra.captive); } map.delete(id); }
@@ -754,8 +754,13 @@
           }
           case 'patch': this.ring(e.x, e.y, 2, this.lc(PAL.linen, 2), 0.35, 7); this.glints(e.x, e.y, 0.8, 10, this.lc(PAL.linen, 2.2), 4); break;
           case 'repad': this.loop(pl.x, PY, 1.4, PAL.steelHi); break;
-          case 'chain': this.arcs.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0, max: 0.32, side: Math.random() < 0.5 ? -1 : 1 }); this.glints(e.x2, e.y2, 0.8, 5, this.lc(PAL.madderPale, 2.4), 3); break;
+          case 'chain': this.arcs.push({ x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2, t: 0, max: 0.32, side: Math.random() < 0.5 ? -1 : 1 }); this.glints(e.x2, e.y2, 0.8, 5, this.lc(e.live ? PAL.steelHi : PAL.madderPale, 2.4), 3); break;
+          // weapons: a petal takes a bullet, a pin goes into the cloth, a pin comes loose
+          case 'petal': this.glints(e.x, e.y, 0.8, 4, this.lc(PAL.rose, 2.2), 3, 0.3, 0.3); this.ring(e.x, e.y, 0.9, this.lc(PAL.rose, 1.8), 0.2, 10); this.strands(e.x, e.y, LINEN, 2, 0.4); break;
+          case 'pin': this.ring(e.x, e.y, 0.7, this.lc(PAL.violet, 2), 0.18, 7); this.glints(e.x, e.y, 0.6, 2, this.lc(PAL.steelHi, 2), 2, 0.25, 0.25); break;
+          case 'pinloose': if (e.wheel) { this.ring(e.x, e.y, 2.2, this.lc(PAL.violet, 2.2), 0.3, 7); this.glints(e.x, e.y, 0.8, 6, this.lc(PAL.saffron, 2.2), 4); } else this.glints(e.x, e.y, 0.6, 2, this.lc(PAL.violet, 1.6), 2, 0.25, 0.25); break;
           case 'lance': {
+            if (e.glow) { this.lances.push({ x: e.x, y: e.y !== undefined ? e.y : PY + 0.7, w: e.w * 0.7, t: 0, max: 0.22 }); break; }   // Afterglow: the beam's echo, no new jolt
             this.lances.push({ x: e.x, y: e.y !== undefined ? e.y : PY + 0.7, w: e.w, t: 0, max: 0.36 }); const ly = e.y !== undefined ? e.y : PY + 0.7;
             for (let y = ly + 0.3; y < H; y += 0.5) { if (Math.random() > this.q.particles) continue; const s = rnd(2, 6) * (Math.random() < 0.5 ? -1 : 1);
               this.glow.emit(e.x + rnd(-0.1, 0.1) * e.w, y, 0.6, s, rnd(-1, 1), 0, rnd(0.15, 0.35), rnd(0.25, 0.4), this.lc(PAL.steelHi, 2.5), 1, 4, 5, 0.3, Math.atan2(0, s), 0, 0); }
@@ -1414,12 +1419,24 @@
           case 'knot': this.compose(s.x, s.y, 0.6, s.t * 9, 0.4, 0, 1); P.knot.push(this.M, this.lc(PAL.madder), 0, 0.6); break;
           case 'cross': this.compose(s.x, s.y, 0.6, s.t * 12, 0, 0, 1.5); P.xshot.push(this.M, rgb, 0, 0.8); break;
           case 'satin': case 'herringbone': case 'fan': this.compose(s.x, s.y, 0.6, ang, 0, 0, s.kind === 'satin' ? 0.8 : 1, s.kind === 'satin' ? 1.1 : 1.4, 1); P.dash.push(this.M, rgb, 0, glow + 0.2); break;
+          // the four newest weapons: a lazy-daisy loop, a feather with its barbs, a blanket stitch's leg, a pin
+          case 'daisy': if (s.seedling) { this.spr.add(s.x, s.y, 0.62, 0.45, this.lc(PAL.saffron, 2), 0.9, 6, 0, s.id * 0.37); break; }
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.75, 1.7, 0.8); P.link.push(this.M, rgb, 0, glow + 0.35); this.spr.add(s.x, s.y - 0.18, 0.64, 0.32, this.lc(PAL.saffron, 2), 0.8, 9); break;
+          case 'feather': { const k = s.big ? 1.8 : 1, c = Math.cos(ang), sn = Math.sin(ang);
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, k, 1.2 * k, k); P.dash.push(this.M, rgb, 0, glow + 0.2);
+            this.spr.add(s.x + sn * 0.16 * k, s.y - c * 0.16 * k, 0.6, 0.55 * k, this.lc(PAL.teal, 1.8), 0.8, 4, ang + 0.9);
+            this.spr.add(s.x + sn * 0.16 * k, s.y - c * 0.16 * k, 0.6, 0.55 * k, this.lc(PAL.teal, 1.8), 0.8, 4, ang - 0.9); break; }
+          case 'blanket': this.compose(s.x, s.y, 0.6, ang, 0, 0, 1.2, 1.3, 1.2); P.dash.push(this.M, rgb, 0, glow + 0.25);
+            this.spr.add(s.x, s.y, 0.62, 0.7, this.lc(PAL.rust, 1.9), 0.85, 4, ang); break;
+          case 'pins': if (s.pinShot || s.kid) { this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.7, 0.9, 0.7); P.dash.push(this.M, this.lc(PAL.steelHi), 0, glow); break; }
+            this.compose(s.x, s.y, 0.6, ang, 0, 0, 0.8, 2, 0.8); P.dash.push(this.M, this.lc(PAL.steelHi), 0, 0.3); this.spr.add(s.x + Math.sin(ang) * 0.24, s.y - Math.cos(ang) * 0.24, 0.65, 0.5, this.lc(PAL.violet, 1.8), 1, 9); break;
           default: { const c = Math.cos(ang), sn = Math.sin(ang);
             this.compose(s.x - sn * 0.17, s.y + c * 0.17, 0.6, ang, 0, 0, 1); P.dash.push(this.M, rgb, 0, glow);
             this.compose(s.x + sn * 0.17, s.y - c * 0.17, 0.6, ang, 0, 0, 1); P.dash.push(this.M, rgb, 0, glow); }
         }
         this.spr.add(s.x, s.y, 0.8, s.kind === 'knot' ? 1.1 : 0.7, this.lc(col, s.kind === 'knot' ? 2 : 1.6), s.kind === 'satin' ? 0.4 : 0.55, 0);
         if (sign) this.spr.add(s.x, s.y, 0.85, 0.9, this.lc(PAL.saffron, 2.2), 0.7, 1, s.t * 4);   // Signature: every shot gilded
+        else if (s.gold) this.spr.add(s.x, s.y, 0.85, 0.85, this.lc(PAL.saffron, 2.4), 0.75, 8, s.t * 5);   // a mastered weapon's gold shot
         this.shotTrail(v, s.kind, 1, sign);
         if (s.kind === 'knot' && Math.random() < 0.4 * this.q.particles) this.glow.emit(s.x, s.y - 0.2, 0.6, rnd(-0.5, 0.5), -1, 0, 0.35, 0.25, this.lc(PAL.madderPale, 2), 0.8, 1, 0, 0.3);
       }
@@ -1429,10 +1446,33 @@
       for (let i = 1; i < nb; i++) { if (bi[i] - bi[i - 1] !== 1) continue; const dx = bx[i] - bx[i - 1], dy = by[i] - by[i - 1], d = Math.sqrt(dx * dx + dy * dy); if (d > 3.2) continue;
         this.tline(this.trN, bx[i - 1], by[i - 1], bx[i], by[i], 0.62, 0.05, this.lc(PAL.linen), 1 - d / 3.2, 1, 0, 0, undefined, 0.25 * (1 - d / 3.2)); }
     }
+    /* The weapons that live on the cloth between shots: Lazy Daisy's ring of petals (a loop of thread each, the lazy-daisy stitch),
+       Tacking Pins stuck in the cloth, and a knot's echo about to burst. All from the shared pools and sprites: nothing is made here. */
+    syncWeapons(sim) {
+      const P = this.pools, rs = sim.rings, t = this.time;
+      if (rs) for (let q = 0; q < 2; q++) {
+        const R = q ? rs.B : rs.L; if (!R || !R.on) continue;
+        const rgb = this.lc(PAL.rose), all = R.n + R.n2;
+        for (let i = 0; i < all; i++) {
+          const pt = R.p[i], outer = i >= R.n, k = pt.on ? 1 : Math.max(0.15, 1 - pt.re / (R.grow || 1)), sc = (outer ? 0.75 : 1) * k * (q ? 0.8 : 1);
+          this.compose(pt.x, pt.y, 0.62, pt.a - 1.5708, 0, 0, 0.62 * sc, 1.45 * sc, 0.7 * sc); P.link.push(this.M, outer ? this.lc(PAL.madderPale) : rgb, 0, pt.on ? 0.5 : 0.15);
+          if (pt.on && !outer) this.spr.add(pt.x, pt.y, 0.66, 0.42, this.lc(PAL.rose, 1.9), 0.55, 0);
+        }
+      }
+      const ps = sim.tacks;
+      if (ps) for (let i = 0; i < ps.length; i++) {
+        const q = ps[i], fade = q.t < 0.6 ? 0.5 + 0.5 * Math.sin(t * 24) : 1, hot = q.cd > q.every - 0.08;
+        this.compose(q.x, q.y - 0.12, 0.5, 0.25, 0, 0.5, 0.75, 1.5, 0.75); P.dash.push(this.M, this.lc(PAL.steelHi), 0, 0.2);
+        this.spr.add(q.x, q.y + 0.05, 0.66, 0.42, this.lc(PAL.violet, 1.7), fade, 9); if (q.wheel) this.spr.add(q.x, q.y + 0.05, 0.64, 0.62, this.lc(PAL.saffron, 1.6), 0.5 * fade, 10, t * 2);   // mastered: a gold ring round the head
+        if (hot) this.spr.add(q.x, q.y + 0.3, 0.7, 0.6, this.lc(PAL.glare, 2.2), 0.8, 8, t * 6);
+      }
+      const fs = sim.fuses;
+      if (fs) for (let i = 0; i < fs.length; i++) { const f = fs[i]; if (f.kind !== 'knot') continue; const k = 1 - f.t / f.t0; this.spr.add(f.x, f.y, 0.6, f.r * (0.6 + 0.6 * k), this.lc(PAL.madderPale, 2), 0.35 + 0.5 * k, 7, t * 3); }
+    }
     shotTrail(v, kind, fade, sign) {
       if (v.n < 2) return;
       const px = this.px, py = this.py, pz = this.pz, ps = this.ps;
-      const maxL = kind === 'satin' ? 1.1 : kind === 'knot' ? 1.9 : kind === 'chain' ? 1.6 : 1.4;
+      const maxL = kind === 'satin' ? 1.1 : kind === 'knot' ? 1.9 : kind === 'chain' ? 1.6 : kind === 'blanket' ? 4.2 : kind === 'pins' ? 0.8 : 1.4;
       let m = 0, acc = 0;
       for (let i = 0; i < v.n; i++) {   // capped by length, so trails look the same at any frame rate
         px[i] = v.hx[i]; py[i] = v.hy[i]; pz[i] = 0.55; ps[i] = v.hs[i]; m = i + 1;
@@ -1450,6 +1490,10 @@
         case 'knot': for (let i = 0; i < m; i++) { const w = Math.sin(ps[i] * 7) * 0.16 * (i / m); px[i] += w; } A.strip(px, py, pz, ps, m, 0.07, 0.03, this.lc(PAL.madderPale, 2), 0.9 * fade, 0, 1); break;
         case 'cross': A.strip(px, py, pz, ps, m, 0.1, 0.05, this.lc(PAL.blue, 2.2), 0.9 * fade, 0, 1); break;
         case 'satin': A.strip(px, py, pz, ps, m, 0.32, 0.12, this.lc(PAL.green, 1.6), 0.8 * fade, 0, 4); break;
+        case 'daisy': A.strip(px, py, pz, ps, m, 0.16, 0.06, this.lc(PAL.rose, 1.7), 0.8 * fade, 0, 5); break;
+        case 'feather': for (let i = 1; i < m; i++) px[i] += (i % 2 ? 0.09 : -0.09) * (i / m); A.strip(px, py, pz, ps, m, 0.09, 0.04, this.lc(PAL.teal, 1.9), 0.85 * fade, 0, 1); break;
+        case 'blanket': A.strip(px, py, pz, ps, m, 0.2, 0.08, this.lc(PAL.rust, 2), 0.95 * fade, 0, 2); A.strip(px, py, pz, ps, m, 0.45, 0.12, this.lc(PAL.rust, 1.1), 0.25 * fade, 0, 0); break;   // a running line of rust stitches with a soft glow: the loop reads as a drawn line
+        case 'pins': A.strip(px, py, pz, ps, m, 0.05, 0.03, this.lc(PAL.steelHi, 1.5), 0.7 * fade, 0, 2); break;
         default: A.strip(px, py, pz, ps, m, 0.08, 0.04, this.lc(col, 1.5), 0.8 * fade, 0, 2);
       }
     }
@@ -2004,6 +2048,7 @@
       this.syncBobbins(sim, dt, fdt, alive);
       this.syncEnemies(sim, dt, fdt);
       this.syncShots(sim, dt);
+      this.syncWeapons(sim);
       this.syncEshots(sim, dt);
       this.syncDrops(sim, dt, fdt);
       this.syncHazards(sim, dt, fdt);

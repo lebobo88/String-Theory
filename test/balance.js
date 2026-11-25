@@ -155,8 +155,11 @@ function partWeapons() {
   for (const w of rows) {
     w.score = {}; for (const k of Object.keys(best)) w.score[k] = norm(w, k);
     w.score.overall = K.mean(CORE.map(k => w.score[k]));
-    w.jobScore = w.job === 'overall' ? w.score.overall : w.score[w.job];
+    w.jobScore = w.score[w.job];
   }
+  // the all-rounder's job is "overall": it is scored against the best overall weapon, not against each specialist at its own job
+  const bestOverall = Math.max(...rows.map(w => w.score.overall));
+  for (const w of rows) if (w.job === 'overall') w.jobScore = bestOverall > 0 ? w.score.overall / bestOverall : 0;
   console.log('\n== WEAPONS: fully upgraded ship, one weapon at its top level, solo. DPS on one target (near y=3, mid y=8, weak spot r0.7 at y=14.4, boss body r2.5), coverage of the row, wave clear time (auto-aim pilot, home row or forward, enemy health x' + WAVE_HP_SCALE + ', 5 waves x 3 seeds), mean boss kill time (8 bosses, proper bots). ==');
   console.log(K.table(['weapon', 'lv', 'fork', 'near', 'mid', 'soft', 'body', 'cover', 'clear s', 'boss s', 'hits', 'job', 'job score', 'overall'],
     rows.map(w => [w.id, K.maxLevel(w.id), w.variants.length > 1 ? w.m[w.job === 'overall' ? 'midV' : (w.job + 'V')] || '' : '', K.f1(w.m.near), K.f1(w.m.mid), K.f1(w.m.soft), K.f1(w.m.body), K.pct(w.m.cover), K.f1(w.m.clearT), K.f0(w.m.bossT), w.m.hits, w.job, K.pct(w.jobScore), K.pct(w.score.overall)])));

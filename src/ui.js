@@ -121,7 +121,7 @@
   const attr = (el, a, v) => { const k = '_a' + a; if (el && el[k] !== v) { el[k] = v; el.setAttribute(a, v); } };
 
   /* Sounds by action: tabs flick, equipping seats a spool, everything else is a soft tap. Items and the special make their own sound in play. */
-  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1, bomb: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1, wear: 1, unwear: 1 };
+  const TAB_ACTS = { forks: 1, wlist: 1, tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1, bomb: 1 }, EQUIP_ACTS = { fork: 1, wind: 1, wind2: 1, takeup: 1, wear: 1, unwear: 1 };
 
   class UI {
     constructor(ctl) {
@@ -205,8 +205,8 @@
         case 'hem': c.openHem(false); break;
         case 'title': c.toTitle(); break;
         case 'depart': if (!c.midNight) this.snd('ui_start'); c.depart(); break;
-        case 'tab': this.tab = arg; this.hem(); break;
-        case 'pick': if (this.selKey() === 'exch' && /^n:/.test(arg)) this.xn = arg === 'n:max' ? 'max' : +arg.slice(2); else this.sel[this.selKey()] = arg; this.hem(); break;
+        case 'tab': this.tab = arg; this.spoolView = null; this.hem(); break;
+        case 'pick': if (this.selKey() === 'forks' && arg === 'back') { this.spoolView = null; this.hem(); break; } if (this.selKey() === 'exch' && /^n:/.test(arg)) this.xn = arg === 'n:max' ? 'max' : +arg.slice(2); else this.sel[this.selKey()] = arg; this.hem(); break;
         case 'pview': this.patView = ['more', 'ups', 'exch'].indexOf(arg) >= 0 ? arg : 'perks'; this.hem(); break;
         case 'fray': { const mode = ST.modeUnlocked(this.p, st.mode) ? st.mode : 'normal', top = ST.frayOpen(this.p, mode), now = Math.min(top, st.fray | 0);
           st.fray = Math.max(0, Math.min(top, now + (arg === 'up' ? 1 : -1))); c.saved(); this.menu(); break; }
@@ -219,6 +219,9 @@
         case 'nope': this.snd('ui_fail'); this.shake(); break;
         case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
         case 'wind2': S.windSecond(this.p, arg); c.saved(); this.hem(); break;
+        case 'forks': this.sel.spool = arg; this.spoolView = 'forks'; this.sel.forks = null; this.hem(); break;   // a weapon's forks, mastery and pairing
+        case 'wlist': this.spoolView = null; this.hem(); break;
+        case 'fork': { const [id, i, o] = arg.split(':'); if (S.setFork(this.p, id, +i, o)) { c.saved(); this.toast('Fork', C.THREADS[id].forks[+i].opts.find(x => x.id === o).name); } this.hem(); break; }
         case 'takeup': S.takeUp(this.p, arg); c.saved(); this.hem(); break;
         case 'continue': c.continueNight(); break;
         case 'pocket': c.takePocket(arg); if (!this.played) this.snd('ui_fail'); break;
@@ -438,7 +441,7 @@
       }
     }
     /* Which selection a pick belongs to: the Perks and Collection tabs each hold two views. */
-    selKey() { return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : this.tab; }
+    selKey() { if (this.tab === 'spool' && this.spoolView === 'forks') return 'forks'; return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : this.tab; }
     /* A two-way switch in the strip's slot, for the tabs that hold two views. */
     seg(act, label, opts, cur) {
       return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b>${o[2] === '' ? '' : `<span>${o[2]} of ${o[3]}</span>`}</button>`).join('')}</nav>`;
@@ -511,28 +514,71 @@
         <div class="dbody" data-anchor="body" data-fit="4">${o.desc ? `<p class="ddesc">${esc(o.desc)}</p>` : ''}${rows.length ? `<dl class="dcmp">${rows.map(r => `<div class="${r.cls || ''}${r.opt ? ' opt' : ''}"><dt>${r.k}</dt><dd>${r.v}</dd></div>`).join('')}</dl>` : ''}</div>
         <div class="dact"><div class="dleft" data-anchor="have" data-fit="1">${o.left || ''}</div><div class="dbuy" data-anchor="buy">${o.buy || ''}</div></div></section>`;
     }
+    /* Weapons. Two views in the same slots: the weapons (list) and one weapon's forks, mastery and pairing (this.spoolView = 'forks').
+       Levels I to X; a fork at IV and at VII is bought once, then either option is chosen for free. */
     st_spool() {
       const p = this.p, ids = Object.keys(C.THREADS), sel = this.sel.spool && C.THREADS[this.sel.spool] ? this.sel.spool : p.thread;
+      if (this.spoolView === 'forks' && p.threads[sel]) return this.st_forks(sel);
       const owned = ids.filter(id => p.threads[id]), second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : owned.find(id => id !== p.thread) || null;
       const items = ids.map(id => { const t = C.THREADS[id], w = p.threads[id], st = S.threadState(p, id);
         return { id, name: t.name, icon: `<i class="spool" style="--c:${t.color}"></i>`, lock: st.why === 'sealed',
-          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · level ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : dustTag(t.price, 'sm') }; });
-      const t = C.THREADS[sel], w = p.threads[sel] || 0, st = S.threadState(p, sel);
+          meta: w ? (p.thread === id ? 'Lead' : second === id ? 'Bobbin' : 'Owned') + ' · ' + ROMAN[w] : st.why === 'sealed' ? 'Locked' : t.silk ? silkTag(t.silk, 'sm') : dustTag(t.price, 'sm') }; });
+      const t = C.THREADS[sel], w = p.threads[sel] || 0, top = t.lv.length, st = S.threadState(p, sel);
       const dd = ST.derive(p), L = t.lv[Math.max(1, w) - 1], per = dd.dmg * L.dmg, shots = L.n + (L.mid ? 1 : 0);
       const fires = `${shots} ${shots > 1 ? 'shots' : 'shot'} of <b class="mono">${per.toFixed(2)}</b>, <b class="mono">${(dd.fireMul / L.rate).toFixed(1)}</b> a second`;
+      const f = (p.forks && p.forks[sel]) || {}, chosen = (t.forks || []).map((fk, i) => { const o = fk.opts.find(x => x.id === f[String.fromCharCode(97 + i)]); return o ? o.name : ''; }).filter(Boolean);
+      const mate = t.pair && C.THREADS[t.pair.with], paired = w >= top && mate && p.thread === sel && second === t.pair.with;
+      const forkRow = w ? { k: 'Forks', v: (chosen.length ? esc(chosen.join(', ')) + '.' : w >= 4 ? 'One to choose: see Forks.' : 'A choice of two at level IV.') + `<button class="eq fkb" data-act="forks" data-arg="${sel}">Forks</button>`, opt: !chosen.length && w < 4 } : null;   // (the button shows only where the left slot has no room for it)
+      const pairRow = mate ? { k: 'Pairs with', v: esc(mate.name) + (paired ? ': on.' : '.'), opt: true } : null;
       const rows = st.why === 'sealed' ? [{ k: 'Locked', v: `Its blueprint is dropped by: ${esc(C.CHARTS[t.chart].from)}.` }]
-        : w ? [{ k: 'Now', v: `Level ${ROMAN[w]}. ${esc(t.weights[w - 1])}.`, cls: 'was', opt: true }, w < 3 ? { k: 'Next', v: `Level ${ROMAN[w + 1]}. ${esc(t.weights[w])}.` } : { k: 'Level III', v: 'Fully upgraded.' }]
-          : [{ k: 'Level I', v: esc(t.weights[0]) + '.' }];
+        : w ? [{ k: 'Level', v: `${ROMAN[w]} of ${ROMAN[top]}. ${esc(t.weights[w - 1])}.`, cls: 'was', opt: w < top },
+            w < top ? { k: 'Next', v: `${ROMAN[w + 1]}. ${esc(t.weights[w])}.` } : null, forkRow, pairRow]
+          : [{ k: 'Level I', v: esc(t.weights[0]) + '.' }, pairRow];
       const lead = p.thread === sel, bob = second === sel;
-      const left = w ? `<div class="equip" role="group" aria-label="Use this weapon as"><span>Use as</span>
+      const left = w ? `<div class="equip w3" role="group" aria-label="This weapon"><span>Use as</span>
           <button class="eq ${lead ? 'on' : ''}" ${lead ? 'disabled' : `data-act="wind" data-arg="${sel}"`} aria-pressed="${lead}">Lead</button>
-          <button class="eq ${bob ? 'on' : ''}" ${bob || lead ? 'disabled' : `data-act="wind2" data-arg="${sel}"`} aria-pressed="${bob}">Bobbin</button></div>`
+          <button class="eq ${bob ? 'on' : ''}" ${bob || lead ? 'disabled' : `data-act="wind2" data-arg="${sel}"`} aria-pressed="${bob}">Bobbin</button>
+          <button class="eq fkl" data-act="forks" data-arg="${sel}">Forks</button></div>`
         : `<span>${fires}</span>`;
-      const buy = st.ok ? this.buyBtn(st, 'dust', st.why === 'buy' ? 'Buy' : 'Upgrade', 'thread:' + sel, st.why === 'buy' ? '' : 'to level ' + ROMAN[st.next])
-        : st.why === 'owned' ? this.stamp('Max level', 'Level III') : this.buyBtn(st, 'dust', w ? 'Upgrade' : 'Buy');
+      const buy = st.ok ? this.wpnBtn(st, st.why === 'buy' ? 'Buy' : 'Upgrade', 'thread:' + sel, st.why === 'buy' ? '' : 'to level ' + ROMAN[st.next])
+        : st.why === 'owned' ? this.stamp('Mastered', 'Level ' + ROMAN[top]) : this.wpnBtn(st, w ? 'Upgrade' : 'Buy');
       if (st.ok || (w && p.thread !== sel)) { const q = this.clone(); q.thread = sel; q.threads[sel] = p.thread === sel || !w ? (st.ok ? st.next || 1 : w) : w; this.preview = q; }
       return { sel, list: this.list(items, sel), detail: this.detail({ pic: `<i class="spool" style="--c:${t.color}"></i>`, name: t.name,
         kick: 'Weapon · ' + esc(t.job.toLowerCase()) + (lead ? ' · your lead' : bob ? ' · on your bobbin' : ''), desc: t.desc, rows, left, buy }) };
+    }
+    /* A weapon's price on the buy button: coins, gems, or both (levels VIII to X). */
+    wpnBtn(st, label, arg, hint) {
+      if (!(st.dust && st.silk)) return this.buyBtn(st, st.cur || 'dust', label, arg, hint);
+      const tag = dustTag(st.dust, 'sm'), gems = `and ${num(st.silk)} gems`;   // the coins on the button, the gems under it
+      if (st.ok) return `<button class="btn primary buy" data-act="buy" data-arg="${arg}" data-fit="3"><span class="bl">${label}${tag}</span><span class="bh">${gems}${hint ? ' · ' + hint : ''}</span></button>`;
+      return `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}${tag}</span><span class="bh">${this.whyNot(st, st.cur)}</span></button>`;
+    }
+    /* One weapon's forks (two options at level IV, two at VII), its mastery and its pairing, as cards in the list's slots. */
+    st_forks(id) {
+      const p = this.p, t = C.THREADS[id], w = p.threads[id] || 0, top = t.lv.length, f = (p.forks && p.forks[id]) || {}, items = [];
+      (t.forks || []).forEach((fk, i) => { const key = String.fromCharCode(97 + i), have = !!f[key];
+        for (const o of fk.opts) items.push({ id: 'f:' + i + ':' + o.id, name: o.name, icon: `<b class="lv">${ROMAN[fk.at]}</b>`, lock: w < fk.at,
+          meta: f[key] === o.id ? 'In use' : have ? 'Free to switch' : w < fk.at ? 'At level ' + ROMAN[fk.at] : C.FORK_COST[i].silk ? silkTag(C.FORK_COST[i].silk, 'sm') : dustTag(C.FORK_COST[i].dust, 'sm') }); });
+      const mate = t.pair && C.THREADS[t.pair.with], second = p.thread2 && p.thread2 !== p.thread && p.threads[p.thread2] ? p.thread2 : null;
+      items.push({ id: 'm', name: t.mastery.name, icon: `<b class="lv">${ROMAN[top]}</b>`, lock: w < top, meta: w >= top ? 'Mastered' : 'At level ' + ROMAN[top] });
+      if (mate) items.push({ id: 'p', name: t.pair.name, icon: `<i class="spool" style="--c:${mate.color}"></i>`, lock: !p.threads[t.pair.with], meta: 'With ' + esc(mate.name) });
+      items.push({ id: 'back', name: 'All weapons', icon: `<i class="spool" style="--c:${t.color}"></i>`, meta: esc(t.name) });
+      const sel = this.sel.forks && items.some(x => x.id === this.sel.forks && x.id !== 'back') ? this.sel.forks : items[0].id;
+      const pic = `<i class="spool" style="--c:${t.color}"></i>`, left = `<div class="equip w1"><button class="eq" data-act="wlist">All weapons</button></div>`;
+      let d;
+      if (sel === 'm') d = { name: t.mastery.name, kick: esc(t.name) + ' · mastery at level ' + ROMAN[top], desc: t.mastery.desc,
+        rows: [{ k: 'Level', v: `${ROMAN[w]} of ${ROMAN[top]}.` }], buy: w >= top ? this.stamp('Mastered', '') : this.stamp('At level ' + ROMAN[top], '', true) };
+      else if (sel === 'p') { const on = w >= top && p.thread === id && second === t.pair.with;
+        d = { name: t.pair.name, kick: 'Pairing · ' + esc(t.name) + ' with ' + esc(mate.name), desc: t.pair.desc,
+          rows: [{ k: 'How', v: `Master ${esc(t.name)}, fly it as your lead and carry ${esc(mate.name)} on the bobbin.` }, { k: 'Now', v: on ? 'On.' : 'Off.' }],
+          buy: on ? this.stamp('On', '') : p.threads[t.pair.with] && p.thread === id && w >= top ? `<button class="btn primary buy" data-act="wind2" data-arg="${t.pair.with}"><span class="bl">Carry ${esc(mate.name)}</span></button>` : this.stamp('Off', w < top ? 'Needs level ' + ROMAN[top] : !p.threads[t.pair.with] ? 'Needs ' + esc(mate.name) : 'Lead and bobbin', true) }; }
+      else { const [, si, oid] = sel.split(':'), i = +si, fk = t.forks[i], o = fk.opts.find(x => x.id === oid), other = fk.opts.find(x => x.id !== oid), key = String.fromCharCode(97 + i);
+        const st = S.forkState(p, id, i);
+        d = { name: o.name, kick: esc(t.name) + ' · fork at level ' + ROMAN[fk.at], desc: o.desc, rows: [{ k: 'Or', v: esc(other.name) + ': ' + esc(other.desc) }, { k: 'Cost', v: i ? 'Bought once with gems. Switch for free.' : 'Bought once with coins. Switch for free.', opt: true }] };
+        d.buy = f[key] === o.id ? this.stamp('In use', '') : f[key] ? `<button class="btn primary buy" data-act="fork" data-arg="${id}:${i}:${o.id}"><span class="bl">Use this</span><span class="bh">Free</span></button>`
+          : w < fk.at ? this.stamp('At level ' + ROMAN[fk.at], '', true) : this.buyBtn(st, st.cur, 'Buy fork', 'fork:' + id + ':' + o.id); }
+      let list = this.list(items, sel); for (let k = Math.max(10, items.length); k < 12; k++) list = list.replace(/<\/div>$/, '<span class="ghost" aria-hidden="true"></span></div>');
+      return { sel: id + '/' + sel, list, detail: this.detail(Object.assign({ pic, left }, d)) };
     }
     /* Ship upgrades have no top level. Names and numbers: the list shows the plain level; the details show it in Roman numerals, with
        five pips for the stretch you are in (the last one is the next bonus level). */
@@ -743,10 +789,11 @@
         return;
       }
       const from = this.pressEl && this.pressEl.isConnected ? this.pressEl.getBoundingClientRect() : null;
-      const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
+      const r = kind === 'fork' ? S.buyFork(p, id, arg.split(':')[2]) : kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
         : kind === 'charmup' ? S.buyCharmUp(p, id) : kind === 'heirloom' ? S.buyHeirloom(p, id) : S.buyPattern(p, id);
       if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy');
-        if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
+        if (kind === 'fork') this.toast('Fork bought', C.THREADS[id].forks[r.slot].opts.find(x => x.id === r.opt).name + '. Switch for free here.');
+        else if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
         else if (kind === 'heirloom') this.toast('Bought', C.HEIRLOOMS[id].name + '. Wear it in the Heirlooms view.');
         else this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
       else this.snd('ui_fail');

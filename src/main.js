@@ -48,6 +48,13 @@
       fire_knot:        ['fire_knot.mp3',   'Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds', 0.4, 'fire'],
       fire_cross:       ['fire_cross.mp3',  'Two crossing thread whips, a quick sharp X shaped swish, crisp, dry, 0.25 seconds', 0.25, 'fire'],
       fire_satin:       ['fire_satin.mp3',  'Very short silky tick, a smooth light thread flick for rapid fire, soft and high, 0.08 seconds', 0.14, 'fire'],
+      // the four newest weapons (rework): stand-ins until the files are generated (the fourth entry is the stand-in)
+      fire_daisy:       ['fire_daisy.mp3',   'A small loop of thread flicked off a spinning ring: a soft bright pluck with a short airy whirr, like a petal snapped free, dry, 0.2 seconds', 0.2, 'fire_satin'],
+      fire_feather:     ['fire_feather.mp3', 'A light feather quill flicked through the air: a breathy soft swish with a tiny high flutter at the end, dry, 0.15 seconds', 0.18, 'fire_satin'],
+      fire_blanket:     ['fire_blanket.mp3', 'A thread loop thrown out like a lasso and whipping back: a quick rising whoosh then a softer falling one, a rope-like swoosh there and back, dry, 0.35 seconds', 0.25, 'fire_cross'],
+      fire_pins:        ['fire_pins.mp3',    'A dressmaker pin flicked from the fingers: a tiny bright metallic tick with a short thin whistle, dry, 0.15 seconds', 0.22, 'fire_chain'],
+      pin_stick:        ['pin_stick.mp3',    'A steel pin pushed firmly into taut linen: a soft muffled thup with a faint metallic tick on top, close and dry, 0.12 seconds', 0.25, 'hit'],
+      petal_block:      ['petal_block.mp3',  'A stray bullet caught in a loop of silk thread: a soft springy twang and a puff of fabric, gentle and warm, 0.25 seconds', 0.35, 'deflect'],
       charge:           ['laser_charge.mp3','A metal wire being wound tighter, rising pitch creak and hum building tension, 0.8 seconds', 0.3, null],
       armour:           ['armour.mp3',      'Needle glancing off a hard thimble, small bright metallic tink, dry, 0.15 seconds', 0.4, 'hit'],
       deflect:          ['deflect.mp3',     'Thread snapping back off a stiff leather shield, dull slap with a short twang, 0.25 seconds', 0.4, 'hit'],
@@ -381,7 +388,7 @@
   const SHORT_SFX = { greatlappet: 'ins_lappet', tinea: 'ins_tinea', greatwick: 'ins_wick', atlas: 'ins_atlas', unraveller: 'ins_unraveller', beetle: 'ins_beetle', empress: 'ins_empress', king: 'ins_king' };
   const DEATH_SFX = { greatlappet: 'out_lappet', tinea: 'out_tinea', greatwick: 'out_wick', atlas: 'out_atlas', unraveller: 'out_unraveller', beetle: 'out_beetle', empress: 'out_empress', king: 'out_king' };
   const FILM_SFX = { greatlappet: 'in_lappet', tinea: 'in_tinea', greatwick: 'in_wick', atlas: 'in_atlas', unraveller: 'in_unraveller', beetle: 'in_beetle', empress: 'in_empress', king: 'in_king' };
-  const GAP = { graze: 90, xstitch: 280, deflect: 120, armour: 70, tcut: 180, hit: 40, dust: 35, kill: 30, ui_tap: 60 };   // least milliseconds between two plays of one sound
+  const GAP = { graze: 90, xstitch: 280, deflect: 120, armour: 70, tcut: 180, hit: 40, dust: 35, kill: 30, ui_tap: 60, pin_stick: 80, petal_block: 90 };   // least milliseconds between two plays of one sound
   ST.audioState = audio;
   ST.AUDIO = AUDIO;
 
@@ -700,6 +707,8 @@
               r.cine.play(id, { short: !!seen[id] }); this.filmSnd = this.sfx(seen[id] ? SHORT_SFX[id] : FILM_SFX[id]); seen[id] = true; this.saved();
             } else { ui.banner(e.keeper ? e.label : e.panelName + ' \u00b7 ' + e.label, e.keeper ? e.panelName + ' \u00b7 Boss' : e.hint || (e.sampler ? 'They never shoot back. Get them all.' : e.patch), 1800); if (e.keeper) this.sfx('phase'); }
             this.hudNow = true; break; }
+          case 'petal': this.sfx('petal_block'); break;               // (weapons) a Lazy Daisy petal takes a bullet
+          case 'pin': this.sfx('pin_stick', e.src === 'B' ? 0.6 : 1); break;   // (weapons) a Tacking Pin goes into the cloth
           case 'fire': { const b = e.src === 'B', key = b ? 'b' : 'l'; if (!fired[key]) { fired[key] = true; const n = e.thread === 'running' || e.thread === 'couching' ? 'fire' : 'fire_' + e.thread; if (e.thread !== 'couching') this.sfx(n, b ? 0.6 : 1, (b ? 1.3 : 1) * (0.97 + Math.random() * 0.06)); } break; }   // a touch of pitch drift so steady fire never sounds like a machine
           case 'hit': case 'bosshit': this.sfx('hit'); break;
           case 'uncase': this.sfx('armour'); break;

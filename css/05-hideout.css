@@ -166,7 +166,7 @@
   .shipstrip .d:empty { display: block; background: var(--pat-holes) left center / var(--sp-32) var(--ln-2) no-repeat; }
   .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
   .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
-  .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
+  .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }   /* 21 blueprints with the four newest weapons' */
   .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(5, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .cname { font-size: var(--t-body); }
@@ -234,10 +234,30 @@
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .utile .un { display: none; }
   .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
-  .album { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }
+  .album { grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); } .album .ghost { display: none; }   /* 21 blueprints with the four newest weapons' */
   .detail { grid-template-rows: var(--d-pic) minmax(0, 1fr) var(--tap); }
   .dname { font-size: var(--d-sm); } .dname.fit-1 { font-size: var(--d-xs); } .dname.fit-2, .dname.fit-3, .dname.fit-4 { font-size: var(--t-md); }
   .dbody { font-size: var(--t-sm); gap: var(--sp-4); } .dbody.fit-1 { font-size: var(--t-cap); } .dbody.fit-2, .dbody.fit-3 { font-size: var(--t-floor); }
   .btn.buy { padding: 0 var(--sp-4); } .btn.buy .bl { font-size: var(--t-body); gap: var(--sp-4); }
   .tslot { width: var(--sp-32); height: var(--sp-32); } .trayrow > span:first-child { display: none; }
+}
+
+/* ---- weapons (rework): twelve weapons in the same list rectangle, the Forks button beside Lead and Bobbin ---- */
+.st-spool .list { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); }
+.st-spool .card { grid-template-columns: var(--sp-12) minmax(0, 1fr); padding: var(--sp-2) var(--sp-6); gap: 0 var(--sp-6); }
+.st-spool .card .cic .spool { width: var(--sp-12); height: var(--sp-20); border-top-width: var(--sp-2); border-bottom-width: var(--sp-2); }
+.st-spool .card .cic .lv { font-size: var(--t-floor); }
+.equip.w3 { grid-template-columns: auto repeat(3, minmax(0, 1fr)); }
+.dleft.fit-1 .equip.w3, html.text-large .equip.w3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.equip.w1 { grid-template-columns: minmax(0, 1fr); }
+.dcmp .fkb { display: none; }
+.st-spool .cic .lv { font: 700 var(--t-sm)/1 var(--mono); color: var(--ink-2); }
+@media (max-width: 600px), (max-height: 700px) and (max-width: 860px) and (max-aspect-ratio: 1/1), (max-height: 700px) and (max-width: 860px) and (min-height: 501px), (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint PHONE, SHORT, SIDEWAYS */
+  .st-spool .card { grid-template-columns: minmax(0, 1fr); padding: 0 var(--sp-4); } .st-spool .card .cic { display: none; }   /* no room for the spool: the name says it */
+  .equip.w3 { gap: var(--sp-2); } .equip.w3 .eq { padding: 0 var(--sp-2); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  /* sideways the left slot holds two tap targets, not three: Forks moves into its row in the details */
+  .equip.w3 .fkl { display: none; } .equip.w3, .dleft.fit-1 .equip.w3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .equip.w3 > span { display: none; }
+  .dcmp .fkb { display: inline-flex; align-items: center; margin-left: var(--sp-6); min-height: var(--tap); vertical-align: middle; }
 }

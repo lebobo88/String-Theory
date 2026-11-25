@@ -168,22 +168,26 @@
     },
     /* Forks: at level IV and level VII a weapon offers two options. The fork is bought once (the first with coins, the second with gems)
        and the first option is taken; after that either can be chosen in the hideout for nothing (setFork). p.forks[id] = { a, b }. */
-    forkSlot(p, id) {
+    forkSlot(p, id) {   // the first fork this weapon has reached and not bought, or -1
       const t = C.THREADS[id], w = p.threads[id] || 0, f = (p.forks && p.forks[id]) || {};
       return (t.forks || []).findIndex((fk, i) => w >= fk.at && !f[String.fromCharCode(97 + i)]);
     },
-    forkState(p, id) {
+    /* slot: which fork (0 at level IV, 1 at level VII); left out, the first one that can be bought. why: 'buy' | 'owned' | 'level' | 'short' | 'none'. */
+    forkState(p, id, slot) {
       const t = C.THREADS[id], w = p.threads[id] || 0, fs = t.forks || [], f = (p.forks && p.forks[id]) || {};
       if (!w || !fs.length) return R(false, 'none');
-      const i = shop.forkSlot(p, id);
-      if (i < 0) { const next = fs.findIndex((fk, k) => !f[String.fromCharCode(97 + k)]); return next < 0 ? R(false, 'owned') : R(false, 'level', { at: fs[next].at, slot: next }); }
+      let i = slot === undefined ? shop.forkSlot(p, id) : slot;
+      if (i < 0 || !fs[i]) { const next = fs.findIndex((fk, k) => !f[String.fromCharCode(97 + k)]); return next < 0 ? R(false, 'owned') : R(false, 'level', { at: fs[next].at, slot: next }); }
+      if (f[String.fromCharCode(97 + i)]) return R(false, 'owned', { slot: i });
+      if (w < fs[i].at) return R(false, 'level', { at: fs[i].at, slot: i });
       const c = C.FORK_COST[i] || C.FORK_COST[C.FORK_COST.length - 1], o = { slot: i, at: fs[i].at, dust: c.dust, silk: c.silk, cur: c.silk ? 'silk' : 'dust', price: c.silk || c.dust };
       return p.dust >= c.dust && p.silk >= c.silk ? R(true, 'buy', o) : R(false, 'short', o);
     },
-    buyFork(p, id, opt) {
-      const st = shop.forkState(p, id);
+    buyFork(p, id, opt) {   // opt: the option to take (it names its fork); left out, the first option of the first fork that can be bought
+      const fs = C.THREADS[id].forks || [], at = opt ? fs.findIndex(fk => fk.opts.some(x => x.id === opt)) : -1;
+      const st = shop.forkState(p, id, at >= 0 ? at : undefined);
       if (!st.ok) return st;
-      const fk = C.THREADS[id].forks[st.slot], o = fk.opts.find(x => x.id === opt) || fk.opts[0];
+      const fk = fs[st.slot], o = fk.opts.find(x => x.id === opt) || fk.opts[0];
       p.dust -= st.dust; p.silk -= st.silk;
       p.forks = p.forks || {}; p.forks[id] = Object.assign({}, p.forks[id], { [String.fromCharCode(97 + st.slot)]: o.id });
       return R(true, 'bought', { slot: st.slot, opt: o.id });
