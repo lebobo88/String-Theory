@@ -871,7 +871,7 @@
     // ---------- twists on a clock (rework: waves) ----------
     /* The wave's own clocks. dt is game time (slowed by Tangle, scaled by the stage), rawDt is the frame's. */
     waveClocks(dt, rawDt, playing) {
-      if (this.dimWave) { const want = playing ? 0.5 : 0; this.dark += (want - this.dark) * Math.min(1, rawDt * 2); if (!playing && this.dark < 0.01) this.dark = 0; }
+      if (this.dimWave) { const want = playing ? 0.7 : 0; this.dark += (want - this.dark) * Math.min(1, rawDt * 2); if (!playing && this.dark < 0.01) this.dark = 0; }
       if (!playing || this.boss) return;
       const sm = this.sampler;
       if (sm) {

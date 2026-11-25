@@ -1119,10 +1119,10 @@
        a gold moth in the gold round (a halo). */
     twistMark(e, z) {
       const t = this.time, tw = e.tw, sp = this.spr;
-      if (tw === 'elite') { sp.add(e.x, e.y, z + 0.3, 2.0 + 0.12 * Math.sin(t * 5), this.lc(PAL.saffron, 2.4), 0.8, 7, t * 1.3); for (let k = 0; k < 4; k++) { const a = t * 2.2 + k * 1.5708; sp.add(e.x + Math.cos(a) * 0.85, e.y + Math.sin(a) * 0.85, z + 0.4, 0.3, this.lc(PAL.glare, 2.6), 0.95, 1, a); } }
+      if (tw === 'elite') { sp.add(e.x, e.y, z + 0.3, 2.3 + 0.15 * Math.sin(t * 5), this.lc(PAL.saffron, 1.7), 0.8, 7, t * 1.3); sp.add(e.x, e.y, z + 0.1, 1.9, this.lc(PAL.saffron, 1.3), 0.3, 0); for (let k = 0; k < 4; k++) { const a = t * 2.2 + k * 1.5708; sp.add(e.x + Math.cos(a) * 0.85, e.y + Math.sin(a) * 0.85, z + 0.4, 0.3, this.lc(PAL.glare, 2.6), 0.95, 1, a); } }
       else if (tw === 'split') { const a = Math.sin(t * 3 + e.id) * 0.15; for (let k = -1; k <= 1; k += 2) sp.add(e.x + k * (0.55 + a), e.y + 0.45, z + 0.4, 0.42, this.lc(PAL.paper, 2), 0.95, 0); sp.add(e.x, e.y, z + 0.25, 1.5, this.lc(PAL.paper, 1.2), 0.3, 7, -t); }
       else if (tw === 'lead') { sp.add(e.x, e.y, z + 0.3, 2.2, this.lc(PAL.linen, 2), 0.7, 7, t); sp.add(e.x, e.y, z + 0.2, 1.4, this.lc(PAL.saffron, 1.4), 0.4, 0); }
-      else if (tw === 'gold') { sp.add(e.x, e.y, z + 0.2, 1.7 + 0.15 * Math.sin(t * 6 + e.id), this.lc(PAL.saffron, 2.2), 0.8, 7, t * 1.5); sp.add(e.x, e.y, z + 0.1, 1.4, this.lc(PAL.saffron, 1.6), 0.55, 0); }
+      else if (tw === 'gold') { sp.add(e.x, e.y, z + 0.2, 1.5 + 0.12 * Math.sin(t * 6 + e.id), this.lc(PAL.saffron, 2.2), 0.8, 7, t * 1.5); sp.add(e.x, e.y, z + 0.1, 1.2, this.lc(PAL.saffron, 1.4), 0.22, 0); }
     }
     /* The burning thread (a wave twist): a line along the top of the cloth that burns away from the right; a spark runs at its end and it turns red when low. */
     syncTimer(sim, fdt) {
@@ -1308,7 +1308,7 @@
         const sx = 1 + hurt * 0.22 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0), sy = 1 - hurt * 0.1 + (wind ? 0.12 : 0) + (e.elite ? 0.25 : 0);   // an elite moth is bigger
         const sprite = this.mothSprite(e), noSplit = e.type === 'looper';
         this.compose(e.x, e.y + wk * 0.2, z + wk * 0.25, rot, 0, diving ? -0.25 : wk * 0.4, sx, sy, 1);   // it rears back before it dives
-        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = (e.state === 'trace' ? (e.gold ? 0.6 : 0.12) : 0) + sim.dark * 0.3, flash = hurt * 0.9;   // (a gold moth glows; in a dim cloth every moth carries a little light)
+        const warn = wind ? 0.45 + 0.35 * Math.sin(this.time * 30) : 0, glow = (e.state === 'trace' ? (e.gold ? 0.22 : 0.12) : 0) + sim.dark * 0.3, flash = hurt * 0.9;   // (a gold moth glows; in a dim cloth every moth carries a little light)
         this.mothPool(sprite, 'body', noSplit).push(this.M, white, flash, glow, warn);
         if (!noSplit) {
           const a = Math.sin(e.flap) * 0.55 - 0.15, cell = 0.088;

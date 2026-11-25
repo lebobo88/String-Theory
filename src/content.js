@@ -438,15 +438,60 @@
   };
 
   // ---- Gimp's Bench: tempers. Dust. Permanent on every needle (owner direction; the bible had them per-Night). ----
-  const TEMPER_COST = [120, 300, 650, 1200, 2000];
+  /* Uncapped. Prices: the first five are today's; after that each level costs 1.22 times the one before (VI 2,440, X 5,410, XV 14,610,
+     XX 39,480, XXX about 288,000). Every temper uses the same ladder. */
+  const TEMPER_COST = [120, 300, 650, 1200, 2000];   // levels I to V (the legacy ladder; temperCost() below is what the shop reads)
+  const temperCost = lv => lv < 5 ? TEMPER_COST[lv] : Math.round(2000 * Math.pow(1.22, lv - 4));   // price of level lv+1 when you own lv
+  /* What each level adds. `curve` is [levels in this stretch, gain per level] stretches in order; the last stretch goes on for ever.
+     Levels I to V (III for the first one) keep their old gains, so an old save flies exactly as before; later levels taper.
+     `cap` is a ceiling on the total gain (shield and the others that must stay playable). `marks`: every fifth level from X adds a
+     small named bonus, `{ key: amount }` added up in ST.derive (soft: boss weak spots, dmg: damage, sp: special meter from kills,
+     invuln: time safe after a hit, dash: dash recovery, magnet: pickup radius, chart: blueprint drops, charm: power-up drops). */
   const TEMPERS = {
-    point: { name: 'Damage', max: 5, desc: 'Each level: shots hit harder. Level IV breaks Casebearer armour in one hit', chartAt: 4 },
-    eye:   { name: 'Fire rate', max: 5, desc: 'Each level: fire faster', chartAt: 4 },
-    ply:   { name: 'Shield', max: 3, desc: 'Each level: take one more hit before losing a life' },
-    pace:  { name: 'Speed', max: 3, desc: 'Each level: move faster' },
-    magnet: { name: 'Magnet', max: 3, desc: 'Each level: pull in coins and pickups from 35% farther away' },
-    luck:  { name: 'Luck', max: 3, desc: 'Each level: power-ups and blueprints drop 20% more often' }
+    point: { name: 'Damage', desc: 'Each level: shots hit harder. Level IV breaks Casebearer armour in one hit. The gain shrinks after level V', chartAt: 4,
+      curve: [[5, 0.15], [5, 0.08], [10, 0.04], [Infinity, 0.02]],
+      marks: { 10: { name: 'Weak spots', desc: 'Boss weak spots take 10% more', soft: 0.1 }, 15: { name: 'Weak spots II', desc: 'Boss weak spots take another 10% more', soft: 0.1 },
+        20: { name: 'Heavy hand', desc: 'All shots hit 5% harder', dmg: 0.05 }, 25: { name: 'Weak spots III', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 30: { name: 'Heavy hand II', desc: 'All shots hit another 5% harder', dmg: 0.05 } } },
+    eye:   { name: 'Fire rate', desc: 'Each level: fire faster. The gain shrinks after level V', chartAt: 4,
+      curve: [[5, 0.07], [5, 0.0373], [10, 0.0187], [Infinity, 0.0093]],
+      marks: { 10: { name: 'Quick spool', desc: 'Kills fill the special meter 10% faster', sp: 0.1 }, 15: { name: 'Quick spool II', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 },
+        20: { name: 'Quick spool III', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 }, 25: { name: 'Quick spool IV', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 }, 30: { name: 'Quick spool V', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 } } },
+    ply:   { name: 'Shield', desc: 'Levels I to III: one more hit each. After that, one more hit every fourth level, up to level XV',
+      curve: [[3, 1], [Infinity, 0.25]], cap: 6,
+      marks: { 10: { name: 'Padding', desc: 'Stay safe 10% longer after a hit', invuln: 0.1 }, 15: { name: 'Padding II', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 },
+        20: { name: 'Padding III', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 }, 25: { name: 'Padding IV', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 }, 30: { name: 'Padding V', desc: 'Stay safe another 10% longer after a hit', invuln: 0.1 } } },
+    pace:  { name: 'Speed', desc: 'Levels I to III: move faster. After that each level adds less, and the ceiling is close',
+      curve: [[3, 1.5], [Infinity, 0.5]], decay: 0.85,
+      marks: { 10: { name: 'Light foot', desc: 'Dashes come back 8% sooner', dash: 0.08 }, 15: { name: 'Light foot II', desc: 'Dashes come back 8% sooner again', dash: 0.08 },
+        20: { name: 'Light foot III', desc: 'Dashes come back 8% sooner again', dash: 0.08 }, 25: { name: 'Light foot IV', desc: 'Dashes come back 8% sooner again', dash: 0.08 }, 30: { name: 'Light foot V', desc: 'Dashes come back 8% sooner again', dash: 0.08 } } },
+    magnet: { name: 'Magnet', desc: 'Levels I to III: pull in coins and pickups from 35% farther away. After that each level adds less',
+      curve: [[3, 0.35], [3, 0.15], [4, 0.06], [Infinity, 0.02]], cap: 1.8,
+      marks: { 10: { name: 'Wide net', desc: 'Pickups are pulled from 10% farther', magnet: 0.1 }, 15: { name: 'Wide net II', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 },
+        20: { name: 'Wide net III', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 }, 25: { name: 'Wide net IV', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 }, 30: { name: 'Wide net V', desc: 'Pickups are pulled from another 10% farther', magnet: 0.1 } } },
+    luck:  { name: 'Luck', desc: 'Levels I to III: power-ups and blueprints drop 20% more often. After that each level adds less',
+      curve: [[3, 0.2], [5, 0.08], [7, 0.03], [Infinity, 0.01]], cap: 1.4,
+      marks: { 10: { name: 'Keen eye', desc: 'Blueprints drop 10% more often', chart: 0.1 }, 15: { name: 'Bright charms', desc: 'Power-ups drop 10% more often', charm: 0.1 },
+        20: { name: 'Keen eye II', desc: 'Blueprints drop another 10% more often', chart: 0.1 }, 25: { name: 'Bright charms II', desc: 'Power-ups drop another 10% more often', charm: 0.1 }, 30: { name: 'Keen eye III', desc: 'Blueprints drop another 10% more often', chart: 0.1 } } }
   };
+  /* Total gain of a temper at level lv (a number of levels, so 1 level of Damage is 0.15). */
+  function temperGain(id, lv) {
+    const t = TEMPERS[id]; let left = Math.max(0, lv), sum = 0, k = 0;
+    for (const [n, g] of t.curve) {
+      const take = Math.min(left, n);
+      if (t.decay && n === Infinity) sum += g * (1 - Math.pow(t.decay, take)) / (1 - t.decay);   // speed: each level beyond III is 15% smaller than the one before
+      else sum += take * g;
+      left -= take; k++; if (left <= 0) break;
+    }
+    return t.cap !== undefined ? Math.min(sum, t.cap) : sum;
+  }
+  /* The named bonuses a temper at level lv has earned, added up: { soft: .2, dmg: .05, ... }. */
+  function temperMarks(id, lv) {
+    const out = {}, m = TEMPERS[id].marks;
+    for (const at in m) if (lv >= +at) for (const k in m[at]) if (k !== 'name' && k !== 'desc') out[k] = (out[k] || 0) + m[at][k];
+    return out;
+  }
+  /* The next level at which a temper adds a named bonus, after lv (or 0 when it has no more). */
+  const temperNextMark = (id, lv) => { const m = TEMPERS[id].marks; for (const at of Object.keys(m).map(Number).sort((a, b) => a - b)) if (at > lv) return at; return 0; };
 
   // ---- Notions Drawer: consumables. Dust. Single use, three tray slots. ----
   const NOTIONS = {
@@ -551,5 +596,5 @@
     stageHp: 0.2, stageSpeed: 0.04, stageShot: 0.05     // per stage: enemies get tougher, faster, and their shots quicker
   };
 
-  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
+  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, temperCost, temperGain, temperMarks, temperNextMark, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
 })(typeof window !== 'undefined' ? (window.ST = window.ST || {}) : (globalThis.ST = globalThis.ST || {}));
