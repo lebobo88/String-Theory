@@ -1,0 +1,260 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>String Theory · combat and progression plan</title><style>
+:root{--ink:#1c2138;--ink2:#4a5070;--linen:#e9e2d0;--paper:#f3eee1;--madder:#a82a33;--rule:#b9b09a}
+*{box-sizing:border-box}body{margin:0;background:var(--linen);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
+h1{font:400 32px/1.1 ui-monospace,Menlo,Consolas,monospace;margin:8px 0 4px}
+h2{font:400 24px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:44px 0 10px;padding-top:14px;border-top:2px dashed var(--ink)}
+h3{font:400 21px/1.2 ui-monospace,Menlo,Consolas,monospace;margin:34px 0 2px}
+.sub{color:var(--madder);font-weight:700;margin:0 0 8px}
+p{margin:8px 0}.k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+dl{margin:8px 0 0;display:grid;grid-template-columns:150px 1fr;gap:0}dt,dd{margin:0;padding:7px 0;border-top:1px solid var(--rule)}dt{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);padding-right:10px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;margin:10px 0}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}th{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);font-weight:400}
+td.n{font-variant-numeric:tabular-nums}
+ul{padding-left:20px;margin:6px 0}li{margin:5px 0}.note{border:1.5px dashed var(--ink2);padding:10px 12px;background:var(--paper);margin:14px 0;font-size:15px}
+@media(max-width:520px){dl{grid-template-columns:1fr}dt{border-top:1px solid var(--rule);padding-bottom:0}dd{border-top:0;padding-top:2px}table{font-size:13.5px}}
+</style></head><body>
+<main>
+<p class="k">String Theory · plan for approval · nothing below is built yet</p>
+<h1>Combat and progression</h1>
+<p class="sub">Every weapon worth taking, bosses that test skill instead of patience, a bomb you can plan with, no ceiling on upgrades, something to spend on forever, and waves that change.</p>
+<div class="note">Nothing changes until you approve. One build at the end, when all of it is done and tested. Every number below was measured from the game's own code with simulated play, not guessed.</div>
+
+<h2>1 · What the investigation found</h2>
+<dl>
+<dt>Bosses</dt><dd>Boss health grows 30 times from the first boss to the Moth King, but the damage of the build each boss was tuned for grows only 7.6 times. Health per damage goes from 74 s to 295 s, with a cliff at boss 5 (the Unraveller): +104% health for +40% damage. A flawless simulated pilot that is never hit still needs 30 to 44 s <i>per phase</i>; a careful pilot loses to the Moth King 9 times in 9.</dd>
+<dt>Max upgrades</dt><dd>Fully maxed damage and fire rate is only 1.35 times the build the last boss was tuned against. Upgrades stop well before the bosses do.</dd>
+<dt>Carpet Beetle</dt><dd>For 55% of the fight your shots do nothing and are thrown back at you. The head is open about 2 s in every 6.8 s, it burrows for another 9%, and the one fast route (stunning it with a dash so it slams the wall) has a window of about 0.15 s. Bullets are not the problem; there are only about 5 on screen.</dd>
+<dt>Weapons</dt><dd>Spread Stitch has the highest damage on paper, the widest cone and the cheapest price, so it wins waves. Its damage halves with distance, so against bosses it is one of the worst (2.5 damage a second on a weak spot, against 14 for Single and 18 for Satin). Nothing tells the player this, so it feels like the only weapon.</dd>
+<dt>Specials</dt><dd>They charge from grazes and kills, so in a boss fight with one weapon the bar almost never fills. Five of the nine cannot reach a boss at all; the strongest does about 1% of a late boss.</dd>
+<dt>Bomb</dt><dd>It is a random drop (0.4% per kill), fires the moment you touch it and cannot be stored. About 4 a run, and one in three runs gets one during a boss. It does 25 flat damage to a boss. Bug: dying fireflies throw a fresh ring of bullets just after a bomb clears the screen.</dd>
+<dt>Power-ups</dt><dd>Eleven, each picked at random. They come from kills, and boss fights have very few kills, so a power-up is active for only 0 to 2% of boss time, exactly when it would matter most.</dd>
+<dt>Economy</dt><dd>Everything bought with coins totals 28,120; a good player buys it all in 7 or 8 runs. Everything bought with gems totals 3,195, about 20 full clears. After that there is nothing to buy.</dd>
+<dt>Coin Exchange bug</dt><dd>The Coin Exchange perk gives gems equal to your bank ÷ 100 on every game over and never takes the coins, so one death can pay hundreds or thousands of gems.</dd>
+<dt>Waves</dt><dd>All 24 waves in all 8 stages use one 5-row grid, one entry curve and one dive routine. The random seed only changes which moth dives next. Later stages only multiply health and speed, which a maxed ship outruns: a simulated maxed ship clears every wave with 0 to 4 hits. The bonus wave is always 40 moths of the same 4 kinds.</dd>
+<dt>Stats bar</dt><dd>Its slot is 48 px, but its three lines need 44.2 px inside the border at normal text and 47 px at large text, so the change line sits on the brass edge or is cut off. After a purchase it jumps to the <i>next</i> level's preview, so you never see what you just bought. After buying a ship it shows no change at all.</dd>
+</dl>
+
+<h2>2 · The stats bar</h2>
+<ul>
+<li>The strip grows to 56 px (62 px at large text), with room for the change line at a readable 14 px. The layout stays locked: the list loses 8 to 14 px, nothing moves between tabs, and on short screens (700 px or less) the list keeps its full tap size.</li>
+<li>The change line shows the amount and a direction mark, not just colour: <b>Damage 1.60 ▲ +0.15</b>.</li>
+<li>After you buy, the changed stats stay highlighted with "was 1.45" until you pick something else, so you see what the purchase did. Ships get the same.</li>
+<li>The ship details use the same numbers as the bar instead of a separate 1 to 5 rating.</li>
+<li>Also fixed: the "Hideout" heading cut off by the coin purse on small phones at large text.</li>
+<li>The screen audit gets a new rule that fails on any clipped or overflowing stat.</li>
+</ul>
+
+<h2>3 · Bosses that test skill, not patience</h2>
+<h3>Fight length targets</h3>
+<table><tr><th>Bosses</th><th>A good player with the expected build</th><th>A fully upgraded build</th></tr>
+<tr><td>1 to 4</td><td class="n">45 to 70 s (2 phases)</td><td class="n">25 to 40 s</td></tr>
+<tr><td>5 to 7</td><td class="n">70 to 100 s (3 phases)</td><td class="n">40 to 60 s</td></tr>
+<tr><td>Moth King</td><td class="n">110 to 140 s (4 phases)</td><td class="n">65 to 85 s</td></tr></table>
+<p>Each phase lands between 20 and 40 s, and upgrades always shorten a fight. A new player is never stuck in a fight several times longer than a skilled one.</p>
+<h3>How</h3>
+<ul>
+<li><b>One health curve.</b> Boss health is re-derived from the damage a player is expected to have at that point in the game, using the weapons and upgrades they can realistically own, and smoothed so there is no cliff at boss 5. Bosses 5 to 8 come down by roughly 35 to 50%, and every boss is checked against the targets above with the simulator.</li>
+<li><b>Open more of the fight.</b> Every boss is damageable for at least 65% of the fight. Armour and shield windows stay, but they become short, clearly shown moments to dodge, not long stretches of waiting.</li>
+<li><b>Break the boss.</b> The existing fray meter becomes the heart of every fight. Weak-spot hits, close-range hits, grazes and specials fill it. When it fills, the boss is <b>frayed</b>: it stops attacking for 4 to 5 seconds and takes triple damage. A skilled player frays a boss two or three times a phase; that is where the skill shows, not in holding fire for 3 minutes.</li>
+<li><b>The Carpet Beetle, specifically.</b>
+ <ul>
+ <li>Shots bounce off only while it rolls, not while it aims, and they no longer come back at you. They glance off with a spark instead.</li>
+ <li>The head stays open about 3.5 s of every cycle.</li>
+ <li>The dash stun gets a clear tell (the shell flashes and creaks) and a fair window of about 0.5 s, and a stun frays the beetle at once.</li>
+ <li>The underground stretch gets a shadow to shoot at, so there is always something to do.</li>
+ <li>The Mothball Row patch that adds 25% health becomes a new attack instead.</li>
+ </ul></li>
+<li><b>Reward speed.</b> The boss reward shrinks gently the longer the fight takes, and finishing fast pays a bonus.</li>
+</ul>
+
+<h2>4 · Weapons: all viable, all different, twelve of them</h2>
+<p>Each weapon owns one job and gives something up for it. The aim is that every weapon is the best choice somewhere: some for waves, some for bosses, some for staying alive. The simulator checks them, and the test fails if any weapon is more than 15% behind the best on its own job, or more than 40% behind overall.</p>
+<table><tr><th>Weapon</th><th>Its job</th><th>What changes</th></tr>
+<tr><td>Single Stitch</td><td>Precision. Kills bosses from range.</td><td>Pierces from level II. Weak-spot hits fill the fray meter twice as fast.</td></tr>
+<tr><td>Double Stitch</td><td>The steady all-rounder.</td><td>Unchanged in feel, retuned so it is never the worst at anything.</td></tr>
+<tr><td>Spread Stitch</td><td>Crowds, up close.</td><td>Full damage close in, but the cone narrows less with levels. Point-blank hits fray bosses, so it rewards brave flying instead of always winning.</td></tr>
+<tr><td>Chain Stitch</td><td>Packed swarms and bonus waves.</td><td>Jumps to more targets, and every jump adds a little to the fray meter.</td></tr>
+<tr><td>Knot Bomb</td><td>Area damage and clearing bullets.</td><td>Larger blasts; holding fire lets a knot grow before it bursts.</td></tr>
+<tr><td>Cross Stitch</td><td>Angles and the edges of the screen.</td><td>Bank shots off the frame hit harder and can reach a boss's side weak spots.</td></tr>
+<tr><td>Wire Laser</td><td>Breaks armour.</td><td>Ignores armour and shields on bosses as well as moths; the ship stays faster while charging.</td></tr>
+<tr><td>Satin Stitch</td><td>Melts one target.</td><td>Ramps up faster and holds its ramp when you switch between nearby targets.</td></tr>
+<tr><td><b>New:</b> Lazy Daisy</td><td>Defence.</td><td>Petals of thread circle the ship, block bullets and cut anything close.</td></tr>
+<tr><td><b>New:</b> Feather Stitch</td><td>Hits what you can't line up.</td><td>Homing shots that wander toward the nearest enemy; weaker per shot.</td></tr>
+<tr><td><b>New:</b> Blanket Stitch</td><td>Loops and lines.</td><td>A looping shot that flies out and back, hitting everything twice.</td></tr>
+<tr><td><b>New:</b> Tacking Pins</td><td>Control.</td><td>Pins that stick in the cloth and fire up at whatever passes over them.</td></tr></table>
+<h3>Deeper upgrades</h3>
+<ul>
+<li>Every weapon goes from 3 levels to 10.</li>
+<li>At level IV and again at level VII you choose one of two forks that change how the weapon plays. For example, Spread Stitch's first fork is <i>Fan</i> (wider cone) or <i>Arrowhead</i> (pellets converge on one point at range). Both forks are bought once; you can switch between them in the hideout for free.</li>
+<li>Level X is a mastery with a visible change. Each mastered weapon also has a <b>pairing</b>: carry it with a specific partner on the bobbin and both get a matched bonus, so the second weapon becomes a real decision.</li>
+<li>Costs rise with each level (about 1.5 times the level before); levels VIII to X also need gems.</li>
+</ul>
+
+<h2>5 · Specials and the bomb</h2>
+<h3>The bomb becomes a held tool</h3>
+<ul>
+<li>You carry bombs: start with 1, hold up to 3 (more with perks), get one back every stage. A bomb pickup adds one to your stock instead of firing.</li>
+<li>Tap the bomb button to use one. It clears bullets, makes you safe for 1.5 s, hits every moth, does about 6% of a boss's health, and half-fills the boss's fray meter. Aimed well, it starts a break.</li>
+<li><b>Last-second save:</b> if you bomb within about 0.15 s of being hit, the hit is cancelled. It is the classic panic bomb, and it makes the stock feel like lives you can spend wisely.</li>
+<li>Bombs left at the end of a stage pay coins, so holding on is a choice, not a waste.</li>
+<li>The firefly bug is fixed.</li>
+</ul>
+<h3>Specials that matter</h3>
+<ul>
+<li>Specials also charge from damage dealt to bosses, so a boss fight gives two or three specials instead of none.</li>
+<li>Every special gets a boss use:
+ <ul>
+ <li><b>Tie Off</b> also frays the boss.</li>
+ <li><b>Basting Line</b> can be drawn upward through a boss.</li>
+ <li><b>Darn</b> slows the boss's attacks.</li>
+ <li><b>Lasso</b> grabs boss bullets and flings them back.</li>
+ <li><b>Full Sail</b> rams the boss for real damage.</li>
+ <li><b>String of Beads</b> locks every bead on to weak spots.</li>
+ <li><b>Quilt</b> turns the bullets it absorbs into fray.</li>
+ <li><b>Signature</b> lasts longer against bosses.</li>
+ <li><b>Loom</b> sweeps through the boss as well.</li>
+ </ul></li>
+<li>The simulator checks that every special is worth using in waves and in boss fights.</li>
+</ul>
+
+<h2>6 · Power-ups</h2>
+<ul>
+<li><b>Power-ups in boss fights:</b> every 10% of a boss's health that you take off, it sheds a loose thread that becomes a power-up. A good fight gives three to five.</li>
+<li><b>Stacking:</b> catching the same power-up again while it runs extends it and raises it one step (up to three).</li>
+<li><b>Eight new power-ups</b>, so 19 in all:
+ <ul>
+ <li><b>Split Thread:</b> shots split in two on the first hit.</li>
+ <li><b>Mirror:</b> a second set of shots fires from the top of the cloth downward.</li>
+ <li><b>Recharge:</b> fills the special.</li>
+ <li><b>Hot Streak:</b> fire rate climbs for as long as you aren't hit.</li>
+ <li><b>Tack Trap:</b> moths that die leave a pin that shoots.</li>
+ <li><b>Bomb:</b> adds one to your stock.</li>
+ <li><b>Fray Dust:</b> everything you hit frays twice as fast.</li>
+ <li><b>Tangled Spool:</b> a risk pickup. Huge damage for 10 s, but you move at half speed.</li>
+ </ul></li>
+<li>Weights change with the moment: shield power-ups are more likely when you are hurt, bombs when your stock is empty.</li>
+</ul>
+
+<h2>7 · Unique items</h2>
+<dl>
+<dt>Finds (only in a run)</dt><dd>About 30 items that change how a run plays, found only during play and lasting for that run. They come in three rarities and drop from new elite moths and from a choice of 1 of 3 after every boss. Examples:
+ <ul>
+ <li><b>Thimble of Thorns:</b> every hit you take fires a ring of needles.</li>
+ <li><b>Lucky Selvedge:</b> the edges of the screen double coin pickups.</li>
+ <li><b>Moth-Eaten Map:</b> one bonus wave in every stage.</li>
+ </ul>
+ They are grouped into six families that combine well, so collecting several from one family pays off. Every find you discover goes into an album, which is a collection to complete, not extra power.</dd>
+<dt>Heirlooms (only in the shop)</dt><dd>About 12 items bought once with coins or gems and equipped in two slots (three with a perk). They are sidegrades with a cost: <b>Grandmother's Shears</b> doubles bomb damage but you carry one fewer. They are built for particular weapons or ships.</dd>
+<dt>Keepsakes (one per boss)</dt><dd>Eight items, one from each boss, with a chance on every win (guaranteed the first time on Hard). For example, the Beetle's Plate blocks the first hit of every wave. They can be equipped as heirlooms.</dd>
+</dl>
+
+<h2>8 · Money: no ceiling, a fair exchange, things worth saving for</h2>
+<h3>Ship upgrades without caps</h3>
+<p>The caps go. After level V, each level costs about 1.22 times the last, and gains taper off so the game never breaks:</p>
+<table><tr><th>Level</th><th>Cost (coins)</th><th>Damage multiplier</th></tr>
+<tr><td>V (today's cap)</td><td class="n">2,000</td><td class="n">1.75</td></tr>
+<tr><td>VI</td><td class="n">2,440</td><td class="n">1.83</td></tr>
+<tr><td>X</td><td class="n">5,410</td><td class="n">2.15</td></tr>
+<tr><td>XV</td><td class="n">14,610</td><td class="n">2.35</td></tr>
+<tr><td>XX</td><td class="n">39,480</td><td class="n">2.55</td></tr>
+<tr><td>XXX</td><td class="n">288,420</td><td class="n">2.75</td></tr></table>
+<p>Every fifth level adds a small named bonus (for example Damage X: weak spots +10%). Shield, Speed, Magnet and Luck follow their own gentler curves. This is a long road, not a wall: at today's income a strong player reaches about level XV across the board in roughly 30 more runs.</p>
+<h3>The exchange</h3>
+<ul>
+<li>A counter in the hideout swaps coins and gems both ways, with every rate shown before you confirm.</li>
+<li>Coins to gems starts at 150 coins a gem, and each gem bought raises the price 3%. Ten gems cost 1,720 coins, fifty cost about 16,900.</li>
+<li>Gems to coins starts at 40 coins a gem and falls 3% per gem.</li>
+<li>Both rates recover steadily as you play, and fully overnight. A round trip always loses, so the exchange can never be used to make money.</li>
+<li>The broken Coin Exchange perk is removed. Its gem price is refunded, and any gems it already paid out are kept.</li>
+</ul>
+<h3>More to spend gems on</h3>
+<ul>
+<li>Two new perk tiers, about 15 perks. Examples:
+ <ul>
+ <li>+1 bomb stock;</li>
+ <li>start each run with a choice of one of three finds;</li>
+ <li>one free reroll of the find choice;</li>
+ <li>longer fray breaks;</li>
+ <li>+1 heirloom slot;</li>
+ <li>the bobbin fires at 75% instead of 60%;</li>
+ <li>specials start half full.</li>
+ </ul></li>
+<li>Weapon levels VIII to X, the second fork, and the new weapons' unlocks take gems.</li>
+<li>Heirlooms take coins or gems.</li>
+</ul>
+<h3>Going deeper: the Fray dial</h3>
+<p>After your first full clear on any mode, a <b>Fray</b> dial opens for that mode, from 1 to 20. Each step makes moths and bosses a little tougher and faster and adds a twist from a list. Examples:</p>
+<ul>
+<li>elites in every wave;</li>
+<li>bosses start with a third of the fray meter armoured;</li>
+<li>less shield from pickups.</li>
+</ul>
+<p>Each step also adds 10% coins and gems and has its own record. This is the "deeper stages" you asked for: the uncapped upgrades have somewhere to go, and you choose how hard to push.</p>
+<h3>Your save</h3>
+<p>Existing saves carry over untouched. The save gets a proper version-upgrade step and a backup before it is first changed. Today's levels keep their meaning, and new items and the exchange are added alongside them.</p>
+
+<h2>9 · Waves that change</h2>
+<p>Today: one grid, one entry, one dive. The new waves are built from parts, so every stage and every run feels different but is still designed, not random noise.</p>
+<dl>
+<dt>Formations</dt><dd>12 layouts, all authored and readable. Today's grid is one of them; the others are V, chevron, two columns, diamond, ring, spiral, stagger, a wall with a gap, split wings, an arc and a loose cloud.</dd>
+<dt>Entries</dt><dd>8 ways in: today's swoop, loops, figure-eights, a drop from the top, a spiral, crossing streams, a pincer, and a slow march.</dd>
+<dt>Dives</dt><dd>Group dives, swoops in pairs and threes, sweeps along the bottom, and kamikaze bursts, in addition to today's.</dd>
+<dt>Twists</dt><dd>About 10, one or two per wave from stage 2 on:
+ <ul>
+ <li>an elite moth that drops a find;</li>
+ <li>an escorted convoy to break;</li>
+ <li>a shielded front row;</li>
+ <li>reinforcements halfway through;</li>
+ <li>a timer bonus ("clear it before the thread burns through");</li>
+ <li>a captive ship to rescue;</li>
+ <li>a moth that splits;</li>
+ <li>a fast entry;</li>
+ <li>a dim cloth with only your light;</li>
+ <li>bullets that weave.</li>
+ </ul></dd>
+<dt>The stage's boss</dt><dd>The third wave of each stage previews its boss with one of its attacks. Examples:
+ <ul>
+ <li>Mother Tinea's nets;</li>
+ <li>the Atlas's aimed strikes;</li>
+ <li>the Wick's falling coals;</li>
+ <li>the Unraveller's glare;</li>
+ <li>the Empress's web lines.</li>
+ </ul>
+ These attacks already exist and already have warnings and art; waves have simply never used them.</dd>
+<dt>Bonus waves</dt><dd>12 figures instead of 6, and the moths change by stage. Two new kinds of bonus round: <i>catch the falling thread</i> and <i>shoot only the gold moths</i>.</dd>
+<dt>Variety rule</dt><dd>Each run draws its waves from a shuffled deck, so no formation and entry pair repeats within a run, and stage 1 stays gentle. Waves get harder through new patterns and twists, not only more health, so a maxed ship still has to fly.</dd>
+</dl>
+
+<h2>10 · Proof before the build</h2>
+<ul>
+<li><b>A balance test in the repo,</b> built from the simulator this investigation used. It runs every weapon and special against waves and bosses, and fails if any weapon falls outside its band, any boss outside its fight-length target, or any boss is damageable less than 65% of the fight.</li>
+<li><b>An economy model test.</b> It checks that there is always something worth buying until at least run 40, and that the exchange can never be looped for profit.</li>
+<li><b>A variety test.</b> A run must show at least 12 different formations and entries, and no pair may repeat.</li>
+<li><b>A save upgrade test,</b> run against old saves, including yours if you want to send it.</li>
+<li><b>Everything that already exists:</b> the full film, effects, speed, screen-audit and long-play suites, plus the new stats-bar rule.</li>
+<li><b>Art and sound:</b> the new weapons, power-ups and items get stitched icons and shot art in the game's own style, and their own sounds, generated and edited the same way as the boss films.</li>
+</ul>
+
+<h2>11 · How it gets built</h2>
+<table><tr><th>Workstream</th><th>Who</th></tr>
+<tr><td>Boss retune and the fray break, Carpet Beetle rework</td><td>Opus agents (design-heavy), one per group of bosses</td></tr>
+<tr><td>Weapon rework, new weapons, forks and pairings</td><td>Opus agent for the design and tuning; Sonnet agents for the four new weapons' code and art</td></tr>
+<tr><td>Bomb, specials, power-ups</td><td>Sonnet agent</td></tr>
+<tr><td>Finds, heirlooms, keepsakes, album</td><td>Sonnet agent for the system; Haiku agents for entering item data, descriptions and icon charts</td></tr>
+<tr><td>Uncapped upgrades, exchange, perks, Fray dial, save upgrade</td><td>Sonnet agent</td></tr>
+<tr><td>Wave parts, twists, boss previews, bonus figures</td><td>Sonnet agent; Haiku for authoring formation and path tables</td></tr>
+<tr><td>Stats bar and the hideout additions (exchange, heirlooms, album, forks)</td><td>Sonnet agent, checked against atelier and the screen audit</td></tr>
+<tr><td>Balance, economy and variety tests</td><td>Sonnet agent, first, so every other stream is measured against them</td></tr>
+<tr><td>Sounds and descriptions</td><td>Haiku agents for prompt and description drafts; I review, generate and import</td></tr></table>
+<p>The balance tests are built first, then the systems, then tuning against the tests, then the full suite, then one build.</p>
+
+<h2>12 · Calls I made</h2>
+<p>These are my choices; say if you want any of them different.</p>
+<ul>
+<li>"Deeper stages" means the Fray dial on top of the existing 8 stages and 3 modes. I am not adding new stages or bosses; that would mean eight more boss films.</li>
+<li>Spread Stitch stays the best wave weapon at close range. It stops being the answer to everything, and nothing is nerfed into uselessness.</li>
+<li>The bomb is a held stock with a button, not a pickup that fires on touch.</li>
+<li>Uncapped upgrades taper off and never become infinite power, so the hardest Fray steps still need skill.</li>
+<li>Finds are only for a run. Heirlooms and keepsakes are permanent but limited by slots, so a new item is always a choice.</li>
+</ul>
+</main></body></html>
