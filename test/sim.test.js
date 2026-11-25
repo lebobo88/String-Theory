@@ -171,7 +171,8 @@ function fly(profile, seed, skill, log) {
   }
 }
 { // power-up upgrades: content, purchase rules, save migration, and what each upgraded form does in flight
-  const S = ST.shop, ids = Object.keys(C.CHARMS);
+  const S = ST.shop, allIds = Object.keys(C.CHARMS), ids = allIds.filter(id => C.CHARMS[id].up);
+  ok(allIds.filter(id => !C.CHARMS[id].up).sort().join() === 'mirror,recharge,tack', 'only the three that gain nothing from a gem have no upgrade');
   ok(C.CHARM_TIERS.length === 3 && C.CHARM_TIERS[0].need === 0, 'three rows of power-up upgrades, the first open');
   for (const id of ids) { const c = C.CHARMS[id], u = c.up;
     ok(u && u.name && u.name !== c.name && u.desc && u.desc !== c.desc && typeof u.dur === 'number' && u.cost > 0 && C.CHARM_TIERS[u.tier], 'power-up upgrade defined: ' + id);
@@ -180,7 +181,7 @@ function fly(profile, seed, skill, log) {
   const cost = t => ids.filter(id => C.CHARMS[id].up.tier === t).map(id => C.CHARMS[id].up.cost);
   ok(Math.max(...cost(0)) < Math.min(...cost(1)) && Math.max(...cost(1)) < Math.min(...cost(2)), 'each row costs more than the one before');
   ok(Math.min(...cost(0)) <= 30, 'the cheapest upgrade is within a first run or two');
-  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1700, 'the full set is a real investment (' + total + ' gems)');
+  const total = ids.reduce((a, id) => a + C.CHARMS[id].up.cost, 0); ok(total >= 800 && total <= 1400, 'the full set is a real investment (' + total + ' gems)');
   ok(C.CHARMS.twin.up.name === 'Triple Ship', 'the twin ship becomes a triple ship');
 
   // purchase rules

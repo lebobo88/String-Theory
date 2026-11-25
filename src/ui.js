@@ -52,7 +52,15 @@
     sign:   ['...a...', '...a...', 'aaaaaaa', '.aaaaa.', '..aaa..', '.aa.aa.', 'aa...aa'],
     twin:   ['.a...a.', '.a...a.', 'aaa.aaa', 'aaa.aaa', 'a.a.a.a', '.b...b.'],
     triple: ['.....a.....', '.a...a...a.', '.a..aaa..a.', 'aaa.aaa.aaa', 'aaa.a.a.aaa', 'a.a..b..a.a', '.b.......b.'],
-    other:  ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..']
+    other:  ['..a.a..', '.aaaaa.', 'aabbbaa', '.abbba.', 'aabbbaa', '.aaaaa.', '..a.a..'],
+    bomb:   ['.....b.', '....b..', '..aaa..', '.aaaaa.', 'aaabaaa', '.aaaaa.', '..aaa..'],
+    split:  ['...a...', '...a...', '...a...', '..a.a..', '.a...a.', 'a.....a', 'b.....b'],
+    mirror: ['...a...', '..aaa..', '...a...', 'bbbbbbb', '...a...', '..aaa..', '...a...'],
+    recharge: ['....aa.', '...aa..', '..aa...', '.aaaaa.', '...aa..', '..aa...', '.aa....'],
+    streak: ['......a', '.....aa', '...a.aa', '...aaaa', '.a.aaaa', '.aaaaaa', 'bbbbbbb'],
+    tack:   ['.aaa...', 'aaaaa..', '.aaa...', '..a....', '...a...', '....b..', '.....b.'],
+    fraydust: ['.a...a.', '.a.a.a.', '.aa.aa.', '..aaa..', '.b.a.b.', 'b..a..b', '...b...'],
+    spool:  ['aaaaaaa', '.bbbbb.', '.a.a.a.', '.bbbbb.', '.a.a.a.', '.bbbbb.', 'aaaaaaa']
   };
   const PW_SPRITE = { drone: 'bobbin', beeswax: 'beeswax', dish: 'dish', _t: 'thimble', _p: 'pin', _c: 'chalk' };
   const PW_NAME = { sign: 'Signature', _t: 'Thimble', _p: 'Safety Pin', _c: 'Dive warnings', _d: 'Twin ship' };
@@ -80,6 +88,17 @@
     if (UPICONS.size < 200) UPICONS.set(key, h); return h;
   }
 
+  /* Unique items: a find or heirloom as a small counted chart in its family's colour (a rare one wears the saffron ring, like an upgraded power-up). */
+  const ITEMICONS = new Map();
+  function itemIcon(it, px) {
+    const key = (it.glyph || '') + '|' + (it.fam || it.col) + '|' + (it.rar || '') + '|' + px; let h = ITEMICONS.get(key); if (h !== undefined) return h;
+    const col = it.fam ? C.FIND_FAMILIES[it.fam].color : PAL[it.col] || PAL.saffron, g = C.GLYPHS[it.glyph] || C.GLYPHS.egg, rare = it.rar === 'rare';
+    h = stitched(rare ? outlined(g) : g, { a: col, b: PAL.paper, '+': PAL.saffron }, px, 'ic');
+    if (ITEMICONS.size < 200) ITEMICONS.set(key, h); return h;
+  }
+  const findInfo = id => { const f = C.FINDS[id], F = C.FIND_FAMILIES[f.fam]; return { f, F, rar: C.FIND_RARITY[f.rar].name }; };
+  const heirKind = h => h.keepsake ? 'Keepsake' : 'Heirloom';
+
   /* The combo: up to eight turns of thread wound round the score, each one half behind the digits and half in front. */
   const TURNS = 8;
   function woundHtml() {
@@ -102,7 +121,7 @@
   const attr = (el, a, v) => { const k = '_a' + a; if (el && el[k] !== v) { el[k] = v; el.setAttribute(a, v); } };
 
   /* Sounds by action: tabs flick, equipping seats a spool, everything else is a soft tap. Items and the special make their own sound in play. */
-  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1 };
+  const TAB_ACTS = { tab: 1, lview: 1, ledger: 1, stab: 1, pview: 1, bview: 1 }, QUIET_ACTS = { notion: 1, special: 1, bomb: 1 }, EQUIP_ACTS = { wind: 1, wind2: 1, takeup: 1, wear: 1, unwear: 1 };
 
   class UI {
     constructor(ctl) {
@@ -191,7 +210,11 @@
         case 'pview': this.patView = ['more', 'ups', 'exch'].indexOf(arg) >= 0 ? arg : 'perks'; this.hem(); break;
         case 'fray': { const mode = ST.modeUnlocked(this.p, st.mode) ? st.mode : 'normal', top = ST.frayOpen(this.p, mode), now = Math.min(top, st.fray | 0);
           st.fray = Math.max(0, Math.min(top, now + (arg === 'up' ? 1 : -1))); c.saved(); this.menu(); break; }
-        case 'bview': this.bookView = arg === 'foes' ? 'foes' : 'charts'; this.hem(); break;
+        case 'bview': this.bookView = ['foes', 'album', 'heir'].indexOf(arg) >= 0 ? arg : 'charts'; this.hem(); break;
+        case 'wear': S.wearHeirloom(this.p, arg); c.saved(); this.hem(); break;
+        case 'unwear': S.takeOffHeirloom(this.p, arg); c.saved(); this.hem(); break;
+        case 'findpick': c.pickFind(+arg); break;
+        case 'findreroll': c.rerollFind(); break;
         case 'buy': this.buy(arg); break;
         case 'nope': this.snd('ui_fail'); this.shake(); break;
         case 'wind': S.wind(this.p, arg); c.saved(); this.hem(); break;
@@ -220,6 +243,7 @@
         case 'how': this.how(); break;
         case 'notion': c.useNotion(+arg); break;
         case 'special': c.special(); break;
+        case 'bomb': c.bomb(); break;
         case 'gfx': { const o = ['auto', 'low', 'lite', 'medium', 'high']; st.graphics = o[(o.indexOf(st.graphics || 'auto') + 1) % o.length]; c.saved(); c.applySettings(); this.settings(); break; }
         case 'ctl': st.controls = st.controls === 'follow' ? 'drag' : 'follow'; c.saved(); c.applySettings(); this.settings(); break;
         case 'pause': c.pause(); break;
@@ -250,9 +274,10 @@
         case 'route': if (c.midNight && c.sim) { c.state = 'hem'; this.hem(); } else c.openHem(false); return true;   // mid-run: the same visit, so "one per visit" still holds
         case 'hem':   // a second view steps back to the first; then out to the main menu (a run in progress stays saved there as Continue run)
           if (this.tab === 'pattern' && this.patView !== 'perks') { this.patView = 'perks'; this.hem(); }
-          else if (this.tab === 'book' && this.bookView === 'foes') { this.bookView = 'charts'; this.hem(); }
+          else if (this.tab === 'book' && this.bookView && this.bookView !== 'charts') { this.bookView = 'charts'; this.hem(); }
           else c.toTitle();
           return true;
+        case 'finds': return true;   // rework: unique items: the choice stays until you make it
         case 'tally': case 'gameover': case 'victory': c.continueNight(); return true;
       }
       return false;
@@ -389,7 +414,7 @@
     hem() {
       const p = this.p, c = this.ctl, mid = c.midNight;
       const tabs = [['spool', 'Weapons', 'buy and level up'], ['bench', 'Upgrades', 'damage, fire rate, shield, speed'], ['notions', 'Items', 'single use'],
-        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'and power-up upgrades'], ['book', 'Collection', 'blueprints and enemies']];
+        ['case', 'Ships', 'buy with gems'], ['pattern', 'Perks', 'and power-up upgrades'], ['book', 'Collection', 'blueprints, album, heirlooms']];
       if (!tabs.some(t => t[0] === this.tab)) this.tab = 'spool';
       const sub = mid ? `${C.PANELS[c.sim.panel - 1].name} cleared · next: ${C.PANELS[c.sim.panel].name}` : 'Between runs · everything you buy is saved';
       this.preview = null;
@@ -413,7 +438,7 @@
       }
     }
     /* Which selection a pick belongs to: the Perks and Collection tabs each hold two views. */
-    selKey() { return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && this.bookView === 'foes' ? 'foes' : this.tab; }
+    selKey() { return this.tab === 'pattern' && PAT_VIEWS.indexOf(this.patView) >= 0 ? this.patView : this.tab === 'book' && ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : this.tab; }
     /* A two-way switch in the strip's slot, for the tabs that hold two views. */
     seg(act, label, opts, cur) {
       return `<nav class="pseg" aria-label="${label}">${opts.map(o => `<button class="tabb ${cur === o[0] ? 'on' : ''}" aria-pressed="${cur === o[0]}" data-act="${act}" data-arg="${o[0]}"><b>${o[1]}</b>${o[2] === '' ? '' : `<span>${o[2]} of ${o[3]}</span>`}</button>`).join('')}</nav>`;
@@ -426,8 +451,11 @@
     }
     bookSeg() {
       const p = this.p, ch = Object.keys(C.CHARTS), mo = Object.keys(C.MOTHS), ke = Object.keys(C.KEEPERS);
+      const fi = Object.keys(C.FINDS), hs = Object.keys(C.HEIRLOOMS), album = p.album || {}, own = p.heirlooms || {};
       return this.seg('bview', 'Collection', [['charts', 'Blueprints', ch.filter(k => p.charts[k]).length, ch.length],
-        ['foes', 'Enemies', mo.filter(k => p.codex.moths[k]).length + ke.filter(k => p.codex.keepers[k]).length, mo.length + ke.length]], this.bookView === 'foes' ? 'foes' : 'charts');
+        ['foes', 'Enemies', mo.filter(k => p.codex.moths[k]).length + ke.filter(k => p.codex.keepers[k]).length, mo.length + ke.length],
+        ['album', 'Album', fi.filter(k => album[k]).length + hs.filter(k => C.HEIRLOOMS[k].keepsake && own[k]).length, fi.length + hs.filter(k => C.HEIRLOOMS[k].keepsake).length],
+        ['heir', 'Heirlooms', hs.filter(k => own[k]).length, hs.length]], ['foes', 'album', 'heir'].indexOf(this.bookView) >= 0 ? this.bookView : 'charts');
     }
     /* The four numbers a purchase can move, for the ship and weapon in hand. */
     flight(p) {
@@ -624,6 +652,8 @@
     }
     /* The collection, in two views: blueprints by name, then enemies and bosses as pictures (bosses wear a brass frame). */
     st_book() {
+      if (this.bookView === 'album') return this.st_album();
+      if (this.bookView === 'heir') return this.st_heir();
       const p = this.p, foes = this.bookView === 'foes', all = [];
       if (!foes) for (const id of Object.keys(C.CHARTS)) { const c = C.CHARTS[id], got = !!p.charts[id], short = c.name.replace(/ blueprint$/i, '');
         all.push({ id: 'c:' + id, got, tile: `<b class="tn">${esc(short)}</b>`, label: c.name + (got ? ', found' : ', not found yet'), pic: icon('chart', 40), name: c.name, kick: 'Blueprint · ' + (got ? 'found' : 'not found yet'),
@@ -641,6 +671,66 @@
       const grid = `<div class="album ${foes ? 'foes' : 'charts'}">${all.map(x => x ? `<button class="tile ${x.got ? '' : 'unseen'} ${x.boss ? 'boss' : ''} ${x === sel ? 'sel' : ''}" data-act="pick" data-arg="${x.id}" aria-pressed="${x === sel}" aria-label="${esc(x.label)}">${x.tile}</button>` : '<span class="ghost" aria-hidden="true"></span>').join('')}</div>`;
       return { sel: sel.id, list: grid, detail: this.detail({ pic: sel.pic, picCls: sel.got || !foes ? '' : 'unseen', name: sel.name, kick: sel.kick, desc: sel.desc, rows: sel.rows, left: sel.left || '', buy: sel.stamp }) };
     }
+    /* The album: every find and keepsake, in rows by family; the ones you have not found are dark. A collection only: nothing here is power. */
+    st_album() {
+      const p = this.p, album = p.album || {}, own = p.heirlooms || {}, fams = Object.keys(C.FIND_FAMILIES), items = [], tiles = [];
+      for (const fk of fams) {
+        const ids = Object.keys(C.FINDS).filter(id => C.FINDS[id].fam === fk).sort((a, b) => ['common', 'uncommon', 'rare'].indexOf(C.FINDS[a].rar) - ['common', 'uncommon', 'rare'].indexOf(C.FINDS[b].rar)), got = ids.filter(id => album[id]).length;
+        tiles.push(`<span class="afam" style="--c:${C.FIND_FAMILIES[fk].color}"><b>${esc(C.FIND_FAMILIES[fk].name)}</b><span>${got} of ${ids.length}</span></span>`);
+        for (const id of ids) { const f = C.FINDS[id], F = C.FIND_FAMILIES[fk], has = !!album[id], rn = C.FIND_RARITY[f.rar].name;
+          items.push({ id: 'f:' + id, got: has, tile: itemIcon(f, 30), rar: f.rar, label: (has ? f.name : 'Find, not found yet') + ', ' + F.name + ', ' + rn, pic: itemIcon(f, 44), picCls: has ? '' : 'unseen',
+            name: has ? f.name : 'Not found yet', kick: `Find · ${esc(F.name)} · ${rn}`, desc: has ? f.desc : 'Found in a run: an elite moth may drop it, and you choose one of three after every boss.',
+            rows: has ? [{ k: esc(F.name) + ' family', v: F.at.map((n, i) => `${n} finds: ${esc(F.note[i])}.`).join(' ') }] : [{ k: 'Family', v: esc(F.name) + '. Holding several of one family pays off.' }],
+            left: `<span>${esc(F.name)} found: <b class="mono">${got}</b> of ${ids.length}</span>`, stamp: has ? this.stamp('Found') : this.stamp('Not found', '', true) }); }
+        tiles.push(...ids.map(id => 'f:' + id));
+      }
+      const ks = Object.keys(C.HEIRLOOMS).filter(id => C.HEIRLOOMS[id].keepsake), kgot = ks.filter(id => own[id]).length;
+      tiles.push(`<span class="afam" style="--c:${C.PAL.brass}"><b>Keepsakes</b><span>${kgot} of ${ks.length}</span></span>`);
+      for (const id of ks) { const h = C.HEIRLOOMS[id], has = !!own[id], boss = C.KEEPERS[h.keepsake].name;
+        items.push({ id: 'k:' + id, got: has, tile: itemIcon(h, 30), rar: 'keep', label: (has ? h.name : 'Keepsake, not found yet') + ', from ' + boss, pic: itemIcon(h, 44), picCls: has ? '' : 'unseen',
+          name: has ? h.name : 'Not found yet', kick: 'Keepsake · ' + esc(boss), desc: has ? h.desc : 'Dropped by ' + boss + '. A chance on every win, and certain the first time you win on Hard.',
+          rows: has ? [{ k: 'Wear it', v: 'In the Heirlooms view, like any heirloom.' }] : [], left: `<span>Keepsakes found: <b class="mono">${kgot}</b> of ${ks.length}</span>`, stamp: has ? this.stamp('Found') : this.stamp('Not found', '', true) }); tiles.push('k:' + id); }
+      const sel = items.find(x => x.id === this.sel.album) || items.find(x => x.got) || items[0], by = {}; for (const it of items) by[it.id] = it;
+      const grid = `<div class="album items" role="group" aria-label="Album">${tiles.map(t => { const x = by[t]; if (!x) return t;
+        return `<button class="tile ${x.got ? '' : 'unseen'} ${x === sel ? 'sel' : ''}" data-rar="${x.rar}" data-act="pick" data-arg="${x.id}" aria-pressed="${x === sel}" aria-label="${esc(x.label)}">${x.tile}</button>`; }).join('')}</div>`;
+      return { sel: sel.id, list: grid, detail: this.detail({ pic: sel.pic, picCls: sel.picCls, name: sel.name, kick: sel.kick, desc: sel.desc, rows: sel.rows, left: sel.left, buy: sel.stamp }) };
+    }
+    /* Heirlooms: twelve to buy and eight keepsakes from bosses. Wear up to two (three with Heirloom Hook); each gives something and costs something. */
+    st_heir() {
+      const p = this.p, own = p.heirlooms || {}, worn = S.worn(p), slots = S.heirSlots(p), ids = Object.keys(C.HEIRLOOMS), shop = ids.filter(id => !C.HEIRLOOMS[id].keepsake), ks = ids.filter(id => C.HEIRLOOMS[id].keepsake);
+      const sel = this.sel.heir && C.HEIRLOOMS[this.sel.heir] ? this.sel.heir : (worn[0] || shop[0]);
+      const tile = id => { const h = C.HEIRLOOMS[id], has = !!own[id], w = worn.indexOf(id) >= 0, st = S.heirloomState(p, id), pr = h.price || {}, cap = w ? 'Worn' : has ? 'Owned' : h.keepsake ? 'Locked' : pr.silk ? silkTag(pr.silk, 'sm') : dustTag(pr.dust || 0, 'sm');
+        return `<button class="tile ${has || !h.keepsake ? '' : 'unseen'} ${h.keepsake ? 'keep' : ''} ${w ? 'worn' : ''} ${id === sel ? 'sel' : ''}" data-rar="${h.keepsake ? 'keep' : 'heir'}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(h.name + (w ? ', worn' : has ? ', owned' : h.keepsake ? ', not found yet' : ', for sale'))}">${itemIcon(h, 30)}<span class="tcap">${cap}</span></button>`; };
+      const grid = `<div class="album items heirs" role="group" aria-label="Heirlooms"><span class="afam" style="--c:${C.PAL.saffron}"><b>For sale</b><span>${shop.filter(id => own[id]).length} of ${shop.length}</span></span>${shop.map(tile).join('')}
+        <span class="afam" style="--c:${C.PAL.brass}"><b>Keepsakes</b><span>${ks.filter(id => own[id]).length} of ${ks.length}</span></span>${ks.map(tile).join('')}</div>`;
+      const h = C.HEIRLOOMS[sel], has = !!own[sel], w = worn.indexOf(sel) >= 0, st = S.heirloomState(p, sel), boss = h.keepsake ? C.KEEPERS[h.keepsake].name : '';
+      const fits = !h.for || (h.for.thread && h.for.thread.indexOf(p.thread) >= 0) || (h.for.needle && h.for.needle.indexOf(p.needle) >= 0);
+      const rows = [];
+      if (h.for) rows.push({ k: 'Built for', v: (h.for.thread ? h.for.thread.map(t => esc(C.THREADS[t].name)).join(', ') + ' as your lead weapon' : h.for.needle.map(n => esc(C.NEEDLES[n].name)).join(', ') + ' as your ship') + (has ? (fits ? '. It fits now.' : '. It sits idle with what you fly now.') : '.') });
+      if (h.keepsake && !has) rows.push({ k: 'Dropped by', v: esc(boss) + '. A chance on every win, and certain the first time you win on Hard.' });
+      else if (h.keepsake) rows.push({ k: 'Dropped by', v: esc(boss) + '.', opt: true });
+      let buy;
+      if (!has) buy = h.keepsake ? this.stamp('Not found', '', true) : st.ok ? this.buyBtn(st, st.cur, 'Buy', 'heirloom:' + sel) : this.buyBtn(st, st.cur, 'Buy');
+      else if (w) buy = `<button class="btn buy" data-act="unwear" data-arg="${sel}"><span class="bl">Take off</span><span class="bh">Worn now</span></button>`;
+      else if (worn.length >= slots) buy = `<button class="btn nope buy" data-act="nope" aria-disabled="true"><span class="bl">Wear</span><span class="bh">Slots full: take one off</span></button>`;
+      else buy = `<button class="btn primary buy" data-act="wear" data-arg="${sel}" data-focus><span class="bl">Wear</span></button>`;
+      const slotsRow = `<span class="wornrow"><span>Worn</span>${Array.from({ length: slots }, (_, i) => { const id = worn[i]; return `<span class="wslot ${id ? 'on' : ''}">${id ? itemIcon(C.HEIRLOOMS[id], 22) : ''}</span>`; }).join('')}</span>`;
+      return { sel, list: grid, detail: this.detail({ pic: itemIcon(h, 44), picCls: has || !h.keepsake ? '' : 'unseen', name: has || !h.keepsake ? h.name : 'Not found yet', kick: heirKind(h) + (h.keepsake ? ' · ' + esc(boss) : ' · gives and takes'),
+        desc: has || !h.keepsake ? h.desc : 'A keepsake from ' + boss + '. It is yours once you win it.', rows, left: slotsRow, buy }) };
+    }
+    /* The find choice: a small sheet between rounds. Three finds, each a plain button; you keep one for the rest of the run. */
+    finds() {
+      const sim = this.ctl.sim, o = sim && sim.offer; if (!o) return;
+      const opts = o.ids.map((id, i) => { const { f, F, rar } = findInfo(id), n = (sim.famN && sim.famN[f.fam]) || 0, next = F.at.indexOf(n + 1), total = Object.keys(C.FINDS).filter(k => C.FINDS[k].fam === f.fam).length;
+        return `<button class="fopt" data-act="findpick" data-arg="${i}" data-rar="${f.rar}" ${i === 0 ? 'data-focus' : ''} aria-label="${esc(f.name + ', ' + F.name + ', ' + rar + '. ' + f.desc)}">
+          <span class="fic" style="--c:${F.color}">${itemIcon(f, 40)}</span>
+          <span class="ftx"><b class="fn">${esc(f.name)}</b><span class="fd">${esc(f.desc)}</span>
+            <span class="ff">${esc(F.name)} · ${rar}${n ? ` · ${n} of ${total} held` : ''}</span>${next >= 0 ? `<em class="fb">Family bonus: ${esc(F.note[next])}</em>` : ''}</span></button>`; }).join('');
+      const re = o.rerolls > 0 ? `<button class="btn" data-act="findreroll">Throw them back<span class="bh"> · ${o.rerolls} left</span></button>` : '';
+      this.show(`<div class="sheet finds rise"><div class="rhead"><h2>${o.from === 'start' ? 'Choose your first find' : 'Choose a find'}</h2>
+        <p class="sub">${o.from === 'start' ? 'It stays with you for this run.' : 'Boss defeated. Keep one for the rest of this run.'}</p></div>
+        <div class="fopts" role="group" aria-label="Finds on offer">${opts}</div>${re ? `<div class="row">${re}</div>` : ''}</div>`, 'paper veil', 'finds');
+    }
     buy(arg) {
       const [kind, id] = arg.split(':'), p = this.p, before = this.flight(p), d0 = p.dust, s0 = p.silk;
       if (kind === 'exch') {   // the Exchange: the same trade the page quoted, then the page again with the new rates
@@ -654,9 +744,10 @@
       }
       const from = this.pressEl && this.pressEl.isConnected ? this.pressEl.getBoundingClientRect() : null;
       const r = kind === 'thread' ? S.buyThread(p, id) : kind === 'temper' ? S.buyTemper(p, id) : kind === 'notion' ? S.buyNotion(p, id, this.ctl.visit) : kind === 'needle' ? S.buyNeedle(p, id)
-        : kind === 'charmup' ? S.buyCharmUp(p, id) : S.buyPattern(p, id);
+        : kind === 'charmup' ? S.buyCharmUp(p, id) : kind === 'heirloom' ? S.buyHeirloom(p, id) : S.buyPattern(p, id);
       if (r.ok) { this.ctl.saved(); this.ctl.sfx('buy');
         if (kind === 'charmup') this.toast('Power-up upgraded', C.CHARMS[id].name + ' now drops as ' + C.CHARMS[id].up.name);
+        else if (kind === 'heirloom') this.toast('Bought', C.HEIRLOOMS[id].name + '. Wear it in the Heirlooms view.');
         else this.toast(kind === 'pattern' ? 'Unlocked' : 'Bought', (C.THREADS[id] || C.TEMPERS[id] || C.NOTIONS[id] || C.NEEDLES[id] || C.PATTERN.nodes[id]).name); }
       else this.snd('ui_fail');
       this.bought = r.ok ? { at: this.hemSel, was: before, now: this.flight(p) } : this.bought;   // the strip keeps what this buy changed (hem() clears it on the next pick)
@@ -730,7 +821,8 @@
         .concat(res.bonuses.map(b => ['Bonus: ' + esc(b.name), (b.stitches ? '+' + n(b.stitches) + ' ' : '') + (b.dust ? '+' + dustTag(b.dust, '', 1) : '+' + silkTag(b.silk, '', 1))]))
         .concat(anyBonus ? [['Total this ' + (keeper ? 'fight' : 'wave'), dustTag(res.dustAll, '', 1) + ' ' + silkTag(res.silkAll, '', 1), 'total']] : [])
         .concat(keeper ? [['Earned this run so far', dustTag(res.nightDust, '', 1) + ' ' + silkTag(res.nightSilk, '', 1)]] : [])
-        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]));
+        .concat(res.charts.map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
+        .concat((res.keepsakes || []).map(id => ['Keepsake found', esc(C.HEIRLOOMS[id].name), 'total', 1]));
       const next = keeper ? 'To the hideout' : ({ row: 'Next wave', sampler: 'Bonus wave', keeper: 'Fight the boss' })[C.STAGES[info.row + 1]];
       let pk = '';
       if (pocket && pocket.length) pk = `<div class="pocket"><div class="phead">Quick shop: buy one item, or keep your coins</div><div class="pk">${pocket.map(id => { const it = C.NOTIONS[id], st = S.notionState(this.p, id, null);
@@ -770,6 +862,7 @@
       const nextMode = Object.keys(C.MODES).find(k => C.MODES[k].need === mode), firstWin = nextMode && (p.stats['won_' + mode] || 0) === 1;
       const rows = [['Coins earned this run', dustTag(res.nightDust || 0, '', 1)], ['Gems earned this run', silkTag(res.nightSilk || 0, '', 1)], ['Best combo', '×' + n(res.bestCombo || 0)]]
         .concat((res.charts || []).map(c => ['Blueprint found', esc(C.CHARTS[c].name), '', 1]))
+        .concat((res.keepsakes || []).map(id => ['Keepsake found', esc(C.HEIRLOOMS[id].name), 'total', 1]))
         .concat(firstWin ? [[esc(C.MODES[nextMode].name) + ' difficulty', 'Unlocked', 'total', 1]] : [])
         .concat(s.frayOpened ? [['Fray ' + s.frayOpened, 'Unlocked', 'total', 1]] : []);
       this.show(`<div class="sheet finale won rise" data-fit="3">
@@ -781,9 +874,16 @@
         <div class="row"><button class="btn primary" data-act="continue" data-focus>To the hideout</button></div></div>`, 'night veil res', 'victory');
       this.stitchOn();
     }
+    /* What you carry this run, as small pictures (on the pause sheet): the finds taken, then the heirlooms worn. */
+    runItems() {
+      const sim = this.ctl.sim; if (!sim || !sim.finds) return '';
+      const fs = sim.finds, ws = (sim.wornNow || []).filter(id => C.HEIRLOOMS[id]); if (!fs.length && !ws.length) return '';
+      return `<div class="runitems" role="group" aria-label="Your finds and heirlooms">${fs.length ? `<span class="eyebrow">Finds this run</span><span class="ritems">${fs.map(id => `<span class="ri" title="${esc(C.FINDS[id].name)}" role="img" aria-label="${esc(C.FINDS[id].name + ': ' + C.FINDS[id].desc)}">${itemIcon(C.FINDS[id], 26)}</span>`).join('')}</span>` : ''}
+        ${ws.length ? `<span class="eyebrow">Worn</span><span class="ritems">${ws.map(id => `<span class="ri" role="img" aria-label="${esc(C.HEIRLOOMS[id].name + ': ' + C.HEIRLOOMS[id].desc)}">${itemIcon(C.HEIRLOOMS[id], 26)}</span>`).join('')}</span>` : ''}</div>`;
+    }
     pause() {
       this.show(`<div class="sheet narrow"><div class="rhead"><h2>Paused</h2><p class="sub">Your run waits here.</p></div>
-        <div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
+        ${this.runItems()}<div class="stack"><button class="btn primary" data-act="resume" data-focus>Resume</button>
           <button class="btn" data-act="settings">Settings</button>
           <button class="btn" data-act="abandon">End run</button></div></div>`, 'paper veil', 'pause');
     }
@@ -844,7 +944,7 @@
         <button class="mpause" data-act="pause" aria-label="Pause"><i></i><i></i></button></div>`;
       E.tray.innerHTML = `<div class="meters"><button class="sp" data-act="special"><span class="spn"></span><i class="fill"></i></button>
         <div class="mm"><div class="fo" role="img" aria-label="Slow time"><span>Slow</span><b class="bar"><i></i></b></div><div class="da" role="img"><span>Dash</span><b class="dp"></b></div></div></div>
-        <div class="lab">Items</div><div class="slots"></div>`;
+        <div class="lab">Items</div><div class="slots"><button class="slot bomb" data-act="bomb" aria-label="Bomb"><span class="bi" aria-hidden="true"></span><span class="bs" aria-hidden="true"></span><kbd>B</kbd></button><span class="sl"></span></div>`;
       // boss health or the bonus count: a name and a line of thread set straight on the cloth, nothing behind them
       E.bossbar.setAttribute('role', 'img');
       E.bossbar.innerHTML = '<div class="bb"><b></b><span></span><div class="seam"><i></i></div></div>';
@@ -853,7 +953,7 @@
       H.L = { wound: wound(E.hudL), tag: q(E.hudL, '.ctag'), mul: q(E.hudL, '.cmul'), drain: q(E.hudL, '.cdr i'), cn: q(E.hudL, '.cn'), best: q(E.hudL, '.hbest'), chart: q(E.hudL, '.hchart'), stage: q(E.hudL, '.hstage'), threads: q(E.hudL, '.hthreads') };
       H.M = { wound: wound(E.mtop), tag: q(E.mtop, '.ctag'), mul: q(E.mtop, '.cmul'), drain: q(E.mtop, '.cdr i'), lab: q(E.mtop, '.mlab'), lives: q(E.mtop, '.mlives'), ply: q(E.mtop, '.mply'), dust: q(E.mtop, '.mdust'), silk: q(E.mtop, '.msilk') };
       H.R = { pins: q(E.hudR, '.rpins'), spares: q(E.hudR, '.rspares'), plylab: q(E.hudR, '.rplylab'), ply: q(E.hudR, '.rply'), dust: q(E.hudR, '.rdust'), silk: q(E.hudR, '.rsilk'), ship: q(E.hudR, '.rship') };
-      H.T = { sp: q(E.tray, '.sp'), spn: q(E.tray, '.spn'), spf: q(E.tray, '.sp .fill'), fo: q(E.tray, '.fo'), fof: q(E.tray, '.fo .bar i'), da: q(E.tray, '.da'), dp: q(E.tray, '.dp'), slots: q(E.tray, '.slots') };
+      H.T = { sp: q(E.tray, '.sp'), spn: q(E.tray, '.spn'), spf: q(E.tray, '.sp .fill'), fo: q(E.tray, '.fo'), fof: q(E.tray, '.fo .bar i'), da: q(E.tray, '.da'), dp: q(E.tray, '.dp'), slots: q(E.tray, '.slots .sl'), bomb: q(E.tray, '.slots .bomb'), bomi: q(E.tray, '.slots .bi'), boms: q(E.tray, '.slots .bs') };
       H.B = { box: q(E.bossbar, '.bb'), b: q(E.bossbar, 'b'), s: q(E.bossbar, 'span'), i: q(E.bossbar, '.seam i') };
       H.pw = {}; this.fxMax = {}; this.lastMult = 1; this.lastCombo = 0;
     }
@@ -917,6 +1017,10 @@
       txt(T.spn, nd.special + (ready ? ' · ready' : '')); flag(T.sp, 'ready', ready); bar(T.spf, pl.sp);
       attr(T.sp, 'aria-label', 'Special: ' + nd.special + (ready ? ', ready' : ''));
       flag(T.fo, 'on', !!sim.focusOn); bar(T.fof, pl.focus);
+      { const have = pl.bombs | 0, max = pl.bombMax | 0, k = have + '/' + max;   // the bomb: a stitched bomb, and one small stitch for each held (a dashed one for each place still empty)
+        if (T.boms._k !== k) { T.boms._k = k; let m = ''; for (let i = 0; i < max; i++) m += `<i class="${i < have ? 'on' : ''}"></i>`; T.boms.innerHTML = m; attr(T.bomb, 'aria-label', 'Bomb: ' + have + ' of ' + max + ' held' + (have ? '. Tap to use' : '')); }
+        if (!T.bomi._on) { T.bomi._on = 1; T.bomi.innerHTML = stitched(PW_CHART.bomb, { a: PAL.madderPale, b: PAL.saffron }, 26); }
+        flag(T.bomb, 'dry', have === 0); flag(T.bomb, 'held', have > 0); }
       let dash = ''; for (let i = 0; i < d.dashMax; i++) dash += `<i class="${i < pl.dashN ? 'on' : ''}"></i>`; put(T.dp, dash); attr(T.da, 'aria-label', 'Dash charges: ' + pl.dashN);
       const tk = p.tray.map(s => s ? s.id + s.n : '-').join();
       if (T.slots._k !== tk) T.slots._k = tk, put(T.slots, [0, 1, 2].map(i => { const s = p.tray[i]; return `<button class="slot" data-act="notion" data-arg="${i}" aria-label="${s ? esc(C.NOTIONS[s.id].name) + (s.n > 1 ? ', ' + s.n + ' left' : '') : 'Empty slot'}">${s ? icon(C.NOTIONS[s.id].sprite, 34) + (s.n > 1 ? `<em>×${s.n}</em>` : '') : ''}<kbd>${i + 1}</kbd></button>`; }).join('')

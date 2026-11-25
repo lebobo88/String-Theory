@@ -14,13 +14,18 @@
      side sets it from the system setting). Inputs still land: time crawls, it does not stop. */
   const STOP_RATE = 0.08, STOP_GAP = 0.3;
   /* The last-second save: a hit waits this many seconds before it lands, and a bomb used inside the window cancels it. */
-  const HIT_BUFFER = 0.15;
+  const BOSS_DMG_CHARMS = { fan: 1, wide: 1, seek: 1, split: 1, streak: 1, spool: 1, twin: 1, drone: 1, pierce: 1, fraydust: 1 };
+const HIT_BUFFER = 0.15;
   const SIDES = [-1, 1];   // weapons: left and right
-  const PIN_X = [0, -1.8, 1.8, -3.4, 3.4, -0.9, 0.9, -2.6, 2.6];   // Tacking Pins: where each pin lands, across from the gun, in turn
+  const byY = (a, b) => a.y - b.y;
+  const LOOP_A = [0, -10, 10, -20, 20, -5, 5];   // Blanket Stitch: the slant of each loop, in turn (degrees from straight up)
+  const PIN_REACH = 9;   // Tacking Pins: how far up the cloth a pin's shots go
+  const CROSS_K = [1, 0.85, 1.15, 0.92, 1.08, 0.78];   // Cross Stitch: each volley's angle, as a share of the weapon's angle
+  const PIN_X = [0, -0.7, 0.7, -1.6, 1.6, 0.35, -0.35, -2.4, 2.4];   // Tacking Pins: where each pin lands, across from the gun, in turn
   /* What a special does to a boss, in seconds of your own recent fire (bossPay) and in fray (0..1 of the meter). Tuned against test/balance.js --only specials. */
-  const SPECIAL_PAY = { seam: 4.0, lasso: 0.5, lassoHit: 1.5, bead: 0.35, sail: 5.0, loom: 4.0, tie: 1.2 };
-  const SPECIAL_FRAY = { tie: 0.5, darn: 0.3, lasso: 0.2, beads: 0.1, sail: 0.4, loom: 0.3, seam: 0.4, quilt: 0.05 };
-  const DARN_MARK = 1.3, SIGN_WAVE = 5, SIGN_BOSS = 9, TIE_SPEED = 17, LASSO_R = 5.6, LASSO_LIFE = 1.6, BOMB_PAY = 25, BOSS_CHARGE = 2.4, SPLIT2 = [-22, 22], SPLIT3 = [-24, 0, 24], BOMB_BOSS = 0.06, BOMB_BOSS_UP = 0.09;
+  const SPECIAL_PAY = { seam: 5, lasso: 1.2, bead: 0.7, sail: 5.5, loom: 5, tie: 3.5, darn: 3.5, quilt: 0.3 };
+  const SPECIAL_FRAY = { tie: 0.5, darn: 0.4, lasso: 0.15, beads: 0.3, sail: 0.5, loom: 0.4, seam: 0.45, quilt: 0.08 };
+  const DARN_MARK = 1.3, SIGN_WAVE = 5, SIGN_BOSS = 10, TIE_SPEED = 17, FRAY_SPECIAL_CAP = 0.92, PACE_SEC = 60, LASSO_R = 5.6, LASSO_LIFE = 1.6, LASSO_MIN = 4, BOMB_PAY = 25, BOSS_CHARGE = 2.4, SPLIT2 = [-22, 22], SPLIT3 = [-24, 0, 24], BOMB_BOSS = 0.06, BOMB_BOSS_UP = 0.09;
 
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -59,6 +64,7 @@
       this.freezeT = 0;        // Freeze: seconds left of the stop before the slow motion
       this.armed = { thimble: !!p.pattern.headstart, pin: false, chalk: 0 };
       this.combo = 0; this.comboT = 0; this.bestCombo = 0;
+      this.initFinds();   // rework: unique items
       this.phase = 'idle';
       this.clearField();
     }
@@ -72,7 +78,7 @@
       this.tacks = []; this.fuses = [];   // rework: weapons: Tacking Pins in the cloth, delayed blasts
     }
     refit() {   // called after a Hem visit: needle, tempers or Pattern may have changed
-      const old = this.d.ply; this.d = ST.derive(this.p);
+      const old = this.d.ply; this.d = ST.derive(this.p); this.applyFinds();   // rework: unique items: finds and worn heirlooms change the numbers
       this.player.ply = clamp(this.player.ply + (this.d.ply - old), 1, this.d.ply);
       this.lastNeedle = this.d.needle;
     }
@@ -88,6 +94,116 @@
     /* How long a boss stays broken, as a multiple of its own time: Slow Fray makes it longer, the Fray dial's short breaks make it shorter.
        The boss scripts that set boss.frayed multiply by this (until they do, it changes nothing). */
     breakMul() { return this.d.perk.breakMul * (this.mode.tw ? this.mode.tw.breakMul : 1); }
+    // ---------- rework: unique items: finds (this run), worn heirlooms and keepsakes ----------
+    /* The run's own state: finds taken, the summed effects (fv), the draw stream. Finds draw from their own seeded stream (never this.rand), so they never move the
+       rest of the sim; the stream's seed and count are saved with the run. */
+    initFinds() {
+      this.finds = []; this.fv = {}; for (const k of C.FX_KEYS) this.fv[k] = 0;
+      this.findSeed = ((this.deckSeed | 0) ^ 0x2f6e2b1) | 0; this.findN = 0; this.frand = mulberry(this.findSeed);
+      this.offer = null; this.rerolls = (this.d.perk && this.d.perk.findReroll) | 0; this.startOffered = false;
+      this.killN = 0; this.bombN = 0; this.fvBomb = 0; this.bombMul = 1; this.famN = {}; this.stageKeeps = []; this.wornNow = [];
+      this.applyFinds();
+    }
+    restoreFinds(snap) {
+      this.finds = (snap.finds || []).filter(id => C.FINDS[id]); this.findSeed = snap.findSeed === undefined ? this.findSeed : snap.findSeed | 0;
+      this.frand = mulberry(this.findSeed); this.findN = 0; for (let i = 0; i < (snap.findN | 0); i++) this.findRand();
+      if (snap.rerolls !== undefined) this.rerolls = snap.rerolls | 0; this.startOffered = !!snap.startOffered;
+      this.fvBomb = 0; this.applyFinds();   // (bombMax was just reset by the restore)
+    }
+    findRand() { this.findN++; return this.frand(); }
+    /* Does a worn heirloom fit this ship and weapon? One built for a weapon counts while it is your lead; one built for a ship, while you fly it. */
+    heirFits(h) { const f = h.for; return !f || (f.thread && f.thread.indexOf(this.p.thread) >= 0) || (f.needle && f.needle.indexOf(this.p.needle) >= 0); }
+    /* Sum the fx of this run's finds, the family steps they reach and the heirlooms worn now into this.fv, then fold them into this.d (a fresh derive each time, so it never stacks). */
+    applyFinds() {
+      const fv = this.fv, p = this.p, fam = this.famN = {};
+      for (const k of C.FX_KEYS) fv[k] = 0;
+      const add = fx => { for (const k in fx) fv[k] += fx[k]; };
+      for (const id of this.finds) { const f = C.FINDS[id]; if (f) { add(f.fx); fam[f.fam] = (fam[f.fam] || 0) + 1; } }
+      for (const k in fam) { const F = C.FIND_FAMILIES[k]; for (let i = 0; i < F.at.length; i++) if (fam[k] >= F.at[i]) add(F.bonus[i]); }
+      this.wornNow = ST.shop.worn(p);
+      for (const id of this.wornNow) { const h = C.HEIRLOOMS[id]; if (h && this.heirFits(h)) add(h.fx); }
+      const d = this.d;
+      d.dmg = Math.max(0.2, d.dmg * (1 + fv.dmg)); d.fireMul *= Math.max(0.3, 1 + fv.rate); d.speed *= Math.max(0.4, 1 + fv.speed); d.magnet *= Math.max(0.2, 1 + fv.magnet);
+      d.ply = Math.max(1, d.ply + (fv.ply | 0)); d.invuln *= Math.max(0.3, 1 + fv.invuln); d.luck = Math.max(0.3, d.luck + fv.luck); d.coin *= Math.max(0.3, 1 + fv.coin);
+      d.spGain *= 1 + fv.sp; d.dashRe *= Math.max(0.3, 1 - fv.dash); d.charmLuck *= 1 + fv.charm; if (d.perk) d.perk.bobbin *= Math.max(0.2, 1 + fv.bobbin);
+      this.bombMul = Math.max(0.2, 1 + fv.bomb);
+      const pl = this.player;
+      if (pl && pl.bombMax !== undefined) {   // one bomb fewer (or more) carried: the change from what was applied last time
+        const want = Math.trunc(fv.bombMax), dl = want - this.fvBomb;
+        if (dl) { pl.bombMax = Math.max(1, pl.bombMax + dl); if (pl.bombs > pl.bombMax) pl.bombs = pl.bombMax; this.fvBomb = want; }
+      }
+    }
+    /* Draw n different finds you do not have: by rarity (50/33/17), leaning toward the families you already hold. A draw of three always holds one better than common. */
+    rollFinds(n, skip) {
+      const own = {}; for (const id of this.finds) own[id] = true; if (skip) for (const id of skip) own[id] = true;
+      let pool = Object.keys(C.FINDS).filter(id => !own[id]);
+      if (pool.length < n) pool = Object.keys(C.FINDS).filter(id => !this.finds.includes(id));
+      const out = [], bias = C.FIND_DROPS.ownedBias;
+      while (out.length < n && pool.length) {
+        const last = n >= 3 && out.length === n - 1 && out.every(o => C.FINDS[o].rar === 'common'); let tot = 0;
+        const per = { common: 0, uncommon: 0, rare: 0 }; for (const id of pool) per[C.FINDS[id].rar]++;   // a tier's weight is shared by what is left in it, so the tiers stay 50/33/17
+        const w = pool.map(id => { const f = C.FINDS[id]; let x = C.FIND_RARITY[f.rar].weight / per[f.rar] * (this.famN[f.fam] ? bias : 1); if (last && f.rar === 'common') x = 0; tot += x; return x; });
+        let r = this.findRand() * tot, i = 0, at = -1;
+        for (; i < w.length; i++) { if (w[i] > 0) { at = i; if (r < w[i]) break; r -= w[i]; } }
+        if (i >= w.length) i = at < 0 ? 0 : at;
+        out.push(pool.splice(i, 1)[0]);
+      }
+      return out;
+    }
+    /* A choice of finds: 'start' (First Pick) or 'boss' (after every boss). The screen is the controller's; it calls takeFind / rerollOffer. */
+    openOffer(from) {
+      const n = from === 'start' ? (this.d.perk.findPick | 0) : C.FIND_DROPS.bossOffer;
+      if (from === 'start') this.startOffered = true;
+      if (n <= 0) return false;
+      const ids = this.rollFinds(n); if (!ids.length) return false;
+      this.offer = { from, ids, n, rerolls: this.rerolls }; this.emit('findoffer', { from, ids });
+      return true;
+    }
+    rerollOffer() {
+      const o = this.offer; if (!o || this.rerolls <= 0) return false;
+      this.rerolls--; const ids = this.rollFinds(o.n, o.ids); if (!ids.length) { this.rerolls++; return false; }
+      o.ids = ids; o.rerolls = this.rerolls; return true;
+    }
+    takeFind(i) { const o = this.offer; if (!o || !o.ids[i]) return null; const id = o.ids[i]; this.offer = null; this.addFind(id, o.from); return id; }
+    /* A find is yours for the run, and goes into the album for good. */
+    addFind(id, from) {
+      const f = C.FINDS[id]; if (!f || this.finds.indexOf(id) >= 0) return false;
+      this.finds.push(id); (this.p.album = this.p.album || {})[id] = true;
+      this.refit(); this.emit('find', { id, name: f.name, desc: f.desc, rar: f.rar, from: from || '' });
+      return true;
+    }
+    /* An elite moth's find: a pickup that falls where it died. */
+    eliteFind(e) {
+      const B = C.FIND_DROPS.eliteBase, ch = Math.min(1, B + (1 - B) * Math.min(1, Math.max(0, this.fv.eliteFind)));
+      if (this.findRand() >= ch) return;
+      const ids = this.rollFinds(1); if (ids.length) this.drop('find', e.x, e.y, { find: ids[0] });
+    }
+    /* A boss's keepsake: a chance on Normal, certain the first time you beat it on Hard or above. */
+    keepsakeDrop(bossId) {
+      const p = this.p, id = Object.keys(C.HEIRLOOMS).find(k => C.HEIRLOOMS[k].keepsake === bossId);
+      if (!id || (p.heirlooms || {})[id]) return;
+      if (this.modeId === 'normal' && this.findRand() >= C.FIND_DROPS.keepsake) return;
+      (p.heirlooms = p.heirlooms || {})[id] = true; (p.album = p.album || {})[id] = true;
+      this.stageKeeps.push(id); this.emit('keepsake', { id, name: C.HEIRLOOMS[id].name, desc: C.HEIRLOOMS[id].desc });
+    }
+    /* What a find or heirloom does when a wave begins: a one-hit pad, a shield back, a bomb more (not twice if the stage was already begun before a restart). */
+    stageFinds(kept) {
+      const fv = this.fv, pl = this.player; this.stageKeeps = [];
+      if (fv.waveGuard) this.armed.thimble = true;
+      if (fv.mendWave && !(this.mode.tw && this.mode.tw.noMend) && pl.ply < this.d.ply) pl.ply = Math.min(this.d.ply, pl.ply + (fv.mendWave | 0));
+      if (fv.bombPerStage && this.row === 0 && !kept && pl.bombMax !== undefined && pl.bombs < pl.bombMax) pl.bombs = Math.min(pl.bombMax, pl.bombs + (fv.bombPerStage | 0));
+    }
+    /* Used a bomb: Knotted Fuse makes every third one free. */
+    onBomb() {
+      const n = this.fv.bombRefund | 0; this.bombN++;
+      if (n > 0 && this.bombN % n === 0) { const pl = this.player; if (pl.bombs < pl.bombMax) { pl.bombs++; this.emit('bombfree'); } }
+    }
+    /* Thimble of Thorns: a ring of needles from the ship when it is hit. */
+    thorns() {
+      const n = Math.min(24, this.fv.thorns | 0), pl = this.player;
+      for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; this.shots.push({ id: this.nextId++, x: pl.x, y: pl.y + 0.4, vx: Math.sin(a) * 13, vy: Math.cos(a) * 13, dmg: this.d.dmg * 1.4, pierce: 0, kind: 'running', hit: null, t: 0, home: false, brk: 0, src: 'T', life: 0.85 }); }
+      this.emit('thorns', { x: pl.x, y: pl.y });
+    }
     patchId() { return this.route[this.panel] || C.PANELS[this.panel].patches[0]; }
     setPatch(id) { if (C.PANELS[this.panel].patches.indexOf(id) >= 0) this.route[this.panel] = id; }
     mods() { return C.PATCHES[this.patchId()].mods || {}; }
@@ -118,7 +234,8 @@
       this.stage = { stitches0: this.stitches, dust0: this.nightDust, silk0: this.nightSilk, hurt: false, best: 0, charts: [] };
       this.palmUsed = false;
       if (this.row === 0 && this.panel > 0 && !this.skipBomb) { const pl = this.player; if (pl.bombs < pl.bombMax) pl.bombs++; }   // rework: bomb: one more bomb every stage
-      this.skipBomb = false;
+      const keptBomb = this.skipBomb; this.skipBomb = false;
+      this.stageFinds(keptBomb);   // rework: unique items: stage-start effects
       const noMend = !!(this.mode.tw && this.mode.tw.noMend);   // Fray: no shield repair
       if (!noMend && this.p.pattern.mended && this.row === 0 && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
       if (!noMend && this.p.pattern.freshstart && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;   // Fresh Start: every wave
@@ -136,7 +253,8 @@
       const pl = this.player;
       return { at, mode: this.modeId, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
         nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, wings: pl.wings, lastKnot: this.lastKnot, lastLight: this.lastLight, fray: this.fray, bombs: pl.bombs,
-        perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed), deck: this.getDeck() };
+        perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed), deck: this.getDeck(),
+        finds: this.finds.slice(), findSeed: this.findSeed, findN: this.findN, rerolls: this.rerolls, startOffered: this.startOffered };
     }
     static restore(profile, snap) {
       const s = new Sim(profile, snap.seed || 1);
@@ -150,6 +268,7 @@
       if (snap.bombs !== undefined) s.player.bombs = Math.max(0, Math.min(s.player.bombMax, snap.bombs | 0)); else s.player.bombs = Math.max(1, Math.min(s.player.bombMax, 1 + s.panel - (snap.at === 'hem' ? 1 : 0)));   // an old save: one to start, one more every stage
       s.skipBomb = snap.at === 'stage';   // that snapshot was taken after this stage's bomb was given
       if (snap.deck && snap.deck.waves && snap.deck.waves.length === 24) s.deck = snap.deck;   // the same waves the run began with
+      s.restoreFinds(snap);   // rework: unique items
       return s;
     }
     advance() {      // after a tally: what comes next
@@ -423,7 +542,7 @@
       // lift to slow: time on the cloth runs slow while the focus spool lasts
       const want = !!input.focus && this.phase === 'play' && !pl.ram;
       this.focusOn = want && pl.focus > 0 && (this.focusOn || pl.focus > 0.2);
-      pl.focus = clamp(pl.focus + (this.focusOn ? -dt / T.focusLast : want ? 0 : dt / T.focusFill), 0, 1);
+      pl.focus = clamp(pl.focus + (this.focusOn ? -dt / (T.focusLast * (1 + this.fv.focus)) : want ? 0 : dt / T.focusFill), 0, 1);
 
       if (pl.ram) this.ramStep(dt, input, speed);
       else {
@@ -516,14 +635,18 @@
     }
     lance(x, y, halfW, dmg, src, live, quiet) {   // live: the mastered beam arcs out to two enemies beside it; quiet: the afterglow (no new beam drawn)
       this.emit('lance', { x, y, w: halfW * 2, glow: !!quiet });
-      for (const e of this.enemies.slice()) if (Math.abs(e.x - x) < halfW + e.r && e.y > y) this.damageEnemy(e, dmg, true, src);
+      { const hit = this.lanceHit || (this.lanceHit = []); hit.length = 0;   // the beam hits moths a little softer than bosses and loses 40% through each moth it passes
+        for (const e of this.enemies) if (Math.abs(e.x - x) < halfW + e.r && e.y > y) hit.push(e);
+        if (hit.length > 1) hit.sort(byY);
+        let k = 0.72; for (let i = 0; i < hit.length; i++) { this.damageEnemy(hit[i], dmg * k, true, src); k = Math.max(0.2, k * 0.6); }
+        hit.length = 0; }
       if (live) for (let k = 0; k < 2; k++) {   // Live Wire
         let best = null, bd = 20; for (const e of this.enemies) { if (Math.abs(e.x - x) < halfW + e.r || e.y < y || e.zapT === this.t) continue; const dd = (e.x - x) * (e.x - x) * 1.5 + Math.abs(e.y - y - 6); if (dd < bd) { bd = dd; best = e; } }
         if (!best) break; best.zapT = this.t; this.emit('chain', { x1: x + Math.sign(best.x - x) * halfW, y1: best.y, x2: best.x, y2: best.y, live: true }); this.damageEnemy(best, dmg * 0.5, true, src);
       }
       for (let i = this.eshots.length - 1; i >= 0; i--) { const s = this.eshots[i]; if (s.kind === 'knot' && Math.abs(s.x - x) < halfW + 0.3) this.eshots.splice(i, 1); }
       if (this.props.length) this.columnVsProps(x, halfW, y, dmg);
-      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW && this.boss.y > y) { this.hitArmour = true; this.damageBoss(dmg, x, false, src, 1, this.boss.y); this.hitArmour = false; }   // through armour and shields
+      if (this.boss && !this.boss.enter && Math.abs(this.boss.x - x) < this.boss.def.halfW + halfW && this.boss.y > y) { this.hitArmour = true; this.hitFray = 1.5; this.hitFrayBody = 1; this.damageBoss(dmg, x, false, src, 1, this.boss.y); this.hitArmour = false; this.hitFray = 1; this.hitFrayBody = 0; }   // through armour and shields, and it frays the body: it breaks armour
     }
 
     // ---------- weapons: forks, mastery, pairings and the four newest weapons (rework, weapons stream) ----------
@@ -561,13 +684,14 @@
           return 8;
         }
         case 'backstitch': {
-          const n = L.n + (pair ? 1 : 0), gap = fo('wide') ? 0.7 : fo('tight') ? 0.2 : 0.34, dm = fo('tight') ? 1.15 : 1, lock = fo('lock') ? this.nextId : 0, slant = fo('slant');
+          const n = L.n + (pair ? 1 : 0), wide = fo('wide'), gap = wide ? 0.7 : fo('tight') ? 0.2 : 0.34, dm = fo('tight') ? 1.15 : 1, lock = fo('lock') ? this.nextId : 0, slant = fo('slant');
+          const step = wide ? ((pl.backK = (pl.backK || 0) ^ 1) ? 0.5 : 0) * gap - gap / 4 : 0;   // Wide Rows: every other volley steps half a stitch across
           for (let i = 0; i < n; i++) {
-            const o = i - (n - 1) / 2, a = slant ? o * 6 : 0;
-            const s = add(x + o * gap, y, a ? ang(a, 17) : null); s.dmg = base * L.dmg * dm; if (lock) s.lock = lock;
-            if (mast) { const s2 = add(x + o * gap, y - 0.55, a ? ang(a, 17) : null); s2.dmg = base * L.dmg * dm * 0.5; s2.row2 = 1; if (lock) s2.lock = lock + 1; }
+            const o = i - (n - 1) / 2, a = slant && Math.abs(o) > n / 2 - 1 ? Math.sign(o) * 7 : 0;   // Slant: the outer pair leans out
+            const s = add(x + o * gap + step, y, a ? ang(a, 17) : null); s.dmg = base * L.dmg * dm; s.pierce += L.pierce || 0; if (lock) s.lock = lock;
+            if (mast) { const s2 = add(x + o * gap + step, y - 0.55, a ? ang(a, 17) : null); s2.dmg = base * L.dmg * dm * 0.5; s2.row2 = 1; if (lock) s2.lock = lock + 1; }
           }
-          return slant ? 8 + n * 6 : 8;
+          return slant ? 22 : 8;
         }
         case 'herringbone': {   // crowds up close; point-blank hits fray bosses
           let n = L.n, arc = L.arc, dm = 1;
@@ -575,7 +699,7 @@
           const arrow = fo('arrow'), pb = fo('blank') ? 2 : 1, shrap = fo('shrap');
           for (let i = 0; i < n; i++) {
             const u = i / (n - 1) - 0.5, off = u * 2.6;
-            const s = arrow ? add(x + off, y, ang(-Math.atan2(off, 7) * 57.2958, 15)) : add(x, y, ang(u * arc, 15));
+            const s = arrow ? add(x + off, y, ang(-Math.atan2(off, 4.5) * 57.2958, 15)) : add(x, y, ang(u * arc, 15));
             s.zig = arrow ? 0.5 : 1; s.fall = arrow ? 2 : 1; s.dmg = base * L.dmg * dm; s.pb = pb; if (shrap) s.shrap = 1; if (pair) s.snipAll = 1;
           }
           if (mast) for (const sd of SIDES) { const s = add(x, y, ang(sd * (arc / 2 + 10), 15)); s.fall = 1; s.bounce = 1; s.home = false; s.dmg = base * L.dmg * dm; s.pb = pb; s.bank = 1; }
@@ -598,7 +722,7 @@
           return 8;
         }
         case 'cross': {   // angles: bank shots hit harder and find side weak spots
-          const a0 = fo('wide') ? 40 : fo('steep') ? 14 : 25, b = L.bounce + (pair ? 1 : 0);
+          const k = pl.crossK = ((pl.crossK || 0) + 1) % CROSS_K.length, a0 = (fo('wide') ? 40 : fo('steep') ? 14 : 25) * CROSS_K[k], b = L.bounce + (pair ? 1 : 0);   // the angle changes a little every volley
           for (const sd of SIDES) { const s = add(x, y, ang(sd * a0, 15)); s.bounce = b; s.home = false; s.bank = 1.8; s.xs = 1; if (fo('rico')) s.rico = 1; if (fo('through')) s.thru = 1; if (mast) s.mirror = 1; }
           if (L.mid) add(x, y, { dmg: base * L.mid });
           return a0 * 2;
@@ -607,7 +731,7 @@
           let half = L.half, dm = 1;
           if (fo('wide')) { half *= 1.65; dm = 0.85; } else if (fo('needle')) { half *= 0.5; dm = 1.45; }
           const dmg = base * L.dmg * dm;
-          if (fo('twin')) for (const sd of SIDES) this.lance(x + sd * 0.8, y, half * 0.7, dmg * 0.6, src, mast);
+          if (fo('twin')) for (const sd of SIDES) this.lance(x + sd * 0.6, y, half * 0.7, dmg * 0.6, src, mast);
           else this.lance(x, y, half, dmg, src, mast);
           if (fo('glow')) this.fuse(0.18, 'glow', x, y, half, dmg * 0.4, src);
           return 8;
@@ -637,22 +761,26 @@
           }
           return 8;
         }
-        case 'blanket': {   // a loop out and back that goes through everything and hits twice
-          const tight = fo('tight'), n = (fo('pair') ? 2 : 1) + (pair ? 1 : 0), W = L.w * (fo('wide') ? 1.5 : tight ? 0.5 : 1), laps = fo('double') ? 2 : 1;
+        case 'blanket': {   // a loop out and back that goes through everything near its line, twice; thrown at a new slant each time
+          const tight = fo('tight'), n = (fo('pair') ? 2 : 1) + (pair ? 1 : 0), W = L.w * (fo('wide') ? 1.6 : tight ? 0.5 : 1), laps = fo('double') ? 2 : 1;
           for (let i = 0; i < n; i++) {
-            pl.bside = (pl.bside || 1) > 0 ? -1 : 1;
-            const s = add(x, y, { vy: 0, wpn: 1, loop: 1, side: pl.bside, w: W * (i > 1 ? 0.6 : 1), life: L.life * (tight ? 0.8 : 1) * (laps > 1 ? 1.7 : 1), x0: x, y0: y, pierce: 99, home: false, slot, laps, pass: 0 });
-            s.dmg = base * L.dmg * (tight ? 1.25 : 1) * (n > 1 && !pair ? 0.75 : 1); if (mast) s.bh = 1;
+            const k = pl.loopK = ((pl.loopK || 0) + 1) % LOOP_A.length, tilt = LOOP_A[k] * (fo('wide') ? 1.35 : 1) * Math.PI / 180, ct = Math.cos(tilt);
+            const s = add(x, y, { vy: 0, wpn: 1, loop: 1, side: k % 2 ? 1 : -1, w: W, ct, st: Math.sin(tilt), reach: Math.min(17, Math.max(6, (15.4 - y) / ct)),
+              life: L.life * (tight ? 0.8 : 1) * (laps > 1 ? 1.7 : 1), x0: x, y0: y, pierce: 99, home: false, slot, laps, pass: 0 });
+            s.dmg = base * L.dmg * (tight ? 1.25 : 1); if (mast) s.bh = 1;
           }
           return 8;
         }
         case 'pins': {   // control: pins stick in the cloth and fire up at whatever passes over
-          const k = pl.pinK = ((pl.pinK || 0) + 1) % PIN_X.length, map = fo('map');
-          const tx = clamp(x + PIN_X[k] * (map ? 1.6 : 1), -HW + 0.4, HW - 0.4), ty = y + 3.2 + (k % 3) * 1.1 + (map ? 2.5 : 0);
-          const dx = tx - x, dy = ty - y, dd = Math.hypot(dx, dy) || 1;
-          const s = add(x, y, { vx: dx / dd * 15, vy: dy / dd * 15, wpn: 1, thrown: 1, tx, ty, home: false, life: dd / 15 + 0.04 });
-          s.dmg = base * L.dmg; s.pd = base * L.pd * (fo('hat') ? 1.4 : 1); s.every = L.every * (fo('push') ? 0.5 : 1); s.plife = L.life * (fo('push') ? 0.55 : 1);
-          s.pmax = L.max + (pair ? 2 : 0); s.cushion = fo('cushion') ? 1 : 0; s.hat = fo('hat') ? 1 : 0; s.wheel = mast ? 1 : 0;
+          const map = fo('map');
+          for (let i = 0; i < L.n; i++) {
+            const k = pl.pinK = ((pl.pinK || 0) + 1) % PIN_X.length;
+            const tx = clamp(x + PIN_X[k] * (map ? 1.6 : 1), -HW + 0.4, HW - 0.4), ty = y + 3.2 + (k % 3) * 1.1 + (map ? 2.5 : 0);
+            const dx = tx - x, dy = ty - y, dd = Math.hypot(dx, dy) || 1;
+            const s = add(x, y, { vx: dx / dd * 15, vy: dy / dd * 15, wpn: 1, thrown: 1, tx, ty, home: false, life: dd / 15 + 0.04 });
+            s.dmg = base * L.dmg; s.pd = base * L.pd * (fo('hat') ? 1.4 : 1); s.every = L.every * (fo('push') ? 0.5 : 1); s.plife = L.life * (fo('push') ? 0.55 : 1);
+            s.pmax = L.max + (pair ? 2 : 0); s.cushion = fo('cushion') ? 1 : 0; s.hat = fo('hat') ? 1 : 0; s.wheel = mast ? 1 : 0;
+          }
           return 8;
         }
       }
@@ -669,18 +797,20 @@
       if (s.loop) this.loopStep(s, dt);
       else if (s.feather) this.featherStep(s, dt);
       else if (s.knot) {
-        const g = Math.min(1, s.t / 1.1) * (s.knot === 2 ? 0.7 : 0.35); s.burst = s.b0 * (1 + g); s.dmg = s.d0 * (1 + g * 0.85);
+        const g = Math.min(1, s.t / 1.1) * (s.knot === 2 ? 0.45 : 0.2); s.burst = s.b0 * (1 + g); s.dmg = s.d0 * (1 + g * 0.85);
         if (s.drift && this.enemies.length) { let best = null, bd = 64; for (const e of this.enemies) { if (e.y < s.y) continue; const dd = (e.x - s.x) * (e.x - s.x) + (e.y - s.y) * (e.y - s.y) * 0.3; if (dd < bd) { bd = dd; best = e; } } if (best) s.vx += clamp((best.x - s.x) * 6 - s.vx, -12, 12) * dt; }
       }
       else if (s.thrown && s.t >= s.life - 0.045) { this.stickPin(s, s.tx, s.ty); s.gone = 1; }
     }
-    /* Blanket Stitch: out and back along a loop, anchored where it left and coming home to the ship (or the bobbin). */
+    /* Blanket Stitch: a narrow loop thrown up the cloth at a slant and back, like a boomerang: anchored where it left and coming home to
+       the ship (or the bobbin). Everything near its line is crossed twice, once out and once back. */
     loopStep(s, dt) {
       const pl = this.player, u = Math.min(1, s.t / s.life), uv = u * s.laps, v = uv - Math.floor(uv) || (u >= 1 ? 1 : 0);
       const cx = s.slot === 'B' ? pl.bx : pl.x, cy = s.slot === 'B' ? pl.by + 0.5 : pl.y + 0.7, a = u * u;
-      const ax = s.x0 + (cx - s.x0) * a, ay = s.y0 + (cy - s.y0) * a, D = Math.max(6, 15.4 - s.y0), sv = Math.sin(Math.PI * v);
-      const nx = ax + s.side * s.w * sv * (1 + 0.6 * Math.cos(Math.PI * v)), ny = ay + D * sv;
-      s.vx = (nx - (s.x - s.vx * dt)) / dt; s.vy = (ny - (s.y - s.vy * dt)) / dt; s.x = nx; s.y = ny;
+      const ax = s.x0 + (cx - s.x0) * a, ay = s.y0 + (cy - s.y0) * a, th = -1.5708 + v * 6.2832, D = s.reach;
+      const lx = s.side * s.w * Math.cos(th), ly = D * 0.5 * (1 + Math.sin(th));
+      const nx = ax + lx * s.ct + ly * s.st, ny = ay - lx * s.st + ly * s.ct;
+      const px = s.x - s.vx * dt, py = s.y - s.vy * dt; s.vx = (nx - px) / dt; s.vy = (ny - py) / dt; s.x = nx; s.y = ny;
       const pass = Math.floor(uv * 2);
       if (pass !== s.pass) {   // each pass (out, back) may hit everything again
         s.pass = pass; s.hit = null;
@@ -694,7 +824,7 @@
       const b = this.boss; if (!found && b && !b.enter && !b.hidden) { tx = this.bossAim(b, s.x, 99); ty = b.y; found = true; }
       const sp = 12.5, k = Math.min(1, dt * (s.feather === 2 ? 7 : 3.2));
       let wx = 0, wy = sp; if (found) { const dx = tx - s.x, dy = ty - s.y, dd = Math.sqrt(dx * dx + dy * dy) || 1; wx = dx / dd * sp; wy = dy / dd * sp; }
-      const vl = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1, wob = Math.sin(s.t * 7 + s.ph) * (s.feather === 3 ? 42 : 26);
+      const vl = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1, wob = Math.sin(s.t * 7 + s.ph) * (s.feather === 3 ? 16 : 10);
       s.vx += (wx - s.vx) * k - s.vy / vl * wob * dt; s.vy += (wy - s.vy) * k + s.vx / vl * wob * dt;
       const v2 = Math.sqrt(s.vx * s.vx + s.vy * s.vy) || 1; s.vx *= sp / v2; s.vy *= sp / v2;
       if (s.y < BOT - 0.5) s.gone = 1;
@@ -781,7 +911,7 @@
       let best = null; for (let i = 0; i < R.n; i++) { const P = R.p[i]; if (P.on && (!best || P.y > best.y)) best = P; }
       if (!best) return;
       best.on = false; best.re = R.grow;
-      const s = add(best.x, best.y + 0.1, { vx: Math.cos(best.a) * 3, vy: 16, pierce: 1, home: false, r: 0.18 });
+      const s = add(best.x, best.y + 0.1, { vx: (R.cx - best.x) * 1.15, vy: 16, pierce: 1, home: false, r: 0.18 });   // petals from the side lean in, to cross the ship's line far up the cloth
       s.kind = 'daisy'; s.dmg = base * L.dmg; s.ang = best.a; if (this.fo('daisy', 'seed')) s.seed = 1;
     }
     /* Tacking Pins: a thrown pin sticks where it lands (or in what it hits) and fires up at whatever passes over it. */
@@ -803,11 +933,11 @@
       for (let i = ps.length - 1; i >= 0; i--) {
         const q = ps[i]; q.t -= dt; if (q.t <= 0) { this.pinLoose(q, i); continue; }
         q.cd -= dt; if (q.cd > 0) continue;
-        let over = !!(b && b.y > q.y && Math.abs(b.x - q.x) < b.def.halfW * 0.9);
-        if (!over) for (const e of this.enemies) { if (e.y > q.y - 0.3 && Math.abs(e.x - q.x) < e.r + 0.55 && !(e.state === 'enter' && e.t < 0)) { over = true; break; } }
+        let over = !!(b && b.y > q.y && b.y - b.def.halfH * 0.75 - q.y < PIN_REACH && Math.abs(b.x - q.x) < b.def.halfW * 0.9);   // a pin only reaches so far up the cloth
+        if (!over) for (const e of this.enemies) { if (e.y > q.y - 0.3 && e.y - q.y < PIN_REACH && Math.abs(e.x - q.x) < e.r + 0.55 && !(e.state === 'enter' && e.t < 0)) { over = true; break; } }
         if (!over) continue;
         q.cd = q.every;
-        const o = { r: 0.1, pierce: q.hat ? 2 : 0, pinShot: 1 };
+        const o = { r: 0.1, pierce: q.hat ? 2 : 0, pinShot: 1, life: PIN_REACH / 18 };
         if (q.cushion) for (let k = -1; k <= 1; k++) this.loose(q.src, 'pins', q.x, q.y + 0.2, k * 6, 17, q.pd * 0.55, o);
         else this.loose(q.src, 'pins', q.x, q.y + 0.2, 0, 18, q.pd, o);
       }
@@ -967,8 +1097,9 @@
       if (e.decoy && e.state === 'trace') { this.killDecoy(e); return; }   // (the gold round: a plain moth)
       const def = e.def, tracing = e.state === 'trace', diving = e.state !== 'form' && e.state !== 'enter';
       const m = this.mods();
-      this.combo++; this.comboT = T.comboWindow * (this.p.pattern.second ? 2 : 1) * (this.mode.tw ? this.mode.tw.combo : 1); this.player.sp = Math.min(1, this.player.sp + 0.012 * this.d.spGain);
+      this.combo++; this.comboT = T.comboWindow * (this.p.pattern.second ? 2 : 1) * (this.mode.tw ? this.mode.tw.combo : 1); this.player.sp = Math.min(1, this.player.sp + 0.012 * this.d.spGain + this.fv.killSp);
       this.bestCombo = Math.max(this.bestCombo, this.combo); this.stage.best = Math.max(this.stage.best, this.combo);
+      if (this.fv.killHeal && ++this.killN >= this.fv.killHeal) { this.killN = 0; const q = this.player; if (q.ply < this.d.ply) { q.ply++; this.emit('felt', { x: q.x, y: q.y }); } }   // rework: unique items: Felt Lining
       const mult = this.comboMult();
       let pts = tracing ? C.SAMPLER.pts : diving ? def.ptsDive : def.pts;
       if (tracing && this.sampler) this.sampler.hit++;
@@ -983,8 +1114,8 @@
       const dust = Math.max(1, Math.round(def.dust * (1 + (mult - 1) * T.comboCoin) * (this.fx.gold > 0 ? (this.fxUp.gold ? 3 : 2) + 0.5 * ((this.fxLv.gold || 1) - 1) : 1) * (m.dust || 1) * this.mode.pay * this.d.coin));
       if (this.fx.bobbin > 0 && this.fxUp.bobbin) this.fx.bobbin = Math.min(this.charmDur('bobbin'), this.fx.bobbin + 0.5);   // Overdrive: kills keep it going
       const luck = this.d.luck, fr = this.mode.tw;
-      this.dropDust(e.x, e.y, dust);
-      if (def.silk && (m.spinnerSilk || tracing || this.rand() < (def.silkChance || 1))) {
+      this.dropDust(e.x, e.y, tracing && this.fv.bonusDust > 1 ? Math.round(dust * this.fv.bonusDust) : dust);   // Moth-Eaten Map
+      if (def.silk && (m.spinnerSilk || tracing || this.rand() < (def.silkChance || 1) * (1 + this.fv.gem))) {
         let v = def.silk; if (this.mode.frayPay) { const x = v * this.mode.frayPay; v += Math.floor(x) + (this.rand() < x - Math.floor(x) ? 1 : 0); }   // Fray: +10% gems a step
         this.drop('silk', e.x, e.y, { v });
       }
@@ -1261,6 +1392,7 @@
     /* Elite moth: a prize. Once Finds land, they hook the 'elite' event; until then it is a power-up and a few coins. */
     eliteDrop(e) {
       this.emit('elite', { x: e.x, y: e.y });
+      this.eliteFind(e);   // rework: unique items
       this.drop('charm', e.x, e.y, { charm: this.pickCharm(), up: false });
       this.dropDust(e.x, e.y, 6 * (this.panel + 1));
     }
@@ -1367,7 +1499,7 @@
       this.streakT = this.fxUp.streak ? this.streakT * 0.5 : 0;   // Hot Streak: a hit sets the climb back
       if (this.armed.thimble) { this.armed.thimble = false; pl.invuln = 1; this.emit('thimble'); return; }
       this.stage.hurt = true; this.combo = 0;
-      pl.invuln = this.d.invuln;
+      pl.invuln = this.d.invuln; if (this.fv.thorns) this.thorns();   // rework: unique items: Thimble of Thorns
       if (pl.dual) { pl.wings = Math.max(0, pl.wings - 1); pl.dual = pl.wings > 0; this.emit('undouble', { wings: pl.wings }); return; }
       pl.ply--;
       this.emit('hurt', { ply: pl.ply });
@@ -1384,6 +1516,7 @@
     // ---------- near misses, specials, zones ----------
     graze(s) {
       const pl = this.player; pl.sp = Math.min(1, pl.sp + T.graze); pl.grazeN++;
+      if (this.fv.grazeDust) { const g = this.fv.grazeDust | 0; this.p.dust += g; this.nightDust += g; }   // rework: unique items: Pin Cushion
       if (this.d.padded && pl.grazeN % 8 === 0 && !this.armed.thimble) { this.armed.thimble = true; this.emit('repad'); }
       this.emit('graze', { x: s.x, y: s.y });
     }
@@ -1405,12 +1538,10 @@
         if (b) { px = b.x; py = clamp(b.y - 0.5, 4, H - 3); }
         else { let sx = 0, sy = 0, k = 0; for (const e of this.enemies) if (!(e.state === 'enter' && e.t < 0) && e.y < H - 1) { sx += e.x; sy += e.y; k++; } if (k > 2) { px = sx / k; py = clamp(sy / k, 5, H - 3); } }
         this.zones.push({ id: this.nextId++, kind: 'patch', x: px, y: py, r: b ? 5 : 4.6, life: 4.5, tick: 0 });
-        if (b) { this.darnT = 4.5; this.markT = 4.5; this.markMul = DARN_MARK; this.fillFray(b, SPECIAL_FRAY.darn); }
+        if (b) { this.darnT = 4.5; this.markT = 4.5; this.markMul = DARN_MARK; this.damageBoss(this.bossPay(SPECIAL_PAY.darn), b.x, true, 'S'); this.fillFray(b, SPECIAL_FRAY.darn); }
       }
       else if (id === 'chenille') {   // Lasso: the bobbin sweeps a circle, and for a moment longer every bullet inside is caught and flung back at the boss, or the nearest moth
         this.burst(pl.x, pl.y, 3.6, d.dmg * 6, 'S', false);
-        if (b && Math.hypot(b.x - pl.x, b.y - pl.y) < LASSO_R + b.def.halfW) this.damageBoss(this.bossPay(SPECIAL_PAY.lassoHit), b.x, true, 'S');
-        if (b) this.fillFray(b, SPECIAL_FRAY.lasso);
         this.zones.push({ id: this.nextId++, kind: 'lasso', life: LASSO_LIFE });
       }
       else if (id === 'sail') { pl.ram = 1; pl.invuln = 3; }
@@ -1475,12 +1606,14 @@
         if (near && this.phase !== 'dying') { const sp = (d.kind === 'chart' && !pull ? 9 : 14) * dt; d.x += dx / (dd || 1) * sp; d.y += dy / (dd || 1) * sp; }
         else { d.y -= T.dropSpeed * (d.fall || 1) * dt; d.x += d.vx * dt * Math.max(0, 1 - d.t); }
         if (dd < 0.55 && this.phase !== 'dying') { this.collect(d); this.drops.splice(i, 1); continue; }
+        if (d.life && d.t > d.life) { this.drops.splice(i, 1); continue; }
         if (d.y < BOT - 0.8) { if (d.kind === 'thread' && this.sampler) { this.sampler.out++; this.emit('threadlost', { x: d.x }); } this.drops.splice(i, 1); }
       }
     }
     collect(d) {
       const p = this.p;
-      if (d.kind === 'dust') { p.dust += d.v; this.nightDust += d.v; this.emit('dust', { v: d.v }); }
+      if (d.kind === 'dust') { const v = this.fv.edge > 1 && Math.abs(this.player.x) > HW - 1.8 ? Math.round(d.v * this.fv.edge) : d.v; p.dust += v; this.nightDust += v; this.emit('dust', { v }); }   // Lucky Selvedge: the edges double coins
+      else if (d.kind === 'find') this.addFind(d.find, 'elite');
       else if (d.kind === 'silk') { p.silk += d.v; this.nightSilk += d.v; this.emit('silk', { v: d.v }); }
       else if (d.kind === 'packet') {
         const ids = Object.keys(C.NOTIONS).filter(id => !C.NOTIONS[id].chart || p.charts[C.NOTIONS[id].chart]);
@@ -1499,7 +1632,7 @@
       }
     }
     /* How long a power-up lasts in the form it drops in, with Overtime. */
-    charmDur(id) { const c = C.CHARMS[id], u = this.upgraded(id) ? c.up : c; return u.dur * (this.p.pattern.overtime ? 1.3 : 1); }
+    charmDur(id) { const c = C.CHARMS[id], u = this.upgraded(id) ? c.up : c; return u.dur * (this.p.pattern.overtime ? 1.3 : 1) * (1 + this.fv.dur); }
     /* A power-up picked up. `up` is the form it dropped in (undefined: the form the profile owns now). */
     charm(id, up) {
       const c = C.CHARMS[id], pl = this.player; up = up === undefined ? this.upgraded(id) : !!up && !!c.up;
@@ -1519,7 +1652,7 @@
       }
       else if (id === 'recharge') { pl.sp = 1; if (up) pl.dashN = this.d.dashMax; }
       else {
-        const dur = f.dur * (this.p.pattern.overtime ? 1.3 : 1);
+        const dur = f.dur * (this.p.pattern.overtime ? 1.3 : 1) * (1 + this.fv.dur);
         if (this.fx[id] > 0) { this.fxLv[id] = Math.min(3, (this.fxLv[id] || 1) + 1); this.fx[id] = Math.min(dur * 2.5, this.fx[id] + dur); up = up || !!this.fxUp[id]; }   // caught again while it runs: it lasts longer and rises a step
         else { this.fxLv[id] = 1; this.fx[id] = dur; }
         this.fxUp[id] = up;
@@ -1533,16 +1666,17 @@
     /* The boss, while it can be hurt (not entering, not dead); else null. */
     bossLive() { const b = this.boss; return b && b.hp > 0 && !(b.enter > 0) ? b : null; }
     /* `sec` seconds of your own recent fire against a boss, as a number of health points. It follows what you are really doing
-       (an average of the last few seconds, never below a floor), so a special scales with the weapons, upgrades and power-ups you have. */
-    bossPay(sec) { return sec * Math.max(this.bossDps, 6 * this.d.dmg); }
+       (an average of the last few seconds, never below what a fight at the planned pace needs: the boss's health over PACE_SEC), so a special
+       scales with the weapons, upgrades and power-ups you have and is never worth nothing in a moment when the boss was covered. */
+    bossPay(sec) { const b = this.boss; return sec * Math.max(this.bossDps, b ? b.maxHp / PACE_SEC : 0, 6 * this.d.dmg); }
     /* Add to a boss's fray meter; a full meter breaks it. (The Bosses stream owns what a break is: this only fills and asks for one.) */
-    fillFray(b, amt) {
+    fillFray(b, amt, breaks) {
       if (!b || b.hp <= 0 || b.enter > 0 || b.fray === undefined || b.stun > 0 || b.frayed > 0) return;
-      b.fray = Math.min(1, b.fray + amt * this.frayGain());
+      b.fray = Math.min(breaks ? 1 : FRAY_SPECIAL_CAP, Math.max(b.fray, b.fray + amt * this.frayGain()));   // a special brings a boss to the edge of a break; a bomb can tip it over
       if (b.fray >= 1) { if (this.breakBoss) this.breakBoss(); else this.stunBoss(); }
     }
     /* Fray Dust: how much faster things fray. */
-    frayGain() { return this.fx.fraydust > 0 ? 2 + 0.5 * ((this.fxLv.fraydust || 1) - 1) + (this.fxUp.fraydust ? 1 : 0) : 1; }
+    frayGain() { return (this.fx.fraydust > 0 ? 2 + 0.5 * ((this.fxLv.fraydust || 1) - 1) + (this.fxUp.fraydust ? 1 : 0) : 1) * (1 + this.fv.fray); }
     /* Damage multipliers from the power-ups that run. */
     fxDmg() {
       let m = 1;
@@ -1551,7 +1685,7 @@
       if (this.fx.homing > 0) m *= 1 + 0.1 * ((this.fxLv.homing || 1) - 1);
       return m;
     }
-    signMul() { return 1.5; }
+    signMul() { return 1.6; }
     droneMul() { return this.fx.drone > 0 ? 1 + 0.25 * ((this.fxLv.drone || 1) - 1) : 1; }
     streakMul() {
       if (!(this.fx.streak > 0)) return 1;
@@ -1576,16 +1710,16 @@
       const pl = this.player;
       if (this.phase !== 'play' || !(pl.bombs > 0)) return false;
       const save = this.hitBuf > 0, up = this.upgraded('bomb'), b = this.bossLive();
-      pl.bombs--; this.hitBuf = 0; this.bombT = 1.5; pl.invuln = Math.max(pl.invuln, 1.5);
+      pl.bombs--; this.hitBuf = 0; this.bombT = 1.5; pl.invuln = Math.max(pl.invuln, 1.5); this.onBomb();
       this.emit('bomb', { x: pl.x, y: pl.y, save, up });
-      this.emit('burst', { x: pl.x, y: pl.y + 3, r: 9, up });
+      this.emit('burst', { x: pl.x, y: pl.y + 3, r: 9, up, quiet: 1 });
       if (up) for (const s of this.eshots) if (s.y > BOT && s.y < H) this.drop('dust', s.x, s.y, { v: 1, vx: 0 });   // Grand Unravel: every shot becomes a coin
       this.eshots.length = 0; this.nets.length = 0; this.hazards = this.hazards.filter(h => h.kind === 'burn');
       this.bombing = true;
-      const dmg = (up ? 6 : 3) * (1 + T.stageHp * this.panel);
+      const dmg = (up ? 6 : 3) * (1 + T.stageHp * this.panel) * this.bombMul;
       for (const e of this.enemies.slice()) if (e.state !== 'trace') this.damageEnemy(e, dmg, true, 'S');   // a bonus wave's figure is left alone
       this.bombing = false;
-      if (b) { this.damageBoss(b.maxHp * (up ? BOMB_BOSS_UP : BOMB_BOSS), b.x, true, 'S'); this.fillFray(b, up ? 0.7 : 0.5); }
+      if (b) { this.damageBoss(b.maxHp * (up ? BOMB_BOSS_UP : BOMB_BOSS) * this.bombMul, b.x, true, 'S'); this.fillFray(b, up ? 0.7 : 0.5, true); }
       return true;
     }
     /* Mirror: a second set of shots from the top of the cloth, downward. */
@@ -1620,7 +1754,7 @@
       }
     }
     /* Which power-up drops: even odds, tilted by the moment. Shields come more often when you are hurt, bombs when the stock is empty. */
-    pickCharm() {
+    pickCharm(onBoss) {
       const ids = this.charmIds || (this.charmIds = Object.keys(C.CHARMS)), w = this.charmW || (this.charmW = new Array(ids.length)), pl = this.player, d = this.d;
       const hurt = d.ply > 1 ? 1 - (pl.ply - 1) / (d.ply - 1) : 0;   // 0 at full shield, 1 on the last point
       let tot = 0;
@@ -1631,6 +1765,7 @@
         else if (id === 'bomb') x = pl.bombs <= 0 ? 3 : pl.bombs >= pl.bombMax ? 0.15 : pl.bombs === 1 ? 1.2 : 0.7;
         else if (id === 'recharge') x = pl.sp >= 0.9 ? 0.15 : pl.sp < 0.3 ? 1.5 : 0.8;
         else if (id === 'twin') x = pl.wings > 0 ? 0.4 : 1;
+        if (onBoss && BOSS_DMG_CHARMS[id]) x *= 0.03;   // a boss sheds help for staying alive and for specials, seldom more damage: fight lengths hold
         w[i] = x; tot += x;
       }
       let r = this.rand() * tot;
@@ -1643,20 +1778,24 @@
       while ((b.shed || 0) < n) { b.shed = (b.shed || 0) + 1; this.shedThread(b); }
     }
     shedThread(b) {
-      const id = this.pickCharm();
-      this.drop('charm', b.x + this.rr(-1.6, 1.6), clamp(b.y - 0.6, PY + 3, H - 1), { charm: id, up: this.upgraded(id), loose: 1, fall: 0.8 });
+      const id = this.pickCharm(true);
+      this.drop('charm', b.x + this.rr(-1.6, 1.6), clamp(b.y - 0.6, PY + 3, H - 1), { charm: id, up: this.upgraded(id), loose: 1, fall: 0.42, life: 8 });   // it drifts down slowly and is gone in 8 s: reaching for it is the risk
       this.emit('loose', { x: b.x, y: b.y });
     }
     /* Lasso: catch the bullets inside the swing and throw each back at the boss's weak spot or the nearest moth. */
     lassoStep(z, b) {
       const pl = this.player, d = this.d, R2 = LASSO_R * LASSO_R; let tgt = null, bd = 1e9, each = -1;
+      if (!z.thrown) {   // the first frame: the loop of thread itself is thrown too, so there is always something to fling
+        z.thrown = 1; let n = 0; for (const s of this.eshots) if ((s.x - pl.x) ** 2 + (s.y - pl.y) ** 2 < R2) n++;
+        for (let k = n; k < LASSO_MIN; k++) this.eshot('frass', pl.x + (k - 1.5) * 0.8, pl.y + 0.8, 0, 0, { lassoLoop: 1 });
+      }
       for (let i = this.eshots.length - 1; i >= 0; i--) {
         const s = this.eshots[i]; if ((s.x - pl.x) ** 2 + (s.y - pl.y) ** 2 > R2) continue;
         if (each < 0) {
           each = Math.max(d.dmg * 4, this.bossPay(SPECIAL_PAY.lasso));
           if (!b) for (const e of this.enemies) { if (e.state === 'enter' && e.t < 0) continue; const dd = (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2; if (dd < bd) { bd = dd; tgt = e; } }
         }
-        this.eshots.splice(i, 1); this.emit('snip', { x: s.x, y: s.y });
+        this.eshots.splice(i, 1); this.emit('snip', { x: s.x, y: s.y }); if (b) this.fillFray(b, SPECIAL_FRAY.lasso);
         let tx = s.x, ty = s.y + 8; if (b) { tx = b.x + (b.def.soft[0] ? b.def.soft[0].x : 0); ty = b.y; } else if (tgt) { tx = tgt.x; ty = tgt.y; }
         const dx = tx - s.x, dy = ty - s.y, dd = Math.hypot(dx, dy) || 1;
         this.shots.push({ id: this.nextId++, x: s.x, y: s.y, vx: dx / dd * 17, vy: dy / dd * 17, dmg: each, pierce: 0, kind: 'running', hit: null, t: 0, home: false, brk: 0, src: 'S', flung: 1, soft: 1.5, life: 1.4 });
@@ -1682,7 +1821,7 @@
         for (let j = this.eshots.length - 1; j >= 0; j--) {
           const s = this.eshots[j]; if ((s.x - z.x) ** 2 + (s.y - z.y) ** 2 > z.r * z.r) continue;
           this.eshots.splice(j, 1); this.emit('snip', { x: s.x, y: s.y }); this.emit('quilted', { x: s.x, y: s.y });
-          if (b) this.fillFray(b, SPECIAL_FRAY.quilt); else this.drop('dust', s.x, s.y, { v: 1, vx: 0 });
+          if (b) { this.fillFray(b, SPECIAL_FRAY.quilt); this.bossAcc += 0; this.damageBoss(this.bossPay(SPECIAL_PAY.quilt), b.x, true, 'S'); } else this.drop('dust', s.x, s.y, { v: 1, vx: 0 });
         }
       } else if (z.kind === 'lasso') {
         this.lassoStep(z, b);
@@ -1711,7 +1850,7 @@
       else if (id === 'drone') { if (!(this.fx.drone > 0)) this.fxUp.drone = false; this.fx.drone = Math.max(this.fx.drone, 25); }
       else if (id === 'shears') { this.eshots.length = 0; this.nets.length = 0; this.hazards = this.hazards.filter(h => h.kind === 'burn'); }
       else if (id === 'ripper') {
-        if (this.boss && !this.boss.enter) { this.damageBoss(this.boss.maxHp * 0.015, this.boss.x + this.boss.def.soft[0].x, true, 'S'); this.fillFray(this.boss, 0.25); }   // Seam Ripper: a quarter of the fray meter, where a bomb does half and clears the cloth
+        if (this.boss && !this.boss.enter) { this.damageBoss(this.boss.maxHp * 0.015, this.boss.x + this.boss.def.soft[0].x, true, 'S'); this.fillFray(this.boss, 0.25, true); }   // Seam Ripper: a quarter of the fray meter, where a bomb does half and clears the cloth
         const formed = this.enemies.filter(e => e.slot);
         if (formed.length) { const front = Math.max.apply(null, formed.map(e => e.row)); formed.filter(e => e.row === front).forEach(e => this.damageEnemy(e, 99, true)); }
         else if (!this.boss) return false;
@@ -1741,6 +1880,7 @@
       }
       dmg *= this.crossStitch(b, src, x, b.y - def.halfH * 0.5);
       if (this.markT > 0 && src !== 'S') dmg *= this.markMul;   // Darn: a boss caught in the patch takes more
+      if (this.fv.bossDmg && src !== 'S') dmg *= 1 + this.fv.bossDmg;   // rework: unique items: Heavy Bead
       const took = Math.min(b.hp, dmg * mul);
       b.hp -= dmg * mul; b.flash = 0.1;
       if (src !== 'S') { this.bossAcc += took; this.player.sp = Math.min(1, this.player.sp + took / b.maxHp * BOSS_CHARGE * this.d.spGain); }   // damage dealt to a boss charges the special (its own damage does not)
@@ -1754,8 +1894,9 @@
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
       this.emit('keeperdown', { id: b.id, name: def.name, sprite: def.sprite, x: b.x, y: b.y });
       this.bossDown = true; this.downX = b.x; this.downY = b.y; this.downSprite = def.sprite; this.stopT = 0;
-      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay * this.d.coin / 3));
-      this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay * this.d.gem) });
+      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay * this.d.coin * (1 + this.fv.bossDust) / 3));
+      this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay * this.d.gem) + (this.fv.bossGem | 0) });
+      this.keepsakeDrop(b.id);   // rework: unique items
       const open = def.charts.filter(id => !p.charts[id]);
       if (open.length) this.drop('chart', b.x, b.y - 1, { chart: open[0], keeper: true });
       for (const e of this.enemies.slice()) this.kill(e, true);
@@ -1827,9 +1968,10 @@
       this.dualRun = this.player.dual ? this.dualRun + 1 : 0; p.stats.longestDouble = Math.max(p.stats.longestDouble || 0, this.dualRun);
       this.phase = 'done';
       const last = keeper && this.panel === C.PANELS.length - 1;
+      if (keeper && !last) this.openOffer('boss');   // rework: unique items: choose one of three finds
       if (last) this.closeNight(true);
       this.result = { kind: 'clear', keeper, last, info, stitches: this.stitches - st.stitches0, dust: dustGot, silk: silkGot,
-        dustAll: this.nightDust - st.dust0, silkAll: this.nightSilk - st.silk0, nightSilk: this.nightSilk, nightDust: this.nightDust, bestCombo: st.best, bonuses, charts: st.charts.slice(),
+        dustAll: this.nightDust - st.dust0, silkAll: this.nightSilk - st.silk0, nightSilk: this.nightSilk, nightDust: this.nightDust, bestCombo: st.best, bonuses, charts: st.charts.slice(), keepsakes: (this.stageKeeps || []).slice(), offer: !!this.offer,
         sampler: info.sampler ? { hit: this.sampler.hit, total: this.sampler.total } : null };
       this.emit('stageclear', this.result);
     }

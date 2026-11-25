@@ -75,7 +75,7 @@
 .node.sel, .utile.sel { background: var(--cream); border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; }
 /* power-up upgrades: three rows of picture tiles */
 .ugrid { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--list-gap); }
-.urow { display: grid; grid-template-columns: 5em repeat(4, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
+.urow { display: grid; grid-template-columns: 5em repeat(5, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
 .utile { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-4); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); text-align: center; transition: transform var(--dur-1) var(--ease); }
 .utile .ic { flex: none; width: var(--tile-ic); height: var(--tile-ic); }
 .utile .un { font: 700 var(--t-floor)/1.1 var(--text); hyphens: manual; -webkit-hyphens: manual; }
@@ -167,7 +167,7 @@
   .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
   .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
   .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
-  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(5, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .cname { font-size: var(--t-body); }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); letter-spacing: -.01em; }
@@ -209,7 +209,7 @@
   .node b { font-size: var(--t-md); } .node span, .utile > span, .utile .un, .tile .tn { font-size: var(--t-body); }
   .dname { font-size: var(--d-xl); } .dname.fit-1 { font-size: var(--d-lg); } .dname.fit-2 { font-size: var(--d-md); } .dname.fit-3 { font-size: var(--d-sm); }
   .dbody { font-size: var(--t-md); } .dkick, .dleft { font-size: var(--t-body); }
-  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(4, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(5, minmax(0, 1fr)); }
 }
 /* ---- SIDEWAYS: tabs down the side; list and details side by side ---- */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
@@ -230,7 +230,7 @@
   .card { padding: 0 var(--sp-6); } .cname { font-size: var(--t-body); } .cmeta { padding-top: 0; }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); }
   .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
-  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(5, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .utile .un { display: none; }
   .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }

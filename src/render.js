@@ -956,14 +956,8 @@
         if (r.t >= r.life) { L[i] = L[L.length - 1]; L.pop(); this.sfxFree.push(r); continue; }
         const t = r.t;
         if (r.id === 'tie') {
-          const back = clamp((t - 0.2) / 0.42, 0, 1), R = t < 0.2 ? 0.3 + 4.7 * eo(t / 0.2) : 0.35 + 4.65 * (1 - eio(back)), fade = t < 0.64 ? 1 : 1 - (t - 0.64) / 0.14;
-          const cx = r.x + (pl.x - r.x) * back, cy = r.y + (PY + 0.25 - r.y) * back, sp = -t * 6, sa = this.lc(PAL.saffron, 2.2);
-          this.tarc(trA, cx, cy, R, R * 0.96, sp, sp + TAU, 0.6, 0.55, sa, 0.32 * fade, 0.32 * fade, 0, 48);
-          this.tarc(trN, cx, cy, R, R * 0.96, sp, sp + TAU, 0.62, 0.13, this.lc(PAL.saffron, 1.2), 0.95 * fade, 0.95 * fade, 2, 48);
-          const ex = cx + Math.cos(sp) * R, ey = cy + Math.sin(sp) * R * 0.96;   // the two loose ends where the loop closes
-          this.tline(trN, ex, ey, ex + Math.cos(sp - 0.5) * 0.7, ey + Math.sin(sp - 0.5) * 0.7, 0.62, 0.08, this.lc(PAL.saffron, 1.2), fade, 1, 0.08, t * 20, 0.2 * fade);
-          this.spr.add(ex, ey, 0.8, 0.9, this.lc(PAL.glare, 2.6), fade, 1, t * 3);
-          if (t > 0.6 && !r.done) { r.done = 1; const kx = pl.x, ky = PY + 0.3, c = this.lc(PAL.saffron, 2.6);
+          // the ring itself is the 'tie' zone (syncZones), drawn at the real radius; this is the flash it ends on
+          if (t > 0.5 && !r.done) { r.done = 1; const kx = pl.x, ky = PY + 0.3, c = this.lc(PAL.saffron, 2.6);
             this.flare(kx, ky, 1, 1.6, c, 0.16); this.darn(kx, ky, this.lc(PAL.saffron, 1.6), 0.6, 2.5); this.ring(kx, ky, 2, c, 0.3, 7); this.glints(kx, ky, 0.9, 8, c, 4, 0.35, 0.45); this.hitStop(0.04, 0.4); }
         } else if (r.id === 'lasso') {
           const sw = clamp(t / 0.38, 0, 1), a = r.a - TAU * eio(sw), R = r.b + (3.6 - r.b) * Math.min(1, t / 0.08), cx = pl.x, cy = PY + 0.05, fade = t < 0.38 ? 1 : 1 - (t - 0.38) / 0.24;
@@ -1050,6 +1044,24 @@
           }
           if (Math.random() < fdt * 5 * q) this.lint.emit(x0 + rnd(-R, R) * 0.6, y0 + rnd(-R, R) * 0.6, 0.4, rnd(-0.15, 0.15), rnd(-0.15, 0.15), 0, 1.6, 0.4, this.lc(PAL.mist), 0.3, 6, 0, 1.6, undefined, 0.3);
           if (end < 0.4 && !m.done) { m.done = 1; for (let i = 0; i < 8; i++) { const an = i / 8 * TAU; this.fibres(x0 + Math.cos(an) * R * 0.7, y0 + Math.sin(an) * R * 0.7, 0.4, 2, weft, 1.4); } }
+        } else if (z.kind === 'tie') {   // Tie Off: the loop of thread runs out to the real reach of the special, then holds as a knot
+          const R = z.r, fade = z.knot ? Math.min(1, z.life / 0.5) : 1, sp = -age * 6, sa = this.lc(PAL.saffron, 2.2);
+          this.tarc(trA, z.x, z.y, R, R * 0.96, sp, sp + TAU, 0.6, z.knot ? 0.4 : 0.55, sa, 0.3 * fade, 0.3 * fade, 0, 64);
+          this.tarc(trN, z.x, z.y, R, R * 0.96, sp, sp + TAU, 0.62, 0.13, this.lc(PAL.saffron, 1.2), 0.95 * fade, 0.95 * fade, 2, 64);
+          const ex = z.x + Math.cos(sp) * R, ey = z.y + Math.sin(sp) * R * 0.96; this.spr.add(ex, ey, 0.8, 0.9, this.lc(PAL.glare, 2.6), fade, 1, age * 3);
+        } else if (z.kind === 'quilt') {   // Quilt: a ring of patchwork stitching round the ship while it drinks bullets
+          const fade = Math.min(1, z.life / 0.4) * Math.min(1, age / 0.1), cx = sim.player.x, cy = sim.player.y + 0.2, R = z.r * (0.9 + 0.04 * Math.sin(age * 9));
+          this.tarc(trA, cx, cy, R, R, age * 0.8, age * 0.8 + TAU, 0.6, 0.4, this.lc(PAL.steelHi, 1.6), 0.22 * fade, 0.22 * fade, 0, 56);
+          this.tarc(trN, cx, cy, R, R, -age * 0.8, -age * 0.8 + TAU, 0.62, 0.1, this.lc(PAL.paper, 1.4), 0.8 * fade, 0.8 * fade, 2, 56);
+        } else if (z.kind === 'seam') {   // Basting Line on a boss: the thread stays pulled through it, pinning its place for the three seconds it bites
+          const b = sim.boss; if (b) { const fade = Math.min(1, z.life / 0.4) * Math.min(1, age / 0.1), x = b.x + Math.sin(age * 40) * 0.04 * Math.exp(-age * 4), n = 18;
+            for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = x; py[i] = B + (H - B) * u; pz[i] = 0.55; ps[i] = (H - B) * u; }
+            trA.strip(px, py, pz, ps, n, 0.6, 0.6, this.lc(PAL.saffron, 1.8), 0.3 * fade, 0.3 * fade, 0);
+            trN.strip(px, py, pz, ps, n, 0.13, 0.13, this.lc(PAL.brass, 1.4), fade, fade, 1);
+            if (Math.random() < fdt * 20 * q) this.glints(x, b.y + (Math.random() - 0.5) * b.def.halfH * 2, 0.7, 1, this.lc(PAL.saffron, 2.4), 1.5, 0.3, 0.3); }
+        } else if (z.kind === 'lasso') {   // Lasso: the swung loop's reach, a thin ring that shrinks as it lets go
+          const fade = Math.min(1, z.life / 0.3), R = 5.6 * (0.7 + 0.3 * fade), cx = sim.player.x, cy = sim.player.y;
+          this.tarc(trN, cx, cy, R, R, age * 5, age * 5 + TAU, 0.6, 0.08, this.lc(PAL.madderPale, 1.8), 0.5 * fade, 0.5 * fade, 2, 48);
         } else if (z.kind === 'sweep') {   // Loom: a plied thread rail to rail, a shuttle racing along it, the band it has woven trailing behind
           const fade = Math.min(1, z.life / 0.3) * Math.min(1, age / 0.08), y = z.y, n = 24, vib = 0.05 + 0.08 * Math.exp(-age * 5);
           for (let i = 0; i < n; i++) { const u = i / (n - 1); px[i] = -HW + W * u; py[i] = y + Math.sin(u * Math.PI * 6 + age * 40) * vib * Math.sin(u * Math.PI); pz[i] = 0.55; ps[i] = W * u; }
@@ -1505,6 +1517,10 @@
             this.spr.add(x, y, z + 0.25, 2.3, this.lc(PAL.saffron, 2.4), 0.85, 7, -t * 1.6);
             for (let k = 0; k < 3; k++) { const a = t * 2.4 + k * TAU / 3; this.spr.add(x + Math.cos(a) * 0.95, y + Math.sin(a) * 0.95, z + 0.3, 0.5, this.lc(PAL.glare, 2.6), 0.95, 1, a); }
           }
+          if (d.loose) {   // shed by a boss: a loose thread trails above it, and it blinks as it is about to go
+            const left = d.life - d.t; if (left < 2.5 && ((left * 6) | 0) % 2) this.spr.add(x, y, z + 0.4, 2.6, this.lc(PAL.paper, 2), 0.5, 3);
+            for (let k = 1; k <= 4; k++) this.spr.add(x + Math.sin(t * 5 + k) * 0.18 * k, y + k * 0.42, z - 0.1, 0.34, this.lc(ch.color, 1.8), 0.8 - k * 0.15, 1, k);
+          }
           hex = d.up ? PAL.saffron : ch.color; size = d.up ? 1.1 : 0.9;
         } else if (d.kind === 'dust') {
           this.compose(x, y, z, 0, d.t * 9 + d.id, 0, 1); this.dropPool('dust', 0.085).push(this.M, this.lc('#FFFFFF'), 0, sim.fx.gold > 0 ? 0.45 : 0.18);
@@ -1521,6 +1537,13 @@
           this.spr.add(x - 0.25, y + 0.1, z + 0.3, 0.8 + 0.3 * Math.sin(t * 5 + d.id), this.lc(PAL.glare, 2.6), 0.9, 1, t * 1.5);
           this.spr.add(x + 0.3, y - 0.1, z + 0.3, 0.5 + 0.2 * Math.sin(t * 7 + d.id), this.lc(PAL.glare, 2.6), 0.9, 1, -t);
           hex = PAL.paper; size = 0.8;
+        } else if (d.kind === 'find') {   // rework: unique items: a find from an elite moth: a ring of thread turning round a bright knot, in its family's colour
+          const fd = C.FINDS[d.find], col = fd ? C.FIND_FAMILIES[fd.fam].color : PAL.saffron, rare = fd && fd.rar === 'rare';
+          this.compose(x, y, z, Math.sin(d.t * 2) * 0.3, d.t * 2.4, 0, 1.15); this.dropPool('chart', 0.12).push(this.M, this.lc(col), 0, 0.5);
+          this.spr.add(x, y, z - 0.2, 2.2, this.lc(col, 1.5), 0.5 + 0.12 * Math.sin(t * 6), 0);
+          this.spr.add(x, y, z + 0.2, 1.8, this.lc(PAL.glare, 2.2), 0.85, 7, -t * 2);
+          for (let k = 0; k < (rare ? 4 : 3); k++) { const a = t * 2.6 + k * TAU / (rare ? 4 : 3); this.spr.add(x + Math.cos(a) * 0.8, y + Math.sin(a) * 0.8, z + 0.3, 0.45, this.lc(PAL.glare, 2.6), 0.95, 1, a); }
+          hex = col; size = 1.1;
         } else if (d.kind === 'packet') {
           this.compose(x, y, z, Math.sin(d.t * 2) * 0.25, Math.sin(d.t * 3) * 0.5, 0, 1); this.dropPool('packet', 0.085).push(this.M, this.lc('#FFFFFF'), 0, 0.25);
           this.spr.add(x, y, z - 0.1, 1.4, this.lc(PAL.linen, 1.2), 0.45, 0);
@@ -1929,6 +1952,10 @@
         this.tarc(this.trA, pl.x, cy, 1.15, 1.15, Math.PI / 2, a1, 0.9, 0.34, sa, 0.35, 0.35, 0, Math.ceil(40 * f) + 2);
         this.tarc(this.trN, pl.x, cy, 1.15, 1.15, Math.PI / 2, a1, 0.92, 0.08, this.lc(PAL.saffron, 1.3), 0.95, 0.95, 2, Math.ceil(40 * f) + 2);
         this.spr.add(pl.x + Math.cos(a1) * 1.15, cy + Math.sin(a1) * 1.15, 1, 0.8, this.lc(PAL.glare, 2.4), 0.9, 1, this.time * 3); }
+      for (let i = 0; i < sim.pins.length; i++) { const q = sim.pins[i], f = Math.min(1, (q.life - q.t) / 1.2), c = this.lc(PAL.brass, 2.2);   // Tack Trap: a pin standing in the cloth, firing up
+        this.spr.add(q.x, q.y, 0.7, 0.9, c, f, 9); this.spr.add(q.x, q.y, 0.65, 1.7, this.lc(PAL.saffron, 1.6), 0.35 * f, 0, 0);
+        this.tline(this.trN, q.x, q.y - 0.5, q.x, q.y + 0.5, 0.6, 0.08, this.lc(PAL.steelHi, 1.8), f, 1, 0.1, 0, 0); }
+      if (sim.fx.spool > 0) { const cy = PY + 0.25, sa = this.lc(PAL.madderHi, 2); this.tarc(this.trN, pl.x, cy, 1.5, 1.5, this.time * 2, this.time * 2 + TAU * 0.8, 0.9, 0.12, sa, 0.9, 0.9, 2, 28); }   // Tangled Spool: a heavy winding ring
       this.drawDash(pl, fdt);
       if (sim.fx.dish > 0 && Math.random() < fdt * 20 * this.q.particles) { const a = Math.random() * TAU, r = 3.2; this.glow.emit(pl.x + Math.cos(a) * r, PY + Math.sin(a) * r, 0.5, -Math.cos(a) * 9, -Math.sin(a) * 9, 0, 0.32, 0.4, this.lc(PAL.steelHi, 2), 0.8, 4, 0, 0.3, a, 0, 0); }
       // dash after-images

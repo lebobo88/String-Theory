@@ -413,6 +413,15 @@ body.flying .hud { visibility: visible; }
 .slot.txt { font: 700 var(--t-cap)/1 var(--text); color: var(--mist-hi); }
 .slot.pz { flex-direction: column; gap: var(--sp-2); } .slot.pz .pzi { display: none; gap: var(--sp-4); } .slot.pz .pzi i { width: var(--sp-4); height: var(--sp-16); background: var(--linen); }
 button.slot:active { border-color: var(--saffron); }
+/* ---- the bomb: a stitched bomb with one small stitch for each bomb held (a dashed one for each place still empty). Sits at the end of the item row, under the thumb. ---- */
+.sl { display: contents; }
+.slot.bomb { order: 9; flex-direction: column; gap: var(--sp-2); border-color: var(--madder-lit); }
+.slot.bomb .bi { display: flex; } .slot.bomb .bi .ic { width: var(--sp-24); height: var(--sp-24); }
+.slot.bomb .bs { display: flex; gap: var(--sp-4); height: var(--sp-8); align-items: stretch; }
+.slot.bomb .bs i { width: var(--ln-2); border-left: var(--ln-2) dotted var(--dot); }
+.slot.bomb .bs i.on { border-left: var(--ln-3) solid var(--saffron-lit); }
+.slot.bomb.dry { border-color: var(--dot); } .slot.bomb.dry .bi { opacity: .35; }
+.slot.bomb kbd { display: none; }
 
 /* ---- boss health and the bonus count: lettering and a line of thread set straight on the cloth. Nothing solid behind them:
    a shadow under the letters and a wash that fades to nothing keep them readable over a busy scene. ---- */
@@ -514,6 +523,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .slots { grid-area: s; flex-wrap: nowrap; gap: var(--sp-6); justify-content: flex-end; }
   .slot { border: var(--ln) dashed var(--line-dark); outline: var(--ln-3) solid var(--umber); }
   .slot kbd, .slot.pz { display: none; }
+  body.lefty .slot.bomb { order: -1; }
   #bossbar { top: calc(var(--hud-top) + var(--sp-8)); left: calc(var(--sp-16) + var(--safe-l)); right: calc(var(--sp-16) + var(--safe-r)); }
   /* narrow: the name, the thread under it, then what the boss is doing */
   .bb { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "seam" "tag"; }
@@ -564,6 +574,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .slot kbd, .slot.pz .pzt { display: none; }
   .slot.pz { display: inline-flex; margin-left: auto; } .slot.pz .pzi { display: flex; }
   body.lefty .slot.pz { margin-left: 0; order: -1; margin-right: auto; }
+  body.lefty .slot.bomb { order: -1; }
   #toasts { left: 50%; right: auto; bottom: auto; top: var(--sp-64); transform: translateX(-50%); width: min(300px, calc(100vh * .74)); align-items: center; } /* atelier-ignore: component width */
   body.bossing #toasts { top: calc(var(--sp-64) + var(--sp-32)); }
   .toast { align-items: center; text-align: center; padding: var(--sp-4) var(--sp-12); } .toast span { display: none; }
@@ -798,7 +809,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
 .node.sel, .utile.sel { background: var(--cream); border: var(--ln-2) solid var(--ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--ink) inset; }
 /* power-up upgrades: three rows of picture tiles */
 .ugrid { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: var(--list-gap); }
-.urow { display: grid; grid-template-columns: 5em repeat(4, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
+.urow { display: grid; grid-template-columns: 5em repeat(5, minmax(0, 1fr)); gap: var(--list-gap); align-items: stretch; min-height: 0; }
 .utile { min-width: 0; min-height: 0; padding: var(--sp-2) var(--sp-4); background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sp-2); text-align: center; transition: transform var(--dur-1) var(--ease); }
 .utile .ic { flex: none; width: var(--tile-ic); height: var(--tile-ic); }
 .utile .un { font: 700 var(--t-floor)/1.1 var(--text); hyphens: manual; -webkit-hyphens: manual; }
@@ -890,7 +901,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .shipstrip .unit, .shipstrip .d .to { display: none; }   /* a phone's cell has room for the mark and the amount, not the new value too */
   .shop .pseg .tabb { padding: 0 var(--sp-2); } .shop .pseg .tabb b { font-size: var(--t-body); }
   .album { grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(5, minmax(0, 1fr)); }
-  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(5, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .cname { font-size: var(--t-body); }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); letter-spacing: -.01em; }
@@ -932,7 +943,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .node b { font-size: var(--t-md); } .node span, .utile > span, .utile .un, .tile .tn { font-size: var(--t-body); }
   .dname { font-size: var(--d-xl); } .dname.fit-1 { font-size: var(--d-lg); } .dname.fit-2 { font-size: var(--d-md); } .dname.fit-3 { font-size: var(--d-sm); }
   .dbody { font-size: var(--t-md); } .dkick, .dleft { font-size: var(--t-body); }
-  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(4, minmax(0, 1fr)); }
+  .srow, .urow { grid-template-columns: 6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 6em repeat(5, minmax(0, 1fr)); }
 }
 /* ---- SIDEWAYS: tabs down the side; list and details side by side ---- */
 @media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
@@ -953,7 +964,7 @@ body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a men
   .card { padding: 0 var(--sp-6); } .cname { font-size: var(--t-body); } .cmeta { padding-top: 0; }
   .cname.fit-1 { font-size: var(--t-sm); } .cname.fit-2, .cname.fit-3 { font-size: var(--t-floor); }
   .node { padding: 0 var(--sp-6); gap: 0; } .node b { font-size: var(--t-floor); }
-  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(4, minmax(0, 1fr)); }
+  .srow { grid-template-columns: 4.6em repeat(3, minmax(0, 1fr)); } .urow { grid-template-columns: 3.6em repeat(5, minmax(0, 1fr)); }
   .srow .eyebrow, .urow .eyebrow { letter-spacing: 0; text-transform: none; color: var(--ink); font-size: var(--t-floor); }
   .utile .un { display: none; }
   .dpic .lvpic { font-size: calc(var(--d-xs) * var(--k, 1)); }
@@ -1211,4 +1222,66 @@ body.celebrating .overlay.res .stitchin > div, body.celebrating .overlay.res .st
   #banner, .btn, .card, .tabb, .node, .utile, .tile, .chip, .eq, .rcard, .pcard, .ptile { transition: none; }
   #wipe, .amb { display: none; }
   .meters .sp .fill, .fo .bar i, .pw .pt i, .seam i, .ctag .cdr i { transition: none; }
+}
+
+/* ============ 11 · unique items: the find choice, the album, heirlooms ============
+   The choice is a small sheet between rounds (three plain buttons). The album and the heirlooms are views of the Collection tab: they use the
+   same frame as every other view, and a list that is longer than its slot scrolls inside it (the frame itself never moves). */
+.finds { width: min(100%, 560px); gap: var(--sp-12); } /* atelier-ignore: component width */
+.finds .rhead { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fopts { display: grid; gap: var(--sp-8); min-height: 0; }
+.fopt { display: grid; grid-template-columns: var(--sp-48) minmax(0, 1fr); gap: var(--sp-12); align-items: center; min-width: 0; min-height: var(--tap); padding: var(--sp-8) var(--sp-12); text-align: left; background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); border-radius: 0; transition: transform var(--dur-1) var(--ease); }
+.fopt:hover, .fopt:focus-visible { border-style: solid; border-color: var(--ink); background: var(--cream); }
+.fopt:active { transform: scale(.985); }
+.fopt[data-rar="uncommon"] { border: var(--ln-2) solid var(--brass); }
+.fopt[data-rar="rare"] { border: var(--ln-2) solid var(--saffron-ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.fic { width: var(--sp-48); height: var(--sp-48); display: grid; place-items: center; background: var(--pat-cloth), var(--coverlet); }
+.fic .ic { width: var(--sp-32); height: var(--sp-32); }
+.ftx { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.fn { font: 700 var(--t-md)/var(--lh-tight) var(--text); }
+.fd { font: 400 var(--t-body)/var(--lh-snug) var(--text); }
+.ff { font: 600 var(--t-sm)/var(--lh-snug) var(--mono); color: var(--ink-2); }
+.fb { font: 700 var(--t-sm)/var(--lh-snug) var(--text); font-style: normal; color: var(--saffron-ink); }
+.finds .row .btn .bh { font-weight: 400; }
+
+/* the album and the heirlooms: rows of five, a heading for each family, scrolling inside the list's slot */
+.album.items { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; align-content: start; overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-2); scrollbar-width: thin; }
+.album.items .tile { min-height: var(--sp-64); }
+.album.items .tile .ic { width: var(--tile-ic); height: var(--tile-ic); }
+.album.items .afam { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp-8); padding-top: var(--sp-4); font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--ink); border-bottom: var(--ln) dotted var(--ink-2); }
+.album.items .afam::before { content: ""; flex: none; width: var(--sp-12); height: var(--sp-12); background: var(--c); border: var(--ln) solid var(--ink); }
+.album.items .afam > span { margin-left: auto; font: 600 var(--t-sm)/var(--lh-tight) var(--mono); color: var(--ink-2); }
+.album.items .afam:first-child { padding-top: 0; }
+.tile[data-rar="uncommon"] { border: var(--ln-2) dashed var(--brass); }
+.tile[data-rar="rare"] { box-shadow: inset 0 0 0 var(--ln-2) var(--saffron); }
+.tile[data-rar="keep"], .tile[data-rar="heir"] { box-shadow: inset 0 0 0 var(--ln-2) var(--brass); }
+.tile.sel[data-rar] { border: var(--ln-2) solid var(--saffron); box-shadow: 0 0 0 var(--ln-2) var(--coverlet) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.tile .tcap { display: flex; align-items: center; justify-content: center; max-width: 100%; font: 600 var(--t-floor)/1 var(--mono); color: var(--mist-hi); }
+.tile.worn .tcap { color: var(--saffron-hi); }
+.tile .tcap .tag { background: transparent; color: var(--linen); padding: 0; clip-path: none; height: auto; gap: var(--sp-2); }
+.tile .tcap .tag .ic { width: var(--sp-12); }
+.tile.unseen .tcap { color: var(--mist-hi); }
+.tile.unseen.worn .ic { filter: none; }
+
+/* what is worn, in the details' left slot */
+.wornrow { display: flex; align-items: center; gap: var(--sp-6); min-width: 0; }
+.wslot { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); border: var(--ln-2) dashed var(--ink-2); }
+.wslot.on { border: var(--ln-2) solid var(--ink); background: var(--coverlet); }
+.wslot .ic { width: var(--sp-24); height: var(--sp-24); }
+
+/* the pause sheet's small pictures of what you carry */
+.runitems { display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start; }
+.ritems { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
+.ri { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); background: var(--coverlet); }
+.ri .ic { width: var(--sp-24); height: var(--sp-24); }
+
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .fopt { grid-template-columns: var(--sp-40) minmax(0, 1fr); gap: var(--sp-8); padding: var(--sp-6) var(--sp-8); }
+  .fic { width: var(--sp-40); height: var(--sp-40); } .fic .ic { width: var(--sp-24); height: var(--sp-24); }
+  .fn { font-size: var(--t-body); } .fd { font-size: var(--t-sm); } .ff, .fb { font-size: var(--t-floor); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .finds { width: min(100%, 900px); display: grid; grid-template-columns: minmax(0, 1fr); } /* atelier-ignore: component width */
+  .fopts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fopt { grid-template-columns: minmax(0, 1fr); align-items: start; }
 }

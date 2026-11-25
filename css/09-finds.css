@@ -1,0 +1,62 @@
+
+/* ============ 11 · unique items: the find choice, the album, heirlooms ============
+   The choice is a small sheet between rounds (three plain buttons). The album and the heirlooms are views of the Collection tab: they use the
+   same frame as every other view, and a list that is longer than its slot scrolls inside it (the frame itself never moves). */
+.finds { width: min(100%, 560px); gap: var(--sp-12); } /* atelier-ignore: component width */
+.finds .rhead { display: flex; flex-direction: column; gap: var(--sp-2); }
+.fopts { display: grid; gap: var(--sp-8); min-height: 0; }
+.fopt { display: grid; grid-template-columns: var(--sp-48) minmax(0, 1fr); gap: var(--sp-12); align-items: center; min-width: 0; min-height: var(--tap); padding: var(--sp-8) var(--sp-12); text-align: left; background: var(--paper); color: var(--ink); border: var(--ln) dashed var(--rule); border-radius: 0; transition: transform var(--dur-1) var(--ease); }
+.fopt:hover, .fopt:focus-visible { border-style: solid; border-color: var(--ink); background: var(--cream); }
+.fopt:active { transform: scale(.985); }
+.fopt[data-rar="uncommon"] { border: var(--ln-2) solid var(--brass); }
+.fopt[data-rar="rare"] { border: var(--ln-2) solid var(--saffron-ink); box-shadow: 0 0 0 var(--ln-2) var(--paper) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.fic { width: var(--sp-48); height: var(--sp-48); display: grid; place-items: center; background: var(--pat-cloth), var(--coverlet); }
+.fic .ic { width: var(--sp-32); height: var(--sp-32); }
+.ftx { display: flex; flex-direction: column; gap: var(--sp-2); min-width: 0; }
+.fn { font: 700 var(--t-md)/var(--lh-tight) var(--text); }
+.fd { font: 400 var(--t-body)/var(--lh-snug) var(--text); }
+.ff { font: 600 var(--t-sm)/var(--lh-snug) var(--mono); color: var(--ink-2); }
+.fb { font: 700 var(--t-sm)/var(--lh-snug) var(--text); font-style: normal; color: var(--saffron-ink); }
+.finds .row .btn .bh { font-weight: 400; }
+
+/* the album and the heirlooms: rows of five, a heading for each family, scrolling inside the list's slot */
+.album.items { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-template-rows: none; grid-auto-rows: auto; align-content: start; overflow-y: auto; overscroll-behavior: contain; padding: var(--sp-2); scrollbar-width: thin; }
+.album.items .tile { min-height: var(--sp-64); }
+.album.items .tile .ic { width: var(--tile-ic); height: var(--tile-ic); }
+.album.items .afam { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--sp-8); padding-top: var(--sp-4); font: 700 var(--t-body)/var(--lh-tight) var(--text); color: var(--ink); border-bottom: var(--ln) dotted var(--ink-2); }
+.album.items .afam::before { content: ""; flex: none; width: var(--sp-12); height: var(--sp-12); background: var(--c); border: var(--ln) solid var(--ink); }
+.album.items .afam > span { margin-left: auto; font: 600 var(--t-sm)/var(--lh-tight) var(--mono); color: var(--ink-2); }
+.album.items .afam:first-child { padding-top: 0; }
+.tile[data-rar="uncommon"] { border: var(--ln-2) dashed var(--brass); }
+.tile[data-rar="rare"] { box-shadow: inset 0 0 0 var(--ln-2) var(--saffron); }
+.tile[data-rar="keep"], .tile[data-rar="heir"] { box-shadow: inset 0 0 0 var(--ln-2) var(--brass); }
+.tile.sel[data-rar] { border: var(--ln-2) solid var(--saffron); box-shadow: 0 0 0 var(--ln-2) var(--coverlet) inset, 0 0 0 calc(var(--ln-2) + var(--ln)) var(--saffron) inset; }
+.tile .tcap { display: flex; align-items: center; justify-content: center; max-width: 100%; font: 600 var(--t-floor)/1 var(--mono); color: var(--mist-hi); }
+.tile.worn .tcap { color: var(--saffron-hi); }
+.tile .tcap .tag { background: transparent; color: var(--linen); padding: 0; clip-path: none; height: auto; gap: var(--sp-2); }
+.tile .tcap .tag .ic { width: var(--sp-12); }
+.tile.unseen .tcap { color: var(--mist-hi); }
+.tile.unseen.worn .ic { filter: none; }
+
+/* what is worn, in the details' left slot */
+.wornrow { display: flex; align-items: center; gap: var(--sp-6); min-width: 0; }
+.wslot { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); border: var(--ln-2) dashed var(--ink-2); }
+.wslot.on { border: var(--ln-2) solid var(--ink); background: var(--coverlet); }
+.wslot .ic { width: var(--sp-24); height: var(--sp-24); }
+
+/* the pause sheet's small pictures of what you carry */
+.runitems { display: flex; flex-direction: column; gap: var(--sp-4); align-items: flex-start; }
+.ritems { display: flex; flex-wrap: wrap; gap: var(--sp-4); }
+.ri { display: grid; place-items: center; width: var(--sp-32); height: var(--sp-32); background: var(--coverlet); }
+.ri .ic { width: var(--sp-24); height: var(--sp-24); }
+
+@media (max-aspect-ratio: 1/1), (max-width: 860px) and (min-height: 501px) { /* atelier-ignore: breakpoint UPRIGHT */
+  .fopt { grid-template-columns: var(--sp-40) minmax(0, 1fr); gap: var(--sp-8); padding: var(--sp-6) var(--sp-8); }
+  .fic { width: var(--sp-40); height: var(--sp-40); } .fic .ic { width: var(--sp-24); height: var(--sp-24); }
+  .fn { font-size: var(--t-body); } .fd { font-size: var(--t-sm); } .ff, .fb { font-size: var(--t-floor); }
+}
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) { /* atelier-ignore: breakpoint SIDEWAYS */
+  .finds { width: min(100%, 900px); display: grid; grid-template-columns: minmax(0, 1fr); } /* atelier-ignore: component width */
+  .fopts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .fopt { grid-template-columns: minmax(0, 1fr); align-items: start; }
+}

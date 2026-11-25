@@ -88,6 +88,15 @@ body.flying .hud { visibility: visible; }
 .slot.txt { font: 700 var(--t-cap)/1 var(--text); color: var(--mist-hi); }
 .slot.pz { flex-direction: column; gap: var(--sp-2); } .slot.pz .pzi { display: none; gap: var(--sp-4); } .slot.pz .pzi i { width: var(--sp-4); height: var(--sp-16); background: var(--linen); }
 button.slot:active { border-color: var(--saffron); }
+/* ---- the bomb: a stitched bomb with one small stitch for each bomb held (a dashed one for each place still empty). Sits at the end of the item row, under the thumb. ---- */
+.sl { display: contents; }
+.slot.bomb { order: 9; flex-direction: column; gap: var(--sp-2); border-color: var(--madder-lit); }
+.slot.bomb .bi { display: flex; } .slot.bomb .bi .ic { width: var(--sp-24); height: var(--sp-24); }
+.slot.bomb .bs { display: flex; gap: var(--sp-4); height: var(--sp-8); align-items: stretch; }
+.slot.bomb .bs i { width: var(--ln-2); border-left: var(--ln-2) dotted var(--dot); }
+.slot.bomb .bs i.on { border-left: var(--ln-3) solid var(--saffron-lit); }
+.slot.bomb.dry { border-color: var(--dot); } .slot.bomb.dry .bi { opacity: .35; }
+.slot.bomb kbd { display: none; }
 
 /* ---- boss health and the bonus count: lettering and a line of thread set straight on the cloth. Nothing solid behind them:
    a shadow under the letters and a wash that fades to nothing keep them readable over a busy scene. ---- */

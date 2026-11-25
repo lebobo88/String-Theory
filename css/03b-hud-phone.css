@@ -34,6 +34,7 @@
   .slots { grid-area: s; flex-wrap: nowrap; gap: var(--sp-6); justify-content: flex-end; }
   .slot { border: var(--ln) dashed var(--line-dark); outline: var(--ln-3) solid var(--umber); }
   .slot kbd, .slot.pz { display: none; }
+  body.lefty .slot.bomb { order: -1; }
   #bossbar { top: calc(var(--hud-top) + var(--sp-8)); left: calc(var(--sp-16) + var(--safe-l)); right: calc(var(--sp-16) + var(--safe-r)); }
   /* narrow: the name, the thread under it, then what the boss is doing */
   .bb { grid-template-columns: minmax(0, 1fr); grid-template-areas: "name" "seam" "tag"; }
@@ -84,6 +85,7 @@
   .slot kbd, .slot.pz .pzt { display: none; }
   .slot.pz { display: inline-flex; margin-left: auto; } .slot.pz .pzi { display: flex; }
   body.lefty .slot.pz { margin-left: 0; order: -1; margin-right: auto; }
+  body.lefty .slot.bomb { order: -1; }
   #toasts { left: 50%; right: auto; bottom: auto; top: var(--sp-64); transform: translateX(-50%); width: min(300px, calc(100vh * .74)); align-items: center; } /* atelier-ignore: component width */
   body.bossing #toasts { top: calc(var(--sp-64) + var(--sp-32)); }
   .toast { align-items: center; text-align: center; padding: var(--sp-4) var(--sp-12); } .toast span { display: none; }

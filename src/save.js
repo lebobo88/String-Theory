@@ -21,6 +21,9 @@
       charmUps: {},                // power-up id -> true: that power-up drops in its upgraded form (C.CHARMS[id].up)
       tray: [],                    // [{id, n}] up to TUNING.traySlots
       charts: {},                  // blueprint id -> true
+      heirlooms: {},               // heirloom or keepsake id -> true (owned; C.HEIRLOOMS)
+      worn: [],                    // ids worn now, at most ST.heirSlots(p)
+      album: {},                   // find, keepsake or heirloom id -> true: every unique item ever found (a collection, never power)
       codex: { moths: {}, keepers: {} },
       stats: { bestNight: 0, nights: 0, mended: 0, perfectSamplers: 0, longestDouble: 0, playSec: 0 },   // playSec: seconds flown (the Exchange's clock)
       exch: { buy: 0, sell: 0, t: 0, day: '' },   // the Exchange: gems bought and sold (they fall back as you fly), the playSec stamp, and the date of the last overnight reset
@@ -251,6 +254,36 @@
       if (left > 0) return R(false, 'tier', { price: u.cost, left });
       return p.silk >= u.cost ? R(true, 'buy', { price: u.cost }) : R(false, 'short', { price: u.cost });
     },
+    /* Heirlooms (rework: unique items): bought once with coins or gems. A keepsake is dropped by its boss and cannot be bought. why: 'buy' | 'owned' | 'drop' | 'short'. */
+    heirloomState(p, id) {
+      const h = C.HEIRLOOMS[id]; if (!h) return R(false, 'none');
+      if ((p.heirlooms || {})[id]) return R(false, 'owned');
+      if (h.keepsake) return R(false, 'drop');
+      const dust = h.price.dust || 0, silk = h.price.silk || 0, cur = silk ? 'silk' : 'dust', price = silk || dust;
+      return p.dust >= dust && p.silk >= silk ? R(true, 'buy', { price, cur, dust, silk }) : R(false, 'short', { price, cur, dust, silk });
+    },
+    buyHeirloom(p, id) {
+      const st = shop.heirloomState(p, id);
+      if (!st.ok) return st;
+      p.dust -= st.dust; p.silk -= st.silk; (p.heirlooms = p.heirlooms || {})[id] = true; (p.album = p.album || {})[id] = true;
+      return R(true, 'bought');
+    },
+    /* How many heirlooms may be worn: two, and one more with the Heirloom Hook perk. */
+    heirSlots(p) { return 2 + ((p.pattern && p.pattern.heirhook) ? 1 : 0); },
+    /* The worn list, cleaned: only owned ids, no repeats, no more than the slots allow. */
+    worn(p) {
+      const out = [], own = p.heirlooms || {}, seen = {};
+      for (const id of (Array.isArray(p.worn) ? p.worn : [])) if (own[id] && C.HEIRLOOMS[id] && !seen[id] && out.length < shop.heirSlots(p)) { seen[id] = true; out.push(id); }
+      return out;
+    },
+    /* Wear or take off. why: 'worn' | 'off' | 'full' | 'unowned'. */
+    wearHeirloom(p, id) {
+      if (!(p.heirlooms || {})[id] || !C.HEIRLOOMS[id]) return R(false, 'unowned');
+      const w = shop.worn(p); if (w.indexOf(id) >= 0) return R(true, 'worn');
+      if (w.length >= shop.heirSlots(p)) return R(false, 'full');
+      w.push(id); p.worn = w; return R(true, 'worn');
+    },
+    takeOffHeirloom(p, id) { p.worn = shop.worn(p).filter(x => x !== id); return R(true, 'off'); },
     buyCharmUp(p, id) {
       const st = shop.charmUpState(p, id);
       if (!st.ok) return st;
@@ -347,7 +380,7 @@
   ST.modeUnlocked = (p, id) => { const m = C.MODES[id]; return !!m && (!m.need || (p.stats['won_' + m.need] || 0) > 0); };
   ST.shop = shop;
   ST.derive = derive;
-  ST.perk = perk;
+  ST.perk = perk; ST.heirSlots = shop.heirSlots;
   ST.exchangeQuote = exchangeQuote; ST.exchange = exchange; ST.exchangeDay = exchangeDay;
   ST.frayOpen = frayOpen; ST.frayStep = frayStep;
 })(typeof window !== 'undefined' ? window.ST : globalThis.ST);
