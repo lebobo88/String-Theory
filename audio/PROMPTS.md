@@ -24,6 +24,12 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | fire_knot | `audio/fire_knot.mp3` | Arcade game heavy launcher shot: a deep punchy bass thump with a hard wooden knock on top, like a small mortar firing a dense ball, tight weighty low end, immediate attack, dry, 0.4 seconds |
 | fire_cross | `audio/fire_cross.mp3` | Two crossing thread whips, a quick sharp X shaped swish, crisp, dry, 0.25 seconds |
 | fire_satin | `audio/fire_satin.mp3` | Very short silky tick, a smooth light thread flick for rapid fire, soft and high, 0.08 seconds |
+| fire_daisy | `audio/fire_daisy.mp3` | A small loop of thread flicked off a spinning ring: a soft bright pluck with a short airy whirr, like a petal snapped free, dry, 0.2 seconds |
+| fire_feather | `audio/fire_feather.mp3` | A light feather quill flicked through the air: a breathy soft swish with a tiny high flutter at the end, dry, 0.15 seconds |
+| fire_blanket | `audio/fire_blanket.mp3` | A thread loop thrown out like a lasso and whipping back: a quick rising whoosh then a softer falling one, a rope-like swoosh there and back, dry, 0.35 seconds |
+| fire_pins | `audio/fire_pins.mp3` | A dressmaker pin flicked from the fingers: a tiny bright metallic tick with a short thin whistle, dry, 0.15 seconds |
+| pin_stick | `audio/pin_stick.mp3` | A steel pin pushed firmly into taut linen: a soft muffled thup with a faint metallic tick on top, close and dry, 0.12 seconds |
+| petal_block | `audio/petal_block.mp3` | A stray bullet caught in a loop of silk thread: a soft springy twang and a puff of fabric, gentle and warm, 0.25 seconds |
 | charge | `audio/laser_charge.mp3` | A metal wire being wound tighter, rising pitch creak and hum building tension, 0.8 seconds |
 | armour | `audio/armour.mp3` | Needle glancing off a hard thimble, small bright metallic tink, dry, 0.15 seconds |
 | deflect | `audio/deflect.mp3` | Thread snapping back off a stiff leather shield, dull slap with a short twang, 0.25 seconds |
@@ -35,6 +41,15 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | sp_ready | `audio/sp_ready.mp3` | A spool of thread wound full and ready: a bright rising three note chime with a taut string hum, 0.6 seconds |
 | low_shield | `audio/low_shield.mp3` | Warning: a fraying rope creaking under strain with two low muffled heartbeat thumps, tense, 0.9 seconds |
 | life_lost | `audio/life_lost.mp3` | A thick rope snapping and a needle clattering to a wooden floor, a short sad falling note, 1 second |
+| bomb_use | `audio/bomb_use.mp3` | A held bomb let go in a cloth room: a deep soft boom that opens into a wide ring of threads snapping outward all at once, then a short bright shimmer as bullets turn to loose thread, powerful but clean, 1.1 seconds |
+| bomb_save | `audio/bomb_save.mp3` | A last-second save: a sharp rising intake of breath cut by a deep soft boom, a rewinding tape-like zip as the hit is undone, then a bright relieved chime, 1 second |
+| bomb_get | `audio/bomb_get.mp3` | A heavy round spool of thread dropped into a wooden drawer with a soft thump, then a small clink of a brass latch, 0.5 seconds |
+| loose | `audio/loose.mp3` | A single thread coming loose and swinging free with a tiny sparkling ping, light and airy, 0.4 seconds |
+| pin | `audio/pin.mp3` | A small brass tack pressed into wood, a short tick with a bright metallic ring, 0.15 seconds |
+| pin_shot | `audio/pin_shot.mp3` | A tiny sewing pin flicked upward, a very short thin zip with a faint glassy tick, 0.1 seconds |
+| charm_up | `audio/charm_up.mp3` | The same bright three note harp rise played again and climbing a step higher, with a small shimmer on top, 0.7 seconds |
+| recharge | `audio/recharge.mp3` | A spool winding full very fast, a quickening ratchet that ends in a bright taut hum and a small chime, 0.7 seconds |
+| spool_on | `audio/spool_on.mp3` | A huge heavy spool snagging in a tangle of thread, a thick low creak and a dull thud, slow and weighty, 0.8 seconds |
 | patch | `audio/patch.mp3` | A shot thudding into a stretched canvas patch, taut drum-like whump, 0.3 seconds |
 | repad | `audio/repad.mp3` | Stuffing a cushion: two soft plump wool puffs and a quick stitch pulled closed, 0.5 seconds |
 | tcut | `audio/tether_cut.mp3` | A taut thread slicing through soft fabric, quick clean zip and a small tear, 0.2 seconds |
@@ -71,6 +86,9 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | in_beetle | `audio/in_beetle.mp3` | Heavy thumps under a floor getting closer, something circling beneath, then a wooden frame splintering as a hard shell bursts through and rolls past, three sharp knocks on wood, and a metallic shing, 4 seconds |
 | btl_aim | `audio/btl_aim.mp3` | A hard shell clicking shut and a heavy ball starting to spin up on cloth, ratcheting clicks rising, 0.7 seconds |
 | btl_bounce | `audio/btl_bounce.mp3` | A heavy hard ball knocking off a wooden rail, a solid billiard-like clack, 0.25 seconds |
+| btl_creak | `audio/btl_creak.mp3` | A rolling armoured shell straining: a sharp woody creak of plates under pressure with a bright tick on top, a clear "now" cue, 0.35 seconds |
+| btl_mothball | `audio/btl_mothball.mp3` | A hard white mothball knocked loose and skittering across a felt table: a small knock then a soft rolling patter, 0.4 seconds |
+| boss_mend | `audio/boss_mend.mp3` | Loose threads drawn tight again: a quick rising zip of thread through cloth and a soft taut pluck, the break is over, 0.5 seconds |
 | btl_slam | `audio/btl_slam.mp3` | A heavy armoured ball crashing full speed into a wooden frame and flipping over, big crunch, rattling shell and a dazed wobble, 1 second |
 | in_empress | `audio/in_empress.mp3` | Silk strands shooting across a room one at a time, each a quick taut zing, building a web, then something descending slowly on one creaking thread, a delicate sinister music-box phrase, the line cut with a snip, 4 seconds |
 | emp_spin | `audio/emp_spin.mp3` | Silk being spun fast from a spinneret, a fine whirring thread drawn out with a soft high whine, 0.7 seconds |
@@ -101,6 +119,10 @@ Each file lives at the path shown. If one is missing the game falls back to its 
 | ui_fail | `audio/ui_fail.mp3` | A thread pulled and refusing to give, a short dull double thud, gentle and not harsh, 0.25 seconds |
 | ui_equip | `audio/ui_equip.mp3` | A spool dropped onto its spindle and seated with a wooden click and a short thread zip, 0.3 seconds |
 | ui_start | `audio/ui_start.mp3` | A needle threaded and pulled taut, quick zip rising to a bright confident pluck, 0.5 seconds |
+| find | `audio/find.mp3` | A small bright treasure found: a soft glassy chime of two rising notes, a faint sparkle of tiny bells after it, warm and quick, 0.8 seconds |
+| find_pick | `audio/find_pick.mp3` | A coin-sized charm sewn on and snapped tight: one soft thread pull, then a warm round plucked note with a short shimmer, 0.7 seconds |
+| keepsake | `audio/keepsake.mp3` | An heirloom unwrapped from tissue paper: a rustle, then a slow warm three-note music-box phrase that settles on a gentle held chord, 1.6 seconds |
+| thorns | `audio/thorns.mp3` | A ring of tiny needles flung outward at once: a quick sharp metallic shiver and a short airy whoosh, 0.5 seconds |
 | fw_launch | `audio/fw_launch.mp3` | A firework rocket launch: a thread zipping fast up through cloth with a soft rising whistle, dry abrupt end, 0.6 seconds |
 | fw_pop | `audio/fw_pop.mp3` | A distant firework burst: a muffled soft boom like thick cloth whumping, followed by a light crackle of tiny sparks, warm and round, 0.9 seconds |
 | fw_ring | `audio/fw_ring.mp3` | A bright firework burst: a sharp ting-pop like a wire hoop pulled taut, then a short glittering shimmer fading quickly, 0.9 seconds |
