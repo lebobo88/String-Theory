@@ -101,11 +101,13 @@ const proper = {
 };
 
 // ---------- what each boss must show ----------
+/* target: the plan's fight length with the expected build (docs/progression-plan.html section 3), seconds from when the boss can act. */
+const IGNORE = [1.3, 3.0];   // ignoring the mechanic costs time, but never several times as long (plan: at most 3 times)
 const BOSSES = [
-  { id: 'unraveller', file: 'unraveller.js', target: [90, 130], properCues: ['snag', 'snap', 'choke'], ignoreCues: ['bite'] },
-  { id: 'beetle', file: 'beetle.js', target: [90, 130], properCues: ['slam', 'larvae', 'burrow', 'erupt'], ignoreCues: ['bounce'] },
-  { id: 'empress', file: 'empress.js', target: [90, 130], properCues: ['spin', 'fall', 'cocoon', 'puppet', 'storm'], ignoreCues: [] },
-  { id: 'king', file: 'king.js', target: [150, 200], properCues: ['court', 'pass', 'eyes', 'crown', 'jewel', 'pair', 'laststand'], ignoreCues: ['wrongjewel', 'fail'] }
+  { id: 'unraveller', file: 'unraveller.js', target: [70, 100], properCues: ['snag', 'snap', 'choke'], ignoreCues: ['bite'] },
+  { id: 'beetle', file: 'beetle.js', target: [70, 100], properCues: ['creak', 'slam', 'larvae', 'burrow', 'erupt'], ignoreCues: ['bounce'], patch: { id: 'mothballs', cues: ['mothball'] } },
+  { id: 'empress', file: 'empress.js', target: [70, 100], properCues: ['spin', 'fall', 'cocoon', 'puppet', 'storm'], ignoreCues: [] },
+  { id: 'king', file: 'king.js', target: [110, 140], properCues: ['court', 'pass', 'eyes', 'crown', 'jewel', 'pair', 'laststand'], ignoreCues: ['wrongjewel', 'fail'] }
 ];
 const FRAMEWORK_CUES = new Set(['stun', 'recover']);
 
@@ -121,24 +123,32 @@ for (const B of BOSSES) {
     for (const seed of [1, 2, 3]) {
       const r = fight(B.id, watch(kind === 'proper' ? proper[B.id]() : ignore()), { god: true, seed, maxSec: 420 });
       const tag = B.id + ' ' + kind + ' seed ' + seed;
-      times[kind + seed] = r.sec;
-      console.log(tag.padEnd(26), 'won', r.won, 'sec', r.sec, 'stuns', r.stuns, 'stalled', r.stalled, 'maxProps', r.maxProps);
+      times[kind + seed] = r.live;
+      console.log(tag.padEnd(26), 'won', r.won, 'sec', r.live, 'stuns', r.stuns, 'stalled', r.stalled, 'maxProps', r.maxProps);
       ok(!r.error, tag + ': no error ' + (r.error || ''));
       ok(r.won, tag + ': wins (hp left ' + r.hp + ')');
       ok(r.phases === nPh, tag + ': every phase reached (' + r.phases + '/' + nPh + ')');
       ok(r.stalled < 25, tag + ': no stall (' + r.stalled + ' s)');
       ok(r.maxProps < 80, tag + ': props and shots under 80 (' + r.maxProps + ')');
       if (kind === 'proper') {
-        ok(r.sec >= B.target[0] && r.sec <= B.target[1], tag + ': fight length ' + r.sec + ' s inside ' + B.target.join(' to '));
+        ok(r.live >= B.target[0] && r.live <= B.target[1], tag + ': fight length ' + r.live + ' s inside ' + B.target.join(' to '));
         for (const c of B.properCues) ok(r.cues[c] > 0, tag + ': the mechanic happens (cue ' + c + ')');
-        ok(r.stuns > 0, tag + ': the fray-and-stun window is reached');
+        ok(r.stuns > 0, tag + ': the boss is frayed (a break) at least once');
       } else {
         ok(r.sec < 420, tag + ': finishes inside 420 s');
-        ok(r.sec >= 2 * times['proper' + seed], tag + ': ignoring the mechanic takes at least twice as long (' + r.sec + ' vs ' + times['proper' + seed] + ')');
+        { const k = r.live / times['proper' + seed]; ok(k >= IGNORE[0] && k <= IGNORE[1], tag + ': ignoring the mechanic takes ' + IGNORE.join(' to ') + ' times as long (' + r.live + ' vs ' + times['proper' + seed] + ')'); }
         for (const c of B.ignoreCues) ok(r.cues[c] > 0, tag + ': ignoring it costs (cue ' + c + ')');
       }
       for (const [c, n] of Object.entries(r.cues)) seenCues[c] = (seenCues[c] || 0) + n;
     }
+  }
+  if (B.patch) {   // the stage's other patch changes the fight (Mothball Row: the Beetle knocks mothballs loose)
+    const r = fight(B.id, watch(proper[B.id]()), { god: true, seed: 1, maxSec: 420, patch: B.patch.id });
+    console.log((B.id + ' on ' + B.patch.id).padEnd(26), 'won', r.won, 'sec', r.live, 'stuns', r.stuns, 'maxProps', r.maxProps);
+    ok(!r.error && r.won, B.id + ' on ' + B.patch.id + ': wins with no error ' + (r.error || ''));
+    ok(r.live <= B.target[1] * 1.25, B.id + ' on ' + B.patch.id + ': fight length ' + r.live + ' s (at most a quarter over the band)');
+    for (const c of B.patch.cues) ok(r.cues[c] > 0, B.id + ' on ' + B.patch.id + ': cue ' + c);
+    for (const [c, n] of Object.entries(r.cues)) seenCues[c] = (seenCues[c] || 0) + n;
   }
   for (const c of doc.CUES) ok(seenCues[c] > 0, B.id + ': documented cue fired: ' + c);
   for (const c of Object.keys(seenCues)) ok(doc.CUES.has(c) || FRAMEWORK_CUES.has(c), B.id + ': cue is documented: ' + c);

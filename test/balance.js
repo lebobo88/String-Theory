@@ -21,8 +21,8 @@ const BANDS = {
   // Plan section 4: no weapon more than 15% behind the best on its own job, or 40% behind overall.
   weapon: { jobWithin: 0.15, overallWithin: 0.40 },
   // Plan section 3: fight length in seconds for a flawless pilot, per boss group. [low, high]. 'expected' = the expected build for that
-  // boss (see EXPECTED BUILD below); 'full' = a fully upgraded build (every weapon at its top level, every ship upgrade at its
-  // cap or level XV when uncapped, all perks).
+  // boss (see EXPECTED BUILD below); 'full' = a fully upgraded build (lib/econ.js fullBuild: every weapon at its top level X with its
+  // forks, every ship upgrade at level X, all perks, no finds; the lead's definition, docs/BALANCE.md).
   boss: [
     { name: 'bosses 1 to 4', from: 0, to: 3, expected: [45, 70], full: [25, 40] },
     { name: 'bosses 5 to 7', from: 4, to: 6, expected: [70, 100], full: [40, 60] },
@@ -183,7 +183,7 @@ function partBosses() {
   console.log(K.table(['boss', 'budget coins', 'budget gems', 'weapons', 'tempers', 'lead', 'bobbin'], bossIds.map(id => { const s = eb[id], d = E.describe(s.profile); return [id, s.budget.dust, s.budget.silk, d.weapons, d.tempers, d.lead, d.second || '-']; })));
   const rows = [];
   bossIds.forEach((id, i) => {
-    const g = groupOf(i), pe = () => { const p = K.clone(eb[id].profile); p.settings.mode = 'normal'; p.stats.won_normal = 1; p.stats.won_hard = 1; return p; }, pf = () => K.fullProfile(lead, second);
+    const g = groupOf(i), pe = () => { const p = K.clone(eb[id].profile); p.settings.mode = 'normal'; p.stats.won_normal = 1; p.stats.won_hard = 1; return p; }, pf = () => E.fullBuild({ lead, second });
     const ex = BOSS_SEEDS.map(s => F.fight(pe(), id, { seed: s, probe: false })), fu = BOSS_SEEDS.map(s => F.fight(pf(), id, { seed: s, probe: false }));
     const ig = F.fight(pe(), id, { kind: 'ignore', seed: 1, probe: false });
     const ue = F.fight(pe(), id, { seed: 1, probe: true }), uf = F.fight(pf(), id, { seed: 1, probe: true });
@@ -215,12 +215,14 @@ function partBosses() {
 // =============================================================================================================================
 // Part 3: specials
 // =============================================================================================================================
-const mkSpecialProfile = needle => { const { lead, second } = K.refPair(); return K.fullProfile(lead, second, null, { needle, needles: undefined }); };
+// the specials are measured on the same full build as the boss bands (lib/econ.js fullBuild), so a boss fight lasts long enough for the window
+const mkSpecialProfile = needle => E.fullBuild({ needle });
 function shipProfile(needle) { const p = mkSpecialProfile(needle); p.needles[needle] = true; p.needle = needle; return p; }
 /* A wave with the ship firing at the nearest enemy (the same auto-aim as the weapon test); the special is used on the first frame of an
    8 s window that starts 9 s into the wave, or not (the control). Fire is on so that specials that boost the weapon count. */
 function waveSpecial(needle, use, seed, panel, row) {
   const sim = K.newSim(shipProfile(needle), seed); sim.panel = Math.min(panel, C.PANELS.length - 1); sim.row = row; sim.startStage();
+  for (const e of sim.enemies) e.hp *= WAVE_HP_SCALE;   // as in clearTime: at normal health the ship's own fire clears the wave before the window, so a special has nothing left to do
   let snips = 0, kills = 0, hp0 = 0, n0 = 0, shots1 = 0;
   const aim = () => { const pl = sim.player; let tgt = null, bd = 1e9; for (const e of sim.enemies) { if (e.y < -1 || e.y > 17.5) continue; const d = Math.abs(e.x - pl.x) + Math.abs(e.y - pl.y) * 0.25; if (d < bd) { bd = d; tgt = e; } } return tgt ? tgt.x : 0; };
   const step = o => { sim.player.invuln = Math.max(sim.player.invuln, 1); sim.update(1 / 60, K.go(aim(), K.HOME, o)); for (const e of sim.events) { if (e.t === 'snip') snips++; if (e.t === 'kill') kills++; } };
@@ -257,8 +259,10 @@ function partSpecials() {
     const bullets = K.mean(W.map(([a, b]) => (a.snips - b.snips) + (b.shots1 - a.shots1)));
     const waveOk = hpFrac >= sp.waveHpFrac || killFrac >= sp.waveKillFrac || bullets >= sp.waveBullets;
     const per = bossIds.map(id => { const a = K.mean([1, 2, 3].map(s => bossSpecial(needle, id, true, s))), b = K.mean([1, 2, 3].map(s => bossSpecial(needle, id, false, s))); return { id, a, b }; });
-    const ref = K.mean(per.map(x => x.b)) / 10;   // the ship's own fire, health per second, averaged over the bosses
-    const secs = per.map(x => ref > 0 ? (x.a - x.b) / ref : 0);
+    // the ship's own fire on THAT boss, health per second: a boss's health and the knee differ by a factor of 50 from the Great Lappet to
+    // the Moth King, so one average over all bosses made every special look worthless on the early bosses (rework: bosses)
+    const ref = K.mean(per.map(x => x.b)) / 10;
+    const secs = per.map(x => x.b > 0 ? (x.a - x.b) / (x.b / 10) : 0);
     rows.push({ needle, name: C.NEEDLES[needle].special, hpFrac, killFrac, bullets, waveOk, secs, mean: K.mean(secs), helped: secs.filter(v => v >= sp.bossWorstSec).length / secs.length, ref });
   }
   console.log('\n== SPECIALS: value of one use. Wave: auto-aim fire on, 8 s window, 2 waves x 3 seeds (share of enemy health removed, share of moths killed, bullets cleared). Boss: fire on, 10 s window, 3 seeds, extra boss damage with the special vs without, in seconds of the ship\'s own fire. ==');

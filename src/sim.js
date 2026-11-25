@@ -14,6 +14,8 @@
      side sets it from the system setting). Inputs still land: time crawls, it does not stop. */
   const STOP_RATE = 0.08, STOP_GAP = 0.3;
   /* The last-second save: a hit waits this many seconds before it lands, and a bomb used inside the window cancels it. */
+  const BOSS_PACE_K = 0.3, BOSS_PACE_MIN = 0.7, BOSS_FAST = 0.75, BOSS_FAST_PAY = 0.25;   // rework: bosses: the speed reward (see killBoss)
+  const GRAZE_FRAY = 0.04, NEAR_FRAY = 0.35, NEAR_T = 0.3;   // rework: bosses: fray from a graze; body weight of a close-range hit (a shot younger than NEAR_T s)
   const BOSS_DMG_CHARMS = { fan: 1, wide: 1, seek: 1, split: 1, streak: 1, spool: 1, twin: 1, drone: 1, pierce: 1, fraydust: 1 };
 const HIT_BUFFER = 0.15;
   const SIDES = [-1, 1];   // weapons: left and right
@@ -73,7 +75,7 @@ const HIT_BUFFER = 0.15;
       this.props = []; this.arena = { floor: 0, inset: 0 }; this.dark = 0; this.pull = null; this.suck = null; this.propSlow = 1; this.bobbinLock = null;
       this.boss = null; this.sampler = null; this.extras = []; this.t = 0; this.diveT = 2.5; this.fireT = 2; this.extraT = 4;
       this.reserve = null; this.timer = null; this.convoy = null; this.cv = null; this.pv = null; this.weave = false; this.dimWave = false; this.spec = null;
-      this.bossDown = false; this.stopT = 0; this.stopAt = -9; this.wall = 0;
+      this.bossDown = false; this.bossPace = null; this.stopT = 0; this.stopAt = -9; this.wall = 0;
       this.pins = []; this.darnT = 0; this.markT = 0; this.hitBuf = 0; this.bossDps = 0; this.bossAcc = 0; this.cutT = 0;   // rework: bomb, specials, power-ups
       this.tacks = []; this.fuses = [];   // rework: weapons: Tacking Pins in the cloth, delayed blasts
     }
@@ -442,7 +444,7 @@ const HIT_BUFFER = 0.15;
     }
     buildKeeper(id) {
       const def = C.KEEPERS[id];
-      const hp = def.hp * this.mode.hp * (this.mods().hp || 1);
+      const m = this.mods(), hp = def.hp * this.mode.hp * (1 + (def.frayHp || 0) * (this.fray | 0)) * (m.keeperHp || m.hp || 1);   // def.frayHp: the Fray dial's extra for this boss (src/bosses.js FRAY_HP)   // rework: bosses: a patch can leave the boss's health alone (keeperHp) and give it an attack instead
       this.boss = { id, def, x: 0, y: H + 4, hp, maxHp: hp, t: 0, phase: 1, enter: 2.2, timers: [], open: false, flash: 0 };
       this.boss.frayArmour = this.mode.tw ? this.mode.tw.armour : 0;   // Fray twist: share of the fray meter that starts armoured. The boss scripts read it (no-op until they do)
       this.spec = { diveEvery: 99, fireEvery: 99 };
@@ -858,6 +860,7 @@ const HIT_BUFFER = 0.15;
       const x = s.xs && s.bounced ? this.bossAim(b, s.x, 1.6) : s.x;   // bank shots find the side weak spots
       let fw = s.fray || 1, fb = s.frayB || 0;
       if (s.pb && s.t * 15 < 8.5) { fb = Math.max(fb, 0.8 * s.pb); fw = Math.max(fw, 1 + 0.5 * s.pb); }   // Spread Stitch point blank
+      if (s.t < NEAR_T) fb = Math.max(fb, NEAR_FRAY);   // rework: bosses: any hit from close in frays the body a little
       this.hitFray = fw; this.hitFrayBody = fb;
       const res = this.damageBoss(this.shotDmg(s, b), x, false, s.src, s.soft, s.y);
       this.hitFray = 1; this.hitFrayBody = 0;
@@ -1009,6 +1012,10 @@ const HIT_BUFFER = 0.15;
           }
         }
         if (!dead && this.props.length && this.shotVsProps && this.shotVsProps(s, s.dmg)) { if (s.burst) this.knotBurst(s, s.dmg); dead = true; }
+        if (!dead && this.boss && !this.boss.enter && this.boss.hidden && this.boss.shadow) {   // rework: bosses: a boss under the cloth can be shot through its shadow
+          const b = this.boss, sh = b.shadow;
+          if ((s.x - sh.x) * (s.x - sh.x) + (s.y - sh.y) * (s.y - sh.y) < sh.r * sh.r && !(s.hit && s.hit.indexOf(-1) >= 0)) { this.shotBoss(s, b); dead = true; }
+        }
         if (!dead && this.boss && !this.boss.enter && !this.boss.hidden) {
           const b = this.boss;
           if (Math.abs(s.x - b.x) < b.def.halfW && Math.abs(s.y - b.y) < b.def.halfH * 0.75 && !(s.hit && s.hit.indexOf(-1) >= 0)) {
@@ -1526,6 +1533,7 @@ const HIT_BUFFER = 0.15;
     // ---------- near misses, specials, zones ----------
     graze(s) {
       const pl = this.player; pl.sp = Math.min(1, pl.sp + T.graze); pl.grazeN++;
+      { const b = this.bossLive(); if (b && b.def && this.addFray) this.addFray(b, GRAZE_FRAY * this.frayGain()); }   // rework: bosses: a graze frays the boss
       if (this.fv.grazeDust) { const g = this.fv.grazeDust | 0; this.p.dust += g; this.nightDust += g; }   // rework: unique items: Pin Cushion
       if (this.d.padded && pl.grazeN % 8 === 0 && !this.armed.thimble) { this.armed.thimble = true; this.emit('repad'); }
       this.emit('graze', { x: s.x, y: s.y });
@@ -1682,6 +1690,7 @@ const HIT_BUFFER = 0.15;
     /* Add to a boss's fray meter; a full meter breaks it. (The Bosses stream owns what a break is: this only fills and asks for one.) */
     fillFray(b, amt, breaks) {
       if (!b || b.hp <= 0 || b.enter > 0 || b.fray === undefined || b.stun > 0 || b.frayed > 0) return;
+      if (b.fray < (b.frayArm || 0)) amt *= 0.5;   // rework: bosses: the plated part of the meter (Fray dial) fills at half speed
       b.fray = Math.min(breaks ? 1 : FRAY_SPECIAL_CAP, Math.max(b.fray, b.fray + amt * this.frayGain()));   // a special brings a boss to the edge of a break; a bomb can tip it over
       if (b.fray >= 1) { if (this.breakBoss) this.breakBoss(); else this.stunBoss(); }
     }
@@ -1878,7 +1887,8 @@ const HIT_BUFFER = 0.15;
       let soft, mul;
       if (scripted) {
         mul = this.bossHit(b, dmg, x, y === undefined ? b.y - def.halfH * 0.5 : y, force, src, softMul);
-        if (this.hitArmour && !b.hidden && (mul === 'reflect' || (typeof mul === 'number' && mul < 1))) mul = 1;   // the Wire Laser goes through armour and shields
+        if (this.hitArmour && !b.hidden && (mul === 'reflect' || mul === 'glance' || (typeof mul === 'number' && mul < 1))) mul = 1;   // the Wire Laser goes through armour and shields
+        if (mul === 'glance') { this.emit('bossblock', { x, y: b.y - def.halfH * 0.5, reflect: true, glance: true }); return 0; }   // rework: bosses: a spark, nothing comes back
         if (mul === 'reflect') { this.emit('bossblock', { x, y: b.y - def.halfH * 0.5, reflect: true }); return mul; }
         if (!(mul > 0)) { if (!b.hidden) this.emit('bossblock', { x, y: b.y - def.halfH * 0.5 }); return 0; }
         soft = !!b.softHit;
@@ -1904,7 +1914,10 @@ const HIT_BUFFER = 0.15;
       p.codex.keepers[b.id] = (p.codex.keepers[b.id] || 0) + 1;
       this.emit('keeperdown', { id: b.id, name: def.name, sprite: def.sprite, x: b.x, y: b.y });
       this.bossDown = true; this.downX = b.x; this.downY = b.y; this.downSprite = def.sprite; this.stopT = 0;
-      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * this.mode.pay * this.d.coin * (1 + this.fv.bossDust) / 3));
+      // rework: bosses: the reward shrinks gently past the boss's par time (down to 70%), and a fast finish pays a bonus at the stage end
+      const par = def.par || 100, sec = b.age || b.t || 0, pace = sec > par ? Math.max(BOSS_PACE_MIN, 1 - BOSS_PACE_K * (sec / par - 1)) : 1;
+      this.bossPace = { sec, par, mul: pace, fast: sec <= par * BOSS_FAST, dust: Math.round(def.dust * BOSS_FAST_PAY * this.mode.pay) };
+      for (const o of [-1.5, 0, 1.5]) this.dropDust(b.x + o, b.y, Math.round(def.dust * pace * this.mode.pay * this.d.coin * (1 + this.fv.bossDust) / 3));
       this.drop('silk', b.x, b.y, { v: Math.round((def.silk + (this.mods().keeperSilk || 0)) * (this.mods().keeperSilkMul || 1) * this.mode.pay * this.d.gem) + (this.fv.bossGem | 0) });
       this.keepsakeDrop(b.id);   // rework: unique items
       const open = def.charts.filter(id => !p.charts[id]);
@@ -1970,6 +1983,7 @@ const HIT_BUFFER = 0.15;
       if (info.kind === 'row' && this.timer && !this.timer.burned) bonuses.push({ name: 'Cleared before the thread burned', dust: Math.round(T.cleanRowDust * (this.panel + 1) * 1.5) });
       if (st.best >= 12) bonuses.push({ name: 'Combo bonus: best combo ' + st.best, dust: st.best });
       if (keeper) bonuses.push({ name: 'Stage cleared', silk: T.panelSilk });
+      if (keeper && this.bossPace && this.bossPace.fast) bonuses.push({ name: 'Fast finish: ' + Math.round(this.bossPace.sec) + ' s', dust: this.bossPace.dust });   // rework: bosses
       if (keeper && this.player.bombs > 0) bonuses.push({ name: 'Bombs kept: ' + this.player.bombs, dust: this.player.bombs * BOMB_PAY * (this.panel + 1) });   // rework: bomb: holding on pays
       const dustGot = this.nightDust - st.dust0, silkGot = this.nightSilk - st.silk0;   // picked up on the cloth, before bonuses
       if (this.mode.frayPay) for (const b of bonuses) { if (b.dust) b.dust = Math.round(b.dust * (1 + this.mode.frayPay)); if (b.silk) b.silk = Math.round(b.silk * (1 + this.mode.frayPay)); }   // Fray: +10% a step

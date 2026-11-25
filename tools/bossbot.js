@@ -1,10 +1,13 @@
 /* Boss test harness. Loads the game logic headless and fights one boss with a strategy you supply.
    CLI:    node tools/bossbot.js <bossId> [seconds]        (naive strategy: sit under the weak spot)
    Module: const { fight, load } = require('../tools/bossbot.js');
-           fight('tinea', (sim, frame) => ({ targetX, targetY, fire: true, dash: 0, special: false, focus: false, notion: -1 }), { god: true, maxSec: 300, seed: 5, mode: 'normal', setup: p => {}, hold: 'triple' })
+           fight('tinea', (sim, frame) => ({ targetX, targetY, fire: true, dash: 0, special: false, focus: false, notion: -1 }), { god: true, maxSec: 300, seed: 5, mode: 'normal', setup: p => {}, hold: 'triple', patch: 'mothballs' })
            hold: keep a power-up going for the whole fight, to measure it: a C.CHARMS id ('bobbin', 'homing', ...) for its plain form, the id
            with '+' ('bobbin+') for its upgraded form; 'twin' / 'triple' start the fight with that many ships (lost to hits as usual).
-   Returns { won, sec, hurts, stuns, phases, cues: {name: count}, events: {type: count}, maxProps, stalled (longest seconds without boss damage), hp (fraction left), error } */
+   The ship is the EXPECTED BUILD for that boss (test/lib/econ.js expectedBuilds: what a competent player has bought when they first meet it),
+   the same build test/balance.js measures the plan's fight lengths on.
+   Returns { won, sec, live (seconds from when the boss can act, the plan's fight length), hurts, stuns (breaks), phases, cues: {name: count},
+   events: {type: count}, maxProps, stalled (longest seconds without boss damage), hp (fraction left), error } */
 const path = require('path');
 function load() {
   if (globalThis.ST && globalThis.ST.Sim) return globalThis.ST;
@@ -14,26 +17,25 @@ function load() {
   for (const f of fs.readdirSync(dir).sort()) if (f.endsWith('.js')) require(path.join(dir, f));
   return globalThis.ST;
 }
+let builds = null;
 function fight(id, strategy, opts) {
   const ST = load(), C = ST.content, o = Object.assign({ god: false, maxSec: 420, seed: 5, mode: 'normal' }, opts);
-  // the ship a player is expected to have when they meet this boss (see POWER in src/bosses.js): a fresh ship for the first, fully built for the last
-  const LOAD = [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 1, 0], [2, 2, 1, 1], [3, 2, 2, 1], [3, 3, 2, 2], [3, 3, 3, 2], [3, 3, 3, 3]];   // Double level, Single level, damage, fire rate
-  const idx = Math.max(0, C.PANELS.findIndex(pn => pn.keeper === id)), L = LOAD[idx];
-  const p = ST.save.freshProfile('bot'); p.threads = { running: L[1] }; p.thread = 'running'; p.thread2 = null;
-  if (L[0]) { p.threads.backstitch = L[0]; p.thread = 'backstitch'; p.thread2 = 'running'; }
-  p.tempers.point = L[2]; p.tempers.eye = L[3]; p.tempers.ply = Math.min(2, idx >> 1); p.tempers.pace = Math.min(2, idx >> 1); p.settings.mode = o.mode; p.stats.won_normal = 1; p.stats.won_hard = 1;
+  // the ship a player is expected to have when they meet this boss: the balance harness's expected build (rework: bosses)
+  if (!builds) builds = require('../test/lib/econ.js').expectedBuilds();
+  const p = JSON.parse(JSON.stringify(builds[id].profile)); p.settings.mode = o.mode; p.stats.won_normal = 1; p.stats.won_hard = 1;
   if (o.setup) o.setup(p);
   const sim = new ST.Sim(p, o.seed);
   sim.panel = C.PANELS.findIndex(pn => pn.keeper === id); if (sim.panel < 0) throw new Error('no stage has boss ' + id);
-  sim.row = C.STAGES.indexOf('keeper'); sim.startStage();
-  const out = { won: false, sec: 0, hurts: 0, stuns: 0, phases: 1, cues: {}, events: {}, maxProps: 0, stalled: 0, hp: 1, error: null };
-  let lastHp = sim.boss.hp, lastHit = 0, f = 0;
+  sim.row = C.STAGES.indexOf('keeper'); if (o.patch) sim.setPatch(o.patch); sim.startStage();
+  const out = { won: false, sec: 0, live: 0, hurts: 0, stuns: 0, phases: 1, cues: {}, events: {}, maxProps: 0, stalled: 0, hp: 1, error: null };
+  let lastHp = sim.boss.hp, lastHit = 0, f = 0, f0 = -1;
   const hold = o.hold ? String(o.hold) : '', hid = hold.replace('+', '');
   if (hold === 'twin' || hold === 'triple') { sim.player.wings = hold === 'triple' ? 2 : 1; sim.player.dual = true; }
   const naive = s => ({ targetX: s.boss ? s.boss.x + s.boss.def.soft[0].x : 0, targetY: C.TUNING.playerY, fire: true, dash: 0, special: s.player.sp >= 1, focus: false, notion: -1 });
   try {
     for (; f < o.maxSec * 60; f++) {
       const pl = sim.player; if (o.god) { pl.invuln = 1; }
+      if (f0 < 0 && sim.boss && sim.phase === 'play' && !(sim.boss.enter > 0)) f0 = f;
       if (hold && hold !== 'twin' && hold !== 'triple' && C.CHARMS[hid] && C.CHARMS[hid].dur) { sim.fx[hid] = Math.max(sim.fx[hid], 1); sim.fxUp[hid] = hold !== hid; }
       sim.update(1 / 60, Object.assign({ fire: true, dash: 0, special: false, focus: false, notion: -1 }, (strategy || naive)(sim, f)));
       for (const e of sim.events) {
@@ -52,7 +54,7 @@ function fight(id, strategy, opts) {
     }
   } catch (err) { out.error = String(err && err.stack || err).split('\n').slice(0, 3).join(' | '); }
   if (out.won) out.hp = 0;
-  out.sec = +(f / 60).toFixed(1); out.stalled = +out.stalled.toFixed(1); out.hp = +out.hp.toFixed(2);
+  out.sec = +(f / 60).toFixed(1); out.live = +((f - Math.max(0, f0)) / 60).toFixed(1); out.stalled = +out.stalled.toFixed(1); out.hp = +out.hp.toFixed(2);
   return out;
 }
 module.exports = { fight, load };

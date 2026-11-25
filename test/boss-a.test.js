@@ -102,12 +102,16 @@ function atlasProper(sim) {
   return go(tx, ty, { dash });
 }
 
+/* target: the plan's fight length for bosses 1 to 4 with the expected build (docs/progression-plan.html section 3), in seconds from
+   when the boss can act (tools/bossbot.js `live`). Each seed must land in it. */
 const BOSSES = {
-  greatlappet: { target: [50, 80], proper: lappetProper, ignore: underBody },
-  tinea: { target: [50, 80], proper: tineaProper, ignore: underBody },
-  greatwick: { target: [70, 100], proper: wickProper, ignore: underBody },
-  atlas: { target: [70, 100], proper: atlasProper, ignore: underBody }
+  greatlappet: { target: [45, 70], proper: lappetProper, ignore: underBody },
+  tinea: { target: [45, 70], proper: tineaProper, ignore: underBody },
+  greatwick: { target: [45, 70], proper: wickProper, ignore: underBody },
+  atlas: { target: [45, 70], proper: atlasProper, ignore: underBody }
 };
+/* Ignoring the mechanic must cost time, but a new player is never stuck several times longer (plan: at most 3 times). */
+const IGNORE = [1.3, 3.0];
 
 // ---------- runner ----------
 if (require.main !== module) { module.exports = { BOSSES }; return; }
@@ -117,7 +121,7 @@ if (args[0] === 'report') {
   const ids = args[1] ? [args[1]] : Object.keys(BOSSES);
   for (const id of ids) for (const kind of ['proper', 'ignore']) for (const seed of [1, 2, 3]) {
     const r = fight(id, BOSSES[id][kind], { god: true, seed, maxSec: 420 });
-    console.log(id.padEnd(12), kind.padEnd(7), 'seed', seed, 'won', r.won, 'sec', r.sec, 'stalled', r.stalled, 'stuns', r.stuns, 'hurts', r.hurts, 'phases', r.phases, 'maxProps', r.maxProps, 'hp', r.hp, r.error || '', JSON.stringify(r.cues));
+    console.log(id.padEnd(12), kind.padEnd(7), 'seed', seed, 'won', r.won, 'sec', r.live, 'stalled', r.stalled, 'stuns', r.stuns, 'hurts', r.hurts, 'phases', r.phases, 'maxProps', r.maxProps, 'hp', r.hp, r.error || '', JSON.stringify(r.cues));
   }
   process.exit(0);
 }
@@ -139,15 +143,15 @@ for (const id of Object.keys(BOSSES)) {
       ok(r.stalled < 25, tag + 'stalled ' + r.stalled + 's');
       ok(r.maxProps < 80, tag + 'maxProps ' + r.maxProps);
       ok(r.phases === def.phases.length, tag + 'reached every phase (' + r.phases + ')');
-      if (kind === 'proper') ok(r.sec >= B.target[0] && r.sec <= B.target[1], tag + r.sec + 's, want ' + B.target.join(' to '));
+      if (kind === 'proper') ok(r.live >= B.target[0] && r.live <= B.target[1], tag + r.live + 's, want ' + B.target.join(' to '));
       else ok(r.sec <= 420, tag + r.sec + 's, want under 420');
-      times[kind].push(r.sec);
+      times[kind].push(r.live);
       for (const c in r.cues) seen[c] = true;
     }
     for (const c of cues) ok(seen[c], id + ' seed ' + seed + ': cue ' + c + ' fired');
   }
   const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
-  ok(avg(times.ignore) >= 2 * avg(times.proper), id + ': ignoring the mechanic takes at least twice as long (' + avg(times.ignore).toFixed(1) + 's vs ' + avg(times.proper).toFixed(1) + 's)');
+  { const k = avg(times.ignore) / avg(times.proper); ok(k >= IGNORE[0] && k <= IGNORE[1], id + ': ignoring the mechanic takes ' + IGNORE.join(' to ') + ' times as long (' + avg(times.ignore).toFixed(1) + 's vs ' + avg(times.proper).toFixed(1) + 's)'); }
   console.log(id, 'proper', times.proper.join(' '), 'ignore', times.ignore.join(' '));
   // one honest run without god mode: it must end cleanly, win or lose
   const h = fight(id, B.proper, { god: false, seed: 4, maxSec: 420 });

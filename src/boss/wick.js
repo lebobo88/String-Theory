@@ -3,8 +3,8 @@
    He lights fuses: a flame runs down a stitched line toward a knot of powder in your half. Shoot any unburnt part of the line,
    or dash through it, to cut it; otherwise the powder blows up (its blast circle is drawn from the moment the fuse is lit).
    He swells a fireball in his hand before he throws it. Burst it while it is swelling and it goes off in his face: big damage
-   and a stun, the only time his lamp (the weak spot) is open. Too late and he throws it: it rains fire that leaves burning patches.
-   His body takes little from shots (def.armour). Phase 2: two fuses at once, and the cloth dims so his lamp is the main light.
+   and a break. His lamp (the weak spot) is open while he swells and while he is broken. Too late and he throws it: it rains fire that leaves burning patches.
+   His body takes little from shots (def.armour) while he strikes a fuse or throws, and full damage otherwise. Phase 2: two fuses at once, and the cloth dims so his lamp is the main light.
 
    PROPS
      fuse    seg     the unburnt part of a fuse: (x, y) is the flame end (moves each frame), (x2, y2) the powder end. Shootable, cuttable.
@@ -66,8 +66,8 @@
   const script = {
     cues: ['blink', 'light', 'snuff', 'boom', 'swell', 'misfire', 'throw', 'dim'],
     def: {
-      hp: 4100, halfW: 2.0, halfH: 2.2, armour: 0.6, stunTime: 2.5,
-      soft: [{ x: 0, r: 0.75 }], softName: 'The fireball he carries: burst it while it swells',
+      hp: 4100, halfW: 2.0, halfH: 2.2, armour: 0.6, guarded: true, stunTime: 4.5,
+      soft: [{ x: 0, r: 0.75 }], softName: 'His lamp, bright while he swells a fireball (burst the fireball for a break)',
       phases: ['Lights one fuse at a time and swells fireballs', 'Lights two fuses at once in the dark'],
       phaseTag: ['Fuses and fire', 'Lights out']
     },
@@ -97,6 +97,8 @@
         return;
       }
       b.x = HOOKS[s.hook] + Math.sin(b.t * 1.7) * 0.15; b.y = HOOKY + Math.cos(b.t * 1.7) * 0.06;
+      b.guard = s.st === 'throw' || (s.st === 'hang' && s.tm >= 0.5 && s.tm < 1.0);
+      b.softOpen[0] = s.st === 'swell';   // his lamp burns bright while he swells a fireball: it is open then (and while he is broken)   // rework: bosses: he turns his wax to you only while he strikes a fuse and throws
       if (s.st === 'hang') {
         b.pose = s.tm < 0.5 ? 'hang' : s.tm < 1.0 ? 'light' : 'hang';
         if (!s.lit && s.tm >= 0.5) {

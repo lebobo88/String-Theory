@@ -146,6 +146,7 @@ body.sheeted #toasts { display: none; }
 #banner.on ~ #coach { opacity: 0; }
 body.sheeted #coach { opacity: 0; }   /* a lesson belongs to flying: under a menu or a results sheet it waits */
 #bossbar.on ~ #coach { transform: translate(-50%, var(--sp-64)); }   /* a boss or a bonus wave has the top line: the prompt sits under it */
+body.lefty #fps { left: auto; right: var(--sp-6); }   /* left-hand mode puts the item row down the left side: the readout moves out of its way */
 #fps { position: absolute; left: var(--sp-6); bottom: calc(max(var(--bot, 0px), var(--safe-b)) + var(--sp-6)); z-index: var(--z-readout); font: 600 var(--t-floor)/1.35 var(--mono); white-space: pre; color: var(--paper); background: var(--night); padding: var(--sp-2) var(--sp-6); pointer-events: none; display: none; }
 #flyers { position: fixed; inset: 0; z-index: var(--z-fly); pointer-events: none; overflow: hidden; }
 .coinfly { position: absolute; left: 0; top: 0; display: block; line-height: 0; filter: drop-shadow(0 var(--sp-2) 0 var(--shade)); }

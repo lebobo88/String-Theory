@@ -2,8 +2,8 @@
    She swoops like a leaf and throws light spreads. Then she plays dead: she glides over the ship, folds her wings, goes brown
    and drops straight down onto the row the ship is on. The landing sends a shockwave both ways along that row: be above or
    below it, or dash through it. If nothing catches the ship she lies stunned on the cloth with her pale stripe showing, the
-   only weak spot; fill the fray meter there for a full stun. If the shockwave or her body catches the ship she springs straight
-   back up. Wings shrug off shots (def.armour). Phase 2: she splits into three look-alikes that fall one after another onto
+   only weak spot; fill the fray meter there for a break. If the shockwave or her body catches the ship she springs straight
+   back up (the stripe shows only for a moment as she goes). Her wings shrug off shots (def.armour) only while she glides over the ship and drops. Phase 2: she splits into three look-alikes that fall one after another onto
    the ship's row; only the real one has the stripe.
 
    PROPS
@@ -29,7 +29,7 @@
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const TOP = 12.4, HOVY = 11.6, LOWROW = F.PY + 0.2, HIGHROW = F.PY + T.roam + 0.1;
   const HOVER = 0.55, FALL = 0.55, RISE = 1.1, GAP = 1.05, FRONT_V = 9, FRONT_W = 1.1;
-  const FOLD = [0.95, 0.8], LIE = [3.4, 3.0], DRIFT = [[3.4, 4.4], [3.0, 3.8]];
+  const FOLD = [0.95, 0.8], LIE = [3.4, 3.0], DRIFT = [[3.4, 4.4], [3.0, 3.8]], PEEK = 1.35;
 
   const pathX = (ph) => 4.8 * Math.sin(ph);
   const pathY = (ph) => TOP + 2.0 * Math.sin(ph) * Math.sin(ph) + 0.35 * Math.sin(ph * 2.3);
@@ -67,7 +67,7 @@
     }
   }
 
-  function caught(sim, b, L) { b.softOpen = [false]; sim.cue(b, 'caught', { x: L.x, y: L.y }); startRise(sim, b, L); }
+  function caught(sim, b, L) { sim.cue(b, 'caught', { x: L.x, y: L.y }); startRise(sim, b, L); b.softOpen = [true]; b.s.peek = PEEK; }   // springing up, the stripe shows for a moment
   function startRise(sim, b, L) { L.st = 'rise'; L.tm = 0; L.sx = L.x; L.sy = L.y; b.softOpen = [false]; sim.cue(b, 'rise', { x: L.x, y: L.y }); }
 
   function clearFronts(sim, L) { for (const f of L.fronts) sim.removeProp(f); L.fronts.length = 0; }
@@ -139,14 +139,14 @@
   const script = {
     cues: ['dust', 'fold', 'land', 'caught', 'rise', 'split', 'crumble'],
     def: {
-      hp: 1500, halfW: 2.2, halfH: 1.8, armour: 0.3, frayAt: 0.1, stunTime: 3.2,
+      hp: 1500, halfW: 2.2, halfH: 1.8, armour: 0.3, guarded: true, frayAt: 0.25, stunTime: 4.5,
       soft: [{ x: 0, r: 0.6 }], softName: 'The pale stripe down her back, while she lies on the cloth',
       phases: ['Swoops, throws light spreads, then drops onto your row', 'Splits into three look-alikes that drop one after another'],
       phaseTag: ['The falling leaf', 'Three leaves']
     },
     init(sim, b) {
       const s = b.s;
-      s.ph = 0; s.flut = 0; s.me = newLeaf(true, 0, null); s.leaves = [s.me];
+      s.ph = 0; s.flut = 0; s.peek = 0; s.me = newLeaf(true, 0, null); s.leaves = [s.me];
       b.x = 0; b.y = pathY(0); s.me.x = b.x; s.me.y = b.y; b.softOpen = [false]; b.pose = 'drift';
       s.mode = 'drift'; s.tm = 0; s.dur = 3.0;
     },
@@ -163,6 +163,8 @@
         if (s.tm >= s.dur && s.flut <= 0) beginDrops(sim, b);
       }
       for (const L of s.leaves) { if (L.st !== 'gone') { stepLeaf(sim, b, L, dt, s.ph); syncLeaf(sim, b, L); } }
+      { const st = s.me.st; b.guard = st === 'hover' || st === 'fold' || st === 'fall'; }
+      if (s.peek > 0) { s.peek -= dt; if (s.peek <= 0 && s.me.st === 'rise') b.softOpen = [false]; }   // rework: bosses: her wings shrug off shots only while she drops
       if (s.mode === 'drops') {
         let busy = false;
         for (const L of s.leaves) if (L.st !== 'done' && L.st !== 'gone') busy = true;

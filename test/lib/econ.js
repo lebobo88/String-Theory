@@ -185,6 +185,26 @@ function expectedBuilds() {
   });
   return out;
 }
+/* The FULL BUILD the boss bands are measured on (plan section 3, "a fully upgraded build"): every weapon at its top level (X) with its
+   forks bought (the first option chosen, as fullProfile does), every ship upgrade at level X, every perk except the exchange perk, no finds
+   or heirlooms, Sharps ship, the reference pair (Double Stitch lead, Single Stitch bobbin). Tempers stop at X and not at XV: the
+   uncapped road past X is the Fray dial's (plan section 8). The weapon tests keep their own fully upgraded ship (core.js fullProfile,
+   tempers at XV): they compare weapons with each other, not with the bosses.
+   It flies at the deepest Fray step (FULL_FRAY, with every twist that step brings): that build is 4 to 11 times as fast at a boss as the
+   expected build, so at step 0 no boss health that suits the expected build can also hold it to the plan's 25 to 85 s; the plan gives the
+   uncapped upgrades the Fray dial as the place they go ("you choose how hard to push"), so the fully upgraded fight is measured there
+   (docs/BALANCE.md, docs/DEPARTURES.md "Rework: bosses"). fullBuild({ fray: 0 }) gives the same ship at step 0. */
+const FULL_TEMPER = 10, FULL_FRAY = 20;
+function fullBuild(o) {
+  o = Object.assign({}, o || {});
+  const { lead, second } = K.refPair(), levels = {}, forks = {}, tempers = {};
+  for (const id of K.weaponIds()) { levels[id] = K.maxLevel(id); const sl = K.forkSlots(id); if (sl.length) { forks[id] = {}; for (const f of sl) forks[id][f.key] = f.opts[0]; } }
+  for (const id in C.TEMPERS) tempers[id] = FULL_TEMPER;
+  const fray = o.fray === undefined ? FULL_FRAY : o.fray; delete o.fray;
+  const p = K.makeProfile(Object.assign({ lead, second, levels, forks, tempers, perks: true, charts: true }, o));
+  p.fray = Object.assign({}, p.fray || {}, { [p.settings.mode]: Math.max(fray, (p.fray && p.fray[p.settings.mode]) | 0) }); p.settings.fray = fray;
+  return p;
+}
 /* Summarise a profile for the report. */
 function describe(p) {
   const w = Object.keys(p.threads).filter(i => p.threads[i]).map(i => i + p.threads[i]).join(' ');
@@ -192,4 +212,4 @@ function describe(p) {
   return { weapons: w, tempers: t, lead: p.thread, second: p.thread2 };
 }
 
-module.exports = { catalog, unmodelled, priceOf, buyAll, remaining, buildDps, equip, fly, incomeModel, expectedBuilds, describe, INCOME_AT_BOSS };
+module.exports = { catalog, unmodelled, priceOf, buyAll, remaining, buildDps, equip, fly, incomeModel, expectedBuilds, fullBuild, FULL_TEMPER, FULL_FRAY, describe, INCOME_AT_BOSS };

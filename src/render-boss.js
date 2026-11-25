@@ -420,6 +420,11 @@
     'beetle:lock'(e) { const K = this.bf.K; this.ring(e.x, e.y, 3.6, K.bastHot, 0.35, 10); this.glints(e.x, e.y, 1.2, 8, K.bastHot, 3); },
     'beetle:bounce'(e) { this.railHit(e, 0.6); },
     'beetle:slam'(e) { this.railHit(e, 1.3); this.flashAdd(PAL.glare, 0.4); this.hitStop(0.15, 0.08); },
+    'beetle:creak'(e, sim) {   // the matador's moment: the shell flashes and creaks; dash now (rework: bosses)
+      const K = this.bf.K, b = sim.boss, x = b ? b.x : e.x, y = b ? b.y : e.y;
+      this.ring(x, y, 2.6, K.saffHi, 0.25, 10); this.flare(x, y, 1.6, 2.4, K.glare, 0.12); this.glints(x, y, 1.6, 10, K.saffHi, 4, 0.3, 0.4); this.sparks(x, y, K.saffHi, 6, 5);
+    },
+    'beetle:mothball'(e) { const K = this.bf.K; this.lintPuff(e.x, e.y, 0.4, 6, K.linen, 0.8, 1.6); this.glints(e.x, e.y, 0.8, 4, K.linenHi, 2); },
     'beetle:rear'(e, sim) { const b = sim.boss; if (b) this.cueWind({ x: b.x, y: b.y + b.def.softY }); },
     'beetle:larvae'(e) { const K = this.bf.K; this.lintPuff(e.x, e.y, 0.8, 10, K.tan, 0.9, 2.4); this.strands(e.x, e.y, [PAL.tan, PAL.brown], 8, 1); },
     'beetle:burrow'(e) { const K = this.bf.K; this.ripple(e.x, e.y, 1, 6, 0.6, 1.8, true); this.lintPuff(e.x, e.y, 0.4, 14, K.mist, 1, 2.6); this.stitchBurstRing(e.x, e.y, 1.2); this.shake = Math.max(this.shake, 0.35); },
@@ -982,6 +987,7 @@
     if (ps.cased > 0.01) tint.lerp(bf.cLinen, ps.cased * 0.35);
     u.mat.color.copy(tint);
     if (ps.stun > 0.01) { const f = 0.06 * ps.stun * (0.5 + 0.5 * Math.sin(t * 6)); mu.uFlash.value.x += f; mu.uFlash.value.y += f * 0.9; mu.uFlash.value.z += f * 0.7; }
+    if (b.id === 'beetle' && b.s && b.s.creak && b.pose === 'roll') { const f = 0.22 * (0.5 + 0.5 * Math.sin(t * 40)); mu.uFlash.value.x += f; mu.uFlash.value.y += f * 0.85; mu.uFlash.value.z += f * 0.4; }   // the creak: the shell flashes until it is past you
     // weak-spot rings follow softOpen; none show behind a shield or inside the closed case
     const stunned = b.stun > 0;
     for (let i = 0; i < u.rings.length; i++) {
@@ -1020,6 +1026,9 @@
         this.bfLine(this.trN, lx, ly, lx + sw, ly - len, 1.3, 0.07, ps.pal[i % ps.pal.length], ps.stun, 8, sw * 0.4, 0.04, t * 4 + i, ps.stun * 0.6, 1);
       }
       if (Math.random() < fdt * 10 * this.q.particles) this.fibres(x + rnd(-hw, hw) * 0.7, y + rnd(-hh, hh) * 0.5, 1.2, 1, K.linen, 1.2);
+      // frayed (rework: bosses): its outline comes undone, a running saffron basting that unpicks as the break runs out
+      const left = clamp(b.stun / (b.breakT || 4.5), 0, 1);
+      this.bfLoop(this.trA, x, y, hw * 1.25, hh * 1.2, t * 0.6, 1.7, 0.09, K.saffHi, ps.stun * (0.55 + 0.35 * Math.sin(t * 9)), 6, Math.max(8, Math.round(40 * left)), t * 2);
     }
     // fraying: loose fibres drift off as the meter fills
     if (b.fray > 0.05 && Math.random() < fdt * b.fray * 16 * this.q.particles) this.fibres(x + rnd(-hw, hw) * 0.8, y + rnd(-hh, hh) * 0.6, 1.1, 1, ps.pal[(Math.random() * ps.pal.length) | 0], 1.4);
@@ -1050,15 +1059,15 @@
     if (open < 0.5) this.bfLine(this.trN, x, y + hh * 0.9 * k, x, y - hh * 0.95 * k, 2.0, 0.06, K.dbrown, 0.8 * k * (1 - open * 2), 2);
     if (open > 0.3 && Math.random() < 0.15 * this.q.particles) this.strands(x, y, [PAL.linen], 1, 0.5);
   };
-  P.bfFrayMeter = function (b, x, y, t) {   // a row of X-stitches under the boss: sewn in as you hit the weak spot, unpicked while it is stunned
-    const K = this.bf.K, n = 10, gap = 0.36, x0 = x - (n - 1) * gap / 2, stunT = b.def.stunTime || 3.5;
+  P.bfFrayMeter = function (b, x, y, t) {   // a row of X-stitches under the boss: sewn in as you hit the weak spot, unpicked while it is frayed (the break)
+    const K = this.bf.K, n = 10, gap = 0.36, x0 = x - (n - 1) * gap / 2, stunT = b.breakT || b.def.stunTime || 4.5, arm = clamp(b.frayArm || 0, 0, 1) * n;
     const stunned = b.stun > 0, val = stunned ? clamp(b.stun / stunT, 0, 1) : clamp(b.fray || 0, 0, 1);
-    if (val <= 0.005 && !stunned) return;
+    if (val <= 0.005 && !stunned && arm <= 0) return;
     const full = val * n;
     for (let i = 0; i < n; i++) {
       const xx = x0 + i * gap, k = clamp(full - i, 0, 1);
       this.halo.add(xx, y, 1.1, 0.34, K.ink, 0.75, 9);
-      this.halo.add(xx, y, 1.12, 0.3, K.ink2, 0.9, 5, 0);
+      this.halo.add(xx, y, 1.12, 0.3, i < arm && !stunned ? K.steel : K.ink2, 0.9, 5, 0);   // the plated part (Fray dial) fills at half speed
       if (k > 0) this.spr.add(xx, y + (stunned ? Math.sin(t * 9 + i) * 0.04 : 0), 1.2, 0.36, stunned ? K.glare : K.saffHi, 0.95 * k, 5, 0);
     }
     if (!stunned && full > 0) this.spr.add(x0 + Math.min(n - 1, Math.floor(full)) * gap, y, 1.25, 0.6, K.saffHi, 0.5 + 0.4 * Math.sin(t * 12), 1, t);

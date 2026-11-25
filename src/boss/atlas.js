@@ -2,7 +2,8 @@
    She makes wide, slow sweeps that press down into the middle of the cloth. The gaze: an eyespot on one wing opens (0.8 s of lid
    opening first) and casts a cone of light that slowly turns to follow the ship. Move inside the cone and the eye fires at you;
    hold still (or creep, or dash: the eye cannot follow a dash) and it does not. The open eyespot is her only weak spot
-   (b.softOpen), so the place you can hurt her from is the dangerous place to stand; fill the fray meter there for a full stun.
+   (b.softOpen), so the place you can hurt her from is the dangerous place to stand; fill the fray meter there for a break. Her
+   scales harden (def.armour) only while a wing drags, a wingtip strikes, or an eye has seen you move.
    Wing sweep: a wing drags across one row of your zone (outlined first): go over or under it.
    Phase 2: both eyes open together with crossing cones, and the snake-head wingtips strike diagonally across the cloth.
 
@@ -68,7 +69,7 @@
   const script = {
     cues: ['open', 'spotted', 'close', 'sweep', 'drag', 'strike'],
     def: {
-      hp: 3300, halfW: 3.3, halfH: 2.0, armour: 0.4, frayAt: 0.08, stunTime: 3.0,
+      hp: 3300, halfW: 3.3, halfH: 2.0, armour: 0.4, guarded: true, frayAt: 0.08, stunTime: 4.5,
       soft: [{ x: -EYE_X, r: 0.65 }, { x: EYE_X, r: 0.65 }], softName: 'The eyespot on her wing, only while it is open and looking',
       phases: ['One eye at a time watches you; hold still in its light to hurt her', 'Both eyes watch at once and her wingtips strike'],
       phaseTag: ['The watcher', 'Both eyes open']
@@ -139,6 +140,7 @@
         }
       }
       if (s.lateStrike > 0) { s.lateStrike -= dt; if (s.lateStrike <= 0) strike(sim, b, pl.x < b.x ? 1 : -1); }
+      b.guard = s.hot || s.striking > 0 || !!(s.wing && s.wing.data.dragging);   // rework: bosses: her scales harden while she drags a wing or strikes, and while her eye has you
     },
     onPhase(sim, b, ph) { if (ph >= 2) b.s.next = Math.min(b.s.next, b.s.tm + 1.0); }
   };

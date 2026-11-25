@@ -23,7 +23,7 @@
   'use strict';
   const C = ST.content, F = ST.FIELD;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  const EGG_LIFE = 4.2, OPEN = 6, FORCED_OPEN = 2.5, FORCE_AFTER = 12, NEED = 3, MAX_NIBS = 10, RAIL = 6.0, RAIL_LOW = 6.8, RAIL_TOP = 16.2;
+  const EGG_LIFE = 4.2, OPEN = 6, FORCED_OPEN = 3, FORCE_AFTER = 7, NEED = 3, MAX_NIBS = 10, RAIL = 6.0, RAIL_LOW = 6.8, RAIL_TOP = 16.2;
   // phase 2 path along the frame: up the left rail, across the top, down the right rail (walked back and forth)
   const PATH = [[-RAIL, RAIL_LOW], [-RAIL, RAIL_TOP], [RAIL, RAIL_TOP], [RAIL, RAIL_LOW]];
   const SEG = [RAIL_TOP - RAIL_LOW, RAIL * 2, RAIL_TOP - RAIL_LOW], LEN = SEG[0] + SEG[1] + SEG[2];
@@ -48,7 +48,7 @@
   const script = {
     cues: ['lay', 'pop', 'hatch', 'split', 'seal', 'crawl', 'net'],
     def: {
-      hp: 3000, halfW: 2.9, halfH: 2.3, frayAt: 0.08, stunTime: 2.5,
+      hp: 3000, halfW: 2.9, halfH: 2.3, frayAt: 0.08, stunTime: 4.5,
       soft: [{ x: 0, r: 0.9 }], softName: 'Her belly, while the silk case is split',
       phases: ['Sits in her silk case and lays egg sacs; pop three to split the case', 'Crawls around the frame laying sacs from the sides, and drops nets'],
       phaseTag: ['The silk case', 'Crawling the frame']

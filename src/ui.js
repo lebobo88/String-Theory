@@ -35,6 +35,8 @@
   }
   /* A price tag: coin or gem, then the number. size 'sm' is the small tag inside lists and buttons; count marks the number for a results sheet's count-up. */
   const dustTag = (n, size, count) => `<span class="tag ${size || ''}">${icon('dust', 20)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> coins</span></span>`;
+  const softWords = t => esc(t).replace(/([A-Za-z]{4})([A-Za-z]{4,})/g, '$1&shy;$2');   // a long word may break at a hyphen in a narrow tile
+  const gemNum = n => `${icon('silk', 16)}<b>${num(n)}</b><span class="sr"> gems</span>`;   // a tile's price: the gem and the number, the same on every perk and power-up tile
   const silkTag = (n, size, count) => `<span class="tag silk ${size || ''}">${icon('silk', 26)}<b${count ? ` data-n="${Math.round(n)}"` : ''}>${num(n)}</b><span class="sr"> gems</span></span>`;
   /* "becomes": a stitched arrow between a number now and the number after. Drawn, so it never depends on a typeface having the glyph. */
   const ARROW = '<svg class="arr" viewBox="0 0 12 9" aria-hidden="true" focusable="false"><path d="M0 4.5h9M6 1l4 3.5L6 8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -638,8 +640,8 @@
       const rows = C.PATTERN.rows.filter(r => (r.tier || 0) > 0 === more), ids = rows.reduce((a, r) => a.concat(r.nodes), []);
       const sel = this.sel[key] && ids.indexOf(this.sel[key]) >= 0 ? this.sel[key] : ids[0];
       const cols = more ? 4 : 3;
-      const grid = `<div class="sampler">${rows.map(r => `<div class="${more ? 'urow' : 'srow'}"><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
-        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' || st.why === 'tier' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? (more ? 'Owned' : 'Unlocked') : more ? all[id].cost + '<span class="sr"> gems</span>' : all[id].cost + ' gems'}</span></button>`; }).join('')
+      const grid = `<div class="sampler">${rows.map(r => `<div class="${more ? 'urow' : 'srow'}"${more ? ' style="--nc:4"' : ''}><span class="eyebrow">${r.name}</span>${r.nodes.map(id => { const st = S.patternState(p, id);
+        return `<button class="node ${p.pattern[id] ? 'done' : ''} ${st.why === 'locked' || st.why === 'tier' ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}"><b>${esc(all[id].name)}</b><span>${p.pattern[id] ? 'Owned' : gemNum(all[id].cost)}</span></button>`; }).join('')
           + '<span class="ghost" aria-hidden="true"></span>'.repeat(cols - r.nodes.length)}</div>`).join('')}${more ? `<p class="snote">${this.tierNote()}</p>` : ''}</div>`;
       const n = all[sel], st = S.patternState(p, sel), row = rows.find(r => r.nodes.includes(sel)), ri = C.PATTERN.rows.indexOf(row);
       // a perk that moves one of the ship's numbers shows it, before and after
@@ -668,16 +670,16 @@
         .concat(sizes.map(k => { const x = q(dir, k); return { id: 'n:' + k, name: k + (k === 1 ? ' gem' : ' gems'), icon: '', meta: coins(x.dust) }; }))
         .concat([{ id: 'n:max', name: buy ? 'All I can pay for' : 'All my gems', icon: '', meta: most ? most + (most === 1 ? ' gem' : ' gems') : 'None' }]);
       const sel = ['n:' + (this.xn === 'max' ? 'max' : sizes.indexOf(this.xn) >= 0 ? this.xn : 10), dir];
-      const desc = buy ? `Pay coins for gems. Each gem you buy makes the next one ${Math.round(E.buyStep * 100)}% dearer. The price settles back as you fly and starts fresh each morning.`
-        : `Sell gems for coins. Each gem you sell makes the next one pay ${Math.round(E.sellStep * 100)}% less. The price settles back as you fly and starts fresh each morning.`;
+      const desc = buy ? `Each gem you buy makes the next ${Math.round(E.buyStep * 100)}% dearer.`
+        : `Each gem you sell pays ${Math.round(E.sellStep * 100)}% less than the last.`;
       const rows = [{ k: 'Price now', v: `${coins(one[dir].dust)} a gem.` }, { k: 'This trade', v: buy ? `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` : `${n} gem${n === 1 ? '' : 's'} for ${coins(qt.dust)}.` },
-        { k: 'After it', v: `${coins(qt.rateAfter)} a gem.` }, { k: 'Round trip', v: 'Always loses coins.', opt: true }];
+        { k: 'After it', v: `${coins(qt.rateAfter)} a gem.` }, { k: 'Round trip', v: 'Always loses coins. Prices settle back as you fly, and start fresh each morning.', opt: true }];
       const st = { ok: !!qt.afford && qt.ok, price: buy ? qt.dust : n, why: qt.afford ? 'buy' : 'short' };
       const label = buy ? 'Buy ' + n + (n === 1 ? ' gem' : ' gems') : 'Sell ' + n + (n === 1 ? ' gem' : ' gems');
       const btn = st.ok ? `<button class="btn primary buy" data-act="buy" data-arg="exch:${dir}" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'for ' + dustTag(qt.dust, 'sm') : 'for ' + dustTag(qt.dust, 'sm')}</span></button>`
         : `<button class="btn nope buy" data-act="nope" aria-disabled="true" data-fit="3"><span class="bl">${label}</span><span class="bh">${buy ? 'Need ' + num(qt.dust - p.dust) + ' more coins' : 'Need ' + num(n - p.silk) + ' more gems'}</span></button>`;
       return { sel: dir, list: this.list(items, sel), detail: this.detail({ pic: icon(buy ? 'silk' : 'dust', 40), name: buy ? 'Buy gems' : 'Sell gems', kick: 'Exchange · coins and gems', desc, rows,
-        left: `<span class="xhave">You have ${dustTag(p.dust, 'sm')} ${silkTag(p.silk, 'sm')}</span>`, buy: btn }) };
+        left: `<span class="xhave"><span class="xw">You have</span> ${dustTag(p.dust, 'sm')} ${silkTag(p.silk, 'sm')}</span>`, buy: btn }) };
     }
     /* Power-up upgrades: each power-up that drops in flight has one stronger form, bought once with gems. Three rows; a row opens
        once two from the row before it are owned. The details set the power-up as it is now against what it becomes. */
@@ -687,7 +689,7 @@
       const lasts = (c, id) => c.dur ? c.dur + ' seconds' : id === 'twin' ? 'until hit' : 'at once';
       const rows = C.CHARM_TIERS.map((tr, t) => { const left = S.charmTierLeft(p, t);
         return `<div class="urow"><span class="eyebrow">${esc(tr.name)}</span>${ids.filter(id => C.CHARMS[id].up.tier === t).sort((a, b) => C.CHARMS[a].up.cost - C.CHARMS[b].up.cost).map(id => { const u = C.CHARMS[id].up, st = S.charmUpState(p, id), own = st.why === 'owned';
-          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${esc(u.name).replace(/([A-Za-z]{6})([A-Za-z]{4,})/g, '$1&shy;$2')}</b><span>${own ? 'Owned' : u.cost + ' gems'}</span></button>`; }).join('')}</div>`; }).join('');
+          return `<button class="utile ${own ? 'own' : ''} ${left ? 'lock' : ''} ${id === sel ? 'sel' : ''}" data-act="pick" data-arg="${id}" aria-pressed="${id === sel}" aria-label="${esc(u.name + ': ' + (own ? 'owned' : u.cost + ' gems'))}">${pwIcon(id + '+', 28)}<b class="un">${softWords(u.name)}</b><span>${own ? 'Owned' : gemNum(u.cost)}</span></button>`; }).join('')}</div>`; }).join('');
       const c = C.CHARMS[sel], u = c.up, st = S.charmUpState(p, sel), own = st.why === 'owned';
       if (st.why === 'tier') st.row = C.CHARM_TIERS[u.tier - 1].name.toLowerCase();
       const cmp = [{ k: (own ? 'Was' : 'Now') + ': ' + esc(c.name), v: esc(c.desc), cls: 'was' }, { k: (own ? 'Now' : 'After') + ': ' + esc(u.name), v: esc(u.desc) }];

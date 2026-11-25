@@ -246,7 +246,7 @@
     lantern:    { name: 'Lantern Field', art: 'lines',   desc: 'Lit by old lamplight.', mark: 'Power-ups drop twice as often', mods: { charms: 2 } },
     looseend:   { name: 'The Loose End', art: 'fringe',  desc: 'The far edge of the cloth, where the thread hangs free.', mark: '' },
     lining:     { name: 'The Lining',    art: 'lines',   desc: 'Behind the cloth. Quieter, with less to pick up.', mark: 'Fewer enemies per wave; coins are worth 25% less', mods: { thin: 1, dust: 0.75 } },
-    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; gems from the boss are doubled', foes: 'Shield Bugs in every wave. Bring a Cross Stitch, a Knot Bomb or the Wire Laser.', mods: { hp: 1.25, keeperSilkMul: 2, guards: 3 } },
+    mothballs:  { name: 'Mothball Row',  art: 'holes',   desc: 'Something has been keeping the moths out. It makes them angry.', mark: 'Enemies have 25% more health; the Carpet Beetle knocks mothballs loose; gems from the boss are doubled', foes: 'Shield Bugs in every wave. Bring a Cross Stitch, a Knot Bomb or the Wire Laser.', mods: { hp: 1.25, keeperHp: 1, mothballs: true, keeperSilkMul: 2, guards: 3 } },
     silkroad:   { name: 'Silk Road',     art: 'darn',    desc: 'Spinners travel this way in numbers.', mark: 'Spinners always drop a gem', mods: { spinnerSilk: 1 } },
     loom:       { name: 'Loom Shadow',   art: 'boro',    desc: 'The great loom overhead drops what it finds.', mark: 'Power-ups drop twice as often; enemy shots are 20% faster', foes: 'Shield Bugs and fast shots.', mods: { charms: 2, shotSpeed: 1.2, guards: 4 } },
     heart:      { name: 'Heart of the Cloth', art: 'eyes', desc: 'The centre of the Coverlet, and the Moth King\'s court. The final stage.', mark: '' }
@@ -418,7 +418,7 @@
         combo: over('combo') ? Math.max(0.6, 1 - 0.04 * over('combo')) : 1, noMend: s >= 16, spare: s >= 18 ? 1 : 0 } });
   }
   /* One line for a step, for the picker: what changes and what it pays. */
-  const frayLine = s => s ? 'Moths and bosses ' + Math.round(FRAY.hp * s * 100) + '% tougher, ' + Math.round(FRAY.speed * s * 100) + '% quicker. +' + Math.round(FRAY.pay * s * 100) + '% coins and gems.' : 'Off.';
+  const frayLine = s => s ? 'Moths and bosses ' + Math.round(FRAY.hp * s * 100) + '% tougher (the early bosses more), ' + Math.round(FRAY.speed * s * 100) + '% quicker. +' + Math.round(FRAY.pay * s * 100) + '% coins and gems.' : 'Off.';
 
   // ---- Spool Wall: threads (weapons), levels I to X. Bought with coins (the four newest with gems), kept for good. ----
   /* Cost of the next level, by the level you own (index 1 = level II). About 1.5 times the level before; VIII to X also take gems. */
