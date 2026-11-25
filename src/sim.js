@@ -36,12 +36,12 @@
       this.route = []; this.perfectSamplers = 0; this.dualRun = 0;
       this.stitches = 0; this.nightDust = 0; this.nightSilk = 0; this.nightCharts = [];
       const want = (p.settings && p.settings.mode) || 'normal';
-      this.modeId = ST.modeUnlocked(p, want) ? want : 'normal'; this.mode = C.MODES[this.modeId];
+      this.modeId = ST.modeUnlocked(p, want) ? want : 'normal'; this.fray = ST.frayStep(p); this.mode = C.frayMode(this.modeId, this.fray);   // economy: the Fray step folds into the mode's numbers
       this.d = ST.derive(p);
-      this.spares = T.spares + (p.pattern.sparepin ? 1 : 0);
-      this.lastKnot = !!p.pattern.lastknot;
+      this.spares = Math.max(0, T.spares + (p.pattern.sparepin ? 1 : 0) + (p.pattern.sparepin2 ? 1 : 0) - (this.mode.tw ? this.mode.tw.spare : 0));
+      this.lastKnot = !!p.pattern.lastknot; this.lastLight = !!p.pattern.lastlight;
       this.player = { x: 0, y: PY, ply: this.d.ply, invuln: 0, dual: false, wings: 0, fireT: 0, charge: 0, fireT2: 0, charge2: 0, dashT: 0, dashDir: 0, dashN: this.d.dashMax, dashRe: 0,
-        bx: 0, by: PY - 0.7, whip: 0, sp: 0, focus: 1, patchT: 0, grazeN: 0, beadN: 0, ram: 0 };
+        bx: 0, by: PY - 0.7, whip: 0, sp: this.d.perk.spStart, focus: 1, patchT: 0, grazeN: 0, beadN: 0, ram: 0 };
       this.focusOn = false;
       this.fx = { beeswax: 0, gold: 0, bobbin: 0, staple: 0, fan: 0, starch: 0, tangle: 0, dish: 0, homing: 0, drone: 0, sign: 0 };
       this.fxUp = {};          // power-up id -> true while the running effect is the upgraded form (C.CHARMS[id].up)
@@ -83,12 +83,14 @@
       const base = C.PANELS[this.panel].rows[this.row], m = this.mods(), sp = Object.assign({}, base);
       if (m.crowd) { sp.spinners = 4; sp.mids = Math.min(10, sp.mids + 2); sp.nibs = 10; sp.diveEvery *= 0.85; }
       if (m.thin) { sp.mids = Math.max(4, sp.mids - 2); sp.nibs = Math.max(6, sp.nibs - 2); }
-      sp.diveEvery /= this.mode.fire * T.pressure; sp.fireEvery /= this.mode.fire * T.pressure;   // pressure: the ship can dash, slow time and fire specials now
+      sp.diveEvery /= this.mode.fire * T.pressure; sp.fireEvery /= this.mode.fire * T.pressure;
+      if (this.mode.tw) sp.diveEvery *= this.mode.tw.dive;   // Fray: dives come sooner   // pressure: the ship can dash, slow time and fire specials now
       if (m.guards) sp.guardEvery = Math.min(sp.guardEvery || 99, m.guards);
       if (m.wicks) sp.wickEvery = Math.min(sp.wickEvery || 99, m.wicks);
       if (m.hawks) sp.hawks = (sp.hawks || 0) + m.hawks;
       const w = this.waveSpec(this.panel, this.row);   // rework: waves: the formation, entry, twists and boss preview drawn for this wave
       if (w) { sp.formation = m.formation || w.formation; sp.entry = m.entry || w.entry; sp.twists = w.twists.slice(); sp.preview = w.preview; sp.fseed = w.fseed; }
+      if (this.mode.tw && this.mode.tw.elite) { sp.twists = sp.twists || []; if (sp.twists.indexOf('elite') < 0) sp.twists.push('elite'); }   // Fray: an elite in every wave
       sp.dives = C.DIVES.byStage[this.panel] || C.DIVES.byStage[0];
       return sp;
     }
@@ -99,7 +101,9 @@
       const pd = C.PANELS[this.panel];
       this.stage = { stitches0: this.stitches, dust0: this.nightDust, silk0: this.nightSilk, hurt: false, best: 0, charts: [] };
       this.palmUsed = false;
-      if (this.p.pattern.mended && this.row === 0 && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
+      const noMend = !!(this.mode.tw && this.mode.tw.noMend);   // Fray: no shield repair
+      if (!noMend && this.p.pattern.mended && this.row === 0 && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;
+      if (!noMend && this.p.pattern.freshstart && !this.skipMend && this.player.ply < this.d.ply) this.player.ply++;   // Fresh Start: every wave
       if (this.d.padded) this.armed.thimble = true;
       this.skipMend = false;
       { const pl = this.player; pl.x = 0; pl.y = PY; pl.bx = 0; pl.by = PY - 0.7; pl.invuln = 1.5; pl.charge = pl.charge2 = 0; pl.dashT = 0; pl.ram = 0; pl.dashN = this.d.dashMax; pl.patchT = 0; this.focusOn = false; }
@@ -113,13 +117,13 @@
     snapshot(at) {
       const pl = this.player;
       return { at, mode: this.modeId, seed: (this.rand() * 0x7fffffff) | 0, panel: this.panel, row: this.row, route: this.route.slice(), stitches: this.stitches, nightDust: this.nightDust,
-        nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, wings: pl.wings, lastKnot: this.lastKnot,
+        nightSilk: this.nightSilk, nightCharts: this.nightCharts.slice(), spares: this.spares, ply: pl.ply, dual: pl.dual, wings: pl.wings, lastKnot: this.lastKnot, lastLight: this.lastLight, fray: this.fray,
         perfectSamplers: this.perfectSamplers, bestCombo: this.bestCombo, dualRun: this.dualRun, armed: Object.assign({}, this.armed), deck: this.getDeck() };
     }
     static restore(profile, snap) {
       const s = new Sim(profile, snap.seed || 1);
-      if (snap.mode && C.MODES[snap.mode]) { s.modeId = snap.mode; s.mode = C.MODES[snap.mode]; }
-      for (const k of ['panel', 'row', 'stitches', 'nightDust', 'nightSilk', 'spares', 'lastKnot', 'perfectSamplers', 'bestCombo', 'dualRun']) if (snap[k] !== undefined) s[k] = snap[k];
+      if (snap.mode && C.MODES[snap.mode]) { s.modeId = snap.mode; s.fray = snap.fray | 0; s.mode = C.frayMode(snap.mode, s.fray); }
+      for (const k of ['panel', 'row', 'stitches', 'nightDust', 'nightSilk', 'spares', 'lastKnot', 'lastLight', 'perfectSamplers', 'bestCombo', 'dualRun']) if (snap[k] !== undefined) s[k] = snap[k];
       s.panel = Math.max(0, Math.min(C.PANELS.length - 1, s.panel | 0)); s.row = Math.max(0, Math.min(C.STAGES.length - 1, s.row | 0));
       s.route = (snap.route || []).slice(); s.nightCharts = (snap.nightCharts || []).slice();
       s.player.ply = Math.max(1, Math.min(s.d.ply, snap.ply || s.d.ply)); s.player.wings = Math.max(0, Math.min(2, snap.wings === undefined ? (snap.dual ? 1 : 0) : snap.wings | 0)); s.player.dual = s.player.wings > 0;
@@ -300,6 +304,7 @@
       const def = C.KEEPERS[id];
       const hp = def.hp * this.mode.hp * (this.mods().hp || 1);
       this.boss = { id, def, x: 0, y: H + 4, hp, maxHp: hp, t: 0, phase: 1, enter: 2.2, timers: [], open: false, flash: 0 };
+      this.boss.frayArmour = this.mode.tw ? this.mode.tw.armour : 0;   // Fray twist: share of the fray meter that starts armoured. The boss scripts read it (no-op until they do)
       this.spec = { diveEvery: 99, fireEvery: 99 };
       if (ST.bossScripts && ST.bossScripts[id]) this.bossInit(this.boss);
     }

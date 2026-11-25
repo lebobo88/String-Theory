@@ -384,6 +384,41 @@
     nightmare: { name: 'Nightmare', hp: 2.2, speed: 1.3,  fire: 1.6,  pay: 2.2, need: 'hard' }
   };
 
+  /* ---- The Exchange (the hideout counter): coins to gems and back. Each gem bought raises the price by buyStep, each gem sold lowers
+     the price by sellStep; both counts fall by recoverPerMin gems for every minute flown, and reset overnight (main.js hands the date to
+     ST.exchangeDay). Selling never pays more than 40 and buying never costs less than 150, so a round trip always loses. ---- */
+  const EXCH = { buyBase: 150, buyStep: 0.03, sellBase: 40, sellStep: 0.03, recoverPerMin: 1, maxTrade: 500 };
+
+  /* ---- The Fray dial: after a first full clear of a mode, steps 1 to 20 make that mode harder and pay more. Per step: moths and bosses
+     get tougher and quicker, and +10% coins and gems. Twists switch on at their `from` step and grow with every step after it. ---- */
+  const FRAY = {
+    max: 20, pay: 0.1, hp: 0.045, speed: 0.012, fire: 0.025,
+    twists: [
+      { id: 'elite',  from: 3,  name: 'Elites',          desc: 'An elite moth in every wave.' },
+      { id: 'dive',   from: 4,  name: 'Quick dives',     desc: 'Dives start sooner.' },
+      { id: 'charm',  from: 5,  name: 'Fewer power-ups', desc: 'Power-ups drop less often.' },
+      { id: 'shield', from: 6,  name: 'Thin shields',    desc: 'Shield pickups give less. From step 14 they give nothing while you have two or more.' },
+      { id: 'armour', from: 8,  name: 'Armoured bosses', desc: 'Bosses start with part of their fray meter armoured.' },
+      { id: 'break',  from: 10, name: 'Short breaks',    desc: 'A broken boss mends sooner.' },
+      { id: 'combo',  from: 12, name: 'Short combos',    desc: 'Your combo runs out sooner.' },
+      { id: 'mend',   from: 16, name: 'No mending',      desc: 'Shield Repair and Fresh Start stop working.' },
+      { id: 'spare',  from: 18, name: 'One life fewer',  desc: 'Start with one life less.' }
+    ]
+  };
+  /* The mode as it is flown at a Fray step: a copy of the plain mode with the step's numbers folded in (so everything in the sim that
+     reads mode.hp / speed / fire / pay gets them without further changes). `tw` holds the twist numbers; all zero at step 0. */
+  function frayMode(id, step) {
+    const m = MODES[id] || MODES.normal, s = Math.max(0, Math.min(FRAY.max, step | 0));
+    if (!s) return m;
+    const over = id2 => { const t = FRAY.twists.find(x => x.id === id2); return s >= t.from ? s - t.from + 1 : 0; };
+    return Object.assign({}, m, { fray: s, hp: m.hp * (1 + FRAY.hp * s), speed: m.speed * (1 + FRAY.speed * s), fire: m.fire * (1 + FRAY.fire * s), pay: m.pay * (1 + FRAY.pay * s), frayPay: FRAY.pay * s,
+      tw: { elite: over('elite') > 0, dive: Math.max(0.7, 1 - 0.02 * over('dive')), charm: Math.max(0.6, 1 - 0.03 * over('charm')), shield: s >= 14 ? 2 : s >= 6 ? 1 : 0,
+        armour: over('armour') ? Math.min(0.5, 0.05 * (s - 7)) : 0, breakMul: over('break') ? Math.max(0.5, 1 - 0.05 * over('break')) : 1,
+        combo: over('combo') ? Math.max(0.6, 1 - 0.04 * over('combo')) : 1, noMend: s >= 16, spare: s >= 18 ? 1 : 0 } });
+  }
+  /* One line for a step, for the picker: what changes and what it pays. */
+  const frayLine = s => s ? 'Moths and bosses ' + Math.round(FRAY.hp * s * 100) + '% tougher, ' + Math.round(FRAY.speed * s * 100) + '% quicker. +' + Math.round(FRAY.pay * s * 100) + '% coins and gems.' : 'Off.';
+
   // ---- Spool Wall: threads (weapons). Bought with Dust, kept for good; weights II/III cost +90/+160. ----
   const WEIGHT_COST = [0, 400, 900];
   /* Each weapon has one job. lv = its three levels: rate is seconds between volleys (charge time for the laser), dmg is per shot in units of the ship's damage. */
@@ -445,13 +480,13 @@
   /* What each level adds. `curve` is [levels in this stretch, gain per level] stretches in order; the last stretch goes on for ever.
      Levels I to V (III for the first one) keep their old gains, so an old save flies exactly as before; later levels taper.
      `cap` is a ceiling on the total gain (shield and the others that must stay playable). `marks`: every fifth level from X adds a
-     small named bonus, `{ key: amount }` added up in ST.derive (soft: boss weak spots, dmg: damage, sp: special meter from kills,
+     small named bonus, `{ key: amount }` added up in ST.derive (soft: boss weak spots, dmg: all damage, sp: special meter from kills,
      invuln: time safe after a hit, dash: dash recovery, magnet: pickup radius, chart: blueprint drops, charm: power-up drops). */
   const TEMPERS = {
     point: { name: 'Damage', desc: 'Each level: shots hit harder. Level IV breaks Casebearer armour in one hit. The gain shrinks after level V', chartAt: 4,
       curve: [[5, 0.15], [5, 0.08], [10, 0.04], [Infinity, 0.02]],
       marks: { 10: { name: 'Weak spots', desc: 'Boss weak spots take 10% more', soft: 0.1 }, 15: { name: 'Weak spots II', desc: 'Boss weak spots take another 10% more', soft: 0.1 },
-        20: { name: 'Heavy hand', desc: 'All shots hit 5% harder', dmg: 0.05 }, 25: { name: 'Weak spots III', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 30: { name: 'Heavy hand II', desc: 'All shots hit another 5% harder', dmg: 0.05 } } },
+        20: { name: 'Weak spots III', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 25: { name: 'Weak spots IV', desc: 'Boss weak spots take another 10% more', soft: 0.1 }, 30: { name: 'Weak spots V', desc: 'Boss weak spots take another 10% more', soft: 0.1 } } },
     eye:   { name: 'Fire rate', desc: 'Each level: fire faster. The gain shrinks after level V', chartAt: 4,
       curve: [[5, 0.07], [5, 0.0373], [10, 0.0187], [Infinity, 0.0093]],
       marks: { 10: { name: 'Quick spool', desc: 'Kills fill the special meter 10% faster', sp: 0.1 }, 15: { name: 'Quick spool II', desc: 'Kills fill the special meter another 10% faster', sp: 0.1 },
@@ -540,13 +575,22 @@
   const CHARM_TIERS = [{ name: 'Row 1', need: 0 }, { name: 'Row 2', need: 2 }, { name: 'Row 3', need: 2 }];
 
   // ---- The Pattern: permanent stitches. Silk. Each row unlocks left to right. ----
+  /* Three tiers. The first (rows with no `tier`) is open from the start. The second opens once 6 first-tier perks are owned, the third
+     once 5 second-tier perks are owned (the same rule as the power-up rows). The Coin Exchange perk (`sweepings`) is gone: it paid gems for
+     nothing. Its price is refunded by the save upgrade. Perks whose system another part of the game owns are read as plain flags (see
+     ST.perk in save.js): until that system exists they do nothing. */
   const PATTERN = {
+    tiers: [{ name: 'Pattern', need: 0 }, { name: 'Second pattern', need: 6 }, { name: 'Third pattern', need: 5 }],
     rows: [
       { name: 'Ship',     nodes: ['steady', 'quick', 'second'] },
       { name: 'Senses',   nodes: ['keen', 'chalkline', 'sight'] },
-      { name: 'Wallet',   nodes: ['deep', 'credit', 'sweepings'] },
+      { name: 'Wallet',   nodes: ['deep', 'credit'] },
       { name: 'Survival', nodes: ['sparepin', 'mended', 'lastknot'] },
-      { name: 'Arsenal',  nodes: ['headstart', 'overtime', 'bargain'] }
+      { name: 'Arsenal',  nodes: ['headstart', 'overtime', 'bargain'] },
+      { name: 'Kit',      tier: 1, nodes: ['bombcache', 'warmbobbin', 'halfspool', 'bombcache2'] },
+      { name: 'Finds',    tier: 1, nodes: ['firstpick', 'secondlook', 'heirhook', 'longfray'] },
+      { name: 'Purse',    tier: 2, nodes: ['coinsense', 'gemfinder', 'bargain2'] },
+      { name: 'Nerve',    tier: 2, nodes: ['sparepin2', 'freshstart', 'lastlight', 'quickstep'] }
     ],
     nodes: {
       steady:    { name: 'Recovery',      cost: 30, desc: 'Stay invincible 50% longer after taking a hit.' },
@@ -557,13 +601,29 @@
       sight:     { name: 'Blueprint Finder', cost: 60, desc: 'Blueprints drop twice as often.' },
       deep:      { name: 'Bigger Slots',  cost: 40, desc: 'Each item slot holds two of the same item.' },
       credit:    { name: 'Discount',      cost: 55, desc: '10% off every item.' },
-      sweepings: { name: 'Coin Exchange', cost: 70, desc: 'When a run ends in game over, earn 1 gem for every 100 coins you hold.' },
       sparepin:  { name: 'Extra Life',    cost: 50, desc: 'Start every run with one more life.' },
       mended:    { name: 'Shield Repair', cost: 90, desc: 'Restore 1 shield at the start of every stage.' },
       headstart: { name: 'Head Start',    cost: 40, desc: 'Start every run with a one-hit shield already up.' },
       overtime:  { name: 'Overtime',      cost: 60, desc: 'Power-ups last 30% longer.' },
       bargain:   { name: 'Bargain',       cost: 80, desc: 'Weapon levels and ship upgrades cost 15% less.' },
-      lastknot:  { name: 'Second Chance', cost: 140, desc: 'Once per run, survive the hit that would end it and keep flying with 1 shield.' }
+      lastknot:  { name: 'Second Chance', cost: 140, desc: 'Once per run, survive the hit that would end it and keep flying with 1 shield.' },
+      // second pattern
+      bombcache:  { name: 'Spare Bomb',    cost: 120, desc: 'Carry one more bomb.' },
+      warmbobbin: { name: 'Warm Bobbin',   cost: 170, desc: 'Your bobbin fires at 75% strength instead of 60%.' },
+      halfspool:  { name: 'Half Spool',    cost: 240, desc: 'Your special starts every run half full.' },
+      bombcache2: { name: 'Bomb Belt',     cost: 330, desc: 'Carry one more bomb, on top of Spare Bomb.' },
+      firstpick:  { name: 'First Pick',    cost: 140, desc: 'Start every run by choosing one of three finds.' },
+      secondlook: { name: 'Second Look',   cost: 200, desc: 'Once per run, throw back the three finds on offer and draw three new ones.' },
+      heirhook:   { name: 'Heirloom Hook', cost: 280, desc: 'Wear one more heirloom.' },
+      longfray:   { name: 'Slow Fray',     cost: 380, desc: 'A boss stays broken 25% longer once its fray meter fills.' },
+      // third pattern
+      coinsense:  { name: 'Coin Sense',    cost: 400, desc: 'Every coin you earn is worth 10% more.' },
+      gemfinder:  { name: 'Gem Finder',    cost: 520, desc: 'Bosses drop 20% more gems.' },
+      bargain2:   { name: 'Bargain II',    cost: 680, desc: 'Weapon levels and ship upgrades cost another 10% less.' },
+      sparepin2:  { name: 'Spare Life II', cost: 460, desc: 'Start every run with one more life, on top of Extra Life.' },
+      freshstart: { name: 'Fresh Start',   cost: 600, desc: 'Restore 1 shield at the start of every wave.' },
+      lastlight:  { name: 'Last Light',    cost: 780, desc: 'A second Second Chance each run: survive a killing hit again, with 2 shields.' },
+      quickstep:  { name: 'Quick Step',    cost: 1000, desc: 'Dashes come back 15% sooner.' }
     }
   };
 
@@ -596,5 +656,5 @@
     stageHp: 0.2, stageSpeed: 0.04, stageShot: 0.05     // per stage: enemies get tougher, faster, and their shots quicker
   };
 
-  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, temperCost, temperGain, temperMarks, temperNextMark, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
+  ST.content = { PAL, SPRITES, MOTHS, KEEPERS, PANELS, STAGES, STAGE_LABEL, PATCHES, SAMPLER, MODES, EXCH, FRAY, frayMode, frayLine, FORM, ENTRIES, TWISTS, DIVES, PREVIEWS, PREVIEW_OF, THREADS, WEIGHT_COST, NEEDLES, TEMPERS, TEMPER_COST, temperCost, temperGain, temperMarks, temperNextMark, NOTIONS, CHARMS, CHARM_TIERS, PATTERN, CHARTS, TUNING };
 })(typeof window !== 'undefined' ? (window.ST = window.ST || {}) : (globalThis.ST = globalThis.ST || {}));
